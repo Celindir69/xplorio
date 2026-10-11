@@ -29,6 +29,7 @@ t('Plugin-Protokoll: letzte Zeilen, nur vorhandene Dateien als Quelle', function
     assert.strictEqual(o.lines[0], '[2026-10-11 10:00:00] Zeile 401');
   });
   l.read('smartplaylists', 300, function(c, o){ assert.strictEqual(o.error, 'missing'); });
+  l.read('', 100, function(c, o){ assert.ok(o.ok); assert.deepStrictEqual(o.lines, []); assert.strictEqual(o.sources.length, 4); });
 });
 
 t('großes Protokoll: nur das Ende wird gelesen, keine angeschnittene erste Zeile', function(){

@@ -217,12 +217,13 @@ without a password.
 #### Logs
 Below the services, the "Logs" card: the last 100 or 300 lines from Volumio, MPD and the Tag Service (from the journal, like
 `journalctl -u volumio`), plus the logs of the AutoDJ (`/data/volumio_autodj_data/autodj.debug.log`) and Smart Playlists
-(`/data/smart_playlists_data/smart_playlists.debug.log`) plugins once they exist. "Live" fetches new lines every 3 seconds
+(`/data/smart_playlists_data/smart_playlists.debug.log`) plugins once they exist. The card first shows only the sources; a tap loads that log, a second tap collapses it. The search field above it shows only lines containing the text you type (e.g. `error`, case-insensitive), also while "Live" is on. "Live" fetches new lines every 3 seconds
 (like `-f`) while the page is open. If a password is set (see above), the logs are protected by it as well, since they
 contain paths, track titles and network addresses.
 
 The user `volumio` can only read the journal as a member of the `systemd-journal` group; without it, the card shows a hint
-for Volumio, MPD and the Tag Service, and the plugin logs still work. Once:
+for Volumio, MPD and the Tag Service, and the plugin logs still work. On many players this is already the case:
+`id volumio` lists the groups; if it shows `systemd-journal` or `adm`, there is nothing to do. Otherwise, once:
 
 ```
 sudo usermod -a -G systemd-journal volumio

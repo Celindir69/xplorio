@@ -1120,10 +1120,11 @@ function doPower(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   svc.power(String(body.action || ''), cb);
 }
-/* POST /logs {source, lines: 100|300, token}: letzte Zeilen eines Protokolls (tags/logs.js); Passwort nur, wenn eines festgelegt ist */
+/* POST /logs {source, lines: 100|300, token}: letzte Zeilen eines Protokolls (tags/logs.js), ohne source nur die Quellen;
+   Passwort nur, wenn eines festgelegt ist */
 var logs = require('./logs.js'), logReader = new logs.Logs();
 function doLogs(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth', sources: logReader.sources()});
+  if (body.source && adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth', sources: logReader.sources()});
   logReader.read(String(body.source || ''), body.lines, cb);
 }
 function doServiceLogin(body, cb) {

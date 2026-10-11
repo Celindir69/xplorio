@@ -71,6 +71,7 @@ Logs.prototype.sources = function() {
 /* cb(code, {ok, source, lines, sources}) */
 Logs.prototype.read = function(id, n, cb) {
   var s = sourceOf(id), list = this.sources();
+  if (!id) return cb(200, {ok: true, source: '', lines: [], sources: list});   /* nur die Liste der Quellen */
   if (!s) return cb(400, {ok: false, error: 'nicht erlaubt'});
   n = lineCount(n);
   function done(lines, error) {

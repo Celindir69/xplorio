@@ -1104,5 +1104,6 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
   background:rgba(var(--fg-rgb),.05); border:1px solid rgba(var(--fg-rgb),.08); border-radius:10px;
   font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:calc(2.6 * var(--vw)); line-height:1.45;
   white-space:pre-wrap; word-break:break-word; color:rgba(var(--fg-rgb),.85); -webkit-user-select:text; user-select:text; }
+.syLogFilter { display:block; width:100%; box-sizing:border-box; margin-top:calc(2 * var(--vw)); }
 .syLogLogin { display:inline-flex; vertical-align:middle; margin-left:4px; }
 @media (min-width:700px) { .syLog { font-size:12px; padding:10px 12px; } }

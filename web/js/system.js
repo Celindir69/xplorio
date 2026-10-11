@@ -14,6 +14,7 @@ function openSystem() {
   overlaySystem.classList.add('on');
   sysSeq++;
   sysEls = null; sysSvcPending = null; sysSvcBusy = {}; sysSvcMsg = '';
+  clearTimeout(sysLog.timer); sysLog.src = ''; sysLog.live = false; sysLog.data = null; sysLog.filter = ''; sysLog.focus = false;   /* Protokoll erst nach Wahl einer Quelle */
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
   sysBody.appendChild(browseNote(T('hist.loading')));
   sysFull();
@@ -287,6 +288,14 @@ function sysRender(st) {
     lg.appendChild(sysEls.logSrc);
     sysEls.logCtl = histEl('div', 'mxChips syLogCtl');
     lg.appendChild(sysEls.logCtl);
+    sysEls.logFilter = histEl('input', 'sySvcPw syLogFilter');
+    sysEls.logFilter.type = 'search'; sysEls.logFilter.placeholder = T('sys.log.filter');
+    sysEls.logFilter.autocapitalize = 'off'; sysEls.logFilter.autocomplete = 'off'; sysEls.logFilter.spellcheck = false;
+    sysEls.logFilter.value = sysLog.filter;
+    sysEls.logFilter.addEventListener('input', function(){ sysLog.filter = this.value; sysLog.bottom = true; sysPaintLog(); });
+    sysEls.logFilter.addEventListener('focus', function(){ sysLog.focus = true; });
+    sysEls.logFilter.addEventListener('blur', function(){ sysLog.focus = false; });
+    lg.appendChild(sysEls.logFilter);
     sysEls.logBox = histEl('pre', 'syLog');
     sysEls.logBox.addEventListener('scroll', function(){ sysLog.scroll = sysEls.logBox.scrollTop; sysLog.bottom = sysLogAtBottom(sysEls.logBox); });
     lg.appendChild(sysEls.logBox);
@@ -294,6 +303,7 @@ function sysRender(st) {
     lg.appendChild(sysEls.logNote);
     grid.appendChild(lg);
     sysPaintLog();
+    if (sysLog.focus) { sysEls.logFilter.focus(); var fl = sysEls.logFilter.value.length; try { sysEls.logFilter.setSelectionRange(fl, fl); } catch (er) {} }
     if (!sysLog.data || sysLog.seq !== sysSeq) sysLogLoad();
   }
 
@@ -495,7 +505,7 @@ function sysSvcRun(u, action) {
 }
 
 /* ---------- Protokolle ---------- */
-var sysLog = {src: 'volumio', n: 100, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
+var sysLog = {src: '', filter: '', focus: false, n: 100, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
 function sysLogAtBottom(b) { return b.scrollTop + b.clientHeight >= b.scrollHeight - 24; }
 function sysLogLoad() {
   var seq = sysSeq, src = sysLog.src, token = sysSvcToken() || sysSvcMem;
@@ -547,14 +557,18 @@ function sysPaintLog() {
   srcs.forEach(function(id){
     var c = histEl('div', 'mxChip mxSmall' + (id === sysLog.src ? ' on' : ''), T('sys.log.src.' + id));
     c.addEventListener('click', function(){
-      if (id === sysLog.src) return;
-      sysLog.src = id; sysLog.data = {ok: true, lines: [], sources: srcs}; sysLog.bottom = true;
+      clearTimeout(sysLog.timer);
+      if (id === sysLog.src) { sysLog.src = ''; sysLog.live = false; sysLog.data = {ok: true, source: '', lines: [], sources: srcs}; return sysPaintLog(); }   /* noch einmal: zuklappen */
+      sysLog.src = id; sysLog.data = {ok: true, source: id, lines: [], sources: srcs}; sysLog.bottom = true;
       sysLogLoad(); sysPaintLog();
     });
     e.logSrc.appendChild(c);
   });
   sysPaintLogCtl();
-  var box = e.logBox, lines = d && d.ok ? d.lines || [] : [];
+  e.logCtl.style.display = e.logFilter.style.display = sysLog.src ? '' : 'none';
+  var box = e.logBox, all = d && d.ok ? d.lines || [] : [], lines = all;
+  var q = sysLog.filter.trim().toLowerCase();             /* Filter: Zeilen, die den Text enthalten (Groß-/Kleinschreibung egal) */
+  if (q) lines = all.filter(function(l){ return l.toLowerCase().indexOf(q) >= 0; });
   box.textContent = lines.join('\n');
   box.style.display = lines.length ? '' : 'none';
   if (sysLog.bottom) box.scrollTop = box.scrollHeight; else box.scrollTop = sysLog.scroll;
@@ -563,6 +577,8 @@ function sysPaintLog() {
     : d.error === 'nojournal' ? T('sys.log.nojournal')
     : d.error === 'missing' ? T('sys.log.missing')
     : !d.ok ? T('sys.svc.error')
+    : !sysLog.src ? T('sys.log.pick')
+    : q && all.length ? T('sys.log.match', {n: lines.length, all: all.length})
     : !lines.length && !sysLog.busy ? T('sys.log.empty') : '';
   e.logNote.textContent = note;
   e.logNote.className = 'syNote' + (d && !d.ok ? ' syWarn' : '');
