@@ -20,6 +20,8 @@ window.APP_CONFIG = {
   ROTEL_HOST: '',     /* Adresse des Verstärkers im Netz (liest nur rotel-bridge.js), z. B. '192.168.1.50' */
   ROTEL_AMP_PORT: 9590, /* Port des Verstärkers (ASCII-Protokoll) */
   ROTEL_PORT: 8765,   /* Port des Rotel-Dienstes auf dem Player */
+  ROTEL_PROFILE: null, /* Fernbedienung (Seite Wiedergabe): Befehle und Eingänge des Verstärkers. null = Rotel RA-1572 /
+                         RA-1572MKII; einzelne Teile überschreiben, false blendet ein Element aus (docs/einrichten.md) */
   TIDAL: 'auto',      /* TIDAL-Teile (Auswahl Lokal/TIDAL in der Suche, ähnliche Künstler bei TIDAL):
                          'auto' = nur, wenn das TIDAL-Plugin in Volumio aktiv ist; true = immer; false = nie */
   QOBUZ: 'auto',      /* Qobuz genauso wie TIDAL (Auswahl in der Suche, ähnliche Künstler bei Qobuz):

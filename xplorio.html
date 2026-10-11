@@ -53,6 +53,9 @@
     </div>
   </div>
   <div id="topRight">
+    <div class="topBtn" id="btnRemote" title="Verstärker" data-i18n-title="html.remote" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M15 2H9a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 18H9V4h6v16zm-3-15a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 12 5zm-2 6h4v1.6h-4zm0 3h1.5v1.5H10zm2.5 0H14v1.5h-1.5zM10 17h1.5v1.5H10zm2.5 0H14v1.5h-1.5z"/></svg>
+    </div>
     <div class="topBtn" id="btnStage" title="Layout wechseln (Display mit Lyrics)" data-i18n-title="html.layout">
       <svg viewBox="0 0 24 24"><path d="M3 4h18a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm1 2v12h7V6H4zm9 0v12h7V6h-7zM5 7h5v4H5V7zm0 5.5h5V14H5v-1.5zm9-5.5h5v1.5h-5V7zm0 3h5v1.5h-5V10zm0 3h5v1.5h-5V13z"/></svg>
     </div>
@@ -327,6 +330,20 @@
   <div class="overlayBody" id="sysBody"></div>
 </div>
 
+<div class="overlay" id="overlayPlayback">
+  <div class="overlayHandle"></div>
+  <div class="overlayHead">
+    <div id="playbackBack" title="Zurück zum Menü" data-i18n-title="html.backToMenu">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </div>
+    <h2 data-i18n="html.playback">Wiedergabe</h2>
+    <div class="overlayClose" id="closePlayback">
+      <svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+    </div>
+  </div>
+  <div class="overlayBody" id="pbBody"></div>
+</div>
+
 <div class="overlay" id="overlayHelp">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -378,7 +395,7 @@
   langApply(document);                      /* data-i18n-Texte im HTML in der gewählten Sprache */
 
   /* App-Skripte je Stand laden (?v=): nach xplorio-deploy neu, sonst aus dem Browser-Cache (Reihenfolge wichtig) */
-  ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'discover', 'genre', 'moodmix', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome'].forEach(function(n){
+  ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'playback', 'discover', 'genre', 'moodmix', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome'].forEach(function(n){
     document.write('<script src="web/js/' + n + '.js?v=' + XV + '"><\/script>');
   });
 </script>

@@ -113,12 +113,12 @@ progress of the mood tags.
 
 - Welcome screen on opening: album of the day, album birthdays (round ones and anniversaries highlighted), recently
   played and new albums, random mix; birthdays, recently played and new also in Discover.
-- Menu behind the gear at the top right: welcome screen, history and stats, check library, system (CPU load, temperature, memory, drives, services with restart), update library, and the original Volumio
+- Menu behind the gear at the top right: welcome screen, history and stats, check library, playback (crossfade, volume levelling, Rotel remote), system (CPU load, temperature, memory, drives, services with restart, restart or shut down the player), update library, and the original Volumio
   interface (browse, queue, settings, plugins, system = Volumio's /dev page) and a help page on how to use the app; at the bottom the logo, the installed version and the license.
 - Light and dark, following the device setting or set explicitly.
 - German and English, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).
-- Optional: control a network-connected Rotel amplifier (power, volume, input) via `rotel/rotel-bridge.js`.
+- Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)
 - `xplorio-deploy`: updates the player directly from this repository, with backups and `--rollback`; the same on

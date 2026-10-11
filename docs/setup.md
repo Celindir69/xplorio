@@ -192,12 +192,16 @@ sudo visudo -f /etc/sudoers.d/xplorio-dienste
 and add this single line:
 
 ```
-volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk, /sbin/reboot, /sbin/poweroff
 ```
 
 The rule allows only these commands, nothing else.
 
-The buttons are also protected by a password and stay locked until one is set:
+Below the services are "Restart" and "Shut down" for the whole player, each with a confirmation. If a password is set (see
+below), they ask for it too; otherwise not, since Volumio itself offers both without a password. They use `/sbin/reboot`
+and `/sbin/poweroff` like Volumio; the sudo rule above includes both.
+
+The service buttons are also protected by a password and stay locked until one is set:
 
 ```
 sudo xplorio-deploy --passwort
@@ -209,6 +213,15 @@ devices. On the first tap on a button the page asks for the password; the device
 connection is unencrypted (http): the password keeps guests out but does not protect against eavesdropping on your own
 network, so don't use one you use elsewhere. Note: Volumio itself can be restarted and shut down on the home network
 without a password.
+
+### Playback
+In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
+(ReplayGain) with Off, Track, Album or Automatic (like Track in shuffle, otherwise like Album). The Tag Service switches both
+directly in MPD, without a restart; ReplayGain only affects files with ReplayGain tags. Volumio's own normalization
+(`volume_normalization`, levels even without tags but changes the dynamics) is only shown; change it in Volumio under
+Settings → Playback options. If the AutoDJ plugin is installed, the page shows whether its automation for crossfade and
+levelling is on: if you set both here, switch it off in the plugin, otherwise AutoDJ changes the values at the next fresh
+mix. Whether Volumio resets crossfade and the ReplayGain mode after a restart has not been checked yet.
 
 ### History and Statistics
 
@@ -345,6 +358,23 @@ window.APP_CONFIG.ROTEL_HOST = '<amplifier-ip>';   // Amplifier address, read by
 Then restart the bridge. To allow the amplifier to be powered on via the network while in standby, set its Power Mode to "Quick".
 
 Without `ROTEL: true`, the interface controls Volumio's volume instead (if enabled there).
+
+### Remote control
+
+With `ROTEL: true`, a remote control icon appears at the top right of the player view. It opens the "Playback" page (gear menu) at the "Amplifier" card: power/standby, volume and mute, input, tone bypass, bass, treble, balance, and speakers A and B. The values come from the amplifier and also follow the physical remote.
+
+The commands are preset for the Rotel RA-1572 / RA-1572MKII (ASCII protocol V2, port 9590). For other models or your own input names, use `web/config.local.js`; anything left out keeps the default:
+
+```js
+window.APP_CONFIG.ROTEL_PROFILE = {
+  model: 'My amplifier',
+  sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'TV'}, {cmd: 'phono', name: 'Turntable'}],
+  speakerB: false,             // false hides a control (bypass, bass, treble, balance, speakerA, speakerB)
+  powerOnSource: 'pcusb'       // input selected after power-on, '' = don't switch
+};
+```
+
+Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (the deploy script only does so when `rotel-bridge.js` itself has changed).
 
 ## Streaming Services (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 

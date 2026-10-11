@@ -1,7 +1,7 @@
 /* Dienste für die Seite „System“: Zustand der Player-Dienste (systemctl show) und Neustart, beim Kiosk auch
    Start und Stopp. Nur die Dienste und Aktionen aus UNITS sind erlaubt. Der Tag-Dienst läuft als Benutzer
    volumio und braucht dafür eine sudo-Regel (Anleitung: docs/einrichten.md, „Dienste“); ohne sie bleibt die
-   Anzeige, die Knöpfe melden „nosudo“.
+   Anzeige, die Knöpfe melden „nosudo“. Außerdem Neustart und Ausschalten des ganzen Players (power).
    Node 8, nur ES5. run: Ersatz für execFile (Tests) */
 var fs = require('fs'), cp = require('child_process');
 
@@ -13,6 +13,7 @@ var UNITS = [
   {id: 'volumio-kiosk', actions: ['start', 'stop', 'restart']}
 ];
 var SYSTEMCTL = '/bin/systemctl', TIMEOUT = 8000, SUDO_CACHE_MS = 300000;
+var POWER = {reboot: ['/sbin/reboot'], poweroff: ['/sbin/poweroff']};   /* dieselben Befehle wie Volumio selbst */
 
 function unitOf(id) {
   for (var i = 0; i < UNITS.length; i++) if (UNITS[i].id === id) return UNITS[i];
@@ -112,4 +113,18 @@ Services.prototype.act = function(id, action, self_, cb) {
   });
 };
 
-module.exports = {Services: Services, UNITS: UNITS, allowed: allowed, command: command, parseShow: parseShow, merge: merge};
+/* Player neu starten oder ausschalten: erst prüfen, ob sudo es erlaubt, dann antworten, dann ausführen */
+Services.prototype.power = function(action, cb) {
+  var me = this, cmd = POWER[action];
+  if (!cmd || !Object.prototype.hasOwnProperty.call(POWER, action)) return cb(400, {ok: false, error: 'nicht erlaubt'});
+  this.run('sudo', ['-n', '-l'].concat(cmd), function(err){
+    if (err) return cb(200, {ok: false, error: 'nosudo'});
+    cb(200, {ok: true});
+    setTimeout(function(){
+      console.log('Player: ' + action + ' (Seite System)');
+      me.run('sudo', ['-n'].concat(cmd), function(e){ if (e) console.error('Player ' + action + ' gescheitert: ' + (e.message || e)); });
+    }, 500);
+  });
+};
+
+module.exports = {Services: Services, UNITS: UNITS, allowed: allowed, command: command, POWER: POWER, parseShow: parseShow, merge: merge};

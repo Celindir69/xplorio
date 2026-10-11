@@ -233,12 +233,16 @@ sudo visudo -f /etc/sudoers.d/xplorio-dienste
 und diese eine Zeile eintragen:
 
 ```
-volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk, /sbin/reboot, /sbin/poweroff
 ```
 
 Die Regel erlaubt nur diese Befehle, nichts sonst.
 
-Die Knöpfe sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
+Unter den Diensten stehen „Neustart“ und „Ausschalten“ für den ganzen Player, jeweils mit Rückfrage. Ist ein Passwort
+festgelegt (siehe unten), fragen auch sie danach; sonst nicht, denn Volumio selbst bietet beides ohne Passwort an. Sie nutzen
+`/sbin/reboot` und `/sbin/poweroff` wie Volumio; die sudo-Regel oben enthält beide.
+
+Die Knöpfe der Dienste sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
 
 ```
 sudo xplorio-deploy --passwort
@@ -250,6 +254,16 @@ alle Geräte ab. Beim ersten Tipp auf einen Knopf fragt die Seite nach dem Passw
 Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, schützt aber nicht vor Mitlesen im eigenen Netz,
 also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
 und ausschalten.
+
+### Wiedergabe
+Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 30 Sekunden, und **Lautstärke angleichen**
+(ReplayGain) mit Aus, Titel, Album oder Automatisch (bei Zufallswiedergabe wie Titel, sonst wie Album). Beides stellt der
+Tag-Dienst direkt in MPD um, ohne Neustart; ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. Volumios eigene
+Normalisierung (`volume_normalization`, gleicht auch ohne Tags an, verändert aber die Dynamik) zeigt die Seite nur an;
+umgestellt wird sie in Volumio unter Einstellungen → Wiedergabe-Optionen. Ist das AutoDJ-Plugin installiert, zeigt die Seite,
+ob dessen Automatik für Crossfade und Angleichen an ist: Wer beides hier einstellt, sollte sie im Plugin ausschalten, sonst
+stellt AutoDJ die Werte beim nächsten neuen Mix um. Ob Volumio Crossfade und ReplayGain-Modus nach einem Neustart
+zurücksetzt, ist noch nicht geprüft.
 
 ### Verlauf und Statistik
 Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** gespielt (nach Tagen), **Meistgespielt** (Titel, Alben, Künstler oder Genres;
@@ -463,6 +477,27 @@ window.APP_CONFIG.ROTEL_HOST = '<IP-des-Verstaerkers>';   // Adresse des Verstä
 ```
 Danach die Bridge neu starten. Damit der Verstärker im Standby per Netz einschaltbar ist, dort Power Mode „Quick“ einstellen.
 Ohne `ROTEL: true` regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
+
+### Fernbedienung
+Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs-Symbol. Es öffnet die Seite
+„Wiedergabe“ (Zahnrad-Menü) an der Karte „Verstärker“: Ein/Standby, Lautstärke und Stumm, Eingang, Klang umgehen
+(Bypass), Bass, Höhen, Balance sowie Lautsprecher A und B. Die Werte kommen vom Verstärker und folgen auch der echten
+Fernbedienung.
+
+Die Befehle sind für den Rotel RA-1572 / RA-1572MKII voreingestellt (ASCII-Protokoll V2, Port 9590). Andere Modelle
+oder eigene Namen für die Eingänge in `web/config.local.js`; was fehlt, bleibt beim Standard:
+```js
+window.APP_CONFIG.ROTEL_PROFILE = {
+  model: 'Mein Verstärker',
+  sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'Fernseher'}, {cmd: 'phono', name: 'Plattenspieler'}],
+  speakerB: false,             // false blendet ein Element aus (bypass, bass, treble, balance, speakerA, speakerB)
+  powerOnSource: 'pcusb'       // Eingang nach dem Einschalten, '' = nicht umschalten
+};
+```
+Weitere Felder: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` je `[an, aus]`, `bass`/`treble`
+je `[höher, tiefer, Mitte]`, `balance: [rechts, links, Mitte]`, `toneMax` (Standard 10) und `balanceMax` (15).
+Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung die Bridge
+neu starten (das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
 
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und

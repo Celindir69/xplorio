@@ -24,10 +24,72 @@ var ROTEL_PORT = parseInt(process.env.ROTEL_PORT || CFG.ROTEL_AMP_PORT || '9590'
 var HTTP_PORT  = parseInt(process.env.HTTP_PORT  || CFG.ROTEL_PORT || '8765', 10);
 var MAX_VOL    = 70;   /* Sicherheitsgrenze (Rotel: 0-96) */
 
-/* Nach dem Einschalten diesen Eingang wählen ('' = nichts umschalten) */
-var POWER_ON_SOURCE = 'pcusb';
+/* Geräteprofil: Befehle des Rotel-ASCII-Protokolls V2 (RA-1572 ab V2.65, RA-1572MKII; Rotel „RS232 / IP ASCII
+   Controller Command List“). Andere Modelle: in web/config.local.js mit ROTEL_PROFILE überschreiben, z. B.
+   ROTEL_PROFILE: {sources: [{cmd: 'opt1', name: 'Fernseher'}, {cmd: 'pcusb', name: 'Player'}], speakerB: false}.
+   Jeder Eintrag ersetzt den Standard; false blendet das Bedienelement aus. Nur Befehle aus dem Profil gehen an den Verstärker.
+   bass/treble: [lauter, leiser, Mitte]; balance: [nach rechts, nach links, Mitte] (je ein Schritt bzw. auf 0) */
+var DEFAULT_PROFILE = {
+  model: 'RA-1572 / RA-1572MKII',
+  sources: [
+    {cmd: 'cd', name: 'CD'}, {cmd: 'coax1', name: 'Coax 1'}, {cmd: 'coax2', name: 'Coax 2'}, {cmd: 'opt1', name: 'Opt 1'},
+    {cmd: 'opt2', name: 'Opt 2'}, {cmd: 'aux', name: 'Aux'}, {cmd: 'tuner', name: 'Tuner'}, {cmd: 'phono', name: 'Phono'},
+    {cmd: 'usb', name: 'USB'}, {cmd: 'bluetooth', name: 'Bluetooth'}, {cmd: 'bal_xlr', name: 'XLR'}, {cmd: 'pcusb', name: 'PC-USB'}
+  ],
+  bypass: ['bypass_on', 'bypass_off'],
+  bass: ['bass_up', 'bass_down', 'bass_000'], treble: ['treble_up', 'treble_down', 'treble_000'], toneMax: 10,
+  balance: ['balance_r', 'balance_l', 'balance_000'], balanceMax: 15,
+  speakerA: ['speaker_a_on', 'speaker_a_off'], speakerB: ['speaker_b_on', 'speaker_b_off'],
+  powerOnSource: 'pcusb'                          /* nach dem Einschalten diesen Eingang wählen ('' = nichts umschalten) */
+};
+var CMD_RE = /^[a-z0-9_+\-]{1,24}$/;
 
-var state = {connected:false, power:null, volume:null, mute:null, source:null};
+/* Standard mit ROTEL_PROFILE überschreiben; ungültige Befehle fallen weg */
+function makeProfile(over) {
+  var p = {}, o = over && typeof over === 'object' ? over : {};
+  Object.keys(DEFAULT_PROFILE).forEach(function(k){ p[k] = Object.prototype.hasOwnProperty.call(o, k) ? o[k] : DEFAULT_PROFILE[k]; });
+  p.sources = (Array.isArray(p.sources) ? p.sources : []).map(function(x){
+    return typeof x === 'string' ? {cmd: x, name: x} : {cmd: String(x && x.cmd || ''), name: String(x && (x.name || x.cmd) || '')};
+  }).filter(function(x){ return CMD_RE.test(x.cmd); });
+  function cmds(v, len) { return Array.isArray(v) && v.length === len && v.every(function(c){ return CMD_RE.test(String(c)); }) ? v.map(String) : false; }
+  ['bypass', 'speakerA', 'speakerB'].forEach(function(k){ p[k] = cmds(p[k], 2); });
+  ['bass', 'treble', 'balance'].forEach(function(k){ p[k] = cmds(p[k], 3); });
+  p.toneMax = Math.max(1, Math.min(20, parseInt(p.toneMax, 10) || 10));
+  p.balanceMax = Math.max(1, Math.min(30, parseInt(p.balanceMax, 10) || 15));
+  p.powerOnSource = CMD_RE.test(String(p.powerOnSource || '')) ? p.powerOnSource : '';
+  return p;
+}
+/* Rückmeldungen: Klang +03 / -03 / 000, Balance L05 / R05 / 000 (links negativ) */
+function parseTone(v) { var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+function parseBalance(v) {
+  var m = /^([lr]?)(\d+)$/.exec(String(v));
+  if (!m) return null;
+  return m[1] === 'l' ? -parseInt(m[2], 10) : parseInt(m[2], 10);
+}
+/* erlaubte Befehle für /cmd */
+function allowedCmds(p) {
+  var a = ['vol_up', 'vol_dwn', 'mute_on', 'mute_off', 'power_on', 'power_off'];
+  p.sources.forEach(function(x){ a.push(x.cmd); });
+  ['bypass', 'speakerA', 'speakerB', 'bass', 'treble', 'balance'].forEach(function(k){ if (p[k]) a = a.concat(p[k]); });
+  var cfgCmds = [CFG.ROTEL_CMD_POWER_ON, CFG.ROTEL_CMD_POWER_OFF].filter(function(c){ return CMD_RE.test(String(c || '')); });
+  return a.concat(cfgCmds);
+}
+/* Abfragen nach dem Verbinden */
+function queries(p) {
+  var q = ['power?', 'volume?', 'mute?', 'source?'];
+  if (p.bypass) q.push('bypass?');
+  if (p.bass) q.push('bass?');
+  if (p.treble) q.push('treble?');
+  if (p.balance) q.push('balance?');
+  if (p.speakerA || p.speakerB) q.push('speaker?');
+  return q;
+}
+
+var PROFILE = makeProfile(CFG.ROTEL_PROFILE);
+var POWER_ON_SOURCE = PROFILE.powerOnSource;
+
+var state = {connected:false, power:null, volume:null, mute:null, source:null,
+             bypass:null, bass:null, treble:null, balance:null, speakerA:null, speakerB:null};
 var sock = null, buf = '', retry = null, connectTimer = null, sourceTimer = null;
 
 function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
@@ -71,6 +133,11 @@ function parseMsg(m) {
     if (!state.power) clearTimeout(sourceTimer);
   }
   else if (k === 'source') state.source = v;
+  else if (k === 'bypass') state.bypass = (v === 'on');
+  else if (k === 'bass')    state.bass    = parseTone(v);
+  else if (k === 'treble')  state.treble  = parseTone(v);
+  else if (k === 'balance') state.balance = parseBalance(v);
+  else if (k === 'speaker') { state.speakerA = v === 'a' || v === 'a_b'; state.speakerB = v === 'b' || v === 'a_b'; }
 }
 
 function connect() {
@@ -88,7 +155,7 @@ function connect() {
     clearTimeout(connectTimer);
     state.connected = true;
     send('rs232_update_on');          /* Rotel meldet Änderungen selbst */
-    ['power?','volume?','mute?','source?'].forEach(function(q){ sock.write(q); });
+    queries(PROFILE).forEach(function(q){ sock.write(q); });
   });
   sock.on('data', function(d){
     buf += d;
@@ -172,7 +239,7 @@ function corsHeaders(origin) {
 var EXTRA_HOSTS = [].concat(CFG.ALLOWED_HOSTS || [], String(process.env.XPLORIO_HOSTS || '').split(','))
   .map(function(x){ return String(x).trim(); }).filter(Boolean);
 
-var ALLOWED = ['vol_up','vol_dwn','mute_on','mute_off','power_on','power_off','pcusb'];
+var ALLOWED = allowedCmds(PROFILE);
 
 var server = http.createServer(function(req, res){
   var u = url.parse(req.url, true), ok = true, error = null;
@@ -194,6 +261,13 @@ var server = http.createServer(function(req, res){
       if (send('vol_' + (v < 10 ? '0' : '') + v)) state.volume = v;
       else { ok = false; error = 'nicht verbunden'; }
     }
+  } else if (u.pathname === '/profile') {
+    /* für die Fernbedienung: welche Bedienelemente es gibt (ohne Befehle) */
+    res.writeHead(200, head);
+    return res.end(JSON.stringify({ok: true, state: state, profile: {model: PROFILE.model, maxVol: MAX_VOL,
+      sources: PROFILE.sources, bypass: !!PROFILE.bypass, bass: !!PROFILE.bass, treble: !!PROFILE.treble, toneMax: PROFILE.toneMax,
+      balance: !!PROFILE.balance, balanceMax: PROFILE.balanceMax, speakerA: !!PROFILE.speakerA, speakerB: !!PROFILE.speakerB,
+      cmd: {bypass: PROFILE.bypass, speakerA: PROFILE.speakerA, speakerB: PROFILE.speakerB, bass: PROFILE.bass, treble: PROFILE.treble, balance: PROFILE.balance}}}));
   } else if (u.pathname !== '/state') {
     ok = false; error = 'unbekannt';
   }
@@ -204,4 +278,5 @@ var server = http.createServer(function(req, res){
 });
 
 if (require.main === module) { server.listen(HTTP_PORT); connect(); }
-module.exports = {server: server, check: check, hostOk: hostOk};
+module.exports = {server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
+  parseMsg: parseMsg, state: state};
