@@ -276,7 +276,7 @@ langRegister('de', 'Deutsch', {
   'pb.ampMute': 'Stumm',
   'pb.ampSource': 'Eingang',
   'pb.ampBypass': 'Klang umgehen',
-  'pb.ampBypassNote': 'Bass und Höhen wirken dann nicht.',
+  'pb.ampBypassNote': 'Bass und Höhen deaktiviert',
   'pb.ampBass': 'Bass',
   'pb.ampTreble': 'Höhen',
   'pb.ampZero': '0',
