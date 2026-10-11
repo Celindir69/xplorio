@@ -48,11 +48,12 @@ function pbSet(body) {
   }).catch(function(){ if (seq === pbSeq) { pbMsg = T('pb.error'); pbRender(); } });
 }
 
-function pbChips(list, cur, fn) {
+/* again: auch der gewählte Eintrag sendet erneut (Verstärker, falls die Anzeige nicht zum Gerät passt) */
+function pbChips(list, cur, fn, again) {
   var box = histEl('div', 'mxChips pbChips');
   list.forEach(function(it){
     var c = histEl('div', 'mxChip mxSmall' + (it[0] === cur ? ' on' : ''), it[1]);
-    c.addEventListener('click', function(){ if (it[0] !== cur) fn(it[0]); });
+    c.addEventListener('click', function(){ if (again || it[0] !== cur) fn(it[0]); });
     box.appendChild(c);
   });
   return box;
@@ -222,7 +223,7 @@ function pbAmpPaint() {
   }
 
   /* Klang: Bypass, Bass, Höhen; Balance */
-  if (p.bypass) line(T('pb.ampBypass'), pbChips([['off', T('pb.off')], ['on', T('pb.on')]], st.bypass ? 'on' : 'off', function(v){ pbAmpCmd(p.cmd.bypass[v === 'on' ? 0 : 1]); }));
+  if (p.bypass) line(T('pb.ampBypass'), pbChips([['off', T('pb.off')], ['on', T('pb.on')]], st.bypass ? 'on' : 'off', function(v){ pbAmpCmd(p.cmd.bypass[v === 'on' ? 0 : 1]); }, true));
   function stepper(key, label, fmt) {
     var cmd = p.cmd[key], v = st[key];
     if (!cmd) return;

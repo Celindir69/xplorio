@@ -30,4 +30,18 @@ t('Rückmeldungen des Verstärkers', function(){
   ['balance=000', 'speaker=off'].forEach(rb.parseMsg);
   assert.strictEqual(rb.state.balance, 0); assert.strictEqual(rb.state.speakerB, false);
 });
+t('nach einem Befehl den neuen Stand abfragen; tone= als Gegenteil von Bypass', function(){
+  var p = rb.makeProfile();
+  assert.strictEqual(rb.queryFor(p, 'bypass_off'), 'bypass?');
+  assert.strictEqual(rb.queryFor(p, 'speaker_b_on'), 'speaker?');
+  assert.strictEqual(rb.queryFor(p, 'bass_up'), 'bass?');
+  assert.strictEqual(rb.queryFor(p, 'phono'), 'source?');
+  assert.strictEqual(rb.queryFor(p, 'vol_up'), null);
+  var log = console.log; console.log = function(){};
+  ['bypass=off', 'tone=off', 'irgendwas=1'].forEach(rb.parseMsg);
+  console.log = log;
+  assert.strictEqual(rb.state.bypass, true);
+  rb.parseMsg('bypass=off');
+  assert.strictEqual(rb.state.bypass, false);
+});
 console.log(n + ' Prüfungen');
