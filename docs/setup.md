@@ -366,16 +366,80 @@ The value applies to that track on all devices (`/data/xplorio/data/lyrics-offse
 
 ## Rotel Bridge (Optional)
 
-Copy `rotel/rotel-bridge.js` to `/data/xplorio/rotel/` and configure it as a systemd service as above (port 8765). In `web/config.local.js`:
+Controls a network-connected Rotel amplifier: power, volume and the remote control (see below). The bridge is a small service on the player (port 8765) that keeps the connection to the amplifier (TCP, port 9590); the interface only talks to the bridge.
 
-```js
-window.APP_CONFIG.ROTEL = true;                  // Power button and amplifier volume in the interface
-window.APP_CONFIG.ROTEL_HOST = '<amplifier-ip>';   // Amplifier address, read by the bridge at startup
+**Preparing the amplifier:** connect it to the network, read its IP address in the amplifier's menu (ideally assign a fixed one in your router) and set Power Mode to "Quick" so it can be switched on from standby over the network.
+
+**1. Copy the file to the player** (in the repository folder; `xplorio-deploy` does this itself on every deployment):
+
+```bash
+sudo mkdir -p /data/xplorio/rotel && sudo cp rotel/rotel-bridge.js /data/xplorio/rotel/
+sudo chown -R volumio:volumio /data/xplorio/rotel
 ```
 
-Then restart the bridge. To allow the amplifier to be powered on via the network while in standby, set its Power Mode to "Quick".
+**2. Settings in `web/config.local.js`** (the bridge reads them at startup; the folder depends on the Volumio version: `/volumio/http/www3/web/`, Volumio 2 `/volumio/http/www/web/`, Volumio 4 `/volumio/http/www4/web/`):
+
+```bash
+sudo nano /volumio/http/www3/web/config.local.js
+```
+
+and add:
+
+```js
+window.APP_CONFIG.ROTEL = true;                            // power, amplifier volume and remote control
+window.APP_CONFIG.ROTEL_HOST = '<amplifier-ip>';           // e.g. '192.168.1.50'
+```
 
 Without `ROTEL: true`, the interface controls Volumio's volume instead (if enabled there).
+
+**3. Set it up as a service and start it:**
+
+```bash
+sudo tee /etc/systemd/system/rotel-bridge.service > /dev/null << 'UNIT'
+[Unit]
+Description=Rotel bridge for Xplorio
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/env node /data/xplorio/rotel/rotel-bridge.js
+WorkingDirectory=/data/xplorio/rotel
+Restart=always
+User=volumio
+Environment=APP_CONFIG_DIR=/volumio/http/www3/web
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload && sudo systemctl enable rotel-bridge && sudo systemctl start rotel-bridge
+```
+
+`APP_CONFIG_DIR` is the folder from step 2; on Volumio 2 replace `www3` with `www` before copying, on Volumio 4 with `www4`.
+
+**4. Check:**
+
+```bash
+curl -s localhost:8765/state
+```
+
+`"connected":true` means the bridge reached the amplifier; `"power"` and `"volume"` show its state. With `"connected":false`, the log shows why (wrong address, amplifier not on the network):
+
+```bash
+journalctl -u rotel-bridge -n 30 --no-pager
+```
+
+To switch it on as a test (without a browser the bridge needs the `X-Xplorio` header):
+
+```bash
+curl -s -H 'X-Xplorio: 1' 'localhost:8765/cmd?c=power_on'
+```
+
+**5. After changes** to `config.local.js` (address, profile below), restart the bridge:
+
+```bash
+sudo systemctl restart rotel-bridge
+```
+
+Reload the interface once; the remote control icon appears at the top right of the player view.
 
 ### Remote control
 
@@ -392,7 +456,7 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 };
 ```
 
-Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Other Rotel devices and Rotel's Michi series (X3, X5, P5, S5, M8) use the same ASCII protocol; the commands and the port (`ROTEL_AMP_PORT`) are in the device's protocol PDF on rotel.com (the P5, for example, uses port 9596 instead of 9590). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (the deploy script only does so when `rotel-bridge.js` itself has changed).
+Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Other Rotel devices and Rotel's Michi series (X3, X5, P5, S5, M8) use the same ASCII protocol; the commands and the port (`ROTEL_AMP_PORT`) are in the device's protocol PDF on rotel.com (the P5, for example, uses port 9596 instead of 9590). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (`sudo systemctl restart rotel-bridge`; the deploy script only does so when `rotel-bridge.js` itself has changed).
 
 ## Streaming Services (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 
