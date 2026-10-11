@@ -488,13 +488,72 @@ Laufen synchrone Lyrics konstant zu früh oder zu spät (andere Fassung des Tite
 allen Geräten (`/data/xplorio/data/lyrics-offsets.json`); Tippen auf den Wert setzt ihn auf 0 zurück.
 
 ## Rotel-Bridge (optional)
-`rotel/rotel-bridge.js` nach `/data/xplorio/rotel/`, als systemd-Dienst wie oben (Port 8765). In `web/config.local.js`:
-```js
-window.APP_CONFIG.ROTEL = true;                  // Ein/Aus-Knopf und Verstärker-Lautstärke in der Oberfläche
-window.APP_CONFIG.ROTEL_HOST = '<IP-des-Verstaerkers>';   // Adresse des Verstärkers, liest die Bridge beim Start
+Steuert einen Rotel-Verstärker im Netz: Ein/Aus, Lautstärke und die Fernbedienung (siehe unten). Die Bridge ist ein
+kleiner Dienst auf dem Player (Port 8765), der die Verbindung zum Verstärker hält (TCP, Port 9590); die Oberfläche
+spricht nur mit der Bridge.
+
+**Vorbereitung am Verstärker:** Netzwerkkabel anschließen, im Menü des Verstärkers die IP-Adresse ablesen (am besten
+im Router fest vergeben) und den Power Mode auf „Quick“ stellen, damit er sich aus dem Standby per Netz einschalten lässt.
+
+**1. Datei auf den Player kopieren** (im Ordner des Repos; `xplorio-deploy` erledigt das bei jedem Einspielen selbst):
+```bash
+sudo mkdir -p /data/xplorio/rotel && sudo cp rotel/rotel-bridge.js /data/xplorio/rotel/
+sudo chown -R volumio:volumio /data/xplorio/rotel
 ```
-Danach die Bridge neu starten. Damit der Verstärker im Standby per Netz einschaltbar ist, dort Power Mode „Quick“ einstellen.
+
+**2. Einstellungen in `web/config.local.js`** (die Bridge liest sie beim Start; Ordner je nach Volumio-Version
+`/volumio/http/www3/web/`, bei Volumio 2 `/volumio/http/www/web/`, bei Volumio 4 `/volumio/http/www4/web/`):
+```bash
+sudo nano /volumio/http/www3/web/config.local.js
+```
+und eintragen:
+```js
+window.APP_CONFIG.ROTEL = true;                            // Ein/Aus, Verstärker-Lautstärke und Fernbedienung
+window.APP_CONFIG.ROTEL_HOST = '<IP-des-Verstaerkers>';    // z. B. '192.168.1.50'
+```
 Ohne `ROTEL: true` regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
+
+**3. Als Dienst einrichten und starten:**
+```bash
+sudo tee /etc/systemd/system/rotel-bridge.service > /dev/null << 'UNIT'
+[Unit]
+Description=Rotel-Bridge fuer Xplorio
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/env node /data/xplorio/rotel/rotel-bridge.js
+WorkingDirectory=/data/xplorio/rotel
+Restart=always
+User=volumio
+Environment=APP_CONFIG_DIR=/volumio/http/www3/web
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload && sudo systemctl enable rotel-bridge && sudo systemctl start rotel-bridge
+```
+`APP_CONFIG_DIR` ist der Ordner aus Schritt 2; unter Volumio 2 vor dem Kopieren `www3` durch `www` ersetzen, unter
+Volumio 4 durch `www4`.
+
+**4. Prüfen:**
+```bash
+curl -s localhost:8765/state
+```
+Steht dort `"connected":true`, hat die Bridge den Verstärker erreicht; `"power"` und `"volume"` zeigen seinen Stand.
+Bei `"connected":false` zeigt das Log den Grund (falsche Adresse, Verstärker ohne Netz):
+```bash
+journalctl -u rotel-bridge -n 30 --no-pager
+```
+Einschalten zum Test (ohne Browser braucht die Bridge den Kopf `X-Xplorio`):
+```bash
+curl -s -H 'X-Xplorio: 1' 'localhost:8765/cmd?c=power_on'
+```
+
+**5. Nach Änderungen** an `config.local.js` (Adresse, Profil unten) die Bridge neu starten:
+```bash
+sudo systemctl restart rotel-bridge
+```
+Die Oberfläche einmal neu laden; das Fernbedienungs-Symbol erscheint oben rechts in der Player-Ansicht.
 
 ### Fernbedienung
 Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs-Symbol. Es öffnet die Seite
@@ -515,7 +574,7 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 Weitere Felder: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` je `[an, aus]`, `bass`/`treble`
 je `[höher, tiefer, Mitte]`, `balance: [rechts, links, Mitte]`, `toneMax` (Standard 10) und `balanceMax` (15).
 Dasselbe ASCII-Protokoll nutzen auch andere Rotel-Geräte und die Michi-Serie von Rotel (X3, X5, P5, S5, M8); Befehle und Port (`ROTEL_AMP_PORT`) stehen im Protokoll-PDF des Geräts auf rotel.com (der P5 etwa nutzt Port 9596 statt 9590). Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung die Bridge
-neu starten (das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
+neu starten (`sudo systemctl restart rotel-bridge`; das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
 
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und
