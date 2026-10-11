@@ -1,6 +1,7 @@
 /* Seite „System“ (Zahnrad-Menü): CPU-Last live und über 24 h, Temperatur, Arbeitsspeicher, Laufwerke (interne
    Karte, USB, jede NAS-Verbindung), Systemangaben und die laufende Datei. Werte vom Tag-Dienst (GET /sysinfo,
-   tags/sysinfo.js), Dienste (GET /services, POST /service, tags/services.js) und von Volumio (getState). Solange die Seite offen ist: Live-Werte alle 2 s, alles andere jede Minute.
+   tags/sysinfo.js), Dienste (GET /services, POST /service, tags/services.js), Protokolle (POST /logs, tags/logs.js)
+   und von Volumio (getState). Solange die Seite offen ist: Live-Werte alle 2 s, alles andere jede Minute.
    Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
 var overlaySystem = document.getElementById('overlaySystem');
 var sysBody = document.getElementById('sysBody');
@@ -279,6 +280,21 @@ function sysRender(st) {
     svc.appendChild(sysEls.svcLogin);
     grid.appendChild(svc);
     sysPaintSvc();
+
+    /* Protokolle: letzte Zeilen, Quelle und Länge wählbar, „Live“ holt alle 3 s nach */
+    var lg = sysCard(T('sys.log'), 'syWide');
+    sysEls.logSrc = histEl('div', 'mxChips syKinds');
+    lg.appendChild(sysEls.logSrc);
+    sysEls.logCtl = histEl('div', 'mxChips syLogCtl');
+    lg.appendChild(sysEls.logCtl);
+    sysEls.logBox = histEl('pre', 'syLog');
+    sysEls.logBox.addEventListener('scroll', function(){ sysLog.scroll = sysEls.logBox.scrollTop; sysLog.bottom = sysLogAtBottom(sysEls.logBox); });
+    lg.appendChild(sysEls.logBox);
+    sysEls.logNote = histEl('div', 'syNote', '');
+    lg.appendChild(sysEls.logNote);
+    grid.appendChild(lg);
+    sysPaintLog();
+    if (!sysLog.data || sysLog.seq !== sysSeq) sysLogLoad();
   }
 
   /* Systemangaben */
@@ -409,7 +425,8 @@ function sysSvcLoginForm() {
         sysSvcMem = sysSvcToken(r.token);
         var p = sysSvcPending; sysSvcPending = null;
         sysPaintSvc();
-        if (p) sysSvcRun(p.u, p.action);
+        if (p && p.logs) sysLogLoad();
+        else if (p) sysSvcRun(p.u, p.action);
         return;
       }
       inp.value = '';
@@ -475,6 +492,91 @@ function sysSvcRun(u, action) {
     sysSvcMsg = T('sys.svc.error');
     sysPaintSvc();
   });
+}
+
+/* ---------- Protokolle ---------- */
+var sysLog = {src: 'volumio', n: 100, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
+function sysLogAtBottom(b) { return b.scrollTop + b.clientHeight >= b.scrollHeight - 24; }
+function sysLogLoad() {
+  var seq = sysSeq, src = sysLog.src, token = sysSvcToken() || sysSvcMem;
+  clearTimeout(sysLog.timer);
+  sysLog.busy = true;
+  sysPaintLogCtl();
+  tagPostJson('/logs', {source: src, lines: sysLog.n, token: token}).then(function(r){
+    if (seq !== sysSeq || src !== sysLog.src) return;
+    if (r && r.error === 'auth') { if (token) sysSvcMem = sysSvcToken(null); sysLog.live = false; }
+    sysLog.data = r || {ok: false}; sysLog.seq = seq;
+  }).catch(function(){
+    if (seq !== sysSeq) return;
+    sysLog.data = {ok: false, error: 'net', sources: sysLog.data && sysLog.data.sources}; sysLog.seq = seq;
+  }).then(function(){
+    if (seq !== sysSeq) return;
+    sysLog.busy = false;
+    sysPaintLog();
+    if (sysLog.live) sysLog.timer = setTimeout(function tick(){
+      if (seq !== sysSeq || !sysLog.live || !overlaySystem.classList.contains('on')) return;
+      if (document.hidden) sysLog.timer = setTimeout(tick, 3000);   /* im Hintergrund: nicht abfragen, aber dranbleiben */
+      else sysLogLoad();
+    }, 3000);
+  });
+}
+function sysPaintLogCtl() {
+  var e = sysEls;
+  if (!e || !e.logCtl) return;
+  while (e.logCtl.firstChild) e.logCtl.removeChild(e.logCtl.firstChild);
+  [100, 300].forEach(function(n){
+    var c = histEl('div', 'mxChip mxSmall' + (sysLog.n === n ? ' on' : ''), T('sys.log.lines', {n: n}));
+    c.addEventListener('click', function(){ if (sysLog.n === n) return; sysLog.n = n; sysLog.bottom = true; sysLogLoad(); });
+    e.logCtl.appendChild(c);
+  });
+  var live = histEl('div', 'mxChip mxSmall syLogLive' + (sysLog.live ? ' on' : ''), T('sys.log.live'));
+  live.addEventListener('click', function(){
+    sysLog.live = !sysLog.live;
+    if (sysLog.live) { sysLog.bottom = true; sysLogLoad(); } else { clearTimeout(sysLog.timer); sysPaintLogCtl(); }
+  });
+  e.logCtl.appendChild(live);
+  var rf = histEl('div', 'mxChip mxSmall mxMore' + (sysLog.busy ? ' off' : ''), T('sys.log.refresh'));
+  rf.addEventListener('click', function(){ if (!sysLog.busy) { sysLog.bottom = true; sysLogLoad(); } });
+  e.logCtl.appendChild(rf);
+}
+function sysPaintLog() {
+  var e = sysEls, d = sysLog.data;
+  if (!e || !e.logBox) return;
+  var srcs = d && d.sources || ['volumio', 'mpd', 'tag-service'];
+  while (e.logSrc.firstChild) e.logSrc.removeChild(e.logSrc.firstChild);
+  srcs.forEach(function(id){
+    var c = histEl('div', 'mxChip mxSmall' + (id === sysLog.src ? ' on' : ''), T('sys.log.src.' + id));
+    c.addEventListener('click', function(){
+      if (id === sysLog.src) return;
+      sysLog.src = id; sysLog.data = {ok: true, lines: [], sources: srcs}; sysLog.bottom = true;
+      sysLogLoad(); sysPaintLog();
+    });
+    e.logSrc.appendChild(c);
+  });
+  sysPaintLogCtl();
+  var box = e.logBox, lines = d && d.ok ? d.lines || [] : [];
+  box.textContent = lines.join('\n');
+  box.style.display = lines.length ? '' : 'none';
+  if (sysLog.bottom) box.scrollTop = box.scrollHeight; else box.scrollTop = sysLog.scroll;
+  var note = !d ? T('hist.loading')
+    : d.error === 'auth' ? T('sys.log.auth')
+    : d.error === 'nojournal' ? T('sys.log.nojournal')
+    : d.error === 'missing' ? T('sys.log.missing')
+    : !d.ok ? T('sys.svc.error')
+    : !lines.length && !sysLog.busy ? T('sys.log.empty') : '';
+  e.logNote.textContent = note;
+  e.logNote.className = 'syNote' + (d && !d.ok ? ' syWarn' : '');
+  if (d && d.error === 'auth') {
+    var b = histEl('div', 'mxChip mxSmall sySvcBtn syLogLogin', T('sys.svc.login'));
+    b.addEventListener('click', function(){
+      sysSvcPending = {logs: true};
+      sysPaintSvc();
+      var inp = sysEls && sysEls.svcLogin && sysEls.svcLogin.querySelector('input');
+      if (inp) { inp.focus(); sysEls.svcLogin.scrollIntoView({block: 'center'}); }
+    });
+    e.logNote.appendChild(document.createTextNode(' '));
+    e.logNote.appendChild(b);
+  }
 }
 
 function sysPaintLive() {

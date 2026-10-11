@@ -255,6 +255,23 @@ Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, sch�
 also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
 und ausschalten.
 
+#### Protokolle
+Unter den Diensten die Karte „Protokolle“: die letzten 100 oder 300 Zeilen von Volumio, MPD und dem Tag-Dienst (aus dem
+Journal, wie `journalctl -u volumio`), dazu die Protokolle der Plugins AutoDJ (`/data/volumio_autodj_data/autodj.debug.log`)
+und Smart Playlists (`/data/smart_playlists_data/smart_playlists.debug.log`), sobald es sie gibt. „Live“ holt alle 3 Sekunden
+nach (wie `-f`), solange die Seite offen ist. Ist ein Passwort festgelegt (siehe oben), sind auch die Protokolle damit
+geschützt, denn sie enthalten Pfade, Titel und Adressen im Netz.
+
+Das Journal darf der Benutzer `volumio` nur lesen, wenn er in der Gruppe `systemd-journal` ist; ohne sie zeigt die Karte
+für Volumio, MPD und den Tag-Dienst einen Hinweis, die Plugin-Protokolle gehen trotzdem. Einmalig:
+
+```
+sudo usermod -a -G systemd-journal volumio
+sudo systemctl restart tag-service
+```
+
+Die Gruppe erlaubt nur das Lesen des Journals.
+
 ### Wiedergabe
 Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 30 Sekunden, und **Lautstärke angleichen**
 (ReplayGain) mit Aus, Titel, Album oder Automatisch (bei Zufallswiedergabe wie Titel, sonst wie Album). Beides stellt der

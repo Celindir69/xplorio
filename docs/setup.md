@@ -214,6 +214,23 @@ connection is unencrypted (http): the password keeps guests out but does not pro
 network, so don't use one you use elsewhere. Note: Volumio itself can be restarted and shut down on the home network
 without a password.
 
+#### Logs
+Below the services, the "Logs" card: the last 100 or 300 lines from Volumio, MPD and the Tag Service (from the journal, like
+`journalctl -u volumio`), plus the logs of the AutoDJ (`/data/volumio_autodj_data/autodj.debug.log`) and Smart Playlists
+(`/data/smart_playlists_data/smart_playlists.debug.log`) plugins once they exist. "Live" fetches new lines every 3 seconds
+(like `-f`) while the page is open. If a password is set (see above), the logs are protected by it as well, since they
+contain paths, track titles and network addresses.
+
+The user `volumio` can only read the journal as a member of the `systemd-journal` group; without it, the card shows a hint
+for Volumio, MPD and the Tag Service, and the plugin logs still work. Once:
+
+```
+sudo usermod -a -G systemd-journal volumio
+sudo systemctl restart tag-service
+```
+
+The group only allows reading the journal.
+
 ### Playback
 In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
 (ReplayGain) with Off, Track, Album or Automatic (like Track in shuffle, otherwise like Album). The Tag Service switches both

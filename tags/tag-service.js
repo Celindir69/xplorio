@@ -1120,6 +1120,12 @@ function doPower(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   svc.power(String(body.action || ''), cb);
 }
+/* POST /logs {source, lines: 100|300, token}: letzte Zeilen eines Protokolls (tags/logs.js); Passwort nur, wenn eines festgelegt ist */
+var logs = require('./logs.js'), logReader = new logs.Logs();
+function doLogs(body, cb) {
+  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth', sources: logReader.sources()});
+  logReader.read(String(body.source || ''), body.lines, cb);
+}
 function doServiceLogin(body, cb) {
   adminAuth.login(String(body.password || '').slice(0, 200), Date.now(), function(r){ cb(200, r); });
 }
@@ -1390,7 +1396,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1398,7 +1404,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'Ungültiges JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/playback': doPlaybackSet}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('Anfrage ' + route + ' gescheitert: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'interner Fehler'}); }
   });
