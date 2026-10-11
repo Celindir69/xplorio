@@ -1,14 +1,17 @@
+  /* Ränder für Kerbe/Dynamic Island und Home-Leiste (als Variablen, damit Tests sie nachbilden können) */
+  :root { --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px); }
   #app { position:fixed; top:0; left:0; right:0; bottom:0; z-index:2;
     display:flex; flex-direction:column; align-items:center;
-    padding-top:calc(env(safe-area-inset-top,0px) + 84px);   /* Platz für die Symbolleiste oben */
+    padding-top:calc(var(--sat) + 72px);   /* Platz für die Symbolleiste oben */
     justify-content:flex-end; }
   #topSpacer { flex:1 1 auto; }
   #rightPane { width:100%; display:contents; }
 
-#coverWrap { flex:0 0 auto; margin-bottom:3.5vh;
-  /* auf kurzen Bildschirmen (iPhone SE) schrumpft das Cover, damit die Symbolleiste frei bleibt */
-  width:min(calc(76 * var(--vw)), calc(100vh - 440px)); height:min(calc(76 * var(--vw)), calc(100vh - 440px));   /* Safari < 15.4: ohne dvh */
-  width:min(calc(76 * var(--vw)), calc(100dvh - 440px)); height:min(calc(76 * var(--vw)), calc(100dvh - 440px));
+#coverWrap { flex:0 0 auto; margin-bottom:2.5vh;
+  /* auf kurzen Bildschirmen schrumpft das Cover, damit die Symbolleiste frei bleibt: 470px für alles darunter und
+     die Symbolleiste, dazu die Ränder für Kerbe und Home-Leiste */
+  width:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab))); height:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab)));   /* Safari < 15.4: ohne dvh */
+  width:min(calc(76 * var(--vw)), calc(100dvh - 470px - var(--sat) - var(--sab))); height:min(calc(76 * var(--vw)), calc(100dvh - 470px - var(--sat) - var(--sab)));
   max-width:360px; max-height:360px; }
   #cover { width:100%; height:100%; object-fit:contain;
     border-radius:calc(3 * var(--vw)); box-shadow:0 calc(4 * var(--vw)) calc(10 * var(--vw)) rgba(0,0,0,.8); }
@@ -17,7 +20,7 @@
   html:not(.stage) #coverWrap.arWide #cover { width:100%; height:auto; }
   html:not(.stage) #coverWrap.arTall #cover { width:auto; height:100%; }
 #meta { flex:0 0 auto; width:90%; text-align:center;
-  padding:0 calc(4 * var(--vw)); margin-bottom:3vh; }
+  padding:0 calc(4 * var(--vw)); margin-bottom:2.2vh; }
 
   /* Reihenfolge: Interpret, Titel (mit Schatten wie die aktuelle Lyrics-Zeile), Album */
   #mTitle  { font-size:calc(5.5 * var(--vw)); font-weight:700; line-height:1.2; text-shadow:var(--glow);
@@ -42,7 +45,7 @@
   .qBadge.lossless { display:inline-block; color:var(--fg); }
   .qBadge.lossy, .qBadge.radio { display:inline-block; color:var(--fg); opacity:.5; }
 
-#seekWrap { flex:0 0 auto; width:88%; margin-bottom:2vh; }
+#seekWrap { flex:0 0 auto; width:88%; margin-bottom:1.6vh; }
   #seekBar { width:100%; height:4px; background:rgba(var(--fg-rgb),.25);
     border-radius:2px; cursor:pointer; }
   #seekFill { height:100%; width:100%; background:var(--accent, var(--fg)); transition:background-color .8s; border-radius:2px;
@@ -51,7 +54,7 @@
     margin-top:calc(1.5 * var(--vw)); font-size:calc(3 * var(--vw)); opacity:.5; }
 
 #ctrl { flex:0 0 auto; display:flex; align-items:center;
-  justify-content:center; gap:calc(5 * var(--vw)); margin-bottom:3vh; width:88%; }
+  justify-content:center; gap:calc(5 * var(--vw)); margin-bottom:2.4vh; width:88%; }
 
   .ctrlBtn { cursor:pointer; opacity:.85; }
   .ctrlBtn:active { opacity:1; transform:scale(.92); }
@@ -80,8 +83,8 @@
 
 #actions { flex:0 0 auto; display:flex; align-items:center;
   justify-content:space-around; width:88%;
-  padding-bottom:max(env(safe-area-inset-bottom,4px), 4px);
-  margin-bottom:1.5vh; }
+  padding-bottom:max(var(--sab), 4px);
+  margin-bottom:1vh; }
   .actBtn { cursor:pointer; opacity:.35; padding:calc(2 * var(--vw));
     display:flex; flex-direction:column; align-items:center; gap:0; }
   .actBtn:active { opacity:1; }
@@ -91,7 +94,7 @@
 
   /* Symbolleiste oben: links Rotel ein/aus, rechts Zugang zur Volumio-Oberfläche */
   #topBar { position:fixed; z-index:5; display:flex; justify-content:space-between; pointer-events:none;
-    top:calc(env(safe-area-inset-top,0px) + 12px);
+    top:calc(var(--sat) + 12px);
     left:max(env(safe-area-inset-left,0px), 12px); right:max(env(safe-area-inset-right,0px), 12px); }
   .topBtn { pointer-events:auto; cursor:pointer; display:flex; align-items:center; justify-content:center;
     width:clamp(34px, calc(9 * var(--vw)), 44px); height:clamp(34px, calc(9 * var(--vw)), 44px);
@@ -461,7 +464,7 @@
 
 
 #volWrap { flex:0 0 auto; display:flex; align-items:center; gap:calc(3 * var(--vw));
-  width:88%; margin-bottom:2.5vh; transition:opacity .2s; }
+  width:88%; margin-bottom:2vh; transition:opacity .2s; }
   #volWrap.off { opacity:.3; pointer-events:none; }
   .vBtn { flex:0 0 auto; cursor:pointer; opacity:.8; display:flex; }
   .vBtn svg { width:calc(6 * var(--vw)); height:calc(6 * var(--vw)); max-width:26px; max-height:26px; fill:var(--fg); }
@@ -638,13 +641,14 @@ html.stage #stageDots { display:flex; justify-content:center; gap:10px; padding:
 #stageDots span.on { opacity:1; }
 
 /* Lyrics rechts, immer sichtbar */
-html.stage #overlayLyrics { --vw:clamp(4.4px, .42vw, 6.5px); top:0; bottom:0; left:var(--stageL); right:0; width:auto;
+/* beginnt unter den Knöpfen oben rechts: Auf dem iPad nahm sonst die scrollende Lyrics-Fläche die Tipps auf die Knöpfe an */
+html.stage #overlayLyrics { --vw:clamp(4.4px, .42vw, 6.5px); top:calc(var(--sat) + 64px); bottom:0; left:var(--stageL); right:0; width:auto;
   z-index:3; transform:none; transition:none; border-radius:0; background:none;
   -webkit-backdrop-filter:none; backdrop-filter:none; }
 html.stage #overlayLyrics .overlayHandle, html.stage #overlayLyrics .overlayHead { display:none; }
-html.stage #overlayLyrics .overlayBody { padding:calc(env(safe-area-inset-top,0px) + 76px) max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 4vh clamp(20px, 2.6vw, 48px);
-  -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 60px, #000 120px, #000 calc(100% - 8vh), transparent 100%);
-  mask-image:linear-gradient(to bottom, transparent 0, transparent 60px, #000 120px, #000 calc(100% - 8vh), transparent 100%); }
+html.stage #overlayLyrics .overlayBody { padding:12px max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 4vh clamp(20px, 2.6vw, 48px);
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 56px, #000 calc(100% - 8vh), transparent 100%);
+  mask-image:linear-gradient(to bottom, transparent 0, #000 56px, #000 calc(100% - 8vh), transparent 100%); }
 html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; font-size:.8em; }
 
 /* Queue, Playlisten, Suche … oben rechts als runde Knöpfe */
