@@ -10,10 +10,11 @@ for (var i = 1; i <= 500; i++) rows.push('[2026-10-11 10:00:00] Zeile ' + i);
 fs.writeFileSync(adj, rows.join('\n') + '\n');
 var files = {autodj: adj, smartplaylists: path.join(dir, 'fehlt.log')};
 
-t('nur bekannte Quellen, Zeilen nur 100 oder 300', function(){
+t('nur bekannte Quellen, Zeilen nur 50, 100 oder 300', function(){
   assert.strictEqual(lg.lineCount('300'), 300);
-  assert.strictEqual(lg.lineCount(5000), 100);
-  assert.strictEqual(lg.lineCount('x'), 100);
+  assert.strictEqual(lg.lineCount('100'), 100);
+  assert.strictEqual(lg.lineCount(5000), 50);
+  assert.strictEqual(lg.lineCount('x'), 50);
   new lg.Logs({files: files, run: function(){ throw new Error('nicht aufrufen'); }}).read('/etc/passwd', 100, function(c, o){
     assert.strictEqual(c, 400); assert.ok(!o.ok);
   });

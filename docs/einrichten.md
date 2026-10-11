@@ -256,7 +256,7 @@ also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt 
 und ausschalten.
 
 #### Protokolle
-Unter den Diensten die Karte „Protokolle“: die letzten 100 oder 300 Zeilen von Volumio, MPD und dem Tag-Dienst (aus dem
+Unter den Diensten die Karte „Protokolle“: die letzten 50, 100 oder 300 Zeilen von Volumio, MPD und dem Tag-Dienst (aus dem
 Journal, wie `journalctl -u volumio`), dazu die Protokolle der Plugins AutoDJ (`/data/volumio_autodj_data/autodj.debug.log`)
 und Smart Playlists (`/data/smart_playlists_data/smart_playlists.debug.log`), sobald es sie gibt. Die Karte zeigt zuerst nur die Quellen; ein Tipp lädt das Protokoll, ein zweiter klappt es wieder zu. Das Suchfeld darüber zeigt nur Zeilen mit dem eingegebenen Text (z. B. `error`, Groß-/Kleinschreibung egal), auch bei „Live“. „Live“ holt alle 3 Sekunden
 nach (wie `-f`), solange die Seite offen ist. Ist ein Passwort festgelegt (siehe oben), sind auch die Protokolle damit
