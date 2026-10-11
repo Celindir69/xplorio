@@ -49,10 +49,16 @@ function audioErrorText(m) {
   return '';
 }
 /* Ausgabegerät getrennt: Volumio öffnet dazu ein Fenster mit Bestätigung (openModal, Titel „Kein Audio-Gerät
-   verfügbar“ bzw. „Das Audiogerät ist nicht verfügbar“, Volumio auf Deutsch oder Englisch); hier nur ein kurzer
-   Hinweis. Wieder da: Volumio meldet das nur beim USB-DAC („USB DAC verbunden“) und schließt dann seine Fenster. */
-var AUDIO_GONE_TITLES = /^(kein audio-gerät verfügbar|das audiogerät ist nicht verfügbar|no audio output available|the selected output device is not available)$/i;
-var AUDIO_BACK_TITLES = /^usb dac (verbunden|connected)$/i;
+   verfügbar“ bzw. „Das Audiogerät ist nicht verfügbar“; Volumios Texte auf Deutsch, Englisch, Französisch, Spanisch
+   und Italienisch); hier nur ein kurzer Hinweis. Wieder da: Volumio meldet das nur beim USB-DAC („USB DAC verbunden“)
+   und schließt dann seine Fenster. */
+var AUDIO_GONE_TITLES = new RegExp('^(' + [
+  'kein audio-gerät verfügbar', 'das audiogerät ist nicht verfügbar',
+  'no audio output available', 'the selected output device is not available',
+  'pas de sortie audio disponible', 'la sortie audio choisie n.est pas disponible',
+  'no hay salida de audio disponible', 'el dispositivo de salida seleccionado no está disponible',
+  'nessuna uscita audio disponibile', 'l.uscita audio selezionata non è disponibile'].join('|') + ')$', 'i');
+var AUDIO_BACK_TITLES = /^(usb dac (verbunden|connected)|(dac )?usb dac connecté|dac usb (conectado|connesso))$/i;
 var audioGone = false;
 function audioToast(key) { if (typeof showToast === 'function') showToast(T(key)); }
 socket.on('pushToastMessage', function(m){

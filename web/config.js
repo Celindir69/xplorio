@@ -2,7 +2,7 @@
    sondern in web/config.local.js; diese Datei ist nicht im Repository (.gitignore). */
 window.APP_CONFIG = {
   LANGUAGE: '',       /* Sprache der Oberfläche, z. B. 'de' oder 'en'; leer = wie in Volumio eingestellt (sonst Gerätesprache, sonst Englisch) */
-  LANGUAGES: ['de', 'en'],  /* vorhandene Sprachdateien in web/lang/; eine neue Sprache (z. B. fr.js) hier ergänzen */
+  LANGUAGES: ['de', 'en', 'fr', 'es', 'it'],  /* vorhandene Sprachdateien in web/lang/; eine neue Sprache (z. B. nl.js) hier ergänzen */
   THEME: 'auto',      /* 'auto' = hell oder dunkel wie das Gerät; 'light' = immer hell; 'dark' = immer dunkel (kioskTV.html bleibt dunkel) */
   LASTFM_KEY: '',     /* veraltet: Last.fm-Zugang steht in /data/xplorio/data/keys.json (Tag-Dienst); hier nur noch Ersatz ohne Tag-Dienst */
   LASTFM_SECRET: '',  /* veraltet: wird vom Tag-Dienst einmal nach keys.json übernommen, dann hier löschen */
