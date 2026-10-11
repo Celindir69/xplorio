@@ -9,7 +9,8 @@
 #   sudo xplorio-deploy --password         set or change the password for the services on the "System" page
 #   sudo xplorio-deploy --tag-service      set up the tag service (systemd unit, data folder, start, health check)
 #   sudo xplorio-deploy --rotel [IP]       set up the Rotel bridge (amplifier address in config.local.js, unit, start)
-#   --force                                with --tag-service/--rotel: rewrite an existing unit (the old one is backed up)
+#   --force                                with --tag-service/--rotel: rewrite an existing unit (the old one is backed up);
+#                                          with --rotel also replace the amplifier address (asks for it without IP)
 #
 # The interface (xplorio.html, app.html as a redirect, kioskTV.html, web/, tools/) goes into every existing folder
 # /volumio/http/www*/: which one Volumio serves depends on the version and the chosen interface (Volumio 3: www3,
@@ -21,7 +22,7 @@
 # systemd units to the new paths (the tag service moves its data from /data/INTERNAL by itself).
 # Before every install the affected files are backed up under /data/xplorio/backup (the last 5 are kept).
 # Your own files such as web/config.local.js are not in the repo and stay untouched; nothing is deleted.
-# Only --rotel adds to config.local.js, and only if it has no ROTEL_HOST yet (after a backup).
+# Only --rotel adds to config.local.js, and only if it has no ROTEL_HOST yet (after a backup); --rotel --force replaces it.
 # Install:  curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null && sudo chmod +x /usr/local/bin/xplorio-deploy
 # The earlier names web-app-deploy, mx-deploy and volumio4-deploy call this script (tools/web-app-deploy.sh, tools/mx-deploy.sh).
 # The German option names of earlier versions still work (--passwort, --zurueck, --tagdienst, --neu).
@@ -168,6 +169,7 @@ if [ -n "$SETUP" ]; then
   BACKUP=""                       # existing files that change (relative to the root)
   UNITS_NEW=""                    # units to write
   CFG_ADD=""                      # www folders whose config.local.js gets the Rotel lines
+  CFG_SET=""                      # www folders whose ROTEL_HOST is replaced (--force with an address)
 
   # unit name dir script description [environment line]: prepared in $WORK, written after the backup
   unit() {
@@ -207,20 +209,28 @@ if [ -n "$SETUP" ]; then
       for w in www3 www4 www; do case " $WWWS " in *" $w "*) CFG_DIR=$w; break ;; esac; done
       CFG_DIR=${CFG_DIR:-${WWWS%% *}}
     fi
-    for w in $WWWS; do
-      if has_host "$w"; then echo "ROTEL_HOST is already set in /volumio/http/$w/web/config.local.js, left unchanged"
-      else CFG_ADD="$CFG_ADD $w"; fi
-    done
+    HAVE=""
+    for w in $WWWS; do if has_host "$w"; then HAVE="$HAVE $w"; else CFG_ADD="$CFG_ADD $w"; fi; done
+    # --force: replace an existing address too (asks for it when none was given; empty input keeps it)
+    if [ $FORCE = 1 ] && [ -n "$HAVE" ]; then
+      if [ -z "$ROTEL_IP" ]; then
+        cur=$(grep -Eho '^[^/]*ROTEL_HOST[[:space:]]*[:=][[:space:]]*[^,;]*' "$(cfg_of "$CFG_DIR")" | head -n 1 | sed -E "s/.*[:=][[:space:]]*//; s/['\"]//g")
+        read -r -p "IP address of the amplifier (Enter keeps ${cur:-the current one}): " ROTEL_IP || true
+        [ -z "$ROTEL_IP" ] || valid_host "$ROTEL_IP" || die "invalid amplifier address: $ROTEL_IP"
+      fi
+      if [ -n "$ROTEL_IP" ]; then CFG_SET=$HAVE; HAVE=""; fi
+    fi
+    for w in $HAVE; do echo "ROTEL_HOST is already set in /volumio/http/$w/web/config.local.js, left unchanged (--force replaces it)"; done
     if [ -n "$CFG_ADD" ]; then
       if [ -z "$ROTEL_IP" ]; then
         read -r -p "IP address of the amplifier (e.g. 192.168.1.50): " ROTEL_IP || true
         [ -n "$ROTEL_IP" ] || die "no amplifier address given (sudo $PROG --rotel <IP>)"
         valid_host "$ROTEL_IP" || die "invalid amplifier address: $ROTEL_IP"
       fi
-      for w in $CFG_ADD; do [ -e "$(cfg_of "$w")" ] && BACKUP="$BACKUP$(rel "$(cfg_of "$w")")"$'\n'; done
-    elif [ -n "$ROTEL_IP" ]; then
-      echo "Note: $ROTEL_IP not used, config.local.js already has an address"
+    elif [ -z "$CFG_SET" ] && [ -n "$ROTEL_IP" ]; then
+      echo "Note: $ROTEL_IP not used, config.local.js already has an address (--force replaces it)"
     fi
+    for w in $CFG_ADD $CFG_SET; do [ -e "$(cfg_of "$w")" ] && BACKUP="$BACKUP$(rel "$(cfg_of "$w")")"$'\n'; done
     unit rotel-bridge rotel rotel-bridge.js "Rotel bridge for Xplorio" "Environment=APP_CONFIG_DIR=/volumio/http/$CFG_DIR/web"
   fi
 
@@ -231,7 +241,7 @@ if [ -n "$SETUP" ]; then
     tar czf "$base.tar.gz" -C "${ROOT:-/}" -T "$WORK/list"
     : > "$base.new"
     { for u in $UNITS_NEW; do [ $u = tag-service ] && echo "tags/$u.service" || echo "rotel/$u.service"; done
-      [ -n "$CFG_ADD" ] && echo "rotel/config.local.js"; true; } > "$base.paths"
+      [ -n "$CFG_ADD$CFG_SET" ] && echo "rotel/config.local.js"; true; } > "$base.paths"
     prune_backups
     echo "Backup: $(basename "$base") (undo with: sudo $PROG --rollback)"
   fi
@@ -246,6 +256,10 @@ if [ -n "$SETUP" ]; then
     } >> "$c"
     echo "Amplifier $ROTEL_IP added to /volumio/http/$w/web/config.local.js"
   done
+  for w in $CFG_SET; do
+    sed -i -E "/^[^/]*ROTEL_HOST/ s/(ROTEL_HOST[[:space:]]*[:=][[:space:]]*)(['\"])[^'\"]*(['\"])/\\1\\2$ROTEL_IP\\3/" "$(cfg_of "$w")"
+    echo "Amplifier address in /volumio/http/$w/web/config.local.js set to $ROTEL_IP"
+  done
   mkdir -p "$UNIT_DIR"
   for u in $UNITS_NEW; do
     cp "$WORK/$u.service" "$UNIT_DIR/$u.service"
@@ -259,7 +273,7 @@ if [ -n "$SETUP" ]; then
     systemctl enable "$1" >/dev/null 2>&1 || true
     systemctl restart "$1" || { echo "$1 did not start: journalctl -u $1 -n 30 --no-pager"; return 1; }
   }
-  changed() { case " $UNITS_NEW " in *" $1 "*) return 0 ;; esac; [ "$1" = rotel-bridge ] && [ -n "$CFG_ADD" ]; }
+  changed() { case " $UNITS_NEW " in *" $1 "*) return 0 ;; esac; [ "$1" = rotel-bridge ] && [ -n "$CFG_ADD$CFG_SET" ]; }
   ask() {                         # ask url pattern: up to 10 tries, prints the last answer
     local r="" i
     for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -290,7 +304,7 @@ if [ -n "$SETUP" ]; then
       esac
     fi
   fi
-  if [ -n "$CFG_ADD" ]; then echo "Hard-reload the browser."; fi
+  if [ -n "$CFG_ADD$CFG_SET" ]; then echo "Hard-reload the browser."; fi
   exit 0
 fi
 

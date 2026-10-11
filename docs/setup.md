@@ -62,7 +62,7 @@ Then on the player:
 | `sudo xplorio-deploy --rollback` | restore the latest backup (repeat to go back step by step) |
 | `sudo xplorio-deploy --password` | set or change the password for the services on the "System" page |
 | `sudo xplorio-deploy --tag-service` | set up the Tag Service: unit file, data folder, start and check (see [Tag Service](#tag-service-for-the-tag-editor)) |
-| `sudo xplorio-deploy --rotel <IP>` | set up the Rotel bridge: amplifier address in `config.local.js`, unit file, start and check (see [Rotel Bridge](#rotel-bridge-optional)) |
+| `sudo xplorio-deploy --rotel <IP>` | set up the Rotel bridge: amplifier address in `config.local.js`, unit file, start and check; with `--force` also a different address (see [Rotel Bridge](#rotel-bridge-optional)) |
 
 Targets: `xplorio.html`, `app.html` (redirect), `kioskTV.html`, `web/`, and `tools/` go to every existing `/volumio/http/www*/` folder, and `tags/` plus `rotel/rotel-bridge.js` go to `/data/xplorio/`; the script also updates itself. Which of the folders Volumio serves depends on the version and the selected interface (e.g. classic `www`, Volumio 3 `www3`, Volumio 4 `www4`), so every existing one gets the interface. The script does not create new folders and stops if there is none; `DEPLOY_WWW=<folder>` selects a specific one. `web/config.local.js` is per folder: if you switch interfaces, copy it as well. The script also writes `web/version.json` (branch, commit and its date); the menu shows this version at the bottom below the logo and name, and "Development version" without the file.
 
@@ -391,6 +391,8 @@ sudo xplorio-deploy --rotel 192.168.1.50
 ```
 
 If needed it first deploys `main`, then adds `ROTEL = true` and `ROTEL_HOST` to `web/config.local.js` (only if there is no `ROTEL_HOST` yet, after a backup; without an address it asks for one), creates `/etc/systemd/system/rotel-bridge.service` with the right folder (`www`, `www3` or `www4`), starts the bridge and reports `rotel-bridge is running: connected to the amplifier`. If the bridge is already set up, the command changes nothing and says so; `--force` rewrites the unit file (with a backup). Your own entries in `config.local.js` stay untouched.
+
+**Entered the wrong address?** `sudo xplorio-deploy --rotel <correct IP> --force` replaces `ROTEL_HOST` (after a backup) and restarts the bridge. Without an IP the command asks for the new address; Enter keeps the old one.
 
 **By hand**, step by step:
 

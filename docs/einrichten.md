@@ -55,7 +55,7 @@ Danach auf dem Player:
 | `sudo xplorio-deploy --rollback` | letzte Sicherung wiederherstellen (mehrmals: Schritt für Schritt weiter zurück) |
 | `sudo xplorio-deploy --password` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
 | `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
-| `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
+| `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung; mit `--force` auch eine andere Adresse (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
 
 Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
@@ -518,6 +518,9 @@ noch kein `ROTEL_HOST` steht, vorher mit Sicherung; ohne Adresse fragt es danach
 mit dem passenden Ordner (`www`, `www3` oder `www4`) an, startet die Bridge und meldet `rotel-bridge is running: connected
 to the amplifier`. Ist die Bridge schon eingerichtet, ändert der Befehl nichts und sagt das; `--force` schreibt die
 Dienstdatei neu (mit Sicherung). Eigene Einträge in `config.local.js` bleiben unberührt.
+
+**Falsche Adresse eingegeben?** `sudo xplorio-deploy --rotel <richtige IP> --force` ersetzt `ROTEL_HOST` (vorher mit
+Sicherung) und startet die Bridge neu. Ohne IP fragt der Befehl nach der neuen Adresse; Enter behält die alte.
 
 **Von Hand**, Schritt für Schritt:
 
