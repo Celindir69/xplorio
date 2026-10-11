@@ -122,7 +122,9 @@ function sysArea(box, pts, opts) {
   var padB = opts.labels ? 18 : 2, padT = 6;
   var svg = sysSvg('svg', {viewBox: '0 0 ' + W + ' ' + H, width: '100%', height: H, 'class': 'syChart'}, box);
   var lo = opts.lo, hi = opts.hi, ph = H - padB - padT;
-  pts = pts.filter(function(p){ return p[1] !== null && p[1] !== undefined; });
+  pts = pts.filter(function(p){                          /* nur Werte im gezeigten Zeitraum: ältere lägen links außerhalb der Karte */
+    return p[1] !== null && p[1] !== undefined && (opts.t0 === undefined || p[0] >= opts.t0) && (opts.t1 === undefined || p[0] <= opts.t1);
+  });
   if (opts.bucket && pts.length > W / 3) {                 /* 24 h = 1440 Werte: auf etwa 3 px je Punkt mitteln */
     var n = Math.max(1, Math.round(W / 3)), span = ((opts.t1 || pts[pts.length - 1][0]) - (opts.t0 || pts[0][0])) / n, acc = {}, keys = [];
     pts.forEach(function(p){
