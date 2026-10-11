@@ -113,7 +113,7 @@ progress of the mood tags.
 
 - Welcome screen on opening: album of the day, album birthdays (round ones and anniversaries highlighted), recently
   played and new albums, random mix; birthdays, recently played and new also in Discover.
-- Menu behind the gear at the top right: welcome screen, history and stats, check library, system (CPU load, temperature, memory, drives), update library, and the original Volumio
+- Menu behind the gear at the top right: welcome screen, history and stats, check library, system (CPU load, temperature, memory, drives, services with restart), update library, and the original Volumio
   interface (browse, queue, settings, plugins, system = Volumio's /dev page) and a help page on how to use the app; at the bottom the logo, the installed version and the license.
 - Light and dark, following the device setting or set explicitly.
 - German and English, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`

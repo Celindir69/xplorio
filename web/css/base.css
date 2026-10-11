@@ -11,7 +11,7 @@
   --bg-filter:blur(30px) brightness(.6);    /* Cover im Hintergrund */
   --scrim:linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.75));
   --glow:0 2px 8px rgba(0,0,0,.95); --glow-soft:0 1px 4px rgba(0,0,0,.8);   /* Schatten hinter Text */
-  --gold:#e6c36a; --warn:#f3c969; --err:#ff8a8a;
+  --gold:#e6c36a; --warn:#f3c969; --err:#ff8a8a; --ok:#7ccf8e;
   --accent:var(--accent-d); --bg-tint:var(--tint-d);    /* aus dem Cover (color.js); ohne Cover ungültig = Rückfallwert */
   --on-accent:var(--on-accent-d, var(--ink));          /* Schrift auf Akzentflächen; ohne Cover: Akzent fällt auf --fg zurück, darauf --ink */
   color-scheme:dark;
@@ -25,7 +25,7 @@ html.light {
   --bg-filter:blur(30px) brightness(1.1) saturate(1.15);
   --scrim:linear-gradient(to bottom, rgba(255,255,255,.42), rgba(255,255,255,.80));
   --glow:none; --glow-soft:none;                       /* Schein hinter Text nur im dunklen Modus */
-  --gold:#946b00; --warn:#946000; --err:#c62828;
+  --gold:#946b00; --warn:#946000; --err:#c62828; --ok:#2e7d32;
   --accent:var(--accent-l); --bg-tint:var(--tint-l);
   --on-accent:var(--on-accent-l, var(--ink));
   color-scheme:light;

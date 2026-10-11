@@ -1,33 +1,36 @@
 /* Seite „System“ (Zahnrad-Menü): CPU-Last live und über 24 h, Temperatur, Arbeitsspeicher, Laufwerke (interne
    Karte, USB, jede NAS-Verbindung), Systemangaben und die laufende Datei. Werte vom Tag-Dienst (GET /sysinfo,
-   tags/sysinfo.js) und von Volumio (getState). Solange die Seite offen ist: Live-Werte alle 2 s, alles andere jede Minute.
+   tags/sysinfo.js), Dienste (GET /services, POST /service, tags/services.js) und von Volumio (getState). Solange die Seite offen ist: Live-Werte alle 2 s, alles andere jede Minute.
    Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
 var overlaySystem = document.getElementById('overlaySystem');
 var sysBody = document.getElementById('sysBody');
 var sysTimer = null, sysFullTimer = null, sysSeq = 0, sysData = null, sysHistKind = 'cpu', sysEls = null;
+var sysSvc = null, sysSvcBusy = {}, sysSvcMsg = '', sysSvcTimers = [], sysSvcPending = null;
 var SYS_NS = 'http://www.w3.org/2000/svg';
 
 function openSystem() {
   closeAllOverlays();
   overlaySystem.classList.add('on');
   sysSeq++;
-  sysEls = null;
+  sysEls = null; sysSvcPending = null;
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
   sysBody.appendChild(browseNote(T('hist.loading')));
   sysFull();
 }
-function sysStop() { clearTimeout(sysTimer); clearTimeout(sysFullTimer); sysSeq++; }
+function sysStop() { clearTimeout(sysTimer); clearTimeout(sysFullTimer); sysSvcTimers.forEach(clearTimeout); sysSvcTimers = []; sysSeq++; }
 function sysOpen() { return overlaySystem.classList.contains('on') && !document.hidden; }
 
 function sysFull() {
   var seq = sysSeq;
   clearTimeout(sysFullTimer);
-  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).catch(function(){ return null; })])
+  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).catch(function(){ return null; }),
+               tagGetJson('/services').catch(function(){ return null; })])
     .then(function(res){
       if (seq !== sysSeq) return;
       sysData = res[0];
+      sysSvc = res[2] && res[2].ok ? res[2] : null;
       if (!sysData || !sysData.ok) throw new Error('keine Daten');
-      sysKeepScroll(function(){ sysRender(res[1]); });
+      if (!sysSvcPending || !sysEls) sysKeepScroll(function(){ sysRender(res[1]); });   /* nicht während der Passworteingabe */
       sysLive(seq);
       sysFullTimer = setTimeout(function(){ if (seq === sysSeq && sysOpen()) sysFull(); }, 60000);
     }).catch(function(){
@@ -263,6 +266,19 @@ function sysRender(st) {
   if (!(d.disks || []).length) disks.appendChild(histEl('div', 'syNote', T('sys.diskNone')));
   grid.appendChild(disks);
 
+  /* Dienste: Zustand, Neustart; Kiosk auch Start und Stopp (fehlt bei einem älteren Tag-Dienst) */
+  if (sysSvc) {
+    var svc = sysCard(T('sys.svc'), 'syWide');
+    sysEls.svc = histEl('div', 'sySvcList');
+    svc.appendChild(sysEls.svc);
+    sysEls.svcNote = histEl('div', 'syNote', '');
+    svc.appendChild(sysEls.svcNote);
+    sysEls.svcLogin = sysSvcLoginForm();
+    svc.appendChild(sysEls.svcLogin);
+    grid.appendChild(svc);
+    sysPaintSvc();
+  }
+
   /* Systemangaben */
   var s = d.sys || {}, info = sysCard(T('sys.info'));
   function kv(box, k, v) {
@@ -298,6 +314,144 @@ function sysRender(st) {
 
   sysPaintLive();
   sysPaintHist();
+}
+
+/* ---------- Dienste ---------- */
+function sysSvcState(u) {
+  if (sysSvcBusy[u.id]) return T('sys.svc.busy');
+  if (u.active === 'active') return u.since ? T('sys.svc.since', {d: sysDuration(Math.max(60, (Date.now() - u.since) / 1000))}) : T('sys.svc.running');
+  if (u.active === 'activating' || u.active === 'reloading') return T('sys.svc.starting');
+  if (u.active === 'deactivating') return T('sys.svc.stopping');
+  if (u.active === 'failed') return T('sys.svc.failed');
+  return T('sys.svc.stopped');
+}
+function sysPaintSvc() {
+  var e = sysEls;
+  if (!e || !e.svc || !sysSvc) return;
+  while (e.svc.firstChild) e.svc.removeChild(e.svc.firstChild);
+  (sysSvc.units || []).forEach(function(u){
+    var row = histEl('div', 'sySvc');
+    var st = sysSvcBusy[u.id] ? 'busy' : u.active === 'active' ? 'on' : u.active === 'failed' ? 'bad' : /ing$/.test(u.active) ? 'busy' : 'off';
+    row.appendChild(histEl('span', 'sySvcDot ' + st));
+    var txt = histEl('div', 'sySvcText');
+    txt.appendChild(histEl('div', 'sySvcName', T('sys.svc.' + u.id)));
+    txt.appendChild(histEl('div', 'sySvcState' + (st === 'bad' ? ' syWarn' : ''), sysSvcState(u)));
+    row.appendChild(txt);
+    var btns = histEl('div', 'sySvcBtns'), on = u.active === 'active' || u.active === 'activating';
+    var acts = u.actions.indexOf('start') >= 0
+      ? (on ? ['stop', 'restart'] : ['start'])
+      : ['restart'];
+    acts.forEach(function(a){
+      var label = a === 'restart' && !on ? T('sys.svc.do.start') : T('sys.svc.do.' + a);
+      var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || !sysSvc.pw ? ' off' : ''), label);
+      b.addEventListener('click', function(){ sysSvcAct(u, a); });
+      btns.appendChild(b);
+    });
+    row.appendChild(btns);
+    e.svc.appendChild(row);
+  });
+  var note = sysSvcMsg || [sysSvc.pw ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
+  e.svcNote.textContent = note;
+  e.svcNote.className = 'syNote' + (note ? ' syWarn' : '');
+  e.svcLogin.style.display = sysSvcPending ? '' : 'none';
+}
+
+/* Anmeldung je Gerät: Passwort einmal eingeben, der Tag-Dienst gibt einen Schlüssel für 30 Tage (localStorage) */
+function sysSvcToken(v) {
+  try {
+    if (v === undefined) return localStorage.getItem('xplorio.svcToken') || '';
+    if (v) localStorage.setItem('xplorio.svcToken', v); else localStorage.removeItem('xplorio.svcToken');
+  } catch (e) { /* privates Fenster: dann jedes Mal anmelden */ }
+  return v || '';
+}
+var sysSvcMem = '';                                        /* Schlüssel ohne localStorage, solange die Seite offen ist */
+function sysSvcLoginForm() {
+  var f = histEl('form', 'sySvcLogin');
+  f.appendChild(histEl('div', 'syNote', T('sys.svc.loginHint')));
+  var row = histEl('div', 'sySvcLoginRow');
+  var inp = histEl('input', 'sySvcPw');
+  inp.type = 'password'; inp.autocomplete = 'current-password'; inp.placeholder = T('sys.svc.password');
+  row.appendChild(inp);
+  var ok = histEl('button', 'mxChip mxSmall sySvcBtn', T('sys.svc.login'));
+  ok.type = 'submit';
+  row.appendChild(ok);
+  var no = histEl('div', 'mxChip mxSmall mxMore sySvcBtn', T('sys.svc.cancel'));
+  no.addEventListener('click', function(){ sysSvcPending = null; err.textContent = ''; sysPaintSvc(); });
+  row.appendChild(no);
+  f.appendChild(row);
+  var err = histEl('div', 'syNote syWarn', '');
+  f.appendChild(err);
+  f.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    if (!inp.value || ok.classList.contains('off')) return;
+    ok.classList.add('off');
+    tagPostJson('/servicelogin', {password: inp.value}).then(function(r){
+      ok.classList.remove('off');
+      if (r && r.ok) {
+        inp.value = ''; err.textContent = '';
+        sysSvcMem = sysSvcToken(r.token);
+        var p = sysSvcPending; sysSvcPending = null;
+        sysPaintSvc();
+        if (p) sysSvcRun(p.u, p.action);
+        return;
+      }
+      inp.value = '';
+      err.textContent = r && r.error === 'locked' ? T('sys.svc.locked', {s: r.wait}) : r && r.error === 'wrong' ? T('sys.svc.wrong') + (r.wait ? ' ' + T('sys.svc.locked', {s: r.wait}) : '') : T('sys.svc.error');
+    }).catch(function(){ ok.classList.remove('off'); err.textContent = T('sys.svc.error'); });
+  });
+  return f;
+}
+function sysSvcAskLogin(u, action) {
+  sysSvcPending = {u: u, action: action};
+  sysPaintSvc();
+  var inp = sysEls && sysEls.svcLogin && sysEls.svcLogin.querySelector('input');
+  if (inp) { inp.focus(); sysEls.svcLogin.scrollIntoView({block: 'nearest'}); }
+}
+function sysSvcAct(u, action) {
+  if (sysSvcBusy[u.id]) return;
+  var ask = action === 'start' ? '' : action === 'stop' ? T('sys.svc.askStop.' + u.id) : T('sys.svc.ask.' + u.id);
+  if (ask && !window.confirm(ask)) return;
+  sysSvcRun(u, action);
+}
+function sysSvcRun(u, action) {
+  var token = sysSvcToken() || sysSvcMem;
+  if (!token) return sysSvcAskLogin(u, action);
+  var seq = sysSeq;
+  sysSvcBusy[u.id] = true; sysSvcMsg = '';
+  sysPaintSvc();
+  tagPostJson('/service', {unit: u.id, action: action, token: token}).then(function(r){
+    if (seq !== sysSeq) return;
+    if (r && r.error === 'auth') {                         /* abgelaufen oder neues Passwort: neu anmelden */
+      delete sysSvcBusy[u.id];
+      sysSvcMem = sysSvcToken(null);
+      return sysSvcAskLogin(u, action);
+    }
+    if (!r || !r.ok) {
+      delete sysSvcBusy[u.id];
+      sysSvcMsg = r && r.error === 'nosudo' ? T('sys.svc.nosudo') : r && r.error === 'unset' ? T('sys.svc.nopw') : T('sys.svc.error');
+      return sysPaintSvc();
+    }
+    if (r.self) {                                          /* der Tag-Dienst startet sich selbst neu: kurz warten, dann alles neu laden */
+      return sysSvcTimers.push(setTimeout(function(){ if (seq === sysSeq) { delete sysSvcBusy[u.id]; sysFull(); } }, 6000));
+    }
+    [1500, 5000, 12000, 30000].forEach(function(ms, i, all){
+      sysSvcTimers.push(setTimeout(function(){
+        if (seq !== sysSeq) return;
+        tagGetJson('/services').then(function(s){
+          if (seq !== sysSeq || !s || !s.ok) return;
+          sysSvc = s;
+          var x = (s.units || []).filter(function(v){ return v.id === u.id; })[0];
+          if (i === all.length - 1 || (x && !/ing$/.test(x.active))) delete sysSvcBusy[u.id];
+          sysPaintSvc();
+        }).catch(function(){});
+      }, ms));
+    });
+  }).catch(function(){
+    if (seq !== sysSeq) return;
+    delete sysSvcBusy[u.id];
+    sysSvcMsg = T('sys.svc.error');
+    sysPaintSvc();
+  });
 }
 
 function sysPaintLive() {

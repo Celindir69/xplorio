@@ -60,6 +60,7 @@ Then on the player:
 | `sudo xplorio-deploy -n <branch>` | only show what would change |
 | `sudo xplorio-deploy -y <branch>` | deploy without confirmation |
 | `sudo xplorio-deploy --rollback` | restore the latest backup (repeat to go back step by step) |
+| `sudo xplorio-deploy --passwort` | set or change the password for the services on the "System" page |
 
 Targets: `xplorio.html`, `app.html` (redirect), `kioskTV.html`, `web/`, and `tools/` go to every existing `/volumio/http/www*/` folder, and `tags/` plus `rotel/rotel-bridge.js` go to `/data/xplorio/`; the script also updates itself. Which of the folders Volumio serves depends on the version and the selected interface (e.g. classic `www`, Volumio 3 `www3`, Volumio 4 `www4`), so every existing one gets the interface. The script does not create new folders and stops if there is none; `DEPLOY_WWW=<folder>` selects a specific one. `web/config.local.js` is per folder: if you switch interfaces, copy it as well. The script also writes `web/version.json` (branch, commit and its date); the menu shows this version at the bottom below the logo and name, and "Development version" without the file.
 
@@ -176,6 +177,38 @@ When the page opens (only with the Tag Service), a card in the middle of the win
 ### System
 
 In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (internal card, USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 2 seconds (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
+
+#### Services
+Below that, the "Services" card: Volumio, MPD, Tag Service, Rotel control and kiosk with their state (running for …, stopped,
+error) and a "Restart" button, plus "Start" and "Stop" for the kiosk (for example, so it only runs while the TV is
+connected). The page asks before restarting. Services that are not set up on the player are not listed. The Tag Service runs
+as user `volumio` and may run exactly these commands only with a sudo rule; without it, the card shows the state and a hint.
+Set it up once (`visudo` checks the rule before saving):
+
+```
+sudo visudo -f /etc/sudoers.d/xplorio-dienste
+```
+
+and add this single line:
+
+```
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk
+```
+
+The rule allows only these commands, nothing else.
+
+The buttons are also protected by a password and stay locked until one is set:
+
+```
+sudo xplorio-deploy --passwort
+```
+
+Only a hash (PBKDF2 with salt) is stored, in `/data/xplorio/data/admin.json`; the same command changes it and signs out all
+devices. On the first tap on a button the page asks for the password; the device (the browser) then stays signed in for
+30 days. After 5 wrong attempts the service waits, twice as long after each further one (at most 15 minutes). The
+connection is unencrypted (http): the password keeps guests out but does not protect against eavesdropping on your own
+network, so don't use one you use elsewhere. Note: Volumio itself can be restarted and shut down on the home network
+without a password.
 
 ### History and Statistics
 

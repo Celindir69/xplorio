@@ -1033,9 +1033,29 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 .syKv:last-child { border-bottom:none; }
 .syK { color:rgba(var(--fg-rgb),.55); flex:0 0 auto; font-size:calc(3.3 * var(--vw)); }
 .syV { text-align:right; min-width:0; overflow-wrap:anywhere; }
+.sySvc { display:flex; align-items:center; gap:calc(3 * var(--vw)); padding:calc(2 * var(--vw)) 0; border-bottom:1px solid rgba(var(--fg-rgb),.08); }
+.sySvc:last-child { border-bottom:none; }
+.sySvcDot { flex:0 0 auto; width:10px; height:10px; border-radius:50%; background:rgba(var(--fg-rgb),.3); }
+.sySvcDot.on { background:var(--ok); }
+.sySvcDot.bad { background:var(--err); }
+.sySvcDot.busy { background:var(--warn); animation:sySvcPulse 1s ease-in-out infinite alternate; }
+@keyframes sySvcPulse { from { opacity:1; } to { opacity:.3; } }
+.sySvcText { flex:1 1 auto; min-width:0; }
+.sySvcName { font-size:calc(3.5 * var(--vw)); font-weight:600; }
+.sySvcState { font-size:calc(3 * var(--vw)); color:rgba(var(--fg-rgb),.6); margin-top:2px; }
+.sySvcState.syWarn { color:var(--err); }
+.sySvcBtns { flex:0 0 auto; display:flex; gap:calc(2 * var(--vw)); }
+.sySvcBtn.off { opacity:.4; pointer-events:none; }
+.sySvcList + .syNote:empty { display:none; }
+.sySvcLogin { margin-top:calc(2 * var(--vw)); }
+.sySvcLoginRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); margin-top:calc(1.5 * var(--vw)); flex-wrap:wrap; }
+.sySvcPw { flex:1 1 10em; min-width:0; font:inherit; font-size:16px; color:var(--fg); background:rgba(var(--fg-rgb),.08);
+  border:1px solid rgba(var(--fg-rgb),.2); border-radius:999px; padding:6px 14px; outline:none; }
+.sySvcPw:focus { border-color:var(--accent, var(--fg)); }
+button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .syPath { font-size:calc(3 * var(--vw)); overflow-wrap:anywhere; margin-top:calc(1 * var(--vw)); color:rgba(var(--fg-rgb),.8); -webkit-user-select:text; user-select:text; }
 @media (min-width:700px) {
-  .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath { font-size:13px; } .syBig { font-size:30px; } .syDiskHead { font-size:15px; }
+  .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath, .sySvcState { font-size:13px; } .syBig { font-size:30px; } .syDiskHead, .sySvcName { font-size:15px; }
 }
 
 /* Antippbare Zeilen in allen Listen gleich: mit der Maus hinterlegt, beim Tippen kurz hinterlegt

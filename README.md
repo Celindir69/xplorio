@@ -104,7 +104,7 @@ Fortschritt der Stimmungs-Tags.
 ### Weiteres
 - Begrüßung beim Öffnen: Album des Tages, Album-Geburtstage (runde und Jubiläen hervorgehoben), zuletzt gehörte und neue
   Alben, Zufallsmix; Geburtstage, zuletzt gehört und neu auch unter Entdecken.
-- Menü hinter dem Zahnrad oben rechts: Begrüßungsschirm, Verlauf und Statistik, Bibliothek prüfen, System (Prozessorlast, Temperatur, Speicher, Laufwerke), Bibliothek aktualisieren und die
+- Menü hinter dem Zahnrad oben rechts: Begrüßungsschirm, Verlauf und Statistik, Bibliothek prüfen, System (Prozessorlast, Temperatur, Speicher, Laufwerke, Dienste mit Neustart), Bibliothek aktualisieren und die
   originale Volumio-Oberfläche (Durchsuchen, Warteschlange, Einstellungen, Plugins, System = Volumios Seite /dev) und eine Hilfe zur Bedienung; unten Logo, eingespielter Stand und Lizenz.
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
 - Deutsch und Englisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`

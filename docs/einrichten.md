@@ -53,6 +53,7 @@ Danach auf dem Player:
 | `sudo xplorio-deploy -n <branch>` | nur zeigen, was sich ändern würde |
 | `sudo xplorio-deploy -y <branch>` | ohne Rückfrage |
 | `sudo xplorio-deploy --rollback` | letzte Sicherung wiederherstellen (mehrmals: Schritt für Schritt weiter zurück) |
+| `sudo xplorio-deploy --passwort` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
 
 Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
@@ -217,6 +218,38 @@ jedes Laufwerks (interne Karte, USB und jede Verbindung unter `/mnt/NAS/` einzel
 „nicht erreichbar“ da), Volumio-Version, Kernel, Laufzeit und die gerade gespielte Datei. Die Werte liest der Tag-Dienst aus
 `/proc`, `/sys` und `df`; er misst alle 2 Sekunden (eine kleine Datei, ohne spürbare Last) und sichert den Verlauf alle
 10 Minuten in `/data/xplorio/data/sysinfo.json`.
+
+#### Dienste
+Darunter die Karte „Dienste“: Volumio, MPD, Tag-Dienst, Rotel-Steuerung und Kiosk mit Zustand (läuft seit …, gestoppt,
+Fehler) und einem Knopf „Neustart“, beim Kiosk zusätzlich „Start“ und „Stopp“ (etwa, damit er nur läuft, wenn der Fernseher
+angeschlossen ist). Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht eingerichtet sind, fehlen in
+der Liste. Der Tag-Dienst läuft als Benutzer `volumio` und darf genau diese Befehle nur mit einer sudo-Regel ausführen;
+ohne sie zeigt die Karte den Zustand und einen Hinweis. Einmalig einrichten (`visudo` prüft die Regel vor dem Speichern):
+
+```
+sudo visudo -f /etc/sudoers.d/xplorio-dienste
+```
+
+und diese eine Zeile eintragen:
+
+```
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk
+```
+
+Die Regel erlaubt nur diese Befehle, nichts sonst.
+
+Die Knöpfe sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
+
+```
+sudo xplorio-deploy --passwort
+```
+
+Gespeichert wird nur ein Hash (PBKDF2 mit Salt) in `/data/xplorio/data/admin.json`; derselbe Befehl ändert es und meldet
+alle Geräte ab. Beim ersten Tipp auf einen Knopf fragt die Seite nach dem Passwort, danach bleibt das Gerät (der Browser)
+30 Tage angemeldet. Nach 5 falschen Versuchen wartet der Dienst, bei jedem weiteren doppelt so lange (höchstens 15 Minuten).
+Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, schützt aber nicht vor Mitlesen im eigenen Netz,
+also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
+und ausschalten.
 
 ### Verlauf und Statistik
 Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** gespielt (nach Tagen), **Meistgespielt** (Titel, Alben, Künstler oder Genres;
