@@ -1,11 +1,11 @@
 /* Protokolle für die Seite „System“: letzte Zeilen aus dem Journal (Volumio, MPD, Tag-Dienst) und aus den
-   Protokolldateien der Plugins AutoDJ und Smart Playlists. Nur die Quellen aus SOURCES, nur 100 oder 300 Zeilen.
+   Protokolldateien der Plugins AutoDJ und Smart Playlists. Nur die Quellen aus SOURCES, nur 50, 100 oder 300 Zeilen.
    Das Journal kann der Benutzer volumio nur lesen, wenn er in der Gruppe systemd-journal ist (Anleitung:
    docs/einrichten.md, „Protokolle“); sonst meldet die Quelle „nojournal“. Node 8, nur ES5.
    opts: run (Ersatz für execFile), files ({autodj, smartplaylists}: andere Pfade, Tests) */
 var fs = require('fs'), cp = require('child_process');
 
-var JOURNALCTL = '/bin/journalctl', TIMEOUT = 8000, LINES = [100, 300], MAX_LINE = 2000, TAIL_BYTES = 256 * 1024;
+var JOURNALCTL = '/bin/journalctl', TIMEOUT = 8000, LINES = [50, 100, 300], MAX_LINE = 2000, TAIL_BYTES = 256 * 1024;
 var SOURCES = [
   {id: 'volumio',        unit: 'volumio'},
   {id: 'mpd',            unit: 'mpd'},

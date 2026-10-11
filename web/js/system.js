@@ -505,7 +505,7 @@ function sysSvcRun(u, action) {
 }
 
 /* ---------- Protokolle ---------- */
-var sysLog = {src: '', filter: '', focus: false, n: 100, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
+var sysLog = {src: '', filter: '', focus: false, n: 50, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
 function sysLogAtBottom(b) { return b.scrollTop + b.clientHeight >= b.scrollHeight - 24; }
 function sysLogLoad() {
   var seq = sysSeq, src = sysLog.src, token = sysSvcToken() || sysSvcMem;
@@ -534,7 +534,7 @@ function sysPaintLogCtl() {
   var e = sysEls;
   if (!e || !e.logCtl) return;
   while (e.logCtl.firstChild) e.logCtl.removeChild(e.logCtl.firstChild);
-  [100, 300].forEach(function(n){
+  [50, 100, 300].forEach(function(n){
     var c = histEl('div', 'mxChip mxSmall' + (sysLog.n === n ? ' on' : ''), T('sys.log.lines', {n: n}));
     c.addEventListener('click', function(){ if (sysLog.n === n) return; sysLog.n = n; sysLog.bottom = true; sysLogLoad(); });
     e.logCtl.appendChild(c);
