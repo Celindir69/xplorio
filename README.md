@@ -21,7 +21,7 @@ Entwickelt mit KI (Claude code https://claude.ai)
 
 ### Wiedergabe, Lyrics und Infos
 Großes Cover, Titel und Album, Abzeichen für die Klangqualität (Hi-Res, Abtastrate, Bittiefe, Format), Fortschritt,
-Lautstärke und die üblichen Knöpfe. Die Hintergrundfarbe und der Akzent kommen aus dem Cover. Lyrics laufen synchron mit
+Lautstärke und die üblichen Knöpfe. Die Hintergrundfarbe und der Akzent kommen aus dem Cover (nur bei Covern vom Player selbst; bei Streamingdiensten bleibt die Standardfarbe, weil der Browser deren Cover nicht auslesen darf). Lyrics laufen synchron mit
 (lrclib.net); passt der Text nicht genau zur Aufnahme, verschieben „−“ und „+“ ihn in Schritten von 0,5 s, und der Wert
 gilt dann für diesen Titel auf allen Geräten. Die Info-Seite zeigt Album, Künstler, Mitwirkende und was von diesem
 Künstler in der Sammlung liegt. Verlinkte Mitwirkende (Personen, Studios, Labels) klappen beim Antippen ihre eigenen

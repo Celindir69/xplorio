@@ -21,7 +21,7 @@ Developed using AI (Claude code https://claude.ai)
 ### Playback, Lyrics, and Information
 
 Large cover art, track and album information, badges for audio quality (Hi-Res, sample rate, bit depth, format), progress,
-volume, and the usual controls. The background color and accent are derived from the cover art. Lyrics are synchronized
+volume, and the usual controls. The background color and accent are derived from the cover art (only for covers served by the player itself; streaming services keep the default color, since the browser may not read their covers). Lyrics are synchronized
 (lrclib.net); if the lyrics do not perfectly match the recording, "−" and "+" shift them in 0.5-second increments, and the
 offset then applies to that track on all devices. The information page shows the album, artist, contributors, and which
 releases by that artist are available in the collection. Tapping a linked contributor (person, studio, label) expands
