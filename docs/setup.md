@@ -192,12 +192,16 @@ sudo visudo -f /etc/sudoers.d/xplorio-dienste
 and add this single line:
 
 ```
-volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk, /sbin/reboot, /sbin/poweroff
 ```
 
 The rule allows only these commands, nothing else.
 
-The buttons are also protected by a password and stay locked until one is set:
+Below the services are "Restart" and "Shut down" for the whole player, each with a confirmation. If a password is set (see
+below), they ask for it too; otherwise not, since Volumio itself offers both without a password. They use `/sbin/reboot`
+and `/sbin/poweroff` like Volumio; the sudo rule above includes both.
+
+The service buttons are also protected by a password and stay locked until one is set:
 
 ```
 sudo xplorio-deploy --passwort

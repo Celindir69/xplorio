@@ -4,7 +4,7 @@ var sv = require('../tags/services.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function ta(name, fn) { fn(function(){ n++; console.log('ok   ' + name); }); }
-process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 6, 'nicht alle Prüfungen fertig'); console.log(n + ' Prüfungen'); } });
+process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 7, 'nicht alle Prüfungen fertig'); console.log(n + ' Prüfungen'); } });
 
 var SHOW = [
   'Id=volumio.service', 'LoadState=loaded', 'ActiveState=active', 'SubState=running', 'ActiveEnterTimestampMonotonic=1000000000', '',
@@ -89,5 +89,25 @@ ta('eigener Neustart: erst Antwort, dann Befehl; ohne sudo-Recht gleich nosudo',
         done();
       });
     }, 400);
+  });
+});
+
+ta('Player neu starten/ausschalten: nur reboot und poweroff, erst Antwort, dann Befehl', function(done){
+  var calls = [];
+  var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(null, ''); }});
+  s.power('rm', function(c){
+    assert.strictEqual(c, 400);
+    s.power('toString', function(c1){
+      assert.strictEqual(c1, 400);
+      s.power('reboot', function(c2, o){
+        assert.ok(o.ok);
+        assert.deepStrictEqual(calls, ['sudo -n -l /sbin/reboot']);
+        setTimeout(function(){
+          assert.strictEqual(calls[1], 'sudo -n /sbin/reboot');
+          var s2 = new sv.Services({root: root, run: function(f, a, cb){ cb(new Error('nein'), ''); }});
+          s2.power('poweroff', function(c3, o3){ assert.strictEqual(o3.error, 'nosudo'); done(); });
+        }, 600);
+      });
+    });
   });
 });

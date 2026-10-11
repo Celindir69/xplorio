@@ -12,7 +12,7 @@ function openSystem() {
   closeAllOverlays();
   overlaySystem.classList.add('on');
   sysSeq++;
-  sysEls = null; sysSvcPending = null;
+  sysEls = null; sysSvcPending = null; sysSvcBusy = {}; sysSvcMsg = '';
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
   sysBody.appendChild(browseNote(T('hist.loading')));
   sysFull();
@@ -352,6 +352,21 @@ function sysPaintSvc() {
     row.appendChild(btns);
     e.svc.appendChild(row);
   });
+  /* der ganze Player: Neustart und Ausschalten (mit Passwort nur, wenn eines festgelegt ist) */
+  var pr = histEl('div', 'sySvc sySvcPlayer'), pb = sysSvcBusy.player;
+  pr.appendChild(histEl('span', 'sySvcDot ' + (pb ? 'busy' : 'on')));
+  var pt = histEl('div', 'sySvcText');
+  pt.appendChild(histEl('div', 'sySvcName', T('sys.power.name')));
+  pt.appendChild(histEl('div', 'sySvcState', pb ? T('sys.power.busy.' + pb) : sysData && sysData.uptime ? T('sys.svc.since', {d: sysDuration(sysData.uptime)}) : T('sys.svc.running')));
+  pr.appendChild(pt);
+  var pbs = histEl('div', 'sySvcBtns');
+  ['reboot', 'poweroff'].forEach(function(a){
+    var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (pb ? ' off' : ''), T('sys.power.do.' + a));
+    b.addEventListener('click', function(){ sysSvcAct({id: 'player'}, a); });
+    pbs.appendChild(b);
+  });
+  pr.appendChild(pbs);
+  e.svc.appendChild(pr);
   var note = sysSvcMsg || [sysSvc.pw ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
   e.svcNote.textContent = note;
   e.svcNote.className = 'syNote' + (note ? ' syWarn' : '');
@@ -411,17 +426,17 @@ function sysSvcAskLogin(u, action) {
 }
 function sysSvcAct(u, action) {
   if (sysSvcBusy[u.id]) return;
-  var ask = action === 'start' ? '' : action === 'stop' ? T('sys.svc.askStop.' + u.id) : T('sys.svc.ask.' + u.id);
+  var ask = u.id === 'player' ? T('sys.power.ask.' + action) : action === 'start' ? '' : action === 'stop' ? T('sys.svc.askStop.' + u.id) : T('sys.svc.ask.' + u.id);
   if (ask && !window.confirm(ask)) return;
   sysSvcRun(u, action);
 }
 function sysSvcRun(u, action) {
-  var token = sysSvcToken() || sysSvcMem;
-  if (!token) return sysSvcAskLogin(u, action);
+  var token = sysSvcToken() || sysSvcMem, player = u.id === 'player';
+  if (!token && (!player || sysSvc.pw)) return sysSvcAskLogin(u, action);
   var seq = sysSeq;
-  sysSvcBusy[u.id] = true; sysSvcMsg = '';
+  sysSvcBusy[u.id] = player ? action : true; sysSvcMsg = '';
   sysPaintSvc();
-  tagPostJson('/service', {unit: u.id, action: action, token: token}).then(function(r){
+  tagPostJson(player ? '/power' : '/service', player ? {action: action, token: token} : {unit: u.id, action: action, token: token}).then(function(r){
     if (seq !== sysSeq) return;
     if (r && r.error === 'auth') {                         /* abgelaufen oder neues Passwort: neu anmelden */
       delete sysSvcBusy[u.id];
@@ -432,6 +447,12 @@ function sysSvcRun(u, action) {
       delete sysSvcBusy[u.id];
       sysSvcMsg = r && r.error === 'nosudo' ? T('sys.svc.nosudo') : r && r.error === 'unset' ? T('sys.svc.nopw') : T('sys.svc.error');
       return sysPaintSvc();
+    }
+    if (player) {                                          /* Player fährt herunter; nach einem Neustart in 1 und 2 Minuten neu laden */
+      if (action === 'reboot') [60000, 120000].forEach(function(ms){
+        sysSvcTimers.push(setTimeout(function(){ if (seq === sysSeq) { delete sysSvcBusy.player; sysFull(); } }, ms));
+      });
+      return;
     }
     if (r.self) {                                          /* der Tag-Dienst startet sich selbst neu: kurz warten, dann alles neu laden */
       return sysSvcTimers.push(setTimeout(function(){ if (seq === sysSeq) { delete sysSvcBusy[u.id]; sysFull(); } }, 6000));

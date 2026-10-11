@@ -1115,6 +1115,11 @@ function doService(body, cb) {
   if (!adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   svc.act(String(body.unit || ''), String(body.action || ''), 'tag-service', cb);
 }
+/* POST /power {action: reboot|poweroff, token}: Passwort nur, wenn eines festgelegt ist (Volumio selbst fragt nie) */
+function doPower(body, cb) {
+  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  svc.power(String(body.action || ''), cb);
+}
 function doServiceLogin(body, cb) {
   adminAuth.login(String(body.password || '').slice(0, 200), Date.now(), function(r){ cb(200, r); });
 }
@@ -1385,7 +1390,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/playback'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1393,7 +1398,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'Ungültiges JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/playback': doPlaybackSet}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/playback': doPlaybackSet}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('Anfrage ' + route + ' gescheitert: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'interner Fehler'}); }
   });
