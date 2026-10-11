@@ -5,6 +5,7 @@
 var fs     = require('fs');
 var path   = require('path');
 var plays  = require('./plays.js');
+var jsonl  = require('./jsonl.js');
 var lastfm = require('./lastfm.js');
 
 var MAPPING = require('./mood/lastfm_mapping.json');
@@ -92,21 +93,17 @@ function mainArtist(ar) { return String(ar || '').split(/\s+(?:feat\.?|ft\.?|fea
 function artistKey(ar) { return plays.norm(mainArtist(ar)); }
 
 function readJsonl(file, into) {
-  var txt = '';
-  try { txt = fs.readFileSync(file, 'utf8'); } catch (e) { return; }
-  txt.split('\n').forEach(function(l){
-    if (!l) return;
-    try { var o = JSON.parse(l); if (o && o.k) into[o.k] = o; } catch (x) { /* kaputte Zeile */ }
-  });
+  jsonl.eachLine(file, function(l){ var o = jsonl.parse(l); if (o && o.k) into[o.k] = o; });   /* kaputte Zeilen fallen weg */
 }
 
 /* opts: dir, libFile (Titelliste [[Künstler, Titel, Datei], …]), getCfg() -> {key}, playing(cb(true/false));
    audio: essentia.Store (Audio-Analyse vom Mac), optional;
+   libRaw() -> {m: Änderungszeit, list: Titelliste}, optional: schon gelesene Liste statt libFile selbst zu lesen;
    stepMs, idleMs, waitMs, backoffMs nur für Tests */
 function Collector(opts) {
   this.t = {step: opts.stepMs || STEP_MS, idle: opts.idleMs || IDLE_MS, wait: opts.waitMs || WAIT_MS, backoff: opts.backoffMs || BACKOFF_MS};
   this.dir = opts.dir; this.libFile = opts.libFile; this.getCfg = opts.getCfg; this.playing = opts.playing;
-  this.audio = opts.audio || null;
+  this.audio = opts.audio || null; this.libRaw = opts.libRaw || null;
   this.tracks = {}; this.artists = {}; this.lib = null; this.libAt = 0;
   this.pos = 0; this.timer = null; this.running = false; this.state = 'aus'; this.error = null;
   this.lastIdleCheck = 0; this.idle = false; this.fetched = 0; this.summaryCache = null; this.doneLib = 0;
@@ -115,12 +112,20 @@ function Collector(opts) {
 }
 
 Collector.prototype.loadLib = function() {
-  var st = null;
-  try { st = fs.statSync(this.libFile); } catch (e) { return this.lib || []; }
-  if (this.lib && st.mtime.getTime() === this.libAt) return this.lib;
-  var list = [], seen = {};
+  var raw = null, m = 0;
+  if (this.libRaw) {                                   /* Liste des Dienstes mitbenutzen: die Texte nur einmal im Speicher */
+    raw = this.libRaw();
+    if (!raw || !Array.isArray(raw.list)) return this.lib || [];
+    m = raw.m;
+  } else {
+    var st = null;
+    try { st = fs.statSync(this.libFile); } catch (e) { return this.lib || []; }
+    m = st.mtime.getTime();
+  }
+  if (this.lib && m === this.libAt) return this.lib;
+  var list = [], seen = {}, libFile = this.libFile;
   try {
-    JSON.parse(fs.readFileSync(this.libFile, 'utf8')).forEach(function(p){
+    (raw ? raw.list : JSON.parse(fs.readFileSync(libFile, 'utf8'))).forEach(function(p){
       if (!p || !p[0] || !p[1]) return;
       var k = trackKey(p[0], p[1]);
       if (seen[k]) return;
@@ -128,7 +133,7 @@ Collector.prototype.loadLib = function() {
       list.push({ar: p[0], ti: p[1], k: k, f: p[2] || '', d: p[3] || 0, al: p[4] || '', ge: p[5] || ''});
     });
   } catch (e) { return this.lib || []; }
-  this.lib = list; this.libAt = st.mtime.getTime(); this.pos = 0; this.summaryCache = null;
+  this.lib = list; this.libAt = m; this.pos = 0; this.summaryCache = null;
   return list;
 };
 

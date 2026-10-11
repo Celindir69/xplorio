@@ -205,7 +205,7 @@ t('--tag-service ohne Dateien: spielt erst main ein, dann Dienstdatei und Dateno
   assert.ok(/installing main first/.test(r.stdout) && /Installed to/.test(r.stdout), r.stdout);
   assert.ok(fs.existsSync(path.join(RS, 'data/xplorio/tags/tag-service.js')));
   var u = rd('etc/systemd/system/tag-service.service');
-  assert.ok(/ExecStart=\/usr\/bin\/env node \/data\/xplorio\/tags\/tag-service.js/.test(u) && /WorkingDirectory=\/data\/xplorio\/tags/.test(u), u);
+  assert.ok(/ExecStart=\/usr\/bin\/env node --max-old-space-size=256 --optimize-for-size \/data\/xplorio\/tags\/tag-service.js/.test(u) && /WorkingDirectory=\/data\/xplorio\/tags/.test(u), u);
   assert.ok(/User=volumio/.test(u) && /WantedBy=multi-user.target/.test(u) && !/APP_CONFIG_DIR/.test(u), u);
   assert.ok(/\(test\) enable and restart tag-service/.test(r.stdout), r.stdout);
   assert.strictEqual(fs.statSync(path.join(RS, 'data/xplorio/data')).mode & 511, 448);
@@ -219,7 +219,7 @@ t('--tag-service ein zweites Mal: bleibt, wie es ist', function(){
 t('--tag-service --force schreibt die Dienstdatei neu, --rollback holt die alte zurück', function(){
   var r = shs(['--tag-service', '--force']);
   assert.ok(/Backup: backup-/.test(r.stdout) && /tag-service.service written/.test(r.stdout), r.stdout);
-  assert.ok(/node \/data\/xplorio\/tags\/tag-service.js/.test(rd('etc/systemd/system/tag-service.service')));
+  assert.ok(/node --max-old-space-size=256 --optimize-for-size \/data\/xplorio\/tags\/tag-service.js/.test(rd('etc/systemd/system/tag-service.service')));
   var o = shs(['--rollback']).stdout;
   assert.ok(/restart tag-service/.test(o), o);
   assert.strictEqual(rd('etc/systemd/system/tag-service.service'), 'eigen\n');
