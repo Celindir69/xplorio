@@ -112,6 +112,12 @@ function fmtTime(s) {
 
 var bg       = document.getElementById('bg');
 var cover    = document.getElementById('cover');
+/* nicht quadratische Cover (z. B. ein Foto im Querformat): Klasse am Rahmen, damit das Bild ins Quadrat passt */
+cover.addEventListener('load', function(){
+  var r = cover.naturalHeight ? cover.naturalWidth / cover.naturalHeight : 1, w = cover.parentNode;
+  w.classList.toggle('arWide', r > 1.03);
+  w.classList.toggle('arTall', r < 0.97);
+});
 var mTitle   = document.getElementById('mTitle');
 var mArtist  = document.getElementById('mArtist');
 var mAlbum   = document.getElementById('mAlbum');

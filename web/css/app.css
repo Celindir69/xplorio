@@ -12,6 +12,10 @@
   max-width:360px; max-height:360px; }
   #cover { width:100%; height:100%; object-fit:contain;
     border-radius:calc(3 * var(--vw)); box-shadow:0 calc(4 * var(--vw)) calc(10 * var(--vw)) rgba(0,0,0,.8); }
+  /* Cover, die nicht quadratisch sind (core.js setzt arWide/arTall): passen ins Quadrat, Schatten und Ecken am Bild */
+  #coverWrap { display:flex; align-items:center; justify-content:center; }
+  html:not(.stage) #coverWrap.arWide #cover { width:100%; height:auto; }
+  html:not(.stage) #coverWrap.arTall #cover { width:auto; height:100%; }
 #meta { flex:0 0 auto; width:90%; text-align:center;
   padding:0 calc(4 * var(--vw)); margin-bottom:3vh; }
 
@@ -477,7 +481,7 @@
       padding-right:max(env(safe-area-inset-right,0px),12px);
       padding-top:0; justify-content:flex-start; gap:calc(3 * var(--vw)); }
     #topSpacer { display:none; }
-    #coverWrap { flex:0 0 auto; margin:0; width:auto; height:88vh; height:88dvh;
+    #coverWrap { flex:0 0 auto; margin:0; width:88vh; height:88vh; width:88dvh; height:88dvh;
       max-width:none; max-height:none; }
     #cover { width:auto; height:100%; border-radius:calc(2 * var(--vw)); }
     #rightPane { flex:1 1 auto; min-width:0; display:flex;
@@ -513,7 +517,8 @@
     #app { padding-left:max(env(safe-area-inset-left,0px), calc((100vw - 1500px) / 2), 28px);
       padding-right:max(env(safe-area-inset-right,0px), calc((100vw - 1500px) / 2), 28px);
       gap:clamp(24px, 4vw, 72px); }
-    #coverWrap { height:min(84vh, 46vw, calc(100vh - 80px)); height:min(84dvh, 46vw, calc(100dvh - 80px)); }
+    #coverWrap { width:min(84vh, 46vw, calc(100vh - 80px)); height:min(84vh, 46vw, calc(100vh - 80px));
+      width:min(84dvh, 46vw, calc(100dvh - 80px)); height:min(84dvh, 46vw, calc(100dvh - 80px)); }
     #rightPane { max-width:700px; }
     #cRepeat .badge { font-size:11px; top:-5px; left:calc(100% - 9px); }
     #actions { justify-content:space-between; gap:0; }
