@@ -1,4 +1,4 @@
-# Xplorio: Entdecke deine Musik neu
+# Xplorio: Entdecke deine Musik
 
 *Die Musiksammlung, die du schon hast, ist größer als die, die du hörst.*
 
