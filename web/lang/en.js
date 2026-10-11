@@ -278,7 +278,7 @@ langRegister('en', 'English', {
   'pb.ampMute': 'Mute',
   'pb.ampSource': 'Input',
   'pb.ampBypass': 'Tone bypass',
-  'pb.ampBypassNote': 'While tone bypass is on, bass and treble have no effect.',
+  'pb.ampBypassNote': 'Bass and treble disabled',
   'pb.ampBass': 'Bass',
   'pb.ampTreble': 'Treble',
   'pb.ampZero': '0',
