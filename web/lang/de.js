@@ -251,7 +251,7 @@ langRegister('de', 'Deutsch', {
   'about.3.volumio': 'nicht enthalten: Xplorio läuft auf Volumio (GPL-3.0); socket.io (MIT) und die Schrift kommen vom Player',
   'about.3.essentia': 'nicht enthalten: das Analyse-Werkzeug auf dem Mac nutzt Essentia (AGPL-3.0) und dessen Modelle (CC BY-NC-SA 4.0, nur nicht-kommerziell)',
   'about.3.services': 'Daten, Cover, Lyrics und Senderlogos kommen von diesen Diensten und unterliegen deren Bedingungen',
-  'about.claim': 'Entdecke deine Musik neu',
+  'about.claim': 'Entdecke deine Musik',
   'about.version': 'Stand {v}',
   'about.dev': 'Entwicklungsstand',
   'about.license': 'MIT-Lizenz',
