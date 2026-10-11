@@ -428,6 +428,8 @@ langRegister('en', 'English', {
   'sys.log.live': 'Live',
   'sys.log.refresh': 'Refresh',
   'sys.log.pick': 'Tap a source to see its latest lines.',
+  'sys.log.filter': 'Filter lines, e.g. error',
+  'sys.log.match': '{n} of {all} lines',
   'sys.log.empty': 'No entries.',
   'sys.log.nojournal': 'The tag service is not yet allowed to read the journal. See "Logs" in the setup guide.',
   'sys.log.missing': 'This log does not exist yet.',

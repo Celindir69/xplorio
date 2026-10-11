@@ -426,6 +426,8 @@ langRegister('de', 'Deutsch', {
   'sys.log.live': 'Live',
   'sys.log.refresh': 'Aktualisieren',
   'sys.log.pick': 'Eine Quelle antippen, um die letzten Zeilen zu sehen.',
+  'sys.log.filter': 'Zeilen filtern, z. B. error',
+  'sys.log.match': '{n} von {all} Zeilen',
   'sys.log.empty': 'Keine Einträge.',
   'sys.log.nojournal': 'Der Tag-Dienst darf das Journal noch nicht lesen. Wie das geht, steht in der Anleitung unter „Protokolle“.',
   'sys.log.missing': 'Dieses Protokoll gibt es noch nicht.',
