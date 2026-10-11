@@ -390,7 +390,7 @@ Controls a network-connected Rotel amplifier: power, volume and the remote contr
 sudo xplorio-deploy --rotel 192.168.1.50
 ```
 
-If needed it first deploys `main`, then adds `ROTEL = true` and `ROTEL_HOST` to `web/config.local.js` (only if there is no `ROTEL_HOST` yet, after a backup; without an address it asks for one), creates `/etc/systemd/system/rotel-bridge.service` with the right folder (`www`, `www3` or `www4`), starts the bridge and reports `rotel-bridge is running: connected to the amplifier`. If the bridge is already set up, the command changes nothing and says so; `--force` rewrites the unit file (with a backup). Your own entries in `config.local.js` stay untouched.
+If needed it first deploys `main`, then adds `ROTEL = true` and `ROTEL_HOST` to `web/config.local.js` (only if there is no `ROTEL_HOST` yet, after a backup; without an address it asks for one), creates `/etc/systemd/system/rotel-bridge.service` with the right folder (`www`, `www3` or `www4`), starts the bridge and reports `rotel-bridge is running: connected to the amplifier`. If the bridge is already set up, the command changes nothing and says so; `--force` rewrites the unit file (with a backup). Your own entries in `config.local.js` stay untouched. If one of the www folders already has an address, the command does not ask and leaves the other folders as they are too.
 
 **Entered the wrong address?** `sudo xplorio-deploy --rotel <correct IP> --force` replaces `ROTEL_HOST` (after a backup) and restarts the bridge. Without an IP the command asks for the new address; Enter keeps the old one.
 
