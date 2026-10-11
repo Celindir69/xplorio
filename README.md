@@ -113,7 +113,7 @@ Fortschritt der Stimmungs-Tags.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 
   (Was auf meinem MX-Stream, aufgrund eines Session-Timeouts, etwa nach 4 Stunden ohne Tidal-Nutzung auftritt.)
 - `xplorio-deploy`: aktualisiert direkt auf dem Player aus diesem Repository, mit Sicherung und `--rollback`; gleich auf
-  Volumio 3 und 4.
+  Volumio 3 und 4. Richtet auf Wunsch auch Tag-Dienst (`--tag-service`) und Rotel-Bridge (`--rotel <IP>`) ein.
 
 ## Aufbau
 

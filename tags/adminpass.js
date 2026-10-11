@@ -1,7 +1,7 @@
 /* Passwort für die Dienste auf der Seite „System“ (Neustart, Start, Stopp). Node 8, nur ES5.
    In admin.json im Datenordner steht nur ein Hash (PBKDF2-SHA256 mit Salt), dazu die Anmeldungen der Geräte als
    SHA-256 ihres Schlüssels mit Ablaufdatum (30 Tage). Ohne Passwort bleiben die Knöpfe gesperrt.
-   Festlegen: sudo xplorio-deploy --passwort (ruft diese Datei auf); ein neues Passwort meldet alle Geräte ab.
+   Festlegen: sudo xplorio-deploy --password (ruft diese Datei auf); ein neues Passwort meldet alle Geräte ab.
    Nach 5 falschen Versuchen wartet der Dienst, bei jedem weiteren doppelt so lange (höchstens 15 min). */
 var fs = require('fs'), path = require('path'), crypto = require('crypto');
 
@@ -66,22 +66,22 @@ Auth.prototype.check = function(token, now) {
   return (j.tokens || []).some(function(t){ return t.exp > now && same(t.h, h); });
 };
 
-/* Kommandozeile: node adminpass.js [Datenordner] -> Passwort zweimal verdeckt abfragen */
+/* command line: node adminpass.js [data folder] -> asks for the password twice, hidden (output in English like xplorio-deploy) */
 if (require.main === module) {
   var dir = process.argv[2] || '/data/xplorio/data', auth = new Auth(dir);
   var tty = !!process.stdin.isTTY, muted = false;
   var rl = require('readline').createInterface({input: process.stdin, output: process.stdout, terminal: tty});
   rl._writeToOutput = function(s){ if (!muted) rl.output.write(s); else if (/[\r\n]/.test(s)) rl.output.write('\n'); };
   var ask = function(q, cb){ muted = false; rl.question(q, function(x){ cb(x); }); muted = true; };
-  console.log('Passwort für Neustart, Start und Stopp der Dienste (Seite „System“), mindestens ' + MIN_LEN + ' Zeichen.');
-  console.log('Die Verbindung ist unverschlüsselt: kein Passwort nehmen, das anderswo verwendet wird.');
-  ask('Neues Passwort: ', function(a){
-    ask('Noch einmal: ', function(b){
+  console.log('Password for restarting, starting and stopping the services ("System" page), at least ' + MIN_LEN + ' characters.');
+  console.log('The connection is not encrypted: do not use a password you use anywhere else.');
+  ask('New password: ', function(a){
+    ask('Repeat: ', function(b){
       rl.close();
-      if (a !== b) { console.error('Die Eingaben sind verschieden, nichts geändert.'); process.exit(1); }
+      if (a !== b) { console.error('The entries differ, nothing changed.'); process.exit(1); }
       try { auth.setPassword(a); }
-      catch (e) { console.error(e.message === 'zu kurz' ? 'Zu kurz, nichts geändert.' : 'Nicht gespeichert: ' + e.message); process.exit(1); }
-      console.log('Gespeichert in ' + auth.file + '. Alle Geräte müssen sich neu anmelden.');
+      catch (e) { console.error(e.message === 'zu kurz' ? 'Too short, nothing changed.' : 'Not saved: ' + e.message); process.exit(1); }
+      console.log('Saved to ' + auth.file + '. All devices have to log in again.');
     });
   });
 }

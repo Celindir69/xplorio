@@ -122,7 +122,7 @@ progress of the mood tags.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)
 - `xplorio-deploy`: updates the player directly from this repository, with backups and `--rollback`; the same on
-  Volumio 3 and 4.
+  Volumio 3 and 4. It can also set up the Tag Service (`--tag-service`) and the Rotel bridge (`--rotel <IP>`).
 
 ## Structure
 
