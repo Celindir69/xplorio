@@ -1,9 +1,9 @@
 /* Kopie als web/config.local.js ablegen und anpassen (wird nicht ins Repository übernommen). */
 /* Last.fm-Key und -Secret gehören nicht hierher (diese Datei kann jeder Browser laden), sondern nach
    /data/xplorio/data/keys.json auf dem Player, siehe docs/einrichten.md, Abschnitt Last.fm-Zugang. */
-/* Sprache fest einstellen (sonst wie in Volumio eingestellt); eigene Sprachdatei web/lang/fr.js zusätzlich anmelden:
+/* Sprache fest einstellen (sonst wie in Volumio eingestellt); eigene Sprachdatei web/lang/nl.js zusätzlich anmelden:
 window.APP_CONFIG.LANGUAGE = 'en';
-window.APP_CONFIG.LANGUAGES = ['de', 'en', 'fr'];
+window.APP_CONFIG.LANGUAGES = ['de', 'en', 'fr', 'es', 'it', 'nl'];
 */
 /* Immer hell oder immer dunkel (sonst wie das Gerät):
 window.APP_CONFIG.THEME = 'light';

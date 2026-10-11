@@ -20,15 +20,15 @@ This also applies to the stage layout for large screens; only `kioskTV.html` alw
 
 ### Language
 
-The interface is available in German and English. It uses the language set in Volumio's settings, so the artist and
+The interface is available in German, English, French, Spanish and Italian. It uses the language set in Volumio's settings, so the artist and
 album information from Volumio matches it. On the very first visit the app does not know that language yet; it briefly
 shows the device (browser) language and reloads once. If the Volumio language is not available, the device language
-applies, otherwise English. To fix the language, set `LANGUAGE: 'de'` or `'en'` in `web/config.local.js`. For a quick test,
+applies, otherwise English. To fix the language, set e.g. `LANGUAGE: 'en'` (or `'de'`, `'fr'`, `'es'`, `'it'`) in `web/config.local.js`. For a quick test,
 `http://<player>/xplorio.html?lang=en` also works.
 
-Adding a language: copy `web/lang/en.js`, e.g. to `web/lang/fr.js`, adjust code, name and locale in the last line
-(`langRegister('fr', 'Français', {…}, 'fr-FR')`) and translate the texts; `{name}` are placeholders and stay as they are,
-`{one: …, other: …}` are singular and plural. Then add it in `web/config.local.js`: `LANGUAGES: ['de', 'en', 'fr']`.
+Adding a language: copy `web/lang/en.js`, e.g. to `web/lang/nl.js`, adjust code, name and locale in the last line
+(`langRegister('nl', 'Nederlands', {…}, 'nl-NL')`) and translate the texts; `{name}` are placeholders and stay as they are,
+`{one: …, other: …}` are singular and plural. Then add it in `web/config.local.js`: `LANGUAGES: ['de', 'en', 'fr', 'es', 'it', 'nl']`.
 Texts missing from the file are shown in English. `xplorio-deploy` leaves your own language files in `web/lang/` in place.
 Dates, numbers, month and weekday names come from the browser in the selected language.
 
@@ -40,7 +40,7 @@ service; these stay German.
 If Volumio cannot open the output device (e.g. amplifier or DAC switched off), the app briefly shows "Audio output not
 reachable" or "Audio output is busy"; the progress bar then stays at the start. When Volumio reports a disconnected
 device, "Audio output disconnected" appears instead of Volumio's confirmation window; "Audio output connected" only
-appears when Volumio reports the device coming back (USB DAC). Volumio's messages are recognised in German and English.
+appears when Volumio reports the device coming back (USB DAC). Volumio's messages are recognised in German, English, French, Spanish and Italian.
 
 ## Updating with xplorio-deploy
 

@@ -18,16 +18,16 @@ Fest einstellen: `THEME: 'light'` oder `'dark'` in `web/config.local.js`; zum Au
 Das gilt auch für die Bühnenansicht auf großen Bildschirmen; nur `kioskTV.html` bleibt immer dunkel.
 
 ### Sprache
-Die Oberfläche gibt es auf Deutsch und Englisch. Sie übernimmt die Sprache, die in Volumio unter Einstellungen eingestellt
+Die Oberfläche gibt es auf Deutsch, Englisch, Französisch, Spanisch und Italienisch. Sie übernimmt die Sprache, die in Volumio unter Einstellungen eingestellt
 ist; so passen auch die Künstler- und Albumtexte von Volumio dazu. Beim allerersten Aufruf kennt die App diese Sprache noch
 nicht, zeigt kurz die Sprache des Geräts (Browser) und lädt einmal neu. Ist die Volumio-Sprache nicht vorhanden, gilt die
-Gerätesprache, sonst Englisch. Fest einstellen: `LANGUAGE: 'de'` oder `'en'` in `web/config.local.js`. Zum Ausprobieren geht
+Gerätesprache, sonst Englisch. Fest einstellen: z. B. `LANGUAGE: 'de'` (oder `'en'`, `'fr'`, `'es'`, `'it'`) in `web/config.local.js`. Zum Ausprobieren geht
 auch `http://<player>/xplorio.html?lang=en`.
 
-Weitere Sprache: `web/lang/en.js` kopieren, z. B. als `web/lang/fr.js`, in der letzten Zeile Code, Namen und Locale
-anpassen (`langRegister('fr', 'Français', {…}, 'fr-FR')`) und die Texte übersetzen; `{name}` sind Platzhalter und bleiben
+Weitere Sprache: `web/lang/en.js` kopieren, z. B. als `web/lang/nl.js`, in der letzten Zeile Code, Namen und Locale
+anpassen (`langRegister('nl', 'Nederlands', {…}, 'nl-NL')`) und die Texte übersetzen; `{name}` sind Platzhalter und bleiben
 stehen, `{one: …, other: …}` sind Einzahl und Mehrzahl. Dann in `web/config.local.js` eintragen:
-`LANGUAGES: ['de', 'en', 'fr']`. Fehlt in der Datei ein Text, erscheint er englisch. `xplorio-deploy` lässt eigene
+`LANGUAGES: ['de', 'en', 'fr', 'es', 'it', 'nl']`. Fehlt in der Datei ein Text, erscheint er englisch. `xplorio-deploy` lässt eigene
 Sprachdateien in `web/lang/` stehen. Datum, Zahlen, Monats- und Wochentagsnamen kommen vom Browser in der gewählten Sprache.
 
 Nicht übersetzt werden Texte, die Volumio selbst liefert (z. B. Menünamen beim Durchsuchen), und Fehlermeldungen des
@@ -37,7 +37,7 @@ Tag-Dienstes; die bleiben deutsch.
 Kann Volumio das Ausgabegerät nicht öffnen (z. B. Verstärker oder DAC aus), zeigt die App kurz „Audioziel nicht
 erreichbar“ bzw. „Audioziel ist belegt“; der Fortschrittsbalken bleibt dann am Anfang. Meldet Volumio ein getrenntes
 Gerät, erscheint „Audioziel getrennt“ statt Volumios Fenster mit Bestätigung; „Audioziel verbunden“ gibt es nur, wenn
-Volumio die Rückkehr meldet (USB-DAC). Erkannt werden Volumios Meldungen auf Deutsch und Englisch.
+Volumio die Rückkehr meldet (USB-DAC). Erkannt werden Volumios Meldungen auf Deutsch, Englisch, Französisch, Spanisch und Italienisch.
 
 ## Aktualisieren mit xplorio-deploy
 Einmal einrichten:

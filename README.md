@@ -107,7 +107,7 @@ Fortschritt der Stimmungs-Tags.
 - Menü hinter dem Zahnrad oben rechts: Begrüßungsschirm, Verlauf und Statistik, Bibliothek prüfen, Wiedergabe (Crossfade, Lautstärke angleichen, Rotel-Fernbedienung), System (Prozessorlast, Temperatur, Speicher, Laufwerke, Dienste mit Neustart, Player neu starten oder ausschalten, Protokolle), Bibliothek aktualisieren und die
   originale Volumio-Oberfläche (Durchsuchen, Warteschlange, Einstellungen, Plugins, System = Volumios Seite /dev) und eine Hilfe zur Bedienung; unten Logo, eingespielter Stand und Lizenz.
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
-- Deutsch und Englisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
+- Deutsch, Englisch, Französisch, Spanisch und Italienisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
   (siehe [Einrichten](docs/einrichten.md#sprache)).
 - Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 

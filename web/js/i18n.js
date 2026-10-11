@@ -83,7 +83,7 @@ if (typeof module !== 'undefined') {
 } else {
   (function(){
     var cfg = window.APP_CONFIG || {};
-    var avail = cfg.LANGUAGES || ['de', 'en'];
+    var avail = cfg.LANGUAGES || ['de', 'en', 'fr', 'es', 'it'];
     var device = [langStored()].concat(navigator.languages || [navigator.language]);   /* Volumio vor dem Gerät */
     LANG = LANG_LOCALE = langPick(avail, location.search, cfg.LANGUAGE, device);
     /* von core.js gerufen, sobald Volumio seine Sprache meldet: merken und, falls sie die Wahl ändert, einmal neu laden */
