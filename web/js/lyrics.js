@@ -143,7 +143,9 @@ function lyrShiftPlace() {
   var t = top.getBoundingClientRect(), l = body.getBoundingClientRect(), r = right.getBoundingClientRect();
   var w = bar.offsetWidth, start = l.left + (parseFloat(getComputedStyle(body).paddingLeft) || 0) - t.left;
   var mid = Math.min((l.left + l.right) / 2, r.left - 12 - w / 2) - t.left;       /* Mitte der Lyrics, notfalls weiter links */
-  bar.style.left = Math.round(Math.max(start, ((start + w / 2) + mid) / 2 - w / 2)) + 'px';
+  var x = Math.max(start, ((start + w / 2) + mid) / 2 - w / 2);
+  x = Math.min(x, r.left - t.left - 16 - w);                                       /* nie unter die Knöpfe rechts (z. B. mit Fernbedienung) */
+  bar.style.left = Math.round(Math.max(0, x)) + 'px';
 }
 window.addEventListener('resize', lyrShiftPlace);
 
