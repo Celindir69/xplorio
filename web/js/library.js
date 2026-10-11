@@ -193,7 +193,7 @@ function loadMyRadio() {
     });
 }
 
-/* Reiter 0 Stimmungs-Mix (moodmix.js, nur mit Tag-Dienst sichtbar), 1 Playlisten, 2 Radio;
+/* Reiter 0 Mood Mix (moodmix.js, nur mit Tag-Dienst sichtbar), 1 Playlisten, 2 Radio;
    der zuletzt gewählte gilt beim nächsten Öffnen wieder */
 var PL_TABS = [[T('pl.tab.mix'), 'mixBody'], [T('pl.tab.playlists'), 'playlistResults'], [T('pl.tab.radio'), 'radioPanel']];
 try { plTabActive = +(localStorage.getItem('plTab') || 0) || 0; } catch (e) { plTabActive = 0; }

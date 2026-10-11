@@ -1,5 +1,5 @@
 /* Audio-Analyse (Essentia vom Mac): Datei lesen, in Stimmung/Energie/Stil umrechnen, mit Last.fm zusammenführen,
-   Tempo im Stimmungs-Mix und Hochladen über POST /essentia */
+   Tempo im Mood Mix und Hochladen über POST /essentia */
 var assert = require('assert'), http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -67,7 +67,7 @@ var coll = new moodtags.Collector({dir: path.join(dir, 'moodtags'), libFile: lib
 coll.artists[moodtags.artistKey('Otto')] = {k: 'otto', g: [['happy', 100]]};   /* nur Last.fm, ohne Audio */
 var ottoK = moodtags.trackKey('Otto', 'Ohne'); coll.tracks[ottoK] = {k: ottoK, g: []};     /* Titel ohne eigene Tags abgefragt */
 
-t('Stimmungs-Mix: Titel nur mit Audio-Analyse zählen mit, Tempo grenzt ein', function(){
+t('Mood Mix: Titel nur mit Audio-Analyse zählen mit, Tempo grenzt ein', function(){
   var all = mm.count(coll, mm.parse({}));
   assert.strictEqual(all.rated, 12);
   assert.strictEqual(all.bpm, 11);

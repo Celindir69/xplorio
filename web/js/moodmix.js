@@ -1,4 +1,4 @@
-/* Stimmungs-Mix (erster Reiter im Playlisten-Overlay): Stimmung, Energie und optional Stil wählen, Vorschau ansehen, dann Warteschlange ersetzen und spielen
+/* Mood Mix (erster Reiter im Playlisten-Overlay): Stimmung, Energie und optional Stil wählen, Vorschau ansehen, dann Warteschlange ersetzen und spielen
    (Tag-Dienst GET /moodmix). Erstellen ändert die Warteschlange noch nicht; erst „Mix abspielen“.
    Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach check.js, history.js und discover.js geladen. */
 var mixBody    = document.getElementById('mixBody');
@@ -39,7 +39,7 @@ function mixEnergyDots(e) {
   return s;
 }
 
-/* von außen: Reiter Stimmungs-Mix öffnen, optional mit einer Stimmung vorgewählt */
+/* von außen: Reiter Mood Mix öffnen, optional mit einer Stimmung vorgewählt */
 function openMoodMix(mood) {
   closeAllOverlays();
   if (mood) { mixCrit.moods = [mood]; mixState.view = 'pick'; }

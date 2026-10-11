@@ -42,7 +42,7 @@ daraus.
 
 ## Du suchst Musik für genau diesen Moment?
 
-Der **Stimmungs-Mix** stellt dir eine Playlist zusammen: Wähle eine oder mehrere Stimmungen, wie viel Energie es sein
+Der **Mood Mix** stellt dir eine Playlist zusammen: Wähle eine oder mehrere Stimmungen, wie viel Energie es sein
 darf, welche Genres und wie mutig der Mix sein soll, von deinen Favoriten bis zu den versteckten Perlen. Bevor etwas
 spielt, siehst du jeden Titel mit dem Grund, warum er dabei ist. Gefällt dir einer nicht, fliegt er raus.
 
@@ -50,8 +50,8 @@ Und wenn der Mix zu Ende ist? Mit dem optionalen **AutoDJ** geht die Reise einfa
 was gerade lief.
 
 <p align="center">
-  <img src="bilder/mix-auswahl.jpg" width="240" alt="Stimmungs-Mix: Auswahl">
-  <img src="bilder/mix-vorschau.jpg" width="240" alt="Stimmungs-Mix: Vorschau">
+  <img src="bilder/mix-auswahl.jpg" width="240" alt="Mood Mix: Auswahl">
+  <img src="bilder/mix-vorschau.jpg" width="240" alt="Mood Mix: Vorschau">
 </p>
 
 ## Du magst, was gerade läuft?
@@ -93,7 +93,7 @@ findet fehlende Cover, verschiedene Schreibweisen desselben Künstlers und Alben
 Tipp direkt zur Korrektur.
 
 Und wer noch tiefer gehen will, lässt die Musik auf einem leistungsstarken Rechner analysieren: Die mitgelieferte
-**Audio-Analyse** erkennt Energie, Tempo und Stimmung direkt aus dem Klang und macht Stimmungs-Mix und Entdecken noch
+**Audio-Analyse** erkennt Energie, Tempo und Stimmung direkt aus dem Klang und macht Mood Mix und Entdecken noch
 treffsicherer.
 
 ## Überall zu Hause

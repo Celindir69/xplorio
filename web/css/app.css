@@ -891,7 +891,7 @@ html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller a
 .hScope .hChip { flex:0 0 auto; }
 .hBar.sel .hFill { opacity:1; box-shadow:0 0 0 1px var(--fg); }
 
-/* Stimmungs-Mix */
+/* Mood Mix */
 .mxAsk { font-size:calc(4.4 * var(--vw)); font-weight:600; padding:calc(2 * var(--vw)) 0 calc(3 * var(--vw)); }
 .mxChips { display:flex; flex-wrap:wrap; gap:calc(2 * var(--vw)); }
 .mxChip { font-size:calc(3.5 * var(--vw)); padding:calc(1.8 * var(--vw)) calc(3.6 * var(--vw)); border-radius:999px; cursor:pointer;
