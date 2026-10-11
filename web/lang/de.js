@@ -276,7 +276,7 @@ langRegister('de', 'Deutsch', {
   'pb.ampMute': 'Stumm',
   'pb.ampSource': 'Eingang',
   'pb.ampBypass': 'Klang umgehen',
-  'pb.ampBypassNote': 'Solange „Klang umgehen“ an ist, wirken Bass und Höhen nicht.',
+  'pb.ampBypassNote': 'Bass und Höhen wirken dann nicht.',
   'pb.ampBass': 'Bass',
   'pb.ampTreble': 'Höhen',
   'pb.ampZero': '0',

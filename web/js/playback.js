@@ -223,7 +223,8 @@ function pbAmpPaint() {
   }
 
   /* Klang: Bypass, Bass, Höhen; Balance */
-  if (p.bypass) line(T('pb.ampBypass'), pbChips([['off', T('pb.off')], ['on', T('pb.on')]], st.bypass ? 'on' : 'off', function(v){ pbAmpCmd(p.cmd.bypass[v === 'on' ? 0 : 1]); }, true));
+  if (p.bypass) line(T('pb.ampBypass'), [pbChips([['off', T('pb.off')], ['on', T('pb.on')]], st.bypass ? 'on' : 'off', function(v){ pbAmpCmd(p.cmd.bypass[v === 'on' ? 0 : 1]); }, true)]
+    .concat(st.bypass && (p.cmd.bass || p.cmd.treble) ? [histEl('span', 'pbAmpHint', T('pb.ampBypassNote'))] : []));
   function stepper(key, label, fmt) {
     var cmd = p.cmd[key], v = st[key];
     if (!cmd) return;
@@ -234,7 +235,6 @@ function pbAmpPaint() {
   }
   stepper('bass', T('pb.ampBass'), pbSigned);
   stepper('treble', T('pb.ampTreble'), pbSigned);
-  if (p.bypass && st.bypass && (p.cmd.bass || p.cmd.treble)) card.appendChild(histEl('div', 'syNote', T('pb.ampBypassNote')));
   if (p.cmd.balance) {
     var b = p.cmd.balance, bv = st.balance;
     line(T('pb.ampBalance'), [chip('L', false, function(){ pbAmpCmd(b[1]); }, 'pbStep'),

@@ -1006,6 +1006,8 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 .pbAmpRow:last-child { border-bottom:none; }
 .pbAmpLabel { flex:0 0 calc(22 * var(--vw)); font-size:calc(3.3 * var(--vw)); color:rgba(var(--fg-rgb),.6); }
 .pbAmpCtl { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:calc(2 * var(--vw)); flex-wrap:wrap; }
+.pbAmpHint { flex:1 1 8em; min-width:0; font-size:calc(3 * var(--vw)); line-height:1.35; color:rgba(var(--fg-rgb),.6); }
+@media (min-width:700px) { .pbAmpHint { font-size:13px; } }
 .pbAmpVal { font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 .pbAmpVal.pbWide { min-width:4.5ch; text-align:center; }
 .pbStep { min-width:2.2em; text-align:center; font-weight:600; }
