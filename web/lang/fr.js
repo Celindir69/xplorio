@@ -412,7 +412,7 @@ langRegister('fr', 'Français', {
   'sys.power.ask.poweroff': 'Éteindre le lecteur ? Il ne pourra ensuite être rallumé que sur l\'appareil.',
   'sys.power.busy.reboot': 'redémarrage …',
   'sys.power.busy.poweroff': 'extinction …',
-  'sys.svc.nopw': 'Les boutons des services restent verrouillés tant qu\'aucun mot de passe n\'est défini : via ssh avec sudo xplorio-deploy --passwort.',
+  'sys.svc.nopw': 'Les boutons des services restent verrouillés tant qu\'aucun mot de passe n\'est défini : via ssh avec sudo xplorio-deploy --password.',
   'sys.svc.loginHint': 'Mot de passe des services. Cet appareil reste ensuite connecté 30 jours.',
   'sys.svc.password': 'Mot de passe',
   'sys.svc.login': 'Se connecter',

@@ -413,7 +413,7 @@ langRegister('en', 'English', {
   'sys.power.ask.poweroff': 'Shut down the player? It can then only be switched on again at the device.',
   'sys.power.busy.reboot': 'restarting …',
   'sys.power.busy.poweroff': 'shutting down …',
-  'sys.svc.nopw': 'The service buttons stay locked until a password is set: over ssh with sudo xplorio-deploy --passwort.',
+  'sys.svc.nopw': 'The service buttons stay locked until a password is set: over ssh with sudo xplorio-deploy --password.',
   'sys.svc.loginHint': 'Password for the services. This device then stays signed in for 30 days.',
   'sys.svc.password': 'Password',
   'sys.svc.login': 'Sign in',

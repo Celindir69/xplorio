@@ -411,7 +411,7 @@ langRegister('it', 'Italiano', {
   'sys.power.ask.poweroff': 'Spegnere il player? Poi si potrà riaccendere solo dall\'apparecchio.',
   'sys.power.busy.reboot': 'riavvio …',
   'sys.power.busy.poweroff': 'spegnimento …',
-  'sys.svc.nopw': 'I pulsanti dei servizi restano bloccati finché non imposti una password: via ssh con sudo xplorio-deploy --passwort.',
+  'sys.svc.nopw': 'I pulsanti dei servizi restano bloccati finché non imposti una password: via ssh con sudo xplorio-deploy --password.',
   'sys.svc.loginHint': 'Password per i servizi. Questo dispositivo resterà poi connesso per 30 giorni.',
   'sys.svc.password': 'Password',
   'sys.svc.login': 'Accedi',

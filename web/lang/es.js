@@ -411,7 +411,7 @@ langRegister('es', 'Español', {
   'sys.power.ask.poweroff': '¿Apagar el reproductor? Después solo se podrá encender desde el propio aparato.',
   'sys.power.busy.reboot': 'reiniciando …',
   'sys.power.busy.poweroff': 'apagando …',
-  'sys.svc.nopw': 'Los botones de los servicios están bloqueados hasta que se defina una contraseña: por ssh con sudo xplorio-deploy --passwort.',
+  'sys.svc.nopw': 'Los botones de los servicios están bloqueados hasta que se defina una contraseña: por ssh con sudo xplorio-deploy --password.',
   'sys.svc.loginHint': 'Contraseña de los servicios. Este dispositivo seguirá con la sesión iniciada durante 30 días.',
   'sys.svc.password': 'Contraseña',
   'sys.svc.login': 'Iniciar sesión',

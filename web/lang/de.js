@@ -411,7 +411,7 @@ langRegister('de', 'Deutsch', {
   'sys.power.ask.poweroff': 'Player ausschalten? Wieder einschalten lässt er sich danach nur am Gerät.',
   'sys.power.busy.reboot': 'startet neu …',
   'sys.power.busy.poweroff': 'schaltet sich aus …',
-  'sys.svc.nopw': 'Die Knöpfe der Dienste sind gesperrt, bis ein Passwort festgelegt ist: per ssh mit sudo xplorio-deploy --passwort.',
+  'sys.svc.nopw': 'Die Knöpfe der Dienste sind gesperrt, bis ein Passwort festgelegt ist: per ssh mit sudo xplorio-deploy --password.',
   'sys.svc.loginHint': 'Passwort für die Dienste. Dieses Gerät bleibt danach 30 Tage angemeldet.',
   'sys.svc.password': 'Passwort',
   'sys.svc.login': 'Anmelden',

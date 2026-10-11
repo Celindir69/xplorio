@@ -53,7 +53,9 @@ Danach auf dem Player:
 | `sudo xplorio-deploy -n <branch>` | nur zeigen, was sich ändern würde |
 | `sudo xplorio-deploy -y <branch>` | ohne Rückfrage |
 | `sudo xplorio-deploy --rollback` | letzte Sicherung wiederherstellen (mehrmals: Schritt für Schritt weiter zurück) |
-| `sudo xplorio-deploy --passwort` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
+| `sudo xplorio-deploy --password` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
+| `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
+| `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
 
 Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
@@ -66,6 +68,9 @@ den Stand zeigt das Menü unten unter Logo und Namen, ohne die Datei steht dort 
 sichert das Skript die betroffenen Dateien nach `/data/xplorio/backup/` (die letzten 5). Gelöscht wird nichts; eigene
 Dateien wie `web/config.local.js` bleiben.
 
+Das Skript meldet sich auf Englisch (wie die Befehle). Die deutschen Optionen früherer Versionen (`--passwort`,
+`--zurueck`) gehen weiter, und die Rückfrage nimmt auch `j` an.
+
 Alles außer der Oberfläche liegt in `/data/xplorio/`: `tags/` (Tag-Dienst), `rotel/` (Rotel-Bridge), `data/` (Daten des
 Tag-Dienstes) und `backup/` (Sicherungen). Der Ordner übersteht Volumio-Updates; vor einer Neuinstallation genügt es, ihn zu
 sichern. Frühere Installationen hatten die Dienste unter `/data/INTERNAL/`: Das Skript stellt `tag-service.service` und
@@ -74,13 +79,22 @@ seine Daten selbst um. Die alten Ordner `/data/INTERNAL/tags` und `/data/INTERNA
 einem Test gelöscht werden.
 
 **Umstieg von web-app-deploy (bis Oktober 2026 hießen Repo und Befehl `volumio-web-app` bzw. `web-app-deploy`):**
-`xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „Umzug: /data/web-app nach
+`xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „move: /data/web-app to
 /data/xplorio“) und `sudo xplorio-deploy`. Das Skript verschiebt `/data/web-app` samt Daten, Last.fm-Zugang und
 Sicherungen nach `/data/xplorio`, lässt `/data/web-app` als Verweis (Symlink) stehen, stellt die systemd-Dateien um und
 startet die Dienste neu. `web-app-deploy` und die noch älteren Namen `mx-deploy` und `volumio4-deploy` funktionieren
 weiter und rufen `xplorio-deploy` auf (beim ersten Aufruf richten sie es selbst ein).
 
 ## Tag-Dienst (für den Tag-Editor)
+Am einfachsten mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy):
+```bash
+sudo xplorio-deploy --tag-service
+```
+Das spielt bei Bedarf erst `main` ein, legt `/data/xplorio/data` und `/etc/systemd/system/tag-service.service` an, startet
+den Dienst und prüft ihn (`tag-service is running: {"ok":true,…}`). Ist der Dienst schon eingerichtet, ändert der Befehl
+nichts und sagt das; `--force` schreibt die Dienstdatei neu (die alte kommt in die Sicherung, zurück mit `--rollback`).
+
+Von Hand, im Ordner des Repos:
 ```bash
 sudo mkdir -p /data/xplorio/tags && sudo cp -r tags/. /data/xplorio/tags/
 sudo chown -R volumio:volumio /data/xplorio/tags
@@ -245,7 +259,7 @@ festgelegt (siehe unten), fragen auch sie danach; sonst nicht, denn Volumio selb
 Die Knöpfe der Dienste sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
 
 ```
-sudo xplorio-deploy --passwort
+sudo xplorio-deploy --password
 ```
 
 Gespeichert wird nur ein Hash (PBKDF2 mit Salt) in `/data/xplorio/data/admin.json`; derselbe Befehl ändert es und meldet
@@ -495,6 +509,18 @@ spricht nur mit der Bridge.
 **Vorbereitung am Verstärker:** Netzwerkkabel anschließen, im Menü des Verstärkers die IP-Adresse ablesen (am besten
 im Router fest vergeben) und den Power Mode auf „Quick“ stellen, damit er sich aus dem Standby per Netz einschalten lässt.
 
+**Am einfachsten** mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy), mit der Adresse des Verstärkers:
+```bash
+sudo xplorio-deploy --rotel 192.168.1.50
+```
+Das spielt bei Bedarf erst `main` ein, trägt `ROTEL = true` und `ROTEL_HOST` in `web/config.local.js` ein (nur wenn dort
+noch kein `ROTEL_HOST` steht, vorher mit Sicherung; ohne Adresse fragt es danach), legt `/etc/systemd/system/rotel-bridge.service`
+mit dem passenden Ordner (`www`, `www3` oder `www4`) an, startet die Bridge und meldet `rotel-bridge is running: connected
+to the amplifier`. Ist die Bridge schon eingerichtet, ändert der Befehl nichts und sagt das; `--force` schreibt die
+Dienstdatei neu (mit Sicherung). Eigene Einträge in `config.local.js` bleiben unberührt.
+
+**Von Hand**, Schritt für Schritt:
+
 **1. Datei auf den Player kopieren** (im Ordner des Repos; `xplorio-deploy` erledigt das bei jedem Einspielen selbst):
 ```bash
 sudo mkdir -p /data/xplorio/rotel && sudo cp rotel/rotel-bridge.js /data/xplorio/rotel/
@@ -607,7 +633,7 @@ Die Oberfläche läuft auch unter Volumio 4 (auf einer Testinstanz erprobt). Unt
   `http://<player>/xplorio.html`; `web/config.local.js` gehört nach `/volumio/http/www4/web/`.
 - **Aktualisieren:** wie oben mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy); es findet `www4/` selbst. Beim
   ersten Mal erst ansehen: `sudo xplorio-deploy -n` („geändert“ hieße, eine Datei von Volumio würde ersetzt). In der
-  Meldung „Eingespielt nach …“ muss `www4` stehen.
+  Meldung „Installed to …“ muss `www4` stehen.
 - **Tag-Dienst:** Die Dienstdatei oben startet Node über `/usr/bin/env node` und läuft damit auf beiden Versionen. Eine
   ältere Dienstdatei mit `/usr/local/bin/node` scheitert unter Volumio 4 mit `status=203/EXEC`; dann:
   `sudo sed -i 's|^ExecStart=/usr/local/bin/node|ExecStart=/usr/bin/env node|' /etc/systemd/system/tag-service.service && sudo systemctl daemon-reload && sudo systemctl restart tag-service`.

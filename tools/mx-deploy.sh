@@ -1,20 +1,20 @@
 #!/bin/bash
-# Früherer Name von xplorio-deploy. Unter /usr/local/bin/mx-deploy bzw. volumio4-deploy eingerichtet, richtet es
-# xplorio-deploy ein (falls noch nicht da) und ruft es mit denselben Angaben auf. Aufrufe wie bisher:
+# Earlier name of xplorio-deploy. Installed as /usr/local/bin/mx-deploy or volumio4-deploy, it sets up xplorio-deploy
+# (if not there yet) and calls it with the same arguments. Calls as before:
 #   sudo mx-deploy [-n|-y] [branch]   sudo mx-deploy --rollback
-ROOT=${DEPLOY_ROOT:-${MX_ROOT:-}}                   # nur für Tests
+ROOT=${DEPLOY_ROOT:-${MX_ROOT:-}}                   # tests only
 B=$ROOT/usr/local/bin/xplorio-deploy
 if [ ! -x "$B" ]; then
-  [ -n "$ROOT" ] || [ "$(id -u)" = 0 ] || { echo "$(basename "$0"): bitte mit sudo aufrufen" >&2; exit 1; }
+  [ -n "$ROOT" ] || [ "$(id -u)" = 0 ] || { echo "$(basename "$0"): please run with sudo" >&2; exit 1; }
   mkdir -p "$(dirname "$B")"
-  # von einem älteren mx-deploy mit der Oberfläche eingespielt, sonst aus dem Repo laden
+  # installed with the interface by an older mx-deploy, else load it from the repo
   src=$(ls -1 "$ROOT"/volumio/http/www*/tools/xplorio-deploy.sh 2>/dev/null | head -n 1)
-  if [ -n "$src" ]; then cp "$src" "$B.neu"
-  else curl -fsSL --max-time 60 -o "$B.neu" https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh \
-    || { echo "xplorio-deploy nicht ladbar (Netz?)" >&2; rm -f "$B.neu"; exit 1; }
+  if [ -n "$src" ]; then cp "$src" "$B.new"
+  else curl -fsSL --max-time 60 -o "$B.new" https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh \
+    || { echo "could not load xplorio-deploy (network?)" >&2; rm -f "$B.new"; exit 1; }
   fi
-  chmod +x "$B.neu" && mv "$B.neu" "$B"
-  echo "xplorio-deploy eingerichtet ($B)"
+  chmod +x "$B.new" && mv "$B.new" "$B"
+  echo "xplorio-deploy set up ($B)"
 fi
-echo "Hinweis: $(basename "$0" .sh) heißt jetzt xplorio-deploy."
+echo "Note: $(basename "$0" .sh) is now called xplorio-deploy."
 exec "$B" "$@"

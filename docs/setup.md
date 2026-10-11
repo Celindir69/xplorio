@@ -60,17 +60,31 @@ Then on the player:
 | `sudo xplorio-deploy -n <branch>` | only show what would change |
 | `sudo xplorio-deploy -y <branch>` | deploy without confirmation |
 | `sudo xplorio-deploy --rollback` | restore the latest backup (repeat to go back step by step) |
-| `sudo xplorio-deploy --passwort` | set or change the password for the services on the "System" page |
+| `sudo xplorio-deploy --password` | set or change the password for the services on the "System" page |
+| `sudo xplorio-deploy --tag-service` | set up the Tag Service: unit file, data folder, start and check (see [Tag Service](#tag-service-for-the-tag-editor)) |
+| `sudo xplorio-deploy --rotel <IP>` | set up the Rotel bridge: amplifier address in `config.local.js`, unit file, start and check (see [Rotel Bridge](#rotel-bridge-optional)) |
 
 Targets: `xplorio.html`, `app.html` (redirect), `kioskTV.html`, `web/`, and `tools/` go to every existing `/volumio/http/www*/` folder, and `tags/` plus `rotel/rotel-bridge.js` go to `/data/xplorio/`; the script also updates itself. Which of the folders Volumio serves depends on the version and the selected interface (e.g. classic `www`, Volumio 3 `www3`, Volumio 4 `www4`), so every existing one gets the interface. The script does not create new folders and stops if there is none; `DEPLOY_WWW=<folder>` selects a specific one. `web/config.local.js` is per folder: if you switch interfaces, copy it as well. The script also writes `web/version.json` (branch, commit and its date); the menu shows this version at the bottom below the logo and name, and "Development version" without the file.
 
 `tag-service` and `rotel-bridge` are restarted only if their files have changed. Before each deployment, the script backs up the affected files to `/data/xplorio/backup/` (the latest 5 backups). Nothing is deleted; custom files such as `web/config.local.js` are preserved.
 
+The German option names of earlier versions (`--passwort`, `--zurueck`) keep working, and the confirmation also accepts `j`.
+
 Everything except the interface lives in `/data/xplorio/`: `tags/` (Tag Service), `rotel/` (Rotel bridge), `data/` (Tag Service data), and `backup/` (backups). The folder survives Volumio updates; before a fresh installation, backing it up is enough. Earlier installations had the services under `/data/INTERNAL/`: the script then switches `tag-service.service` and `rotel-bridge.service` to the new paths once (with a backup) and restarts the services; the Tag Service moves its data itself. The old folders `/data/INTERNAL/tags` and `/data/INTERNAL/rotel` stay in place and can be deleted after a test.
 
-**Switching from web-app-deploy (until October 2026 the repository and command were called `volumio-web-app` and `web-app-deploy`):** set up `xplorio-deploy` as above, then run `sudo xplorio-deploy -n` (among other things it shows "Umzug: /data/web-app nach /data/xplorio", i.e. the move) and `sudo xplorio-deploy`. The script moves `/data/web-app` with its data, Last.fm credentials and backups to `/data/xplorio`, leaves `/data/web-app` behind as a symlink, updates the systemd files and restarts the services. `web-app-deploy` and the even older names `mx-deploy` and `volumio4-deploy` keep working and call `xplorio-deploy` (on first use they set it up themselves).
+**Switching from web-app-deploy (until October 2026 the repository and command were called `volumio-web-app` and `web-app-deploy`):** set up `xplorio-deploy` as above, then run `sudo xplorio-deploy -n` (among other things it shows "move: /data/web-app to /data/xplorio") and `sudo xplorio-deploy`. The script moves `/data/web-app` with its data, Last.fm credentials and backups to `/data/xplorio`, leaves `/data/web-app` behind as a symlink, updates the systemd files and restarts the services. `web-app-deploy` and the even older names `mx-deploy` and `volumio4-deploy` keep working and call `xplorio-deploy` (on first use they set it up themselves).
 
 ## Tag Service (for the Tag Editor)
+
+The easiest way is [xplorio-deploy](#updating-with-xplorio-deploy):
+
+```bash
+sudo xplorio-deploy --tag-service
+```
+
+If needed it first deploys `main`, then creates `/data/xplorio/data` and `/etc/systemd/system/tag-service.service`, starts the service and checks it (`tag-service is running: {"ok":true,…}`). If the service is already set up, the command changes nothing and says so; `--force` rewrites the unit file (the old one goes into the backup, restore it with `--rollback`).
+
+By hand, in the repository folder:
 
 ```bash
 sudo mkdir -p /data/xplorio/tags && sudo cp -r tags/. /data/xplorio/tags/
@@ -204,7 +218,7 @@ and `/sbin/poweroff` like Volumio; the sudo rule above includes both.
 The service buttons are also protected by a password and stay locked until one is set:
 
 ```
-sudo xplorio-deploy --passwort
+sudo xplorio-deploy --password
 ```
 
 Only a hash (PBKDF2 with salt) is stored, in `/data/xplorio/data/admin.json`; the same command changes it and signs out all
@@ -370,6 +384,16 @@ Controls a network-connected Rotel amplifier: power, volume and the remote contr
 
 **Preparing the amplifier:** connect it to the network, read its IP address in the amplifier's menu (ideally assign a fixed one in your router) and set Power Mode to "Quick" so it can be switched on from standby over the network.
 
+**The easiest way** is [xplorio-deploy](#updating-with-xplorio-deploy), with the amplifier's address:
+
+```bash
+sudo xplorio-deploy --rotel 192.168.1.50
+```
+
+If needed it first deploys `main`, then adds `ROTEL = true` and `ROTEL_HOST` to `web/config.local.js` (only if there is no `ROTEL_HOST` yet, after a backup; without an address it asks for one), creates `/etc/systemd/system/rotel-bridge.service` with the right folder (`www`, `www3` or `www4`), starts the bridge and reports `rotel-bridge is running: connected to the amplifier`. If the bridge is already set up, the command changes nothing and says so; `--force` rewrites the unit file (with a backup). Your own entries in `config.local.js` stay untouched.
+
+**By hand**, step by step:
+
 **1. Copy the file to the player** (in the repository folder; `xplorio-deploy` does this itself on every deployment):
 
 ```bash
@@ -491,7 +515,7 @@ The interface also runs under Volumio 4 (tested on a test instance). Differences
 
 - **Folders:** Volumio 4 serves the interface from `/volumio/http/www4/` instead of `www3/`. It is still accessed via `http://<player>/xplorio.html`; `web/config.local.js` belongs in `/volumio/http/www4/web/`.
 
-- **Updating:** as above with [xplorio-deploy](#updating-with-xplorio-deploy); it finds `www4/` by itself. The first time, inspect first: `sudo xplorio-deploy -n` ("changed" would mean that a Volumio file would be replaced). The message "Eingespielt nach …" must include `www4`.
+- **Updating:** as above with [xplorio-deploy](#updating-with-xplorio-deploy); it finds `www4/` by itself. The first time, inspect first: `sudo xplorio-deploy -n` ("changed" would mean that a Volumio file would be replaced). The message "Installed to …" must include `www4`.
 
 - **Tag Service:** The service file above starts Node via `/usr/bin/env node` and therefore works on both versions. An older service file using `/usr/local/bin/node` fails under Volumio 4 with `status=203/EXEC`; in that case:
 
