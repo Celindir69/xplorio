@@ -1,22 +1,22 @@
 #!/bin/sh
-# TIDAL-Wächter: startet Volumio neu, wenn TIDAL nicht mehr antwortet (Session-Timeout im Plugin).
+# TIDAL watchdog: restarts Volumio when TIDAL stops answering (session timeout in the plugin).
 #
-# Ablauf: Eine leichte TIDAL-Seite abfragen (Zeitgrenze TIMEOUT). Misslingt das, nach RETRY_PAUSE Sekunden noch einmal.
-# Misslingt auch das zweite Mal, wird Volumio neu gestartet (die Wiedergabe läuft dabei weiter). Danach wird nach
-# SETTLE Sekunden erneut geprüft und das Ergebnis protokolliert.
-# Schutz vor Dauerschleifen: höchstens ein Neustart je MIN_GAP Sekunden (z. B. bei einer Störung bei TIDAL selbst).
-# Läuft Volumio gar nicht (Verbindung verweigert), passiert nichts.
+# How it works: query a light TIDAL page (time limit TIMEOUT). If that fails, try again after RETRY_PAUSE seconds.
+# If the second try fails too, Volumio is restarted (playback continues meanwhile). After SETTLE seconds it checks
+# again and logs the result.
+# Protection against loops: at most one restart per MIN_GAP seconds (e.g. during an outage at TIDAL itself).
+# If Volumio is not running at all (connection refused), nothing happens.
 #
-# Aufruf:   tidal-watchdog.sh            prüfen und bei Bedarf neu starten (für Cron, als root)
-#           tidal-watchdog.sh --check    nur prüfen und ausgeben, nie neu starten
-# Protokoll: /var/log/tidal-watchdog.log (nur die letzten Zeilen bleiben erhalten)
+# Usage:    tidal-watchdog.sh            check and restart if needed (for cron, as root)
+#           tidal-watchdog.sh --check    only check and print, never restart
+# Log:      /var/log/tidal-watchdog.log (only the last lines are kept)
 
 URL="${VOLUMIO_URL:-http://localhost:3000}"
-CHECK_URI="${CHECK_URI:-tidal://artist/27441}"      # eine Seite, die bei TIDAL abgefragt wird
+CHECK_URI="${CHECK_URI:-tidal://artist/27441}"      # a page that is queried at TIDAL
 TIMEOUT="${TIMEOUT:-20}"
 RETRY_PAUSE="${RETRY_PAUSE:-60}"
 SETTLE="${SETTLE:-90}"
-MIN_GAP="${MIN_GAP:-3600}"                          # 1 Stunde (TIDAL fällt etwa alle 4 Stunden aus, siehe docs/tidal-waechter.md)
+MIN_GAP="${MIN_GAP:-3600}"                          # 1 hour (TIDAL drops out about every 4 hours, see the TIDAL watchdog section in docs/setup.md)
 RESTART_CMD="${RESTART_CMD:-systemctl restart volumio}"
 LOG="${LOG:-/var/log/tidal-watchdog.log}"
 STAMP="${STAMP:-/var/run/tidal-watchdog.last}"
@@ -31,7 +31,7 @@ log() {
 CHECK_ONLY=0
 [ "$1" = "--check" ] && CHECK_ONLY=1
 
-# Ergebnis: 0 = TIDAL antwortet, 1 = Zeitüberschreitung oder falsche Antwort, 2 = Volumio nicht erreichbar
+# result: 0 = TIDAL answers, 1 = timeout or wrong answer, 2 = Volumio not reachable
 check() {
   body=$(curl -s -m "$TIMEOUT" "$URL/api/v1/browse?uri=$CHECK_URI")
   rc=$?
@@ -41,31 +41,31 @@ check() {
   return 1
 }
 
-# nur ein Lauf gleichzeitig
+# only one run at a time
 if ! mkdir "$LOCK" 2>/dev/null; then exit 0; fi
 trap 'rmdir "$LOCK"' EXIT
 
 check; r=$?
-[ $r -eq 2 ] && { log "Volumio nicht erreichbar - nichts unternommen"; exit 0; }
+[ $r -eq 2 ] && { log "Volumio not reachable - nothing done"; exit 0; }
 [ $r -eq 0 ] && { log "TIDAL ok"; exit 0; }
 
-log "TIDAL antwortet nicht (1. Versuch), warte ${RETRY_PAUSE}s"
+log "TIDAL does not answer (1st try), waiting ${RETRY_PAUSE}s"
 [ "$CHECK_ONLY" = 1 ] && exit 1
 sleep "$RETRY_PAUSE"
 check; r=$?
-[ $r -eq 2 ] && { log "Volumio nicht erreichbar - nichts unternommen"; exit 0; }
-[ $r -eq 0 ] && { log "TIDAL wieder ok (2. Versuch)"; exit 0; }
+[ $r -eq 2 ] && { log "Volumio not reachable - nothing done"; exit 0; }
+[ $r -eq 0 ] && { log "TIDAL ok again (2nd try)"; exit 0; }
 
 now=$(date +%s)
 last=$(cat "$STAMP" 2>/dev/null || echo 0)
 if [ $((now - last)) -lt "$MIN_GAP" ]; then
-  log "TIDAL antwortet weiter nicht, aber letzter Neustart ist weniger als ${MIN_GAP}s her - kein Neustart"
+  log "TIDAL still does not answer, but the last restart was less than ${MIN_GAP}s ago - no restart"
   exit 1
 fi
 
 echo "$now" > "$STAMP"
-log "TIDAL antwortet nicht (2. Versuch): starte Volumio neu"
+log "TIDAL does not answer (2nd try): restarting Volumio"
 sh -c "$RESTART_CMD" >> "$LOG" 2>&1
 sleep "$SETTLE"
 check; r=$?
-if [ $r -eq 0 ]; then log "nach dem Neustart: TIDAL ok"; else log "nach dem Neustart: TIDAL antwortet weiter nicht (Ergebnis $r)"; fi
+if [ $r -eq 0 ]; then log "after the restart: TIDAL ok"; else log "after the restart: TIDAL still does not answer (result $r)"; fi
