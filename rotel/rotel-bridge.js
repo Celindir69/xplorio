@@ -85,6 +85,16 @@ function queries(p) {
   return q;
 }
 
+/* Abfrage, die nach einem Befehl den neuen Stand holt (nicht jedes Gerät meldet jede Änderung von selbst) */
+function queryFor(p, c) {
+  var q = null;
+  ['bypass', 'bass', 'treble', 'balance', 'speakerA', 'speakerB'].forEach(function(k){
+    if (p[k] && p[k].indexOf(c) >= 0) q = /^speaker/.test(k) ? 'speaker?' : k + '?';
+  });
+  if (!q && p.sources.some(function(x){ return x.cmd === c; })) q = 'source?';
+  return q;
+}
+
 var PROFILE = makeProfile(CFG.ROTEL_PROFILE);
 var POWER_ON_SOURCE = PROFILE.powerOnSource;
 
@@ -134,11 +144,14 @@ function parseMsg(m) {
   }
   else if (k === 'source') state.source = v;
   else if (k === 'bypass') state.bypass = (v === 'on');
+  else if (k === 'tone')   state.bypass = (v === 'off');      /* ältere Firmware: Klangregelung an = Bypass aus */
   else if (k === 'bass')    state.bass    = parseTone(v);
   else if (k === 'treble')  state.treble  = parseTone(v);
   else if (k === 'balance') state.balance = parseBalance(v);
   else if (k === 'speaker') { state.speakerA = v === 'a' || v === 'a_b'; state.speakerB = v === 'b' || v === 'a_b'; }
+  else if (!unknownSeen[k]) { unknownSeen[k] = true; console.log('Rotel meldet: ' + m); }   /* je Schlüssel einmal, hilft bei anderen Modellen */
 }
+var unknownSeen = {};
 
 function connect() {
   clearTimeout(retry);
@@ -254,6 +267,10 @@ var server = http.createServer(function(req, res){
   if (req.method === 'OPTIONS') { res.writeHead(204, head); return res.end(); }
   if (u.pathname === '/cmd' && ALLOWED.indexOf(u.query.c) > -1) {
     if (!send(u.query.c)) { ok = false; error = 'nicht verbunden'; }
+    else {
+      var q = queryFor(PROFILE, u.query.c);
+      if (q) setTimeout(function(){ if (sock && state.connected) sock.write(q); }, 300);
+    }
   } else if (u.pathname === '/vol') {
     var v = parseInt(u.query.v, 10);
     if (!isNaN(v)) {
@@ -278,5 +295,5 @@ var server = http.createServer(function(req, res){
 });
 
 if (require.main === module) { server.listen(HTTP_PORT); connect(); }
-module.exports = {server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
+module.exports = {queryFor: queryFor, server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
   parseMsg: parseMsg, state: state};
