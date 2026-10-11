@@ -222,7 +222,8 @@ Below the services, the "Logs" card: the last 100 or 300 lines from Volumio, MPD
 contain paths, track titles and network addresses.
 
 The user `volumio` can only read the journal as a member of the `systemd-journal` group; without it, the card shows a hint
-for Volumio, MPD and the Tag Service, and the plugin logs still work. Once:
+for Volumio, MPD and the Tag Service, and the plugin logs still work. On many players this is already the case:
+`id volumio` lists the groups; if it shows `systemd-journal` or `adm`, there is nothing to do. Otherwise, once:
 
 ```
 sudo usermod -a -G systemd-journal volumio

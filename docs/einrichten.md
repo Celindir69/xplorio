@@ -263,7 +263,8 @@ nach (wie `-f`), solange die Seite offen ist. Ist ein Passwort festgelegt (siehe
 geschützt, denn sie enthalten Pfade, Titel und Adressen im Netz.
 
 Das Journal darf der Benutzer `volumio` nur lesen, wenn er in der Gruppe `systemd-journal` ist; ohne sie zeigt die Karte
-für Volumio, MPD und den Tag-Dienst einen Hinweis, die Plugin-Protokolle gehen trotzdem. Einmalig:
+für Volumio, MPD und den Tag-Dienst einen Hinweis, die Plugin-Protokolle gehen trotzdem. Auf vielen Playern ist das schon
+so: `id volumio` zeigt die Gruppen, steht dort `systemd-journal` oder `adm`, ist nichts zu tun. Sonst einmalig:
 
 ```
 sudo usermod -a -G systemd-journal volumio
