@@ -517,7 +517,8 @@ Das spielt bei Bedarf erst `main` ein, trägt `ROTEL = true` und `ROTEL_HOST` in
 noch kein `ROTEL_HOST` steht, vorher mit Sicherung; ohne Adresse fragt es danach), legt `/etc/systemd/system/rotel-bridge.service`
 mit dem passenden Ordner (`www`, `www3` oder `www4`) an, startet die Bridge und meldet `rotel-bridge is running: connected
 to the amplifier`. Ist die Bridge schon eingerichtet, ändert der Befehl nichts und sagt das; `--force` schreibt die
-Dienstdatei neu (mit Sicherung). Eigene Einträge in `config.local.js` bleiben unberührt.
+Dienstdatei neu (mit Sicherung). Eigene Einträge in `config.local.js` bleiben unberührt. Steht die Adresse schon in einem
+der www-Ordner, fragt der Befehl nicht und lässt auch die anderen Ordner, wie sie sind.
 
 **Falsche Adresse eingegeben?** `sudo xplorio-deploy --rotel <richtige IP> --force` ersetzt `ROTEL_HOST` (vorher mit
 Sicherung) und startet die Bridge neu. Ohne IP fragt der Befehl nach der neuen Adresse; Enter behält die alte.

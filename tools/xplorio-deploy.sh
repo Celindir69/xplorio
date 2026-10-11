@@ -221,6 +221,8 @@ if [ -n "$SETUP" ]; then
       if [ -n "$ROTEL_IP" ]; then CFG_SET=$HAVE; HAVE=""; fi
     fi
     for w in $HAVE; do echo "ROTEL_HOST is already set in /volumio/http/$w/web/config.local.js, left unchanged (--force replaces it)"; done
+    # already set up in one folder: leave the other folders alone too (no question); --force with an address fills them
+    if [ -n "$HAVE" ]; then CFG_ADD=""; fi
     if [ -n "$CFG_ADD" ]; then
       if [ -z "$ROTEL_IP" ]; then
         read -r -p "IP address of the amplifier (e.g. 192.168.1.50): " ROTEL_IP || true

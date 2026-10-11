@@ -242,13 +242,19 @@ t('--rotel ein zweites Mal: Adresse und Dienst bleiben, wie sie sind', function(
   assert.ok(!/restart rotel-bridge/.test(r.stdout) && !/Backup/.test(r.stdout), r.stdout);
   assert.strictEqual(rd('volumio/http/www3/web/config.local.js'), before);
 });
-t('--rotel --force: Dienstdatei neu, fragt nach der Adresse; Enter behält sie', function(){
+t('--rotel: Adresse nur in einem Ordner, fragt trotzdem nicht und lässt den anderen Ordner, wie er ist', function(){
   shs(['--rollback']);                                                            /* Sicherung vom Eintragen der Adresse */
   assert.strictEqual(rd('volumio/http/www3/web/config.local.js'), 'lokal');
-  var r = shs(['--rotel', '--force'], '\n192.168.1.60\n');                        /* Enter: www behält die Adresse; www3 braucht eine */
-  assert.ok(/ROTEL_HOST is already set in \/volumio\/http\/www\//.test(r.stdout), r.stdout);
+  var r = shs(['--rotel']);                                                       /* ohne Eingabe: eine Frage würde abbrechen */
+  assert.strictEqual(r.status, 0, r.stderr + r.stdout);
+  assert.ok(/ROTEL_HOST is already set in \/volumio\/http\/www\//.test(r.stdout) && !/Backup/.test(r.stdout), r.stdout);
+  assert.strictEqual(rd('volumio/http/www3/web/config.local.js'), 'lokal');
+});
+t('--rotel --force: Dienstdatei neu, fragt nach der Adresse; Enter behält sie', function(){
+  var r = shs(['--rotel', '--force'], '\n');
+  assert.strictEqual(r.status, 0, r.stderr + r.stdout);
   assert.ok(/ROTEL_HOST = '192\.168\.1\.50'/.test(rd('volumio/http/www/web/config.local.js')));
-  assert.ok(/ROTEL_HOST = '192\.168\.1\.60'/.test(rd('volumio/http/www3/web/config.local.js')));
+  assert.strictEqual(rd('volumio/http/www3/web/config.local.js'), 'lokal');
   assert.ok(/APP_CONFIG_DIR=\/volumio\/http\/www\/web/.test(rd('etc/systemd/system/rotel-bridge.service')));   /* der Ordner, der die Adresse schon hatte */
 });
 t('--rotel IP --force ersetzt eine falsche Adresse (auch in eigener Schreibweise), mit Sicherung', function(){
@@ -261,7 +267,7 @@ t('--rotel IP --force ersetzt eine falsche Adresse (auch in eigener Schreibweise
   assert.ok(/ROTEL_HOST = '192\.168\.1\.99';/.test(rd('volumio/http/www3/web/config.local.js')));
   shs(['--rollback']);
   assert.ok(/ROTEL_HOST: "10\.0\.0\.1"/.test(rd('volumio/http/www/web/config.local.js')));
-  assert.ok(/ROTEL_HOST = '192\.168\.1\.60'/.test(rd('volumio/http/www3/web/config.local.js')));
+  assert.strictEqual(rd('volumio/http/www3/web/config.local.js'), 'lokal');
 });
 t('--rotel --force fragt nach der neuen Adresse', function(){
   var r = shs(['--rotel', '--force'], '192.168.1.77\n');
