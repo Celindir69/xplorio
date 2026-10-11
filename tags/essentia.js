@@ -8,9 +8,11 @@
     "val":4.1,"aro":3.6,"styles":[["Electronic---Trip Hop",0.41],…]} */
 var fs = require('fs');
 var moodtags = require('./moodtags.js');
+var jsonl = require('./jsonl.js');
 
 var PROB = 0.6;                  /* ab dieser Wahrscheinlichkeit zählt eine Stimmung */
 var RELOAD_CHECK_MS = 10000;     /* so oft höchstens nachsehen, ob die Datei neu ist */
+var DROP = ['p', 'sz', 'mt', 'v', 'kstr'];   /* braucht nur das Analyse-Skript auf dem Mac: nicht im Speicher halten */
 
 /* Wert an Stelle q (0..1) einer sortierten Liste */
 function quantile(sorted, q) {
@@ -34,14 +36,11 @@ Store.prototype.reload = function(force) {
     this.byKey = {}; this.n = 0; this.mtime = 0; this.stats = null; return true;
   }
   if (!force && st.mtime.getTime() === this.mtime) return false;
-  var txt = '';
-  try { txt = fs.readFileSync(this.file, 'utf8'); } catch (e) { return false; }
   var by = {}, n = 0, aro = [], val = [];
-  txt.split('\n').forEach(function(l){
-    if (!l) return;
-    var o;
-    try { o = JSON.parse(l); } catch (x) { return; }
+  var ok = jsonl.eachLine(this.file, function(l){            /* zeilenweise: die ganze Datei nie auf einmal im Speicher */
+    var o = jsonl.parse(l);
     if (!o || !o.ar || !o.ti || o.err) return;
+    DROP.forEach(function(f){ delete o[f]; });
     var k = moodtags.trackKey(o.ar, o.ti);
     var list = by[k] || (by[k] = []);
     list.push(o);
@@ -49,6 +48,7 @@ Store.prototype.reload = function(force) {
     if (typeof o.aro === 'number') aro.push(o.aro);
     if (typeof o.val === 'number') val.push(o.val);
   });
+  if (!ok) return false;
   aro.sort(function(a, b){ return a - b; }); val.sort(function(a, b){ return a - b; });
   /* Energie und Stimmungsquadranten relativ zur eigenen Sammlung: DEAM-Werte drängen sich sonst in der Mitte */
   this.stats = {aLo: quantile(aro, 0.02), aHi: quantile(aro, 0.98), vLow: quantile(val, 0.33), vHigh: quantile(val, 0.67),

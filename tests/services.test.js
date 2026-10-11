@@ -4,7 +4,7 @@ var sv = require('../tags/services.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function ta(name, fn) { fn(function(){ n++; console.log('ok   ' + name); }); }
-process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 7, 'nicht alle Prüfungen fertig'); console.log(n + ' Prüfungen'); } });
+process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 8, 'nicht alle Prüfungen fertig'); console.log(n + ' Prüfungen'); } });
 
 var SHOW = [
   'Id=volumio.service', 'LoadState=loaded', 'ActiveState=active', 'SubState=running', 'ActiveEnterTimestampMonotonic=1000000000', '',
@@ -107,6 +107,25 @@ ta('Player neu starten/ausschalten: nur reboot und poweroff, erst Antwort, dann 
           var s2 = new sv.Services({root: root, run: function(f, a, cb){ cb(new Error('nein'), ''); }});
           s2.power('poweroff', function(c3, o3){ assert.strictEqual(o3.error, 'nosudo'); done(); });
         }, 600);
+      });
+    });
+  });
+});
+
+ta('Kiosk nach eigenem Stopp „failed“: als gestoppt anzeigen, nach Start wieder echt', function(done){
+  var show = SHOW.replace('Id=volumio-kiosk.service\nLoadState=loaded\nActiveState=inactive\nSubState=dead', 'Id=volumio-kiosk.service\nLoadState=loaded\nActiveState=failed\nSubState=failed');
+  assert.notStrictEqual(show, SHOW);
+  var s = new sv.Services({root: root, run: function(f, a, cb){ cb(null, f === 'sudo' ? '' : show); }});
+  function kiosk(r){ return r.units.filter(function(u){ return u.id === 'volumio-kiosk'; })[0]; }
+  s.status(function(r0){
+    assert.strictEqual(kiosk(r0).active, 'failed');                 /* ohne eigenen Stopp: echter Fehler */
+    s.act('volumio-kiosk', 'stop', 'tag-service', function(){
+      s.status(function(r1){
+        assert.strictEqual(kiosk(r1).active, 'inactive');
+        assert.strictEqual(r1.units.filter(function(u){ return u.id === 'mpd'; })[0].active, 'failed');   /* andere bleiben */
+        s.act('volumio-kiosk', 'start', 'tag-service', function(){
+          s.status(function(r2){ assert.strictEqual(kiosk(r2).active, 'failed'); done(); });
+        });
       });
     });
   });

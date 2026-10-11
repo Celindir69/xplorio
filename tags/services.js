@@ -64,6 +64,7 @@ function Services(opts) {
   this.run = opts.run || defaultRun;
   this.root = opts.root || '';
   this.sudoOk = null; this.sudoAt = 0;
+  this.stopped = {};                        /* über die Seite gestoppte Dienste (bis zum nächsten Start) */
 }
 
 Services.prototype.uptime = function() {
@@ -85,6 +86,9 @@ Services.prototype.status = function(cb) {
   this.run(SYSTEMCTL, ['show', '-p', 'Id,LoadState,ActiveState,SubState,ActiveEnterTimestampMonotonic'].concat(ids), function(err, out){
     if (err && !out) return cb({ok: false, error: 'systemctl'});
     var list = merge(parseShow(out, self.uptime(), Date.now()));
+    /* Der Kiosk endet beim Stoppen oft mit einem Fehlercode (Browser und X-Server werden beendet), systemd meldet
+       dann „failed“. Nach einem Stopp über diese Seite ist das kein Fehler, sondern einfach gestoppt. */
+    list.forEach(function(u){ if (u.active === 'failed' && self.stopped[u.id]) { u.active = 'inactive'; u.sub = 'dead'; } });
     self.sudoCheck(function(ok){ cb({ok: true, units: list, sudo: ok}); });
   });
 };
@@ -109,6 +113,7 @@ Services.prototype.act = function(id, action, self_, cb) {
   }
   go(function(err){
     if (err) return cb(200, {ok: false, error: 'nosudo'});
+    if (action === 'stop') me.stopped[id] = true; else delete me.stopped[id];
     cb(200, {ok: true});
   });
 };

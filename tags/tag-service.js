@@ -625,6 +625,7 @@ var essentiaBusy = false;
 var audioStore = new essentia.Store(ESSENTIA_FILE);
 var moodCollector = new moodtags.Collector({
   dir: path.join(DATA_DIR, 'moodtags'), libFile: TRACKS_FILE, audio: audioStore,
+  libRaw: function(){ return libTracksLoad() ? libTracks : null; },     /* dieselbe Titelliste wie Zufall und Genres */
   getCfg: function(){ return {key: keys.lastfm().key}; },
   playing: function(cb){ playerState(function(e, st){ cb(!!(e || (st && st.status === 'play'))); }); }   /* im Zweifel: spielt */
 });

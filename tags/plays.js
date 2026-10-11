@@ -4,6 +4,7 @@
    Node 8, nur ES5. */
 var fs   = require('fs');
 var path = require('path');
+var jsonl = require('./jsonl.js');
 
 var MIN_TRACK  = 30;          /* s: kürzere Titel zählen nie */
 var MAX_NEEDED = 240;         /* s: nach 4 Minuten zählt jeder Titel */
@@ -29,11 +30,9 @@ function Store(file) { this.file = file; this.list = null; }
 
 Store.prototype.load = function() {
   if (this.list) return this.list;
-  var list = [], txt = '';
-  try { txt = fs.readFileSync(this.file, 'utf8'); } catch (e) { /* noch leer */ }
-  txt.split('\n').forEach(function(line){
-    if (!line) return;
-    try { var e = JSON.parse(line); if (e && e.t && e.ti) list.push(e); } catch (x) { /* kaputte Zeile überspringen */ }
+  var list = [];
+  jsonl.eachLine(this.file, function(line){                 /* fehlt die Datei: noch leer */
+    var e = jsonl.parse(line); if (e && e.t && e.ti) list.push(e);   /* kaputte Zeilen überspringen */
   });
   list.sort(function(a, b){ return a.t - b.t; });
   this.list = list;

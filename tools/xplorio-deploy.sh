@@ -171,9 +171,13 @@ if [ -n "$SETUP" ]; then
   CFG_ADD=""                      # www folders whose config.local.js gets the Rotel lines
   CFG_SET=""                      # www folders whose ROTEL_HOST is replaced (--force with an address)
 
+  # tag service: cap the heap so V8 collects sooner and keeps less memory (the library fits easily)
+  TAG_NODE_FLAGS="--max-old-space-size=256 --optimize-for-size"
+
   # unit name dir script description [environment line]: prepared in $WORK, written after the backup
   unit() {
-    local f="$UNIT_DIR/$1.service"
+    local f="$UNIT_DIR/$1.service" flags=""
+    [ "$1" = tag-service ] && flags="$TAG_NODE_FLAGS "
     if [ -e "$f" ] && [ $FORCE = 0 ]; then
       echo "$1 is already set up, unit left unchanged (/etc/systemd/system/$1.service; --force rewrites it)"
       return 0
@@ -186,7 +190,7 @@ if [ -n "$SETUP" ]; then
       echo "After=network-online.target"
       echo
       echo "[Service]"
-      echo "ExecStart=/usr/bin/env node /data/xplorio/$2/$3"
+      echo "ExecStart=/usr/bin/env node $flags/data/xplorio/$2/$3"
       echo "WorkingDirectory=/data/xplorio/$2"
       echo "Restart=always"
       echo "User=volumio"
