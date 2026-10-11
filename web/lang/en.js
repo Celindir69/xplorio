@@ -427,6 +427,7 @@ langRegister('en', 'English', {
   'sys.log.lines': '{n} lines',
   'sys.log.live': 'Live',
   'sys.log.refresh': 'Refresh',
+  'sys.log.pick': 'Tap a source to see its latest lines.',
   'sys.log.empty': 'No entries.',
   'sys.log.nojournal': 'The tag service is not yet allowed to read the journal. See "Logs" in the setup guide.',
   'sys.log.missing': 'This log does not exist yet.',
