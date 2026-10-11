@@ -1042,6 +1042,12 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 .sySvcBtns { flex:0 0 auto; display:flex; gap:calc(2 * var(--vw)); }
 .sySvcBtn.off { opacity:.4; pointer-events:none; }
 .sySvcList + .syNote:empty { display:none; }
+.sySvcLogin { margin-top:calc(2 * var(--vw)); }
+.sySvcLoginRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); margin-top:calc(1.5 * var(--vw)); flex-wrap:wrap; }
+.sySvcPw { flex:1 1 10em; min-width:0; font:inherit; font-size:16px; color:var(--fg); background:rgba(var(--fg-rgb),.08);
+  border:1px solid rgba(var(--fg-rgb),.2); border-radius:999px; padding:6px 14px; outline:none; }
+.sySvcPw:focus { border-color:var(--accent, var(--fg)); }
+button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .syPath { font-size:calc(3 * var(--vw)); overflow-wrap:anywhere; margin-top:calc(1 * var(--vw)); color:rgba(var(--fg-rgb),.8); -webkit-user-select:text; user-select:text; }
 @media (min-width:700px) {
   .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath, .sySvcState { font-size:13px; } .syBig { font-size:30px; } .syDiskHead, .sySvcName { font-size:15px; }

@@ -53,6 +53,7 @@ Danach auf dem Player:
 | `sudo xplorio-deploy -n <branch>` | nur zeigen, was sich ändern würde |
 | `sudo xplorio-deploy -y <branch>` | ohne Rückfrage |
 | `sudo xplorio-deploy --rollback` | letzte Sicherung wiederherstellen (mehrmals: Schritt für Schritt weiter zurück) |
+| `sudo xplorio-deploy --passwort` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
 
 Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
@@ -236,6 +237,19 @@ volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/sys
 ```
 
 Die Regel erlaubt nur diese Befehle, nichts sonst.
+
+Die Knöpfe sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
+
+```
+sudo xplorio-deploy --passwort
+```
+
+Gespeichert wird nur ein Hash (PBKDF2 mit Salt) in `/data/xplorio/data/admin.json`; derselbe Befehl ändert es und meldet
+alle Geräte ab. Beim ersten Tipp auf einen Knopf fragt die Seite nach dem Passwort, danach bleibt das Gerät (der Browser)
+30 Tage angemeldet. Nach 5 falschen Versuchen wartet der Dienst, bei jedem weiteren doppelt so lange (höchstens 15 Minuten).
+Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, schützt aber nicht vor Mitlesen im eigenen Netz,
+also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
+und ausschalten.
 
 ### Verlauf und Statistik
 Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** gespielt (nach Tagen), **Meistgespielt** (Titel, Alben, Künstler oder Genres;

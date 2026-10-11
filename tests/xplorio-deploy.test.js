@@ -33,6 +33,14 @@ t('erster Lauf spielt alles ein', function(){
   assert.strictEqual(fs.statSync(path.join(R, 'data/xplorio/data')).mode & 511, 448);   /* 0700 */
   assert.ok(!fs.existsSync(path.join(R, 'data/INTERNAL')));
 });
+t('--passwort legt den Hash für die Dienste an, ohne Klartext', function(){
+  var o = sh('bash tools/xplorio-deploy.sh --passwort', 'geheim1\ngeheim1\n'), f = path.join(R, 'data/xplorio/data/admin.json');
+  assert.ok(/Gespeichert/.test(o), o);
+  var j = fs.readFileSync(f, 'utf8');
+  assert.ok(/"hash":"[0-9a-f]{64}"/.test(j) && j.indexOf('geheim1') < 0);
+  assert.strictEqual(fs.statSync(f).mode & 511, 384);                               /* 0600 */
+  assert.throws(function(){ sh('bash tools/xplorio-deploy.sh --passwort', 'abcd\nabce\n'); });
+});
 t('Dienst von /data/INTERNAL auf /data/xplorio umgestellt, alte Datei gesichert', function(){
   var u = fs.readFileSync(path.join(R, 'etc/systemd/system/tag-service.service'), 'utf8');
   assert.ok(/ExecStart=\/usr\/bin\/env node \/data\/xplorio\/tags\/tag-service.js/.test(u) && /WorkingDirectory=\/data\/xplorio\/tags/.test(u), u);

@@ -6,6 +6,7 @@
 #   sudo xplorio-deploy -n [branch]        nur zeigen, was sich ändern würde
 #   sudo xplorio-deploy -y [branch]        ohne Rückfrage
 #   sudo xplorio-deploy --rollback         letzte Sicherung wiederherstellen (alt: --zurueck)
+#   sudo xplorio-deploy --passwort         Passwort für die Dienste auf der Seite „System“ festlegen oder ändern
 #
 # Die Oberfläche (xplorio.html, app.html als Weiterleitung, kioskTV.html, web/, tools/) kommt in jeden vorhandenen Ordner /volumio/http/www*/: Welchen Volumio
 # ausliefert, hängt von Version und gewählter Oberfläche ab (Volumio 3: www3, Volumio 4: www4). Neue Ordner legt das
@@ -83,6 +84,16 @@ restart_services() {               # $1: Liste geänderter Repo-Pfade (Dienste a
     systemctl restart rotel-bridge 2>/dev/null && echo "rotel-bridge neu gestartet" || echo "Hinweis: rotel-bridge nicht neu gestartet (eingerichtet?)"
   fi
 }
+
+# ---------- Passwort für die Dienste (Seite „System“): nur ein Hash in data/admin.json ----------
+if [ "$1" = "--passwort" ] || [ "$1" = "--password" ]; then
+  [ -f "$APP/tags/adminpass.js" ] || die "$APP/tags/adminpass.js fehlt: erst den Tag-Dienst einspielen (sudo $PROG)"
+  prepare_dirs
+  NODE=${DEPLOY_NODE:-$(command -v node || echo /usr/bin/node)}
+  "$NODE" "$APP/tags/adminpass.js" "$APP/data" || exit 1
+  [ -n "$ROOT" ] || chown volumio:volumio "$APP/data/admin.json" 2>/dev/null || true
+  exit 0
+fi
 
 # ---------- Wiederherstellen ----------
 if [ "$1" = "--rollback" ] || [ "$1" = "--zurueck" ] || [ "$1" = "--zurück" ]; then
