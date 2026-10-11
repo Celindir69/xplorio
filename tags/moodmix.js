@@ -1,4 +1,4 @@
-/* Stimmungs-Mix: Titel der Bibliothek nach Stimmung, Energie, Stil und Genre auswählen (Grundlage: moodtags.Collector).
+/* Mood Mix: Titel der Bibliothek nach Stimmung, Energie, Stil und Genre auswählen (Grundlage: moodtags.Collector).
    Das Genre (Genre-Tag des Albums, library-tracks.json) wird nie gelockert.
    Gewichtet nach dem Verlauf (Favoriten … versteckte Perlen); derselbe Künstler nie direkt hintereinander.
    Reichen die Treffer nicht, werden die Kriterien schrittweise gelockert. Node 8, nur ES5. */

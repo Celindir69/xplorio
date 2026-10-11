@@ -1,4 +1,4 @@
-/* Stimmungs-Mix: Kriterien, Trefferzahl, Lockern, Verlaufsgewicht und Reihenfolge */
+/* Mood Mix: Kriterien, Trefferzahl, Lockern, Verlaufsgewicht und Reihenfolge */
 var assert = require('assert');
 var mm = require('../tags/moodmix.js');
 var n = 0;

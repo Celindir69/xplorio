@@ -299,12 +299,12 @@ Kacheln), immer auf Titel-Ebene, egal welcher Reiter offen ist: bei „Noch nie 
 gelten die Würfel-Regeln (siehe Zufallsmix), ohne „mag ich nicht“.
 
 **Nach Stimmung, Energie, Stil und Jahrzehnt:** Unter den Reihen stehen Auswahlknöpfe. Stimmung (Entspannt, Verträumt,
-Melancholisch, Düster, Fröhlich, Intensiv, Episch; dieselben Namen wie im Stimmungs-Mix), Energie (Ruhig, Mittlere Energie, Energiegeladen) und Stil (Acoustic, Ambient,
+Melancholisch, Düster, Fröhlich, Intensiv, Episch; dieselben Namen wie im Mood Mix), Energie (Ruhig, Mittlere Energie, Energiegeladen) und Stil (Acoustic, Ambient,
 Electronic, Funky, Soulful, Experimental) öffnen wie ein Genre die passenden Alben mit „Alle abspielen“ und Würfel.
 Ein Album passt, wenn mindestens die Hälfte seiner eingeordneten Titel diese Stimmung bzw. diesen Stil trägt (ein
 Stil-Knopf fasst verwandte Stile zusammen, z. B. Electronic auch Downtempo, House und Trip-Hop) oder wenn die mittlere
 Energie im Bereich liegt (Ruhig 1–2, Mittlere Energie 3, Energiegeladen 4–5); es braucht mindestens zwei eingeordnete
-Titel. Wie viele Alben passen, hängt von den Stimmungs-Tags ab. Der Stimmungs-Mix bleibt davon getrennt.
+Titel. Wie viele Alben passen, hängt von den Stimmungs-Tags ab. Der Mood Mix bleibt davon getrennt.
 Ein Jahrzehnt öffnet seine Alben, nach Jahr sortiert, mit „Alle abspielen“ und Würfel. Das Jahr ist das häufigste
 Date-Tag im Albumordner (aus MPD, also der Wert im Tag-Editor); Alben ohne Jahr fehlen dort. Nach dem Update liest
 der Tag-Dienst die Albenliste einmal neu, bis dahin fehlen die Jahrzehnte.
@@ -321,7 +321,7 @@ Warteschlange und in der Titelliste eines Albums; ein Tipp schaltet weiter von n
 „mag ich“ (Daumen hoch) zu „mag ich nicht“ (Daumen runter) und zurück. „Mag ich“ ist dasselbe wie ein Favorit in Volumio:
 Der Daumen legt den Titel in die Volumio-Favoriten, und vorhandene Favoriten zeigen den Daumen hoch. Herzen, Sterne und
 „mag ich nicht“ speichert der Tag-Dienst in `/data/xplorio/data/ratings.json`. Titel mit „mag ich nicht“ lassen
-Würfel, Stimmungs-Mix und die Titel-Reihen beim Entdecken aus.
+Würfel, Mood Mix und die Titel-Reihen beim Entdecken aus.
 
 **Versteckte Perlen** (nur mit Tag-Dienst): Beim Entdecken zeigt die Reihe unter den Zufälligen Entdeckungen Künstler,
 Alben oder Titel aus der Mediathek, die nie oder kaum gelaufen sind (Künstler und Alben höchstens zweimal, Titel
@@ -403,7 +403,7 @@ liegen in `/data/xplorio/data/moodtags/`, die Titelliste dazu in `/data/xplorio/
 zusammen mit der Albenliste). Fortschritt und Verteilung zeigt „Bibliothek prüfen“ unter „Stimmungs-Tags (Last.fm)“.
 Ausschalten: `MOODTAGS: false` in `web/config.local.js`, dann den Tag-Dienst neu starten.
 
-**Stimmungs-Mix:** Playlisten-Taste, Reiter „Stimmungs-Mix“ (erscheint, sobald der Tag-Dienst läuft). Dort lassen sich
+**Mood Mix:** Playlisten-Taste, Reiter „Mood Mix“ (erscheint, sobald der Tag-Dienst läuft). Dort lassen sich
 mehrere Stimmungen, ein Energie-Bereich, ein oder mehrere Genres (Genre-Tag des Albums, nie gelockert) und unter „Feinabstimmung“ Stile, Tempo (mit Audio-Analyse), Jahre (Erscheinungsjahr des Albums aus dem Date-Tag; mit Grenze fallen Alben ohne Jahr weg, nie gelockert), Länge, Höchstlänge je Titel (Vorgabe 20 min, hält DJ-Mixe draußen) und Entdeckungsgrad (nach dem Verlauf:
 Favoriten, ausgewogen, versteckte Perlen) wählen. „Mix erstellen“ zeigt nur eine Vorschau; erst „Mix abspielen“ ersetzt
 die Warteschlange (das Listensymbol daneben hängt den Mix an). Gibt es weniger als 20 genaue Treffer, nimmt der Mix
@@ -414,7 +414,7 @@ die Warteschlange (das Listensymbol daneben hängt den Mix an). Gibt es weniger 
 (fröhlich, traurig, entspannt, aggressiv, Party), Tanzbarkeit, Gesang/instrumental, Valenz und Erregung sowie
 Discogs-Stile. Für den Player ist das zu viel Rechenarbeit, deshalb läuft `tools/essentia/analyse.py` auf dem Mac und
 lädt eine Ergebnisdatei hoch. Der Tag-Dienst nimmt dann Energie, Tempo und Stimmung dieser Titel aus dem Audio,
-Last.fm ergänzt weitere Stimmungen und Stile; der Stimmungs-Mix bekommt unter „Feinabstimmung“ einen Tempo-Regler.
+Last.fm ergänzt weitere Stimmungen und Stile; der Mood Mix bekommt unter „Feinabstimmung“ einen Tempo-Regler.
 
 Einmalig (macOS 15 oder neuer; Python 3.14 von python.org oder `brew install python@3.14`):
 ```bash

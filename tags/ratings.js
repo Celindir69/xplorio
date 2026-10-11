@@ -62,7 +62,7 @@ Store.prototype.set = function(b, now) {
   return v;
 };
 
-/* Schlüssel aller Titel mit „mag ich nicht“ -> true (für Würfel, Stimmungs-Mix und Entdecken) */
+/* Schlüssel aller Titel mit „mag ich nicht“ -> true (für Würfel, Mood Mix und Entdecken) */
 Store.prototype.disliked = function() {
   var t = this.load().tracks, out = {};
   Object.keys(t).forEach(function(k){ if (t[k].v === -1) out[k] = true; });

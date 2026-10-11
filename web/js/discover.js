@@ -172,7 +172,7 @@ function discoverLoad(seq, cat, secs, onlyRandom) {
 }
 
 /* Auswahlknöpfe unter den Reihen: Stimmung, Energie, Stil und Jahrzehnt; jeder öffnet die passenden Alben (genre.js) */
-var DISCOVER_MOODS = [['relaxed'], ['dreamy'], ['melancholic'], ['dark'], ['happy'], ['intense'], ['epic']];   /* Namen wie im Stimmungs-Mix */
+var DISCOVER_MOODS = [['relaxed'], ['dreamy'], ['melancholic'], ['dark'], ['happy'], ['intense'], ['epic']];   /* Namen wie im Mood Mix */
 var DISCOVER_ENERGY = [[1, 2, 'disc.energy.low'], [3, 3, 'disc.energy.mid'], [4, 5, 'disc.energy.high']];
 var DISCOVER_STYLES = [
   ['Acoustic', ['acoustic', 'folk', 'singer-songwriter']],
