@@ -251,6 +251,16 @@ Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, sch�
 also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
 und ausschalten.
 
+### Wiedergabe
+Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 30 Sekunden, und **Lautstärke angleichen**
+(ReplayGain) mit Aus, Titel, Album oder Automatisch (bei Zufallswiedergabe wie Titel, sonst wie Album). Beides stellt der
+Tag-Dienst direkt in MPD um, ohne Neustart; ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. Volumios eigene
+Normalisierung (`volume_normalization`, gleicht auch ohne Tags an, verändert aber die Dynamik) zeigt die Seite nur an;
+umgestellt wird sie in Volumio unter Einstellungen → Wiedergabe-Optionen. Ist das AutoDJ-Plugin installiert, zeigt die Seite,
+ob dessen Automatik für Crossfade und Angleichen an ist: Wer beides hier einstellt, sollte sie im Plugin ausschalten, sonst
+stellt AutoDJ die Werte beim nächsten neuen Mix um. Ob Volumio Crossfade und ReplayGain-Modus nach einem Neustart
+zurücksetzt, ist noch nicht geprüft.
+
 ### Verlauf und Statistik
 Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** gespielt (nach Tagen), **Meistgespielt** (Titel, Alben, Künstler oder Genres;
 30 Tage, 12 Monate oder gesamt), **Statistik** (Wiedergaben, Hörzeit, Verlauf, Tageszeit, Wochentag, Top-8-Genres; ein Genre antippen öffnet seine Alben) und **Rückblick**

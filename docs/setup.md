@@ -210,6 +210,15 @@ connection is unencrypted (http): the password keeps guests out but does not pro
 network, so don't use one you use elsewhere. Note: Volumio itself can be restarted and shut down on the home network
 without a password.
 
+### Playback
+In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
+(ReplayGain) with Off, Track, Album or Automatic (like Track in shuffle, otherwise like Album). The Tag Service switches both
+directly in MPD, without a restart; ReplayGain only affects files with ReplayGain tags. Volumio's own normalization
+(`volume_normalization`, levels even without tags but changes the dynamics) is only shown; change it in Volumio under
+Settings → Playback options. If the AutoDJ plugin is installed, the page shows whether its automation for crossfade and
+levelling is on: if you set both here, switch it off in the plugin, otherwise AutoDJ changes the values at the next fresh
+mix. Whether Volumio resets crossfade and the ReplayGain mode after a restart has not been checked yet.
+
 ### History and Statistics
 
 In the menu (gear at the top right) under "History and stats": **Recent** (by day), **Most played** (tracks, albums, artists, or genres; 30 days, 12 months, or all time), **Stats** (plays, listening time, history, time of day, weekday, top 8 genres; tapping a genre opens its albums), and **Year in review** (one year: totals compared with the previous year, months, plus expandable top tracks, albums, artists, genres, and newly discovered artists; tapping a monthly bar displays the rankings for that month; genres are taken from the album list below).
