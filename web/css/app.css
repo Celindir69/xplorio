@@ -1098,3 +1098,11 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 @media (min-width:700px) {
   .hlIntro { font-size:15px; } .hlTitle { font-size:17px; } .hlRow { font-size:14px; }
 }
+/* System: Protokolle */
+.syLogCtl { margin-top:calc(1.5 * var(--vw)); }
+.syLog { margin:calc(2 * var(--vw)) 0 0; max-height:55vh; overflow:auto; -webkit-overflow-scrolling:touch; padding:calc(2 * var(--vw));
+  background:rgba(var(--fg-rgb),.05); border:1px solid rgba(var(--fg-rgb),.08); border-radius:10px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:calc(2.6 * var(--vw)); line-height:1.45;
+  white-space:pre-wrap; word-break:break-word; color:rgba(var(--fg-rgb),.85); -webkit-user-select:text; user-select:text; }
+.syLogLogin { display:inline-flex; vertical-align:middle; margin-left:4px; }
+@media (min-width:700px) { .syLog { font-size:12px; padding:10px 12px; } }
