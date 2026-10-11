@@ -359,6 +359,23 @@ Then restart the bridge. To allow the amplifier to be powered on via the network
 
 Without `ROTEL: true`, the interface controls Volumio's volume instead (if enabled there).
 
+### Remote control
+
+With `ROTEL: true`, a remote control icon appears at the top right of the player view. It opens the "Playback" page (gear menu) at the "Amplifier" card: power/standby, volume and mute, input, tone bypass, bass, treble, balance, and speakers A and B. The values come from the amplifier and also follow the physical remote.
+
+The commands are preset for the Rotel RA-1572 / RA-1572MKII (ASCII protocol V2, port 9590). For other models or your own input names, use `web/config.local.js`; anything left out keeps the default:
+
+```js
+window.APP_CONFIG.ROTEL_PROFILE = {
+  model: 'My amplifier',
+  sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'TV'}, {cmd: 'phono', name: 'Turntable'}],
+  speakerB: false,             // false hides a control (bypass, bass, treble, balance, speakerA, speakerB)
+  powerOnSource: 'pcusb'       // input selected after power-on, '' = don't switch
+};
+```
+
+Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (the deploy script only does so when `rotel-bridge.js` itself has changed).
+
 ## Streaming Services (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 
 The elements for streaming services (tiles in search, similar artists from the service in the information view, and the service's artist and album pages) only appear if the corresponding plugin is active in Volumio.

@@ -12,6 +12,12 @@ window.APP_CONFIG.THEME = 'light';
 window.APP_CONFIG.ROTEL = true;
 window.APP_CONFIG.ROTEL_HOST = '192.168.1.50';
 */
+/* Fernbedienung für ein anderes Modell oder eigene Namen der Eingänge (Standard: RA-1572 / RA-1572MKII):
+window.APP_CONFIG.ROTEL_PROFILE = {
+  sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'Fernseher'}],
+  speakerB: false
+};
+*/
 /* Teile einzelner Streamingdienste abschalten, auch wenn das Plugin läuft:
 window.APP_CONFIG.TIDAL = false;
 window.APP_CONFIG.QOBUZ = false;

@@ -478,6 +478,27 @@ window.APP_CONFIG.ROTEL_HOST = '<IP-des-Verstaerkers>';   // Adresse des Verstä
 Danach die Bridge neu starten. Damit der Verstärker im Standby per Netz einschaltbar ist, dort Power Mode „Quick“ einstellen.
 Ohne `ROTEL: true` regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
 
+### Fernbedienung
+Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs-Symbol. Es öffnet die Seite
+„Wiedergabe“ (Zahnrad-Menü) an der Karte „Verstärker“: Ein/Standby, Lautstärke und Stumm, Eingang, Klang umgehen
+(Bypass), Bass, Höhen, Balance sowie Lautsprecher A und B. Die Werte kommen vom Verstärker und folgen auch der echten
+Fernbedienung.
+
+Die Befehle sind für den Rotel RA-1572 / RA-1572MKII voreingestellt (ASCII-Protokoll V2, Port 9590). Andere Modelle
+oder eigene Namen für die Eingänge in `web/config.local.js`; was fehlt, bleibt beim Standard:
+```js
+window.APP_CONFIG.ROTEL_PROFILE = {
+  model: 'Mein Verstärker',
+  sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'Fernseher'}, {cmd: 'phono', name: 'Plattenspieler'}],
+  speakerB: false,             // false blendet ein Element aus (bypass, bass, treble, balance, speakerA, speakerB)
+  powerOnSource: 'pcusb'       // Eingang nach dem Einschalten, '' = nicht umschalten
+};
+```
+Weitere Felder: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` je `[an, aus]`, `bass`/`treble`
+je `[höher, tiefer, Mitte]`, `balance: [rechts, links, Mitte]`, `toneMax` (Standard 10) und `balanceMax` (15).
+Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung die Bridge
+neu starten (das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
+
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und
 Albumseiten des Dienstes) erscheinen nur, wenn das jeweilige Plugin in Volumio aktiv ist. Fest ein- oder ausschalten:

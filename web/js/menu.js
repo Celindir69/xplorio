@@ -16,7 +16,7 @@ var MENU_ITEMS = [
    icon: 'M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'},
   {id: 'system', needsTags: true, title: T('menu.system'), sub: T('menu.systemSub'), open: function(){ openSystem(); },
    icon: 'M3 13h4l3-8 4 14 3-6h4v2h-2.8L14 22 10 9.4 8.4 15H3z'},
-  {id: 'playback', needsTags: true, title: T('menu.playback'), sub: T('menu.playbackSub'), open: function(){ openPlayback(); },
+  {id: 'playback', needsTags: !ROTEL_ON, title: T('menu.playback'), sub: T('menu.playbackSub'), open: function(){ openPlayback(); },
    icon: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z'},
   {id: 'volumio', title: T('menu.volumio'), sub: T('menu.volumioSub'), open: function(){ openVolumio(); },
    icon: 'M3 4h4.2l4.8 11.3L16.8 4H21l-7 16h-4L3 4z'},
