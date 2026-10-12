@@ -69,7 +69,7 @@ function tagAlbumButton(al) {
 }
 
 /* Stift im Player neben der Qualitätsanzeige: nur, wenn gerade eine lokale Datei läuft */
-var mEdit = null, mEditUri = '';
+var mEdit = null, mEditUri = '', mInput = null;
 function tagPaintPlayer(st) {
   if (!mEdit) {
     var row = document.getElementById('mTechRow');
@@ -78,9 +78,24 @@ function tagPaintPlayer(st) {
     mEdit.id = 'mEdit';
     row.appendChild(mEdit);
   }
-  var local = !!st && st.trackType !== 'webradio' && isLocalTrack(st);
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: Icon statt Stift */
+  var local = !inp && !!st && st.trackType !== 'webradio' && isLocalTrack(st);
   mEditUri = local ? st.uri : '';
   mEdit.style.display = local ? '' : 'none';
+  if (inp && !mInput) {
+    mInput = document.createElement('span');
+    mInput.id = 'mInput'; mInput.className = 'inputIcon';
+    mInput.addEventListener('click', function(){ if (typeof openPlayback === 'function') openPlayback(); });   /* Fernbedienung */
+    mEdit.parentNode.appendChild(mInput);
+  }
+  if (!mInput) return;
+  mInput.style.display = inp ? '' : 'none';
+  var ic = inp ? (ROTEL_ICONS[inp.icon] || ROTEL_ICONS.aux) : '';
+  if (inp && mInput.getAttribute('data-icon') !== ic) {
+    mInput.setAttribute('data-icon', ic);
+    mInput.title = inp.name;
+    mInput.innerHTML = '<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="' + ic + '"/></svg>';
+  }
 }
 
 function tagPost(route, body) {

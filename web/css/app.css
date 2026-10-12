@@ -317,6 +317,10 @@
   .tagEditMini:active { opacity:1; background:rgba(var(--fg-rgb),.15); }
   @media (hover:hover) and (pointer:fine) { .tagEditMini:hover { opacity:1; background:rgba(var(--fg-rgb),.12); } }
   #mEdit { width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); margin-left:0; }
+  /* Eingang am Verstärker statt Stift (anderer Eingang als der Player); Tippen öffnet die Fernbedienung */
+  .inputIcon { flex:0 0 auto; width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); max-width:36px; max-height:36px;
+    display:flex; align-items:center; justify-content:center; opacity:.6; cursor:pointer; }
+  .inputIcon svg { width:70%; height:70%; fill:var(--fg); display:block; }
   #overlayTags { z-index:11; }
   .tagCover { margin-bottom:calc(4 * var(--vw)); padding-bottom:calc(4 * var(--vw)); border-bottom:1px solid rgba(var(--fg-rgb),.15); }
   .tagThumbs { display:flex; gap:calc(4 * var(--vw)); margin-bottom:calc(3 * var(--vw)); }

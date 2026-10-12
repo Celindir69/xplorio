@@ -18,6 +18,8 @@ window.APP_CONFIG = {
   ROTEL: false,       /* Rotel-Verstärker über rotel/rotel-bridge.js: Ein/Aus oben links, Lautstärke am Verstärker.
                          false = Lautstärke von Volumio (falls dort eingeschaltet), kein Ein/Aus-Knopf */
   ROTEL_HOST: '',     /* Adresse des Verstärkers im Netz (liest nur rotel-bridge.js), z. B. '192.168.1.50' */
+  ROTEL_INPUTS: {},   /* Name und Icon einzelner Eingänge ändern (liest rotel-bridge.js), z. B. {aux: {name: 'Plattenspieler', icon: 'phono'}};
+                         Icons: phono, cd, tuner, bluetooth, usb, digital, aux, pc, tv */
   ROTEL_AMP_PORT: 9590, /* Port des Verstärkers (ASCII-Protokoll) */
   ROTEL_PORT: 8765,   /* Port des Rotel-Dienstes auf dem Player */
   ROTEL_PROFILE: null, /* Fernbedienung (Seite Wiedergabe): Befehle und Eingänge des Verstärkers. null = Rotel RA-1572 /

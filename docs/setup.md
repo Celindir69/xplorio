@@ -499,6 +499,12 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 
 Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Other Rotel devices and Rotel's Michi series (X3, X5, P5, S5, M8) use the same ASCII protocol; the commands and the port (`ROTEL_AMP_PORT`) are in the device's protocol PDF on rotel.com (the P5, for example, uses port 9596 instead of 9590). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (`sudo systemctl restart rotel-bridge`; the deploy script only does so when `rotel-bridge.js` itself has changed).
 
+**Active input in the player view:** when the amplifier is set to an input other than the player's (`powerOnSource`, `pcusb` if not set), the line below the title shows the input's name instead of format and quality, and an icon replaces the pencil (tapping it opens the remote control). The icons follow the input: `phono`, `cd`, `tuner`, `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (also XLR), `pc` (PC-USB) and `tv`. To change the name and icon of single inputs without rewriting the whole list (also used by the remote control; restart the bridge afterwards):
+
+```js
+window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: 'Turntable', icon: 'phono'}, opt1: {name: 'TV', icon: 'tv'}};
+```
+
 ## Streaming Services (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 
 The elements for streaming services (tiles in search, similar artists from the service in the information view, and the service's artist and album pages) only appear if the corresponding plugin is active in Volumio.

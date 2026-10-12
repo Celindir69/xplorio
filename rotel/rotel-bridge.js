@@ -43,14 +43,36 @@ var DEFAULT_PROFILE = {
   powerOnSource: 'pcusb'                          /* nach dem Einschalten diesen Eingang wählen ('' = nichts umschalten) */
 };
 var CMD_RE = /^[a-z0-9_+\-]{1,24}$/;
+/* Icons der Eingänge in der Oberfläche (web/js/controls.js); ohne Angabe nach dem Befehl */
+var ICONS = ['phono', 'cd', 'tuner', 'bluetooth', 'usb', 'tv', 'digital', 'aux', 'pc'];
+function iconFor(cmd) {
+  var c = norm(cmd);
+  if (/^phono/.test(c)) return 'phono';
+  if (/^cd/.test(c)) return 'cd';
+  if (/^(tuner|fm|am|dab)/.test(c)) return 'tuner';
+  if (/^(bluetooth|bt)/.test(c)) return 'bluetooth';
+  if (/^pc/.test(c)) return 'pc';
+  if (/^usb/.test(c)) return 'usb';
+  if (/^(opt|coax|hdmi|arc)/.test(c)) return 'digital';
+  return 'aux';
+}
 
-/* Standard mit ROTEL_PROFILE überschreiben; ungültige Befehle fallen weg */
-function makeProfile(over) {
+/* Standard mit ROTEL_PROFILE überschreiben; ungültige Befehle fallen weg.
+   inputs (ROTEL_INPUTS): nur Name und Icon einzelner Eingänge ändern, z. B. {aux: {name: 'Plattenspieler', icon: 'phono'}} */
+function makeProfile(over, inputs) {
   var p = {}, o = over && typeof over === 'object' ? over : {};
   Object.keys(DEFAULT_PROFILE).forEach(function(k){ p[k] = Object.prototype.hasOwnProperty.call(o, k) ? o[k] : DEFAULT_PROFILE[k]; });
   p.sources = (Array.isArray(p.sources) ? p.sources : []).map(function(x){
     return typeof x === 'string' ? {cmd: x, name: x} : {cmd: String(x && x.cmd || ''), name: String(x && (x.name || x.cmd) || '')};
   }).filter(function(x){ return CMD_RE.test(x.cmd); });
+  var ins = {};
+  if (inputs && typeof inputs === 'object') Object.keys(inputs).forEach(function(k){ ins[norm(k)] = inputs[k]; });
+  var icons = {};
+  ((over && Array.isArray(over.sources)) ? over.sources : []).forEach(function(x){ if (x && x.icon) icons[norm(x.cmd)] = String(x.icon); });
+  p.sources = p.sources.map(function(x){
+    var o = ins[norm(x.cmd)], name = typeof o === 'string' ? o : (o && o.name), icon = (o && o.icon) || icons[norm(x.cmd)];
+    return {cmd: x.cmd, name: String(name || x.name).slice(0, 40), icon: ICONS.indexOf(icon) >= 0 ? icon : iconFor(x.cmd)};
+  });
   function cmds(v, len) { return Array.isArray(v) && v.length === len && v.every(function(c){ return CMD_RE.test(String(c)); }) ? v.map(String) : false; }
   ['bypass', 'speakerA', 'speakerB'].forEach(function(k){ p[k] = cmds(p[k], 2); });
   ['bass', 'treble', 'balance'].forEach(function(k){ p[k] = cmds(p[k], 3); });
@@ -95,7 +117,7 @@ function queryFor(p, c) {
   return q;
 }
 
-var PROFILE = makeProfile(CFG.ROTEL_PROFILE);
+var PROFILE = makeProfile(CFG.ROTEL_PROFILE, CFG.ROTEL_INPUTS);
 var POWER_ON_SOURCE = PROFILE.powerOnSource;
 
 var state = {connected:false, power:null, volume:null, mute:null, source:null,
@@ -282,7 +304,7 @@ var server = http.createServer(function(req, res){
     /* für die Fernbedienung: welche Bedienelemente es gibt (ohne Befehle) */
     res.writeHead(200, head);
     return res.end(JSON.stringify({ok: true, state: state, profile: {model: PROFILE.model, maxVol: MAX_VOL,
-      sources: PROFILE.sources, bypass: !!PROFILE.bypass, bass: !!PROFILE.bass, treble: !!PROFILE.treble, toneMax: PROFILE.toneMax,
+      sources: PROFILE.sources, player: PROFILE.powerOnSource || 'pcusb', bypass: !!PROFILE.bypass, bass: !!PROFILE.bass, treble: !!PROFILE.treble, toneMax: PROFILE.toneMax,
       balance: !!PROFILE.balance, balanceMax: PROFILE.balanceMax, speakerA: !!PROFILE.speakerA, speakerB: !!PROFILE.speakerB,
       cmd: {bypass: PROFILE.bypass, speakerA: PROFILE.speakerA, speakerB: PROFILE.speakerB, bass: PROFILE.bass, treble: PROFILE.treble, balance: PROFILE.balance}}}));
   } else if (u.pathname !== '/state') {

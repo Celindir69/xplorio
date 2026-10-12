@@ -4,10 +4,12 @@
 var qualityState = null;
 function paintQuality(st) {
   qualityState = st;
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: dessen Name statt Format */
   if (st.trackType === 'recognized') {                 /* erkannter Titel einer anderen Quelle: nichts über die Qualität bekannt */
-    mTech.textContent = ''; mBadge.textContent = T('recog.badge'); mBadge.className = 'qBadge recog';
+    mTech.textContent = inp ? inp.name : ''; mBadge.textContent = T('recog.badge'); mBadge.className = 'qBadge recog';
     return;
   }
+  if (inp) { mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: Codec aus der Datei, sobald bekannt */
   var q = classifyQuality(st, window.APP_CONFIG);
   mTech.textContent = q.tech.join('  ·  ');
