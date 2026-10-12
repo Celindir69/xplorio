@@ -118,6 +118,8 @@ progress of the mood tags.
 - Light and dark, following the device setting or set explicitly.
 - German, English, French, Spanish and Italian, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).
+- Optional: recognize a track from another source on the amplifier with Shazam via an iOS shortcut and show it with cover, lyrics and info
+  (see [Setup](docs/setup.md#recognize-a-track-from-another-source-iphone-ipad-mac)).
 - Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)

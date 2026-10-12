@@ -43,7 +43,7 @@
     border:1px solid currentColor; text-transform:uppercase; white-space:nowrap; opacity:.9; }
   .qBadge.hires, .qBadge.dsd { display:inline-block; color:var(--gold); }
   .qBadge.lossless { display:inline-block; color:var(--fg); }
-  .qBadge.lossy, .qBadge.radio { display:inline-block; color:var(--fg); opacity:.5; }
+  .qBadge.lossy, .qBadge.radio, .qBadge.recog { display:inline-block; color:var(--fg); opacity:.5; }
 
 #seekWrap { flex:0 0 auto; width:88%; margin-bottom:1.6vh; }
   #seekBar { width:100%; height:4px; background:rgba(var(--fg-rgb),.25);
