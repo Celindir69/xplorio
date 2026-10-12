@@ -96,7 +96,7 @@ Description=Tag-Dienst fuer Xplorio
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/env node --max-old-space-size=256 --optimize-for-size /data/xplorio/tags/tag-service.js
+ExecStart=/usr/bin/env node /data/xplorio/tags/tag-service.js
 WorkingDirectory=/data/xplorio/tags
 Restart=always
 User=volumio
@@ -116,7 +116,6 @@ The service writes to music files as the `volumio` user. To check whether this w
 If it does not work, uncomment `Environment=USE_SUDO=1` (then only `tags.py` runs as root).
 
 After an update: `sudo systemctl restart tag-service`. Log: `journalctl -u tag-service -e`.
-`--max-old-space-size=256 --optimize-for-size` keep the memory use low. An older unit file without them gets them with `sudo xplorio-deploy --tag-service --force`.
 
 Additional variables: `HTTP_PORT`, `MUSIC_ROOT` (`/mnt`), `PYTHON`, `MPC`, `TAGS_DATA` (data folder, default `/data/xplorio/data`).
 

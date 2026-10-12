@@ -105,7 +105,7 @@ Description=Tag-Dienst fuer Xplorio
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/env node --max-old-space-size=256 --optimize-for-size /data/xplorio/tags/tag-service.js
+ExecStart=/usr/bin/env node /data/xplorio/tags/tag-service.js
 WorkingDirectory=/data/xplorio/tags
 Restart=always
 User=volumio
@@ -121,7 +121,6 @@ Der Dienst schreibt als `volumio` in die Musikdateien. Ob das geht:
 `sudo -u volumio touch /mnt/USB/<Musikordner>/.test && sudo rm /mnt/USB/<Musikordner>/.test && echo schreibbar`.
 Wenn nicht, `Environment=USE_SUDO=1` einkommentieren (dann läuft nur `tags.py` als root).
 Nach einem Update: `sudo systemctl restart tag-service`. Log: `journalctl -u tag-service -e`.
-`--max-old-space-size=256 --optimize-for-size` halten den Speicherbedarf klein. Eine ältere Dienstdatei ohne diese Angaben bekommt sie mit `sudo xplorio-deploy --tag-service --force`.
 Weitere Variablen: `HTTP_PORT`, `MUSIC_ROOT` (`/mnt`), `PYTHON`, `MPC`, `TAGS_DATA` (Datenordner, Standard `/data/xplorio/data`).
 
 **Zugriffsschutz:** Tag-Dienst und Rotel-Bridge nehmen Aufträge nur von der Oberfläche auf demselben Gerät an.
