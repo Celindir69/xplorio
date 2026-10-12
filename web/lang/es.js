@@ -321,6 +321,7 @@ langRegister('es', 'Español', {
   'menu.recognize': 'Reconocer canción',
   'menu.recognizeSub': 'Otra fuente sonando: Shazam con un atajo',
   'recog.badge': 'Reconocida',
+  'recog.tapHint': 'Toca para reconocer la canción',
   'help.intro': 'Gran parte de Xplorio está detrás de un toque en nombres, años e iconos. Aquí tienes un resumen de lo esencial; más en la',
   'help.more': 'guía',
   'help.player': 'Reproducción',

@@ -5,6 +5,7 @@ var qualityState = null;
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: dessen Name statt Format */
+  if (st.trackType === 'input') { mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* großes Icon statt Cover */
   if (st.trackType === 'recognized') {                 /* erkannter Titel einer anderen Quelle: nichts über die Qualität bekannt */
     mTech.textContent = inp ? inp.name : ''; mBadge.textContent = T('recog.badge'); mBadge.className = 'qBadge recog';
     return;
@@ -104,16 +105,45 @@ function recogArt(t) {
   }
   return fallback;
 }
+/* Anderer Eingang am Verstärker ohne erkannten Titel: großes Icon des Eingangs statt Cover (als SVG-Bild).
+   Gibt es den Kurzbefehl, steht darunter, dass ein Tipp die Erkennung startet; sie läuft nur auf Tippen, nie von selbst */
+var inputArtCache = {};
+function inputArt(inp, hint) {
+  var light = document.documentElement.classList.contains('light'), fg = light ? '#000' : '#fff';
+  var k = inp.icon + '|' + (hint ? 1 : 0) + '|' + (light ? 1 : 0);
+  if (inputArtCache[k]) return inputArtCache[k];
+  var txt = String(T('recog.tapHint')).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; });
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">' +
+    '<rect width="600" height="600" rx="24" fill="' + fg + '" fill-opacity=".07"/>' +
+    '<g transform="translate(180 ' + (hint ? 150 : 180) + ') scale(10)"><path fill-rule="evenodd" fill="' + fg + '" fill-opacity=".5" d="' +
+    (ROTEL_ICONS[inp.icon] || ROTEL_ICONS.aux) + '"/></g>' +
+    (hint ? '<text x="300" y="505" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif" font-size="27" fill="' +
+            fg + '" fill-opacity=".6">' + txt + '</text>' : '') + '</svg>';
+  return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+}
+function recogCanTap() { return typeof recogShortcutOk === 'function' && recogShortcutOk(); }
+
+/* Was der Player zeigt: erkannter Titel (Volumio spielt nicht oder ist am Verstärker nicht zu hören),
+   sonst bei anderem Eingang dessen Icon, sonst Volumio */
 function recogApply(st) {
-  var t = recogTrack;
-  if (!t || st.status === 'play') return st;
+  var t = recogTrack, inp = typeof rotelInput === 'function' ? rotelInput() : null;
+  if (!inp && (!t || st.status === 'play')) return st;
   var r = {};
   for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
-  r.artist = t.artist; r.title = t.title; r.album = t.album || ''; r.albumart = recogArt(t);
-  r.trackType = 'recognized'; r.service = 'recognized'; r.uri = ''; r.duration = 0; r.seek = 0;
+  if (t) {
+    r.artist = t.artist; r.title = t.title; r.album = t.album || ''; r.albumart = recogArt(t);
+    r.trackType = 'recognized';
+  } else {
+    r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp, recogCanTap());
+    r.trackType = 'input';
+  }
+  r.service = r.trackType; r.uri = ''; r.duration = 0; r.seek = 0;
   r.samplerate = r.bitdepth = r.bitrate = r.fileFormat = '';
   return r;
 }
+/* Tipp aufs Eingangs-Icon startet die Erkennung (Kurzbefehl) */
+var coverTapRecog = false;
+document.getElementById('coverWrap').addEventListener('click', function(){ if (coverTapRecog && recogCanTap()) recogShortcutRun(); });
 
 var playIconShown = null;                              /* zuletzt gezeichnetes Symbol (nur bei Wechsel neu setzen) */
 var pollBusy = false;                                   /* nie mehrere getState gleichzeitig (Volumio hängt z. B. beim Einlesen) */
@@ -121,7 +151,7 @@ function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
   if (!volDrag && ROTEL_ON) rotel('/state');  
-  if (!playing) recogFetch();
+  if (!playing || (typeof rotelInput === 'function' && rotelInput())) recogFetch();
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(function(st){
 st = recogApply(st);
 
@@ -129,7 +159,9 @@ curDur = Number(st.duration) || 0;
 /* gestoppt zählt Volumio die Zeit teils weiter (Wiedergabe angefordert, aber das Ausgabegerät ließ sich nicht öffnen):
    dann steht der Titel am Anfang */
 seekBase = st.status === 'stop' ? 0 : (Number(st.seek) || 0); seekStamp = Date.now();
-playing = (st.status === 'play');
+playing = (st.status === 'play') && st.trackType !== 'recognized' && st.trackType !== 'input';   /* erkannter Titel oder anderer Eingang: keine laufende Zeit */
+coverTapRecog = st.trackType === 'input';
+document.getElementById('coverWrap').classList.toggle('tapRecog', coverTapRecog && recogCanTap());
 paintTime();
 updateSyncedLyrics();
 
@@ -194,11 +226,14 @@ updateSyncedLyrics();
 
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
-      askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* späte Antwort des vorigen Titels verwerfen */
       setTrackInfo(lyrKey, title, null, radio);                   /* Reiter des vorigen Titels weg */
-      (function(k, ti){
-        askTrack(artist, ti).then(function(res){ if (k === lastLyrKey) setTrackInfo(k, ti, res, radio); });
-      })(lyrKey, title);
+      if (!artist) showLyrics(null);                               /* z. B. anderer Eingang ohne erkannten Titel */
+      else {
+        askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* späte Antwort des vorigen Titels verwerfen */
+        (function(k, ti){
+          askTrack(artist, ti).then(function(res){ if (k === lastLyrKey) setTrackInfo(k, ti, res, radio); });
+        })(lyrKey, title);
+      }
     }
 
     if (key === lastKey) return;

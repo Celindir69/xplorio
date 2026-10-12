@@ -79,7 +79,8 @@ function tagPaintPlayer(st) {
     row.appendChild(mEdit);
   }
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: Icon statt Stift */
-  var local = !inp && !!st && st.trackType !== 'webradio' && isLocalTrack(st);
+  if (st && st.trackType === 'input') inp = null;                         /* großes Icon steht schon an Stelle des Covers */
+  var local = !inp && !!st && st.trackType !== 'input' && st.trackType !== 'webradio' && isLocalTrack(st);
   mEditUri = local ? st.uri : '';
   mEdit.style.display = local ? '' : 'none';
   if (inp && !mInput) {
