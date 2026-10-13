@@ -6,6 +6,8 @@ All commands are run on the player (via SSH), as a user with `sudo` privileges. 
 
 Copy `xplorio.html`, `app.html` and `web/` to `/volumio/http/www3/`, then open `http://<player>/xplorio.html` (`app.html` is the former name and only redirects, so old bookmarks and home-screen shortcuts keep working).
 
+Xplorio is served entirely by the player: when it can't be reached (for example away from the home network), the browser shows its error page and the home-screen web app simply stays black. From outside, it only works through a VPN into the home network.
+
 Copy `kioskTV.html` next to `xplorio.html` (the kiosk loads `http://localhost:3000/kioskTV.html`, i.e. from the folder Volumio serves).
 
 After an update with `xplorio-deploy`, the browser loads the new files by itself (the script writes `web/build.js` for this); after copying by hand, do a hard reload once. An existing `web/config.local.js` is preserved.

@@ -6,6 +6,8 @@ steht gesammelt unter [Volumio 4](#volumio-4).
 ## Oberfläche
 `xplorio.html`, `app.html` und `web/` nach `/volumio/http/www3/` kopieren, Aufruf `http://<player>/xplorio.html`
 (`app.html` ist der frühere Name und leitet nur weiter; alte Lesezeichen und Home-Bildschirm-Verknüpfungen gehen also weiter).
+Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser seine
+Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN ins Heimnetz.
 `kioskTV.html` neben `xplorio.html` (der Kiosk lädt `http://localhost:3000/kioskTV.html`, also aus dem Ordner, den Volumio ausliefert).
 Nach einem Update mit `xplorio-deploy` lädt der Browser die neuen Dateien von selbst (das Skript schreibt dazu `web/build.js`); bei Kopieren von Hand einmal hart neu laden. Eine vorhandene `web/config.local.js` bleibt erhalten.
 Eigene Einstellungen (Rotel, Dienste ein/aus, Sprache) kommen in `web/config.local.js`, Vorlage
