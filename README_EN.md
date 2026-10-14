@@ -16,7 +16,7 @@ All images in this file show a fictional example library in German language sett
 
 Developed using AI (Claude code https://claude.ai)
 
-Some features were designed to suite my individual setup (Rotel Amp, iPad, iPhone) and may or may not work in diefferent settings. 
+Note: Some features were designed to suite my individual setup (Rotel Amp, iPad, iPhone) and may or may not work in different settings. 
 
 ## Features
 
