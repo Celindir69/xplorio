@@ -158,6 +158,12 @@ langRegister('en', 'English', {
   'gems.why.artist': '♥ Unheard',
   'gems.why.artistRare': '♥ Barely heard',
   'gems.why.like': 'Like {ar}',
+  'tog.title': 'Better together',
+  'tog.play': 'Play mix',
+  'tog.lfm': 'similar on Last.fm',
+  'tog.hint': 'About 40 % favourites (♥), the rest rarely or never played. The dice draws a new mix.',
+  'tog.new': 'new',
+  'tog.none': 'No matching tracks for these artists right now.',
   'disc.reroll': 'New selection',
 
   'genre.all': 'All',

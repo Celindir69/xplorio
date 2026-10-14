@@ -11,7 +11,7 @@ var DISCOVER_KIND = {
   albums:  {kind: 'album',  ago: 'disc.ago.album'},
   songs:   {kind: 'track',  ago: 'disc.ago.track'}
 };
-var DISCOVER_SHELVES = ['random', 'bday', 'recent', 'fresh', 'gems', 'ago', 'forgotten', 'never', 'oldfav'];   /* Reihenfolge auf der Seite; bday, recent, fresh nur bei Alben */
+var DISCOVER_SHELVES = ['random', 'together', 'bday', 'recent', 'fresh', 'gems', 'ago', 'forgotten', 'never', 'oldfav'];   /* Reihenfolge auf der Seite; bday, recent, fresh nur bei Alben, together nur bei Künstlern */
 
 function discoverDate(t) { return langDate(t * 1000); }
 function discoverCat() { return DISCOVER_KIND[searchCat] || DISCOVER_KIND.albums; }
@@ -40,6 +40,7 @@ function discoverShow() {
   discoverLoad(seq, cat, secs, false);
   discoverGems(seq, cat, secs.gems);
   if (cat.kind === 'album') discoverAlbumRows(seq, secs);
+  if (cat.kind === 'artist') togetherRow(secs.together, function(){ return seq === discoverSeq; });
   return true;
 }
 
@@ -124,8 +125,8 @@ function discoverWhy(it) {
   return [m ? m.charAt(0).toUpperCase() + m.slice(1) : '', w.ge || ''].filter(Boolean).join(' · ');
 }
 
-/* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf}),
-   bei Zufallsreihe und Perlen davor ↻ (neue Kacheln ziehen) */
+/* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf}; ohne shelf keiner),
+   bei Zufallsreihe, Perlen und „Passt zusammen“ davor ↻ (neue Kacheln ziehen) */
 var REROLL_SVG = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
 function discoverHead(title, shelf, roll) {
   var head = browseHeading(title);
@@ -143,7 +144,7 @@ function discoverHead(title, shelf, roll) {
     return b;
   }
   if (roll) btn(REROLL_SVG, T('disc.reroll'), roll).classList.add('dReroll');
-  btn(DICE_SVG, T('disc.mix'), function(){
+  if (shelf) btn(DICE_SVG, T('disc.mix'), function(){
     var q = {shelf: shelf}, tz = histTz().match(/tzw=(-?\d+)&tzs=(-?\d+)/);
     if (tz) { q.tzw = +tz[1]; q.tzs = +tz[2]; }
     randomMixPlay(q);
@@ -364,6 +365,88 @@ function browseSimilar(e, seq) {
       if (why.length) meta.appendChild(histEl('div', 'mxWhy', why.join(' · ')));
       row.appendChild(meta);
       if (x.why.energy) row.appendChild(histEl('div', 'mxDots', mixEnergyDots(x.why.energy)));
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function(){ histPlayUri('music-library/' + x.f, 'mpd', x); });
+      browseBody.appendChild(row);
+    });
+  }).catch(function(){
+    if (seq !== browseSeq) return;
+    discoverClear(browseBody);
+    browseBody.appendChild(browseNote(T('genre.offline')));
+  });
+}
+
+/* ---------- Passt zusammen ---------- */
+/* Mixe aus 2–3 Künstlern der Sammlung, die musikalisch zusammenpassen (Tag-Dienst GET /together, je Tag fest, ↻ würfelt neu).
+   Kachel: die Künstlerfotos überlappend, darunter die Namen und was sie verbindet; Tipp öffnet die Vorschau des Mixes.
+   Im Reiter „Künstler“ der Suche ohne Eingabe und auf der Begrüßung. alive(): Seite noch dieselbe. */
+function togetherName(artists) { return (artists || []).map(histArtistName).join(' + '); }
+function togetherWhy(w) {
+  w = w || {};
+  var parts = [w.mood ? mixName(w.mood) : '', w.style || w.ge || ''].filter(Boolean);
+  if (w.lfm && parts.length < 2) parts.push(T('tog.lfm'));
+  return parts.map(function(x){ return x.charAt(0).toUpperCase() + x.slice(1); }).join(' · ');
+}
+function togetherTile(it) {
+  var tile = histEl('div', 'dTile dTogether');
+  var art = histEl('div', 'tgArt n' + it.artists.length);
+  it.artists.forEach(function(a){
+    var img = histImg(histArtistArt(a.ar), true);
+    histArtistFallback(img, a.ar);
+    art.appendChild(img);
+  });
+  tile.appendChild(art);
+  var names = it.artists.map(function(a){ return a.ar; });
+  tile.appendChild(histEl('div', 'dTi', togetherName(names)));
+  var why = togetherWhy(it.why);
+  if (why) tile.appendChild(histEl('div', 'dAr', why));
+  tile.addEventListener('click', function(){ openBrowse({kind: 'together', artists: names}); });
+  return tile;
+}
+function togetherRow(sec, alive, reroll) {
+  tagGetJson('/together?day=' + discoverToday() + (reroll ? '&reroll=1' : '')).then(function(r){
+    if (!alive() || !r || !r.ok) return;
+    discoverClear(sec);
+    if (!r.items.length) return;
+    sec.appendChild(discoverHead(T('tog.title'), '', function(){ togetherRow(sec, alive, true); }));
+    var row = histEl('div', 'dRow');
+    r.items.forEach(function(it){ row.appendChild(togetherTile(it)); });
+    sec.appendChild(row);
+    discoverFit(row);
+  }).catch(function(){});
+}
+function togetherQuery(e) {
+  return '/togethermix?day=' + discoverToday() + e.artists.map(function(a){ return '&ar=' + encodeURIComponent(a); }).join('');
+}
+/* Vorschau: ▶ spielt den Mix, der Würfel einen neu gezogenen, + hängt ihn an; ♥ markiert Lieblingstitel */
+function browseTogether(e, seq) {
+  tagGetJson(togetherQuery(e)).then(function(r){
+    if (seq !== browseSeq) return;
+    discoverClear(browseBody);
+    if (!r || !r.ok || !r.items.length) { browseBody.appendChild(browseNote(T(r && r.building ? 'disc.building' : 'tog.none'))); return; }
+    var dice = histEl('div', 'mixDice');
+    dice.title = T('disc.mix');
+    dice.innerHTML = DICE_SVG;
+    dice.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      dice.classList.remove('roll'); void dice.offsetWidth; dice.classList.add('roll');
+      tagGetJson(togetherQuery(e) + '&shuffle=1').then(function(m){
+        if (!m || !m.ok || !m.items.length) return showToast(T('tog.none'));
+        tracksPlay(m.items);
+        showToast(T('disc.mixStarted', {n: m.items.length}));
+      }).catch(function(){ showToast(T('hist.offline')); });
+    });
+    browseBody.appendChild(playRow(T('tog.play'), playRowSub(r.items, function(x){ return x.d; }),
+      function(){ tracksPlay(r.items); }, [dice, queueAddButton(tracksItems(r.items), r.items.length)]));
+    browseBody.appendChild(listHint(T('tog.hint')));
+    r.items.forEach(function(x){
+      var row = histEl('div', 'sRow mxRow');
+      row.appendChild(histImg(histAlbumArt(x.ar, x.al, x.f.replace(/\/[^\/]*$/, ''))));
+      var meta = histEl('div', 'sMeta');
+      meta.appendChild(histEl('div', 'sTitle', x.ti));
+      meta.appendChild(histEl('div', 'sSub', x.ar + (x.al ? ' · ' + x.al : '')));
+      row.appendChild(meta);
+      row.appendChild(histEl('div', 'tgMark' + (x.fav ? ' fav' : ''), x.fav ? '♥' : x.plays ? '' : T('tog.new')));
       row.style.cursor = 'pointer';
       row.addEventListener('click', function(){ histPlayUri('music-library/' + x.f, 'mpd', x); });
       browseBody.appendChild(row);

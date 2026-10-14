@@ -111,7 +111,7 @@ function browseRender() {
   var e = browseStack[browseStack.length - 1];
   var seq = ++browseSeq;
   browseBack.style.display = (browseStack.length > 1 || browseOrigin) ? '' : 'none';
-  browseTitle.textContent = e.kind === 'artist' ? e.artist : e.kind === 'playlist' ? e.name : e.kind === 'genre' ? e.genre + (e.sub ? ' · ' + e.sub : '') : e.kind === 'decade' ? T('disc.decade', {d: e.decade}) : e.kind === 'year' ? String(e.year) : e.kind === 'moodset' ? e.title : e.kind === 'similar' ? T('similar.title', {ti: e.title}) : e.album;
+  browseTitle.textContent = e.kind === 'artist' ? e.artist : e.kind === 'playlist' ? e.name : e.kind === 'genre' ? e.genre + (e.sub ? ' · ' + e.sub : '') : e.kind === 'decade' ? T('disc.decade', {d: e.decade}) : e.kind === 'year' ? String(e.year) : e.kind === 'moodset' ? e.title : e.kind === 'similar' ? T('similar.title', {ti: e.title}) : e.kind === 'together' ? togetherName(e.artists) : e.album;
   browseBody.scrollTop = 0;
   while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
   browseBody.appendChild(browseNote(T('browse.loading')));
@@ -122,6 +122,7 @@ function browseRender() {
   else if (e.kind === 'year') browseYear(e, seq);                   /* genre.js */
   else if (e.kind === 'moodset') browseMoodSet(e, seq);             /* genre.js */
   else if (e.kind === 'similar') browseSimilar(e, seq);             /* discover.js */
+  else if (e.kind === 'together') browseTogether(e, seq);           /* discover.js */
   else browseAlbum(e, seq);
 }
 
