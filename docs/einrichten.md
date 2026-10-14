@@ -354,7 +354,7 @@ hört oder mit Herz markiert hat; dazu kommen Künstler mit ähnlichem Klang (Ge
 Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Nennt Last.fm einen davon als ähnlichen Künstler,
 zählt das mit (nur mit Last.fm-Key), seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
 Künstler und was sie verbindet. Ein Tipp öffnet die Vorschau: etwa 25 Titel, rund 40 % Lieblingstitel (oft gehört,
-Favorit oder Album mit 4–5 Sternen, mit ♥ markiert) und der Rest selten oder nie gehört; die Künstler wechseln sich ab,
+Favorit oder Album mit 4–5 Sternen) und der Rest selten oder nie gehört (nie Gehörtes ist mit „neu“ markiert); die Künstler wechseln sich ab,
 Energie und Tempo gehen sanft ineinander über. „Mix abspielen“ ersetzt die Warteschlange, der Würfel zieht einen neuen
 Mix, + hängt ihn an. Die Mixe bleiben den ganzen Tag gleich, ↻ würfelt neue. Der Tag-Dienst merkt sich die gezeigten
 Paarungen sieben Tage in `/data/xplorio/data/together.json`, damit sie sich nicht gleich wiederholen. Nicht dabei:

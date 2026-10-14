@@ -418,7 +418,7 @@ function togetherRow(sec, alive, reroll) {
 function togetherQuery(e) {
   return '/togethermix?day=' + discoverToday() + e.artists.map(function(a){ return '&ar=' + encodeURIComponent(a); }).join('');
 }
-/* Vorschau: ▶ spielt den Mix, der Würfel einen neu gezogenen, + hängt ihn an; ♥ markiert Lieblingstitel */
+/* Vorschau: ▶ spielt den Mix, der Würfel einen neu gezogenen, + hängt ihn an; nie Gehörtes ist als „neu“ markiert */
 function browseTogether(e, seq) {
   tagGetJson(togetherQuery(e)).then(function(r){
     if (seq !== browseSeq) return;
@@ -446,7 +446,7 @@ function browseTogether(e, seq) {
       meta.appendChild(histEl('div', 'sTitle', x.ti));
       meta.appendChild(histEl('div', 'sSub', x.ar + (x.al ? ' · ' + x.al : '')));
       row.appendChild(meta);
-      row.appendChild(histEl('div', 'tgMark' + (x.fav ? ' fav' : ''), x.fav ? '♥' : x.plays ? '' : T('tog.new')));
+      if (!x.plays) row.appendChild(histEl('div', 'tgMark', T('tog.new')));
       row.style.cursor = 'pointer';
       row.addEventListener('click', function(){ histPlayUri('music-library/' + x.f, 'mpd', x); });
       browseBody.appendChild(row);

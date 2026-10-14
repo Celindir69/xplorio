@@ -844,7 +844,6 @@ html.stage body.ovMain #lyrShiftBar { visibility:hidden; }
 .dTile .tgArt.n3 .sCover { width:calc(16 * var(--vw)); height:calc(16 * var(--vw)); max-width:86px; max-height:86px; }
 .dTile .tgArt.n3 .sCover:nth-child(3) { align-self:center; }
 .tgMark { flex:0 0 auto; font-size:calc(2.6 * var(--vw)); opacity:.45; }
-.tgMark.fav { color:var(--gold); opacity:1; font-size:calc(3.4 * var(--vw)); }
 
 /* Geburtstage (discover.js): Abzeichen mit den Jahren bei runden Geburtstagen, Jubiläen zusätzlich mit goldenem Rand */
 .dRound, .dJubilee { position:relative; }

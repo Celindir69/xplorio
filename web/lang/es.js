@@ -159,7 +159,7 @@ langRegister('es', 'Español', {
   'tog.title': 'Combinan bien',
   'tog.play': 'Reproducir mezcla',
   'tog.lfm': 'similares según Last.fm',
-  'tog.hint': 'Alrededor de un 40 % de favoritas (♥), el resto poco o nunca escuchado. El dado crea una mezcla nueva.',
+  'tog.hint': 'Alrededor de un 40 % de favoritas, el resto poco o nunca escuchado. El dado crea una mezcla nueva.',
   'tog.new': 'nuevo',
   'tog.none': 'Ahora mismo no hay pistas adecuadas de estos artistas.',
   'disc.reroll': 'Nueva selección',

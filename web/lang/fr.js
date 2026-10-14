@@ -160,7 +160,7 @@ langRegister('fr', 'Français', {
   'tog.title': 'Vont bien ensemble',
   'tog.play': 'Lire le mix',
   'tog.lfm': 'similaires selon Last.fm',
-  'tog.hint': 'Environ 40 % de favoris (♥), le reste peu ou jamais écouté. Le dé tire un nouveau mix.',
+  'tog.hint': 'Environ 40 % de favoris, le reste peu ou jamais écouté. Le dé tire un nouveau mix.',
   'tog.new': 'nouveau',
   'tog.none': 'Aucun titre adapté pour ces artistes pour le moment.',
   'disc.reroll': 'Nouvelle sélection',

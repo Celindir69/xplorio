@@ -161,7 +161,7 @@ langRegister('en', 'English', {
   'tog.title': 'Better together',
   'tog.play': 'Play mix',
   'tog.lfm': 'similar on Last.fm',
-  'tog.hint': 'About 40 % favourites (♥), the rest rarely or never played. The dice draws a new mix.',
+  'tog.hint': 'About 40 % favourites, the rest rarely or never played. The dice draws a new mix.',
   'tog.new': 'new',
   'tog.none': 'No matching tracks for these artists right now.',
   'disc.reroll': 'New selection',
