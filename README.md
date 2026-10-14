@@ -17,6 +17,10 @@ Alle Bilder in dieser Datei zeigen eine erfundene Beispiel-Bibliothek (Künstler
 
 Entwickelt mit KI (Claude code https://claude.ai)
 
+Hinweis: Manche Funktionalitäten wurden speziell für mein 
+individuelles Setup entwickelt (RotelVerstärker, iPad, iPhone). 
+Diese Funktionalitäten sind in anderen Setups nicht nutzbar. 
+
 ## Funktionen
 
 ### Wiedergabe, Lyrics und Infos
