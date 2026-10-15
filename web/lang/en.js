@@ -129,6 +129,7 @@ langRegister('en', 'English', {
   'disc.last': 'last {date}',
   'disc.mix': 'Random mix: 25 tracks',
   'disc.mixStarted': 'Random mix of {n} tracks',
+  'similar.mixQueued': '{n} similar tracks follow the current one',
   'similar.title': 'Like “{ti}”',
   'similar.seed': 'Similar in mood, energy and tempo: {why}',
   'similar.energy': 'Energy {e}',

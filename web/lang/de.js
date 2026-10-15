@@ -127,6 +127,7 @@ langRegister('de', 'Deutsch', {
   'disc.last': 'zuletzt {date}',
   'disc.mix': 'Zufallsmix: 25 Titel',
   'disc.mixStarted': 'Zufallsmix mit {n} Titeln',
+  'similar.mixQueued': 'Nach dem laufenden Titel folgen {n} ähnliche Titel',
   'similar.title': 'Wie „{ti}“',
   'similar.seed': 'Ähnlich in Stimmung, Energie und Tempo: {why}',
   'similar.energy': 'Energie {e}',

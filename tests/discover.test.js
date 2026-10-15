@@ -142,4 +142,17 @@ t('Würfel-Regeln: höchstens 2 je Album, kürzlich Gehörtes nur zum Auffüllen
   assert.ok(bal.indexOf('Titel 1-0') < 0, bal);
 });
 
+t('Würfel im Reiter Künstler/Alben: Titel der Künstler bzw. Alben der ganzen Reihe', function(){
+  var now = 400 * 86400, lib = [['Nie', 'a', 'X/Nie/1/1.flac'], ['Oft', 'b', 'X/Oft/1/1.flac'], ['Oft', 'c', 'X/Oft/2/1.flac'], ['Gast', 'd', 'X/Oft/1/2.flac']];
+  var al = [{dir: 'X/Nie/1', al: '1', ar: 'Nie'}, {dir: 'X/Oft/1', al: '1', ar: 'Oft'}, {dir: 'X/Oft/2', al: '2', ar: 'Oft'}];
+  var st = d.statIndex([{t: now - 10, ar: 'Oft', ti: 'b', al: '1', u: 'X/Oft/1/1.flac'}]);
+  var ka = d.shelfKeys('never', 'artist', [{ar: 'Nie'}, {ar: 'Oft'}], st, now);
+  assert.deepStrictEqual(Object.keys(ka), ['nie']);
+  assert.deepStrictEqual(d.groupPool(lib, al, 'artist', ka).map(function(x){ return x[1]; }), ['a']);   /* nie gehörte Titel von „Oft“ nicht */
+  var kb = d.shelfKeys('never', 'album', al, st, now);
+  assert.deepStrictEqual(Object.keys(kb).sort(), ['X/Nie/1', 'X/Oft/2']);
+  assert.deepStrictEqual(d.groupPool(lib, al, 'album', kb).map(function(x){ return x[1]; }), ['a', 'c']);
+  assert.deepStrictEqual(d.groupPool(lib, al, 'artist', {oft: true}).map(function(x){ return x[1]; }), ['b', 'c', 'd']);   /* Gast auf dem Album zählt mit */
+});
+
 console.log(n + ' Prüfungen');

@@ -127,6 +127,7 @@ langRegister('it', 'Italiano', {
   'disc.last': 'ultimo {date}',
   'disc.mix': 'Mix casuale: 25 brani',
   'disc.mixStarted': 'Mix casuale di {n} brani',
+  'similar.mixQueued': 'Dopo il brano in corso seguono {n} brani simili',
   'similar.title': 'Come “{ti}”',
   'similar.seed': 'Simili per mood, energia e tempo: {why}',
   'similar.energy': 'Energia {e}',

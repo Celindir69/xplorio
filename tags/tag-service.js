@@ -1005,6 +1005,19 @@ function doRandomMix(body, cb) {
         extra.keys = {};
         plays.ago(pl, now, tz, 500, 'track').items.forEach(function(it){ extra.keys[plays.norm(it.ar) + '|' + plays.norm(it.ti)] = true; });
       }
+      var kind = body.kind === 'artist' || body.kind === 'album' ? body.kind : '';
+      if (kind && shelf !== 'random' && shelf !== 'ago') {           /* Reiter Künstler/Alben: Titel der Künstler bzw. Alben der Reihe */
+        if (shelf !== 'gems') {
+          var shKeys = discover.shelfKeys(shelf, kind, kind === 'artist' ? albums.artists(list || []) : list || [], discoverStats(pl), now);
+          var gp = discover.groupPool(tl, list, kind, shKeys);
+          if (gp.length) return send(discover.mixCapped(gp, n, rules));   /* sonst (Albenliste noch im Aufbau) wie im Reiter Titel */
+        } else return gemsReady(function(g){
+          if (!g) return cb(200, {ok: false, building: albumBuilding, items: []});
+          var gk = {};
+          gems.pick(g, kind, 100).forEach(function(it){ gk[kind === 'artist' ? plays.norm(it.ar) : it.dir] = true; });
+          send(discover.mixCapped(discover.groupPool(tl, list, kind, gk), n, rules));
+        });
+      }
       if (shelf !== 'gems') return send(discover.mixCapped(discover.shelfPool(shelf, tl, discoverStats(pl), now, extra), n, rules));
       return gemsReady(function(g){
         if (!g) return cb(200, {ok: false, building: albumBuilding, items: []});
@@ -1014,6 +1027,13 @@ function doRandomMix(body, cb) {
       });
     }
     var pool = discover.mixPool(tl, list, {artist: body.artist, artists: many, dirs: [].concat(body.dirs || []).slice(0, 5000)});
+    if (body.match) {                                                   /* Stimmungs-/Stil-Seite: nur Titel, die selbst passen */
+      var mq = url.parse('?' + String(body.match).slice(0, 1000), true).query, mc = moodmix.parse(mq);
+      var hits = moodalbums.tracksMatching(moodmix.index(moodCollector), {moods: mc.moods, styles: mc.styles,
+        emin: mq.emin ? mc.emin : 0, emax: mq.emax ? mc.emax : 0});
+      var matched = pool.filter(function(t){ return hits[relUri(t[2])]; });
+      if (matched.length) pool = matched;
+    }
     send(many.length ? discover.mixBalanced(pool, n, list, null, rules.recent) : discover.mixCapped(pool, n, rules));   /* ähnliche Künstler: gleichmäßig */
   });
 }

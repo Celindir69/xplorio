@@ -128,6 +128,7 @@ langRegister('fr', 'Français', {
   'disc.last': 'dernière écoute {date}',
   'disc.mix': 'Mix aléatoire : 25 titres',
   'disc.mixStarted': 'Mix aléatoire de {n} titres',
+  'similar.mixQueued': '{n} titres similaires suivent le titre en cours',
   'similar.title': 'Comme « {ti} »',
   'similar.seed': 'Proche en ambiance, énergie et tempo : {why}',
   'similar.energy': 'Énergie {e}',

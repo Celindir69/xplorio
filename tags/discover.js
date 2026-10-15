@@ -178,6 +178,27 @@ function shelfPool(shelf, tracks, stats, now, extra, rnd) {
   return [];
 }
 
+/* Würfel einer Reihe im Reiter Künstler bzw. Alben: welche Künstler (norm. Name) bzw. Alben (Ordner) gehören zur ganzen
+   Reihe (nicht nur zu den gezeigten Kacheln); gleiche Regeln wie shelves(). ents: Künstler bzw. Alben */
+function shelfKeys(shelf, kind, ents, stats, now) {
+  var statOf = stats[kind], keys = {}, often = [];
+  function key(x) { return kind === 'artist' ? plays.norm(x.ar) : x.dir; }
+  ents.forEach(function(x){
+    var s = statOf(x);
+    if ((shelf === 'never' && !s.n) || (shelf === 'forgotten' && s.n && now - s.last > LONG)) keys[key(x)] = true;
+    if (shelf === 'oldfav' && s.n >= OLDFAV_MIN[kind] && now - s.last > OLDFAV_GAP) often.push(x);
+  });
+  often.sort(function(a, b){ return statOf(b).n - statOf(a).n; }).slice(0, OLDFAV_POOL).forEach(function(x){ keys[key(x)] = true; });
+  return keys;
+}
+/* Titel dieser Künstler (Titel- oder Albumkünstler) bzw. Alben */
+function groupPool(tracks, albumList, kind, keys) {
+  if (kind === 'album') return tracks.filter(function(t){ return keys[albums.albumDir(t[2])]; });
+  var dirArtist = {};
+  (albumList || []).forEach(function(a){ dirArtist[a.dir] = plays.norm(a.ar); });
+  return tracks.filter(function(t){ return keys[plays.norm(t[0])] || keys[dirArtist[albums.albumDir(t[2])]]; });
+}
+
 /* Zufallsmix mit Regeln (Würfel): o.artist Titel je Künstler (Titel-Künstler), o.album je Album (Ordner),
    o.recent(t): kürzlich gehört. Zuerst nicht kürzlich Gehörtes innerhalb der Grenzen, dann darüber hinaus, erst
    zuletzt kürzlich Gehörtes; jede Datei einmal, Reihenfolge wie mix() (nie derselbe Künstler direkt hintereinander). */
@@ -207,4 +228,4 @@ function recentFn(stats, now, days) {
   return function(t){ return stats.track(t).last > since; };
 }
 
-module.exports = {statIndex: statIndex, shelves: shelves, mix: mix, mixPool: mixPool, mixBalanced: mixBalanced, shelfPool: shelfPool, mixCapped: mixCapped, recentFn: recentFn, sample: sample, ROW: ROW};
+module.exports = {statIndex: statIndex, shelves: shelves, mix: mix, mixPool: mixPool, mixBalanced: mixBalanced, shelfPool: shelfPool, shelfKeys: shelfKeys, groupPool: groupPool, mixCapped: mixCapped, recentFn: recentFn, sample: sample, ROW: ROW};
