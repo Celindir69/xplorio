@@ -404,7 +404,7 @@ function discoverMore(artist, alive, onContent, onDone) {
     var g = group(T('more.similar'));
     var dice = chip(g.chips, '', function(c){
       c.classList.remove('roll'); void c.offsetWidth; c.classList.add('roll');
-      randomMixPlay({artists: names});
+      randomMixPlay({artists: [artist].concat(names)});            /* der Künstler selbst gehört dazu */
     }, 'dMixChip');
     dice.innerHTML = DICE_SVG;
     dice.title = T('disc.mix');

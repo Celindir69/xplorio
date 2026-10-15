@@ -352,8 +352,8 @@ fehlt die Reihe.
 (der zuletzt gewählte bleibt beim Zurück offen). „Hintergrund“ zeigt den Künstlertext wie die Info-Seite im Player. Im Reiter „Entdecken“ führen Knöpfe weiter: ähnliche Künstler aus der
 Sammlung (Last.fm), die Stimmungen und Stile, die mindestens ein Fünftel seiner eingeordneten Titel tragen, seine mittlere
 Energie und die Jahrzehnte seiner Alben. Jeder Knopf öffnet wie beim Entdecken den Künstler bzw. die passenden Alben; der
-bisherige Weg zählt dabei nicht als Filter. Der Würfel vor den ähnlichen Künstlern startet einen Zufallsmix, in dem
-jeder dieser Künstler etwa gleich oft vorkommt, egal wie viel von ihm in der Sammlung liegt.
+bisherige Weg zählt dabei nicht als Filter. Der Würfel vor den ähnlichen Künstlern startet einen Zufallsmix aus dem
+Künstler selbst und den ähnlichen Künstlern, jeder etwa gleich oft, egal wie viel von ihm in der Sammlung liegt.
 
 **Wie oft gehört** (Tag-Dienst): In der Abspielzeile der Albumseite steht mittig, wie oft das Album gehört wurde und
 wann zuletzt (aus dem Verlauf; Titel ohne Pause über drei Stunden zählen als ein Hören).
