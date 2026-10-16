@@ -6,6 +6,8 @@ All commands are run on the player (via SSH), as a user with `sudo` privileges. 
 
 Copy `xplorio.html`, `app.html` and `web/` to `/volumio/http/www3/`, then open `http://<player>/xplorio.html` (`app.html` is the former name and only redirects, so old bookmarks and home-screen shortcuts keep working).
 
+Xplorio is served entirely by the player: when it can't be reached (for example away from the home network), the browser shows its error page and the home-screen web app simply stays black. From outside, it only works through a VPN into the home network.
+
 Copy `kioskTV.html` next to `xplorio.html` (the kiosk loads `http://localhost:3000/kioskTV.html`, i.e. from the folder Volumio serves).
 
 After an update with `xplorio-deploy`, the browser loads the new files by itself (the script writes `web/build.js` for this); after copying by hand, do a hard reload once. An existing `web/config.local.js` is preserved.
@@ -274,6 +276,7 @@ Tapping plays the track or opens the album or artist.
 **Better together** (Tag Service only): the "Artists" tab in Discover and the welcome screen show mixes of two or three artists from your collection that fit together musically. Each starts from an artist you play often or have hearted, joined by artists with a similar sound (genre, mood, style and energy from the mood tags, compared with the other artists in your collection). If Last.fm lists one of them as a similar artist, that counts too (only with a Last.fm key), and artists you play less get a small head start. Each tile shows the artists' photos and what they have in common. Tapping it opens the preview: about 25 tracks, roughly 40 % favourites (played often, a favourite or on an album with 4–5 stars) and the rest rarely or never played (never played ones are marked "new"); the artists take turns and energy and tempo change gently. "Play mix" replaces the queue, the dice draws a new mix, + appends it. The mixes stay the same all day; ↻ draws new ones. The Tag Service remembers the pairings shown for seven days in `/data/xplorio/data/together.json`, so they do not come back right away. Left out: "Various", artists with fewer than six tracks, disliked tracks and albums with 1–2 stars.
 
 **Discover on the artist page:** The artist page has three tabs: "Albums & tracks", "Discover" and "Background" (the last chosen one stays open when going back). "Background" shows the artist text like the information page in the player. In the "Discover" tab, buttons lead on: similar artists from the collection (Last.fm), the moods and styles carried by at least a fifth of the artist's classified tracks, their average energy and the decades of their albums. Each button opens the artist or the matching albums, just like in Discover; the path so far does not act as a filter. The dice in front of the similar artists starts a random mix of the artist and the similar artists, each appearing about equally often, however much of them is in the collection.
+**Discover on the artist page:** The artist page has three tabs: "Albums & tracks", "Discover" and "Background" (the last chosen one stays open when going back). "Background" shows the artist text like the information page in the player. In the "Discover" tab, buttons lead on: similar artists from the collection (Last.fm), the moods and styles carried by at least a fifth of the artist's classified tracks, their average energy and the decades of their albums. Each button opens the artist or the matching albums, just like in Discover; the path so far does not act as a filter. The dice in front of the similar artists starts a random mix in which each of these artists appears about equally often, however much of them is in the collection.
 
 **Play count** (Tag Service): The album page's play row shows in the middle how often the album was played and when last (from the history; tracks without a break of more than three hours count as one listen).
 
@@ -380,6 +383,21 @@ If synchronized lyrics consistently appear too early or too late (for example, b
 
 The value applies to that track on all devices (`/data/xplorio/data/lyrics-offsets.json`); tapping the value resets it to 0.
 
+### Recognize a Track from Another Source (iPhone, iPad, Mac)
+
+When the amplifier plays something other than the player (turntable, CD, TV), a shortcut can recognize the track with Shazam and send it to Xplorio. As long as Volumio isn't playing, Xplorio shows it like a playing track: cover, lyrics (not synchronized) and artist information, marked "Recognized". It disappears as soon as Volumio plays again, at the latest after 10 minutes. A web browser can't use Shazam itself, hence the shortcut.
+
+Creating the shortcut (Shortcuts app; action names vary slightly between iOS versions):
+
+1. New shortcut, named e.g. `Xplorio recognize`.
+2. Action **Recognize Music** (Shazam).
+3. Action **Get Contents of URL**: URL `http://<player IP>:8766/recognized`, method **POST**, request body **JSON** with three text fields: `artist` = Shazam Media › Artist, `title` = Shazam Media › Title, `art` = Shazam Media › Artwork URL (optional, fallback cover). A field `album` is used if present.
+4. Optional: action **Show Notification** with the result of "Get Contents of URL" (shows "Artist – Title").
+
+Run it via Siri, Control Center, a widget or from Xplorio: with `window.APP_CONFIG.RECOGNIZE_SHORTCUT = 'Xplorio recognize';` in `web/config.local.js`, the menu on Apple devices gets a "Recognize track" entry that starts the shortcut (in the browser it returns to Xplorio afterwards).
+
+Trying it without an iPhone: `curl -s -H 'Content-Type: application/json' -d '{"artist":"…","title":"…"}' localhost:8766/recognized`; `-d '{"clear":true}'` removes the track again.
+
 ## Rotel Bridge (Optional)
 
 Controls a network-connected Rotel amplifier: power, volume and the remote control (see below). The bridge is a small service on the player (port 8765) that keeps the connection to the amplifier (TCP, port 9590); the interface only talks to the bridge.
@@ -485,6 +503,12 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 ```
 
 Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Other Rotel devices and Rotel's Michi series (X3, X5, P5, S5, M8) use the same ASCII protocol; the commands and the port (`ROTEL_AMP_PORT`) are in the device's protocol PDF on rotel.com (the P5, for example, uses port 9596 instead of 9590). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (`sudo systemctl restart rotel-bridge`; the deploy script only does so when `rotel-bridge.js` itself has changed).
+
+**Active input in the player view:** when the amplifier is set to an input other than the player's (`powerOnSource`, `pcusb` if not set), the line below the title shows the input's name instead of format and quality, and an icon replaces the pencil (tapping it opens the remote control). As long as no track has been recognized, the input's icon is shown large in place of the cover, with its name as the title; with the shortcut set up (`RECOGNIZE_SHORTCUT`, see "Recognize a Track from Another Source") tapping it starts the recognition. Recognition only ever runs on a tap, never by itself. The icons follow the input: `phono`, `cd`, `tuner`, `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (also XLR), `pc` (PC-USB) and `tv`. To change the name and icon of single inputs without rewriting the whole list (also used by the remote control; restart the bridge afterwards):
+
+```js
+window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: 'Turntable', icon: 'phono'}, opt1: {name: 'TV', icon: 'tv'}};
+```
 
 ## Streaming Services (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 

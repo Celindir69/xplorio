@@ -127,6 +127,7 @@ function discoverWhy(it) {
 
 /* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf, kind};
    im Reiter Künstler bzw. Alben Titel der Künstler bzw. Alben dieser Reihe; ohne shelf keiner),
+/* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf}; ohne shelf keiner),
    bei Zufallsreihe, Perlen und „Passt zusammen“ davor ↻ (neue Kacheln ziehen) */
 var REROLL_SVG = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
 function discoverHead(title, shelf, roll) {
@@ -147,6 +148,7 @@ function discoverHead(title, shelf, roll) {
   if (roll) btn(REROLL_SVG, T('disc.reroll'), roll).classList.add('dReroll');
   if (shelf) btn(DICE_SVG, T('disc.mix'), function(){
     var q = {shelf: shelf, kind: discoverCat().kind}, tz = histTz().match(/tzw=(-?\d+)&tzs=(-?\d+)/);
+    var q = {shelf: shelf}, tz = histTz().match(/tzw=(-?\d+)&tzs=(-?\d+)/);
     if (tz) { q.tzw = +tz[1]; q.tzs = +tz[2]; }
     randomMixPlay(q);
   });

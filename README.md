@@ -55,6 +55,7 @@ Die Suche findet Künstler, Alben, Titel und Genres (je Genre die Stilrichtungen
 eingerichtet sind (TIDAL, Qobuz, HIGHRESAUDIO, Spotify (bisher ungetestet)), jeweils in eigenen Abschnitten mit Kästchen zum Ein- und Ausblenden. Solange nichts
 eingegeben ist, zeigt sie passend zum Reiter Reihen zum Entdecken: zufällige Entdeckungen, versteckte Perlen (kaum Gehörtes, das zu den eigenen Bewertungen passt), im Reiter Künstler „Passt zusammen“ (Mixe aus zwei, drei Künstlern, die zusammen klingen), vor einem Jahr gehört, lange
 nicht gehört, noch nie gehört und früher oft gehört. Darunter führen Knöpfe nach Stimmung, Energie, Stil und Jahrzehnt weiter. Neben „Alle abspielen“ und an jeder Entdecken-Reihe startet ein Würfel einen Zufallsmix aus 25 Titeln. Auf jeder Künstlerseite führt der Reiter „Entdecken“ zu ähnlichen Künstlern (mit Zufallsmix aus ihnen und dem Künstler selbst), seinen Stimmungen, Stilen und Jahrzehnten; auf jeder Albumseite zu ähnlichen Alben, Stimmung, Stil, Jahr und weiteren Alben des Künstlers. Der Reiter „Hintergrund“ zeigt dort Künstler- bzw. Albumtext und Mitwirkende. Ein Tipp auf den laufenden Titel zeigt ähnliche Titel nach Stimmung, Energie und Tempo. Hinter jedem Albumtitel steht das Erscheinungsjahr; ein Tipp darauf öffnet die Alben dieses Jahres mit Empfehlungen aus dem Jahrzehnt.
+nicht gehört, noch nie gehört und früher oft gehört. Darunter führen Knöpfe nach Stimmung, Energie, Stil und Jahrzehnt weiter. Neben „Alle abspielen“ und an jeder Entdecken-Reihe startet ein Würfel einen Zufallsmix aus 25 Titeln. Auf jeder Künstlerseite führt der Reiter „Entdecken“ zu ähnlichen Künstlern (mit Zufallsmix daraus), seinen Stimmungen, Stilen und Jahrzehnten; auf jeder Albumseite zu ähnlichen Alben, Stimmung, Stil, Jahr und weiteren Alben des Künstlers. Der Reiter „Hintergrund“ zeigt dort Künstler- bzw. Albumtext und Mitwirkende. Ein Tipp auf den laufenden Titel zeigt ähnliche Titel nach Stimmung, Energie und Tempo. Hinter jedem Albumtitel steht das Erscheinungsjahr; ein Tipp darauf öffnet die Alben dieses Jahres mit Empfehlungen aus dem Jahrzehnt.
 Bewertungen: Herz für Künstler, ein bis fünf Sterne für Alben, Daumen hoch oder runter für Titel (Daumen hoch ist der Volumio-Favorit). Bei Webradio holt die App ein Cover
 zum laufenden Titel und zeigt Senderlogos in der Senderliste.
 
@@ -113,7 +114,9 @@ Fortschritt der Stimmungs-Tags.
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
 - Deutsch, Englisch, Französisch, Spanisch und Italienisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
   (siehe [Einrichten](docs/einrichten.md#sprache)).
-- Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`.
+- Optional: Titel einer anderen Quelle am Verstärker per iOS-Kurzbefehl mit Shazam erkennen und mit Cover, Lyrics und Infos anzeigen
+  (siehe [Einrichten](docs/einrichten.md#titel-einer-anderen-quelle-erkennen-iphone-ipad-mac)).
+- Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`; ein anderer Eingang als der Player steht mit Icon in der Player-Ansicht.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 
   (Was auf meinem MX-Stream, aufgrund eines Session-Timeouts, etwa nach 4 Stunden ohne Tidal-Nutzung auftritt.)
 - `xplorio-deploy`: aktualisiert direkt auf dem Player aus diesem Repository, mit Sicherung und `--rollback`; gleich auf

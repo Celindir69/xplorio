@@ -56,6 +56,7 @@ Search finds artists, albums, tracks, and genres (per genre the styles from the 
 (TIDAL, Qobuz, HIGHRESAUDIO, Spotify (not tested yet)), each in separate sections with checkboxes for showing or hiding them. As long as
 nothing has been entered, the selected tab shows rows to discover: random discoveries, hidden gems (rarely played music that matches your ratings), in the Artists tab "Better together" (mixes of two or three artists that sound good together), played a year ago, not heard in a
 while, never heard, and once played a lot. Below them, buttons lead on by mood, energy, style and decade. Next to "Play all" and on every Discover row, a dice starts a random mix of 25 tracks. On every artist page, the "Discover" tab leads to similar artists (with a random mix of them and the artist), the artist's moods, styles and decades; on every album page to similar albums, mood, style, year and more albums by the artist. The "Background" tab there shows the artist or album text and the credits. Tapping the current title shows similar tracks by mood, energy and tempo. Every album title shows its release year; tapping it opens that year's albums with suggestions from the decade.
+while, never heard, and once played a lot. Below them, buttons lead on by mood, energy, style and decade. Next to "Play all" and on every Discover row, a dice starts a random mix of 25 tracks. On every artist page, the "Discover" tab leads to similar artists (with a random mix from them), the artist's moods, styles and decades; on every album page to similar albums, mood, style, year and more albums by the artist. The "Background" tab there shows the artist or album text and the credits. Tapping the current title shows similar tracks by mood, energy and tempo. Every album title shows its release year; tapping it opens that year's albums with suggestions from the decade.
 Ratings: a heart for artists, one to five stars for albums, thumbs up or down for tracks (thumbs up is the Volumio favourite). For web radio, the app retrieves cover art for the currently playing
 track and displays station logos in the station list.
 
@@ -120,7 +121,9 @@ progress of the mood tags.
 - Light and dark, following the device setting or set explicitly.
 - German, English, French, Spanish and Italian, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).
-- Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`.
+- Optional: recognize a track from another source on the amplifier with Shazam via an iOS shortcut and show it with cover, lyrics and info
+  (see [Setup](docs/setup.md#recognize-a-track-from-another-source-iphone-ipad-mac)).
+- Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`; an input other than the player is shown with an icon in the player view.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)
 - `xplorio-deploy`: updates the player directly from this repository, with backups and `--rollback`; the same on
