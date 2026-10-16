@@ -111,10 +111,11 @@ function browseGenre(e, seq) {
 }
 
 /* Alben aus der Albenliste des Tag-Dienstes ({dir, al, ar, y}) mit „Alle abspielen“ und Würfel darüber, Jahr hinter
-   dem Titel; into: Ziel (sonst browseBody), noHead: ohne „Alle abspielen“ (steht dann schon über den Reitern) */
-function genreAlbumPage(list, into, noHead) {
+   dem Titel; into: Ziel (sonst browseBody), noHead: ohne „Alle abspielen“ (steht dann schon über den Reitern),
+   match: Stimmungs-/Stil-Abfrage der Seite, der Würfel nimmt dann nur Titel, die selbst passen */
+function genreAlbumPage(list, into, noHead, match) {
   var browseBody_ = into || browseBody;
-  if (!noHead) browseBody_.appendChild(genrePlayAllHead(list));
+  if (!noHead) browseBody_.appendChild(genrePlayAllHead(list, match));
   browseBody_.appendChild(browseHeading(T('disc.albums', {n: list.length})));
   list.forEach(function(a){
     var uri = 'music-library/' + a.dir, art = histAlbumArt(a.ar, a.al, a.dir);
@@ -218,7 +219,7 @@ function browseMoodSet(e, seq) {
     if (e.all) browseBody.appendChild(moodSetAll(e));
     var list = (r && r.albums) || [];
     if (!list.length) { browseBody.appendChild(browseNote(r && r.building ? T('disc.building') : T('disc.moodNone'))); return; }
-    genreAlbumPage(list);
+    genreAlbumPage(list, null, false, e.q);
   }).catch(function(){
     if (seq !== browseSeq) return;
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
@@ -227,7 +228,7 @@ function browseMoodSet(e, seq) {
 }
 
 /* „Alle abspielen“ wie auf der Künstlerseite: Warteschlange durch alle Alben der Liste ersetzen (Reihenfolge wie angezeigt) */
-function genrePlayAllHead(list) {
+function genrePlayAllHead(list, match) {
   function folders() { return list.map(function(a){ return {uri: 'music-library/' + a.dir, service: 'mpd', type: 'folder', title: a.al, artist: a.ar}; }); }
   return playRow(T('browse.playAll'), '', function(){
     var items = folders();
@@ -239,7 +240,7 @@ function genrePlayAllHead(list) {
       if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
     }).catch(function(){});
     closeAllOverlays();
-  }, [randomMixButton({dirs: list.map(function(a){ return a.dir; })}),     /* Würfel: 25 zufällige Titel daraus (discover.js) */
+  }, [randomMixButton({dirs: list.map(function(a){ return a.dir; }), match: match || ''}),     /* Würfel: 25 zufällige Titel daraus (discover.js) */
       queueAddButton(folders, 0)]);
 }
 

@@ -311,12 +311,15 @@ neu), **Vor einem Jahr gehört** (um dieses Datum vor einem Jahr, sonst vor 2, 3
 (über ein halbes Jahr her), **Noch nie gehört** und **Früher oft gehört** (oft gehört, aber seit einem halben Jahr nicht
 mehr). Leere Reihen fallen weg. Künstler und Album tippen öffnet, Titel tippen spielt ab. Grundlage ist der Verlauf
 (siehe oben). Der Würfel rechts an jeder Reihe spielt 25 Titel aus der ganzen Reihe (nicht nur den sichtbaren
-Kacheln), immer auf Titel-Ebene, egal welcher Reiter offen ist: bei „Noch nie gehört“ etwa nie gespielte Titel. Es
+Kacheln), passend zum Reiter: im Reiter Titel die Titel der Reihe, im Reiter Künstler Titel der Künstler dieser Reihe,
+im Reiter Alben Titel der Alben dieser Reihe (bei „Noch nie gehört“ im Reiter Künstler also nur Künstler, von denen nie
+etwas lief). „Zufällige Entdeckungen“ und „Vor X Jahren gehört“ mischen in jedem Reiter Titel. Es
 gelten die Würfel-Regeln (siehe Zufallsmix), ohne „mag ich nicht“.
 
 **Nach Stimmung, Energie, Stil und Jahrzehnt:** Unter den Reihen stehen Auswahlknöpfe. Stimmung (Entspannt, Verträumt,
 Melancholisch, Düster, Fröhlich, Intensiv, Episch; dieselben Namen wie im Mood Mix), Energie (Ruhig, Mittlere Energie, Energiegeladen) und Stil (Acoustic, Ambient,
-Electronic, Funky, Soulful, Experimental) öffnen wie ein Genre die passenden Alben mit „Alle abspielen“ und Würfel.
+Electronic, Funky, Soulful, Experimental) öffnen wie ein Genre die passenden Alben mit „Alle abspielen“ und Würfel; der Würfel nimmt dort nur Titel, die selbst
+diese Stimmung, diesen Stil bzw. diese Energie tragen.
 Ein Album passt, wenn mindestens die Hälfte seiner eingeordneten Titel diese Stimmung bzw. diesen Stil trägt (ein
 Stil-Knopf fasst verwandte Stile zusammen, z. B. Electronic auch Downtempo, House und Trip-Hop) oder wenn die mittlere
 Energie im Bereich liegt (Ruhig 1–2, Mittlere Energie 3, Energiegeladen 4–5); es braucht mindestens zwei eingeordnete
@@ -366,15 +369,15 @@ Paarungen sieben Tage in `/data/xplorio/data/together.json`, damit sie sich nich
 (der zuletzt gewählte bleibt beim Zurück offen). „Hintergrund“ zeigt den Künstlertext wie die Info-Seite im Player. Im Reiter „Entdecken“ führen Knöpfe weiter: ähnliche Künstler aus der
 Sammlung (Last.fm), die Stimmungen und Stile, die mindestens ein Fünftel seiner eingeordneten Titel tragen, seine mittlere
 Energie und die Jahrzehnte seiner Alben. Jeder Knopf öffnet wie beim Entdecken den Künstler bzw. die passenden Alben; der
-bisherige Weg zählt dabei nicht als Filter. Der Würfel vor den ähnlichen Künstlern startet einen Zufallsmix, in dem
-jeder dieser Künstler etwa gleich oft vorkommt, egal wie viel von ihm in der Sammlung liegt.
+bisherige Weg zählt dabei nicht als Filter. Der Würfel vor den ähnlichen Künstlern startet einen Zufallsmix aus dem
+Künstler selbst und den ähnlichen Künstlern, jeder etwa gleich oft, egal wie viel von ihm in der Sammlung liegt.
 
 **Wie oft gehört** (Tag-Dienst): In der Abspielzeile der Albumseite steht mittig, wie oft das Album gehört wurde und
 wann zuletzt (aus dem Verlauf; Titel ohne Pause über drei Stunden zählen als ein Hören).
 
 **Entdecken auf der Albumseite** (Tag-Dienst): Die Albumseite hat die Reiter „Titel“, „Entdecken“ und „Hintergrund“.
 „Entdecken“ zeigt ähnliche Alben aus der Sammlung (Stimmungen, Stile und Energie der eingeordneten Titel im Vergleich, je
-Künstler höchstens eins, mit Würfel für einen Zufallsmix daraus), Stimmung, Energie und Stile des Albums, Jahr, Jahrzehnt
+Künstler höchstens eins, mit Würfel für einen Zufallsmix daraus und aus dem Album selbst), Stimmung, Energie und Stile des Albums, Jahr, Jahrzehnt
 und Genre sowie weitere Alben des Künstlers. „Hintergrund“ zeigt den Albumtext und darunter die Mitwirkenden.
 
 Bei Künstlern und Alben vom Streamingdienst heißt der Reiter „Lokal entdecken“ und sucht in der eigenen Sammlung: ähnliche
@@ -384,7 +387,8 @@ Künstler über Last.fm, beim Album das gleichnamige Album in der Sammlung oder,
 mit ähnlicher Stimmung und Energie und, mit Audio-Analyse, ähnlichem Tempo (halbes oder doppeltes Tempo zählt als gleich);
 Stil und Genre zählen etwas mit. Mindestens eine Stimmung muss übereinstimmen, je Künstler höchstens zwei Titel,
 „mag ich nicht“ fällt weg. Jeder Titel zeigt die gemeinsamen Stimmungen, sein Tempo und seine Energie. „Alle abspielen“
-spielt die Liste, der Würfel 25 andere ähnliche Titel. Ohne Stimmungsdaten zum Titel erscheint ein Hinweis.
+spielt die Liste. Der Würfel lässt den laufenden Titel zu Ende spielen und ersetzt alles, was danach in der Warteschlange
+stand, durch 25 andere ähnliche Titel. Ohne Stimmungsdaten zum Titel erscheint ein Hinweis.
 
 **Zufallsmix:** Neben „Alle abspielen“ (Künstlerseite, Genre-Listen) startet der Würfel 25 zufällige Titel daraus.
 Würfel-Regeln: höchstens drei Titel je Künstler und zwei je Album (auf der Künstlerseite keine Künstlergrenze, drei je

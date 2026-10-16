@@ -87,4 +87,11 @@ t('Albumprofil: über Ordner oder Titel, ähnliche Alben je Künstler eins, weit
   assert.strictEqual(none.source, null); assert.deepStrictEqual(none.similar, []); assert.deepStrictEqual(none.others, []);
 });
 
+t('Würfel auf Stimmungs-/Stil-Seiten: nur Titel, die selbst passen', function(){
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {moods: ['relaxed']})).sort(),
+    ['USB/A/Ruhig/1.flac', 'USB/A/Ruhig/2.flac', 'USB/B/Laut/3.flac', 'USB/C/Single/1.flac']);
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {styles: ['ambient'], emin: 2, emax: 2})).sort(), ['USB/A/Ruhig/1.flac', 'USB/C/Single/1.flac']);
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {emin: 4, emax: 5})).sort(), ['USB/B/Laut/1.flac', 'USB/B/Laut/2.flac']);   /* ohne Energie nicht dabei */
+});
+
 console.log(n + ' Prüfungen');

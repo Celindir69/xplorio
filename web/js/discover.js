@@ -125,6 +125,8 @@ function discoverWhy(it) {
   return [m ? m.charAt(0).toUpperCase() + m.slice(1) : '', w.ge || ''].filter(Boolean).join(' · ');
 }
 
+/* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf, kind};
+   im Reiter Künstler bzw. Alben Titel der Künstler bzw. Alben dieser Reihe; ohne shelf keiner),
 /* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf}; ohne shelf keiner),
    bei Zufallsreihe, Perlen und „Passt zusammen“ davor ↻ (neue Kacheln ziehen) */
 var REROLL_SVG = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
@@ -145,6 +147,7 @@ function discoverHead(title, shelf, roll) {
   }
   if (roll) btn(REROLL_SVG, T('disc.reroll'), roll).classList.add('dReroll');
   if (shelf) btn(DICE_SVG, T('disc.mix'), function(){
+    var q = {shelf: shelf, kind: discoverCat().kind}, tz = histTz().match(/tzw=(-?\d+)&tzs=(-?\d+)/);
     var q = {shelf: shelf}, tz = histTz().match(/tzw=(-?\d+)&tzs=(-?\d+)/);
     if (tz) { q.tzw = +tz[1]; q.tzs = +tz[2]; }
     randomMixPlay(q);
@@ -325,6 +328,22 @@ function tracksPlay(list) {
   closeAllOverlays();
 }
 
+/* Titel nach dem laufenden: der laufende spielt weiter, was danach in der Warteschlange stand, weicht dem Mix.
+   Läuft nichts, wie tracksPlay. */
+function tracksAfterCurrent(list) {
+  var items = tracksItems(list);
+  Promise.all([
+    fetch('/api/v1/getState').then(function(r){ return r.json(); }),
+    fetch('/api/v1/getQueue').then(function(r){ return r.json(); })
+  ]).then(function(res){
+    var st = res[0] || {}, q = (res[1] && res[1].queue) || [], pos = typeof st.position === 'number' ? st.position : -1;
+    if (st.status !== 'play' || pos < 0 || pos >= q.length) return tracksPlay(list);
+    for (var i = q.length - 1; i > pos; i--) socket.emit('removeFromQueue', {value: i});   /* von hinten: Nummern bleiben gültig */
+    socket.emit('addToQueue', items);
+    closeAllOverlays();
+  }).catch(function(){ tracksPlay(list); });
+}
+
 /* ---------- Mehr wie dieser Titel (Tipp auf den Titel in der Wiedergabe) ---------- */
 /* Tag-Dienst GET /similar: Titel mit ähnlicher Stimmung, Energie und ähnlichem Tempo, je Künstler höchstens zwei.
    „Alle abspielen“ spielt die Liste, der Würfel 25 andere ähnliche Titel; Tipp auf einen Titel spielt ihn. */
@@ -347,8 +366,8 @@ function browseSimilar(e, seq) {
       dice.classList.remove('roll'); void dice.offsetWidth; dice.classList.add('roll');
       tagGetJson(similarQuery(e) + '&shuffle=1').then(function(m){
         if (!m || !m.ok || !m.items.length) return showToast(T('similar.none'));
-        tracksPlay(m.items);
-        showToast(T('disc.mixStarted', {n: m.items.length}));
+        tracksAfterCurrent(m.items);                                  /* der laufende Titel spielt zu Ende */
+        showToast(T('similar.mixQueued', {n: m.items.length}));
       }).catch(function(){ showToast(T('hist.offline')); });
     });
     browseBody.appendChild(playRow(T('browse.playAll'), playRowSub(r.items, function(x){ return x.d; }),
@@ -487,7 +506,7 @@ function discoverMore(artist, alive, onContent, onDone) {
     var g = group(T('more.similar'));
     var dice = chip(g.chips, '', function(c){
       c.classList.remove('roll'); void c.offsetWidth; c.classList.add('roll');
-      randomMixPlay({artists: names});
+      randomMixPlay({artists: [artist].concat(names)});            /* der Künstler selbst gehört dazu */
     }, 'dMixChip');
     dice.innerHTML = DICE_SVG;
     dice.title = T('disc.mix');
@@ -526,7 +545,7 @@ function discoverMore(artist, alive, onContent, onDone) {
 }
 
 /* ---------- Entdecken (Reiter auf der Albumseite) ---------- */
-/* Tag-Dienst GET /albumprofile: ähnliche Alben aus der Sammlung (mit Würfel: 25 Titel daraus), Stimmung, Energie und
+/* Tag-Dienst GET /albumprofile: ähnliche Alben aus der Sammlung (mit Würfel: 25 Titel daraus und aus dem Album selbst), Stimmung, Energie und
    Stile des Albums (ohne lokales Album: des Künstlers), Jahr, Jahrzehnt und Genre, weitere Alben des Künstlers.
    q: {artist, album, uri}; uri leer bei Alben vom Dienst. alive(): Seite noch dieselbe. */
 function discoverAlbum(box, q, alive) {
@@ -547,7 +566,7 @@ function discoverAlbum(box, q, alive) {
     chips.appendChild(c);
   }
   function moodset(title, mq) { openBrowse({kind: 'moodset', title: title, q: mq}); }
-  function tiles(title, items, dice) {
+  function tiles(title, items, dice, self) {        /* self: Ordner des Albums selbst, kommt mit in den Würfel-Mix */
     var sec = histEl('div', 'dMoreSec');
     var head = histEl('div', 'mxLabel', title);
     if (dice) {
@@ -556,7 +575,7 @@ function discoverAlbum(box, q, alive) {
       b.title = T('disc.mix'); b.innerHTML = DICE_SVG;
       b.addEventListener('click', function(){
         b.classList.remove('roll'); void b.offsetWidth; b.classList.add('roll');
-        randomMixPlay({dirs: items.map(function(it){ return it.dir; })});
+        randomMixPlay({dirs: (self ? [self] : []).concat(items.map(function(it){ return it.dir; }))});
       });
       btns.appendChild(b); head.appendChild(btns);
     }
@@ -581,7 +600,7 @@ function discoverAlbum(box, q, alive) {
     var any = false, chips;
     if (r.source === 'artist' && !r.found && (r.similar.length || r.moods.length || r.styles.length))
       box.appendChild(browseNote(T('more.byArtist', {ar: q.artist}), 'sHint'));
-    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true); any = true; }
+    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true, dir && !/^[a-z]+:\/\//i.test(dir) ? dir : ''); any = true; }
     if (r.moods.length || r.energy) {
       chips = group(T('more.mood'));
       r.moods.forEach(function(m){ var name = mixName(m); chip(chips, name, function(){ moodset(name, 'moods=' + encodeURIComponent(m)); }); });

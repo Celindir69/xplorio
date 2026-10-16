@@ -127,6 +127,7 @@ langRegister('es', 'Español', {
   'disc.last': 'última vez {date}',
   'disc.mix': 'Mix aleatorio: 25 canciones',
   'disc.mixStarted': 'Mix aleatorio de {n} canciones',
+  'similar.mixQueued': 'Después de la canción actual siguen {n} canciones similares',
   'similar.title': 'Como “{ti}”',
   'similar.seed': 'Parecidas en ánimo, energía y tempo: {why}',
   'similar.energy': 'Energía {e}',

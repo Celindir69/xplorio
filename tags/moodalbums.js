@@ -29,6 +29,20 @@ function share(perTrack, keys, n) {
   return hit / n;
 }
 
+/* Titel, die selbst zu q passen ({moods, styles, emin, emax} wie fit), als {Datei: true} (Würfel auf den Stimmungs-/Stil-Seiten) */
+function tracksMatching(idx, q) {
+  var out = {};
+  idx.forEach(function(x){
+    if (!x.it.f || !x.r) return;
+    var r = x.r, e = r.energy;
+    if (q.moods && q.moods.length && !(r.mood || []).some(function(k){ return q.moods.indexOf(k) >= 0; })) return;
+    if (q.styles && q.styles.length && !(r.style || []).some(function(k){ return q.styles.indexOf(k) >= 0; })) return;
+    if ((q.emin || q.emax) && (typeof e !== 'number' || e < (q.emin || 1) || e > (q.emax || 5))) return;
+    out[rel(x.it.f)] = true;
+  });
+  return out;
+}
+
 /* q: {moods: [], styles: [], emin, emax} -> passt das Album? Gibt den Anteil (0..1) zurück, 0 = passt nicht */
 function fit(s, q) {
   if (!s || s.n < MIN_TRACKS) return 0;
@@ -181,4 +195,4 @@ function albumProfile(idx, albumList, q, norm) {
   return out;
 }
 
-module.exports = {summarize: summarize, fit: fit, list: list, artistProfile: artistProfile, decadeProfile: decadeProfile, albumProfile: albumProfile, SHARE: SHARE};
+module.exports = {summarize: summarize, tracksMatching: tracksMatching, fit: fit, list: list, artistProfile: artistProfile, decadeProfile: decadeProfile, albumProfile: albumProfile, SHARE: SHARE};
