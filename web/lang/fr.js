@@ -322,6 +322,7 @@ langRegister('fr', 'Français', {
   'menu.recognize': "Reconnaître le titre",
   'menu.recognizeSub': "Une autre source joue : Shazam via un raccourci",
   'recog.badge': "Reconnu",
+  'recog.tapHint': "Touchez pour reconnaître le titre",
   'help.intro': "Dans Xplorio, beaucoup de choses se cachent derrière un appui sur les noms, les années et les icônes. Voici l'essentiel en bref, plus de détails dans le",
   'help.more': "guide",
   'help.player': "Lecture",

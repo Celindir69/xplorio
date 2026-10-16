@@ -258,7 +258,7 @@ var DICE_SVG = '<svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0
 
 function artUrl(a) {
   if (!a) return '';
-  return (a.indexOf('http') === 0) ? a : (location.origin + a);
+  return (a.indexOf('http') === 0 || a.indexOf('data:') === 0) ? a : (location.origin + a);   /* data: großes Eingangs-Icon (poll.js) */
 }
 
 function askVolumio(payload) {

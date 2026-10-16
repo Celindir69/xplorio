@@ -323,6 +323,7 @@ langRegister('en', 'English', {
   'menu.recognize': "Recognize track",
   'menu.recognizeSub': "Another source playing: Shazam via a shortcut",
   'recog.badge': "Recognized",
+  'recog.tapHint': "Tap to recognize the track",
   'help.intro': "Much of Xplorio sits behind a tap on names, years and icons. Here is an overview of the essentials, more in the",
   'help.more': "guide",
   'help.player': "Playback",

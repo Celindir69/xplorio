@@ -321,6 +321,7 @@ langRegister('it', 'Italiano', {
   'menu.recognize': 'Riconosci brano',
   'menu.recognizeSub': "Un'altra sorgente in riproduzione: Shazam con una scorciatoia",
   'recog.badge': 'Riconosciuto',
+  'recog.tapHint': 'Tocca per riconoscere il brano',
   'help.intro': 'Molto di Xplorio si nasconde dietro un tocco su nomi, anni e icone. Ecco una panoramica dell\'essenziale, di più nella',
   'help.more': 'guida',
   'help.player': 'Riproduzione',

@@ -626,6 +626,17 @@ je `[höher, tiefer, Mitte]`, `balance: [rechts, links, Mitte]`, `toneMax` (Stan
 Dasselbe ASCII-Protokoll nutzen auch andere Rotel-Geräte und die Michi-Serie von Rotel (X3, X5, P5, S5, M8); Befehle und Port (`ROTEL_AMP_PORT`) stehen im Protokoll-PDF des Geräts auf rotel.com (der P5 etwa nutzt Port 9596 statt 9590). Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung die Bridge
 neu starten (`sudo systemctl restart rotel-bridge`; das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
 
+**Aktiver Eingang in der Player-Ansicht:** Ist am Verstärker ein anderer Eingang gewählt als der des Players
+(`powerOnSource`, ohne Angabe `pcusb`), steht unter dem Titel statt Format und Qualität der Name des Eingangs, und statt
+des Stifts ein Icon (Tippen öffnet die Fernbedienung). Solange kein Titel erkannt ist, steht an Stelle des Covers groß das
+Icon des Eingangs und als Titel sein Name; mit eingerichtetem Kurzbefehl (`RECOGNIZE_SHORTCUT`, siehe „Titel einer
+anderen Quelle erkennen“) startet ein Tipp darauf die Erkennung. Erkannt wird nur auf Tippen, nie von selbst. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
+`bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (auch XLR), `pc` (PC-USB) und `tv`. Name und Icon einzelner Eingänge
+ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung; Bridge danach neu starten):
+```js
+window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: 'Plattenspieler', icon: 'phono'}, opt1: {name: 'Fernseher', icon: 'tv'}};
+```
+
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und
 Albumseiten des Dienstes) erscheinen nur, wenn das jeweilige Plugin in Volumio aktiv ist. Fest ein- oder ausschalten:

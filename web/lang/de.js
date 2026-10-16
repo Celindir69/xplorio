@@ -321,6 +321,7 @@ langRegister('de', 'Deutsch', {
   'menu.recognize': "Titel erkennen",
   'menu.recognizeSub': "Läuft eine andere Quelle: per Kurzbefehl mit Shazam",
   'recog.badge': "Erkannt",
+  'recog.tapHint': "Für automatische Titelerkennung tippen",
   'help.intro': "Vieles in Xplorio steckt hinter einem Tipp auf Namen, Jahre und Symbole. Hier das Wichtigste im Überblick, mehr in der",
   'help.more': "Anleitung",
   'help.player': "Wiedergabe",

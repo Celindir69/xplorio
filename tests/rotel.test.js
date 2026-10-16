@@ -14,13 +14,29 @@ t('Standardprofil RA-1572: alle Eingänge, Klang, Balance, Lautsprecher A/B', fu
 
 t('eigenes Profil: Eingänge mit Namen, Ausblenden mit false, ungültige Befehle fallen weg', function(){
   var p = rb.makeProfile({sources: [{cmd: 'opt1', name: 'Fernseher'}, 'pcusb', {cmd: 'rm -rf', name: 'x'}], speakerB: false, bass: ['bass;reboot', 'a', 'b'], balance: false});
-  assert.deepStrictEqual(p.sources, [{cmd: 'opt1', name: 'Fernseher'}, {cmd: 'pcusb', name: 'pcusb'}]);
+  assert.deepStrictEqual(p.sources, [{cmd: 'opt1', name: 'Fernseher', icon: 'digital'}, {cmd: 'pcusb', name: 'pcusb', icon: 'pc'}]);
   assert.strictEqual(p.speakerB, false); assert.strictEqual(p.bass, false); assert.strictEqual(p.balance, false);
   assert.deepStrictEqual(p.treble, ['treble_up', 'treble_down', 'treble_000']);
   var a = rb.allowedCmds(p);
   assert.ok(a.indexOf('opt1') >= 0 && a.indexOf('speaker_a_on') >= 0 && a.indexOf('bypass_off') >= 0 && a.indexOf('treble_000') >= 0);
   assert.ok(a.indexOf('cd') < 0 && a.indexOf('speaker_b_on') < 0 && a.indexOf('rm -rf') < 0 && a.indexOf('bass_up') < 0 && a.indexOf('balance_l') < 0);
   assert.deepStrictEqual(rb.queries(p), ['power?', 'volume?', 'mute?', 'source?', 'bypass?', 'treble?', 'speaker?']);
+});
+
+t('Icons nach Befehl; ROTEL_INPUTS ändert nur Name und Icon einzelner Eingänge', function(){
+  var p = rb.makeProfile();
+  var ic = {}; p.sources.forEach(function(x){ ic[x.cmd] = x.icon; });
+  assert.deepStrictEqual(ic, {cd: 'cd', coax1: 'digital', coax2: 'digital', opt1: 'digital', opt2: 'digital', aux: 'aux', tuner: 'tuner',
+                              phono: 'phono', usb: 'usb', bluetooth: 'bluetooth', bal_xlr: 'aux', pcusb: 'pc'});
+  var q = rb.makeProfile(null, {AUX: {name: 'Plattenspieler', icon: 'phono'}, opt1: 'Fernseher', cd: {icon: 'rakete'}, pc_usb: {icon: 'tv'}});
+  var by = {}; q.sources.forEach(function(x){ by[x.cmd] = x; });
+  assert.strictEqual(q.sources.length, 12);
+  assert.deepStrictEqual(by.aux, {cmd: 'aux', name: 'Plattenspieler', icon: 'phono'});
+  assert.deepStrictEqual(by.opt1, {cmd: 'opt1', name: 'Fernseher', icon: 'digital'});
+  assert.deepStrictEqual(by.cd, {cmd: 'cd', name: 'CD', icon: 'cd'});                  /* unbekanntes Icon: Standard */
+  assert.strictEqual(by.pcusb.icon, 'tv');
+  var r = rb.makeProfile({sources: [{cmd: 'aux', name: 'Platte', icon: 'phono'}]});
+  assert.deepStrictEqual(r.sources, [{cmd: 'aux', name: 'Platte', icon: 'phono'}]);
 });
 
 t('Rückmeldungen des Verstärkers', function(){
