@@ -4,6 +4,10 @@
 var qualityState = null;
 function paintQuality(st) {
   qualityState = st;
+  if (st.trackType === 'recognized') {                 /* erkannter Titel einer anderen Quelle: nichts über die Qualität bekannt */
+    mTech.textContent = ''; mBadge.textContent = T('recog.badge'); mBadge.className = 'qBadge recog';
+    return;
+  }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: Codec aus der Datei, sobald bekannt */
   var q = classifyQuality(st, window.APP_CONFIG);
   mTech.textContent = q.tech.join('  ·  ');
@@ -73,13 +77,51 @@ function radioArt(st, stationArt) {
   return stationArt;
 }
 
+/* Erkannter Titel (iOS-Kurzbefehl mit Shazam, POST /recognized im Tag-Dienst): solange Volumio nichts spielt, steht er
+   wie ein laufender Titel da, mit Cover, Lyrics und Infos. Abgefragt nur, während Volumio nicht spielt */
+var recogTrack = null, recogBusy = false, recogCovers = {};
+function recogFetch() {
+  if (recogBusy || typeof TAGS === 'undefined') return;
+  recogBusy = true;
+  withTimeout(fetch(TAGS + '/recognized'), 4000).then(function(r){ return r.json(); })
+    .then(function(j){ recogTrack = (j && j.track) || null; }, function(){ /* Tag-Dienst gerade nicht da: alten Stand lassen */ })
+    .then(function(){ recogBusy = false; });
+}
+/* Cover: über den Tag-Dienst (iTunes/Deezer; so lassen sich die Farben fürs Hintergrund-Thema lesen),
+   bis dahin und ohne Treffer das vom Kurzbefehl mitgeschickte, sonst das Bild von Volumio für „kein Cover“ */
+function recogArt(t) {
+  var k = t.artist + '|' + t.title, fallback = t.art || '/albumart';
+  if (recogCovers[k]) return recogCovers[k];
+  if (recogCovers[k] === undefined) {
+    recogCovers[k] = null;
+    var u = TAGS + '/radiocover?artist=' + encodeURIComponent(t.artist) + '&title=' + encodeURIComponent(t.title);
+    var img = new Image();
+    img.onload = function(){ recogCovers[k] = u; poll(); };
+    img.onerror = function(){ recogCovers[k] = false; };
+    img.src = u;
+  }
+  return fallback;
+}
+function recogApply(st) {
+  var t = recogTrack;
+  if (!t || st.status === 'play') return st;
+  var r = {};
+  for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
+  r.artist = t.artist; r.title = t.title; r.album = t.album || ''; r.albumart = recogArt(t);
+  r.trackType = 'recognized'; r.service = 'recognized'; r.uri = ''; r.duration = 0; r.seek = 0;
+  r.samplerate = r.bitdepth = r.bitrate = r.fileFormat = '';
+  return r;
+}
+
 var playIconShown = null;                              /* zuletzt gezeichnetes Symbol (nur bei Wechsel neu setzen) */
 var pollBusy = false;                                   /* nie mehrere getState gleichzeitig (Volumio hängt z. B. beim Einlesen) */
 function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
   if (!volDrag && ROTEL_ON) rotel('/state');  
+  if (!playing) recogFetch();
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(function(st){
+st = recogApply(st);
 
 curDur = Number(st.duration) || 0;
 /* gestoppt zählt Volumio die Zeit teils weiter (Wiedergabe angefordert, aber das Ausgabegerät ließ sich nicht öffnen):
@@ -163,7 +205,7 @@ updateSyncedLyrics();
 curArtist = artist;    
 if (!artist) { showInfo([]); return; }
 
-if (radio) {
+if (radio || (st.trackType === 'recognized' && !album)) {      /* Erkennung ohne Album: nur der Künstler */
   Promise.all([ask({mode:'storyArtist', artist:artist}), askDiscography(artist)])
     .then(function(res){
       if (key !== lastKey) return;                   /* inzwischen läuft etwas anderes */
@@ -200,7 +242,7 @@ Promise.all([
 
 /* kleine Zwischenspeicher im Dauerbetrieb (iPad läuft tagelang) begrenzen: älteste Einträge zuerst */
 setInterval(function(){
-  [[radioCovers, 300], [radioLogoSent, 300], [similarCache, 300], [similarAllCache, 300], [streamSimilarCache, 200], [moodCache, 300], [creditCache, 300]]
+  [[radioCovers, 300], [recogCovers, 100], [radioLogoSent, 300], [similarCache, 300], [similarAllCache, 300], [streamSimilarCache, 200], [moodCache, 300], [creditCache, 300]]
     .forEach(function(p){
       var keys = Object.keys(p[0]);
       keys.slice(0, Math.max(0, keys.length - p[1])).forEach(function(k){ delete p[0][k]; });

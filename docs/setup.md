@@ -378,6 +378,21 @@ If synchronized lyrics consistently appear too early or too late (for example, b
 
 The value applies to that track on all devices (`/data/xplorio/data/lyrics-offsets.json`); tapping the value resets it to 0.
 
+### Recognize a Track from Another Source (iPhone, iPad, Mac)
+
+When the amplifier plays something other than the player (turntable, CD, TV), a shortcut can recognize the track with Shazam and send it to Xplorio. As long as Volumio isn't playing, Xplorio shows it like a playing track: cover, lyrics (not synchronized) and artist information, marked "Recognized". It disappears as soon as Volumio plays again, at the latest after 10 minutes. A web browser can't use Shazam itself, hence the shortcut.
+
+Creating the shortcut (Shortcuts app; action names vary slightly between iOS versions):
+
+1. New shortcut, named e.g. `Xplorio recognize`.
+2. Action **Recognize Music** (Shazam).
+3. Action **Get Contents of URL**: URL `http://<player IP>:8766/recognized`, method **POST**, request body **JSON** with three text fields: `artist` = Shazam Media › Artist, `title` = Shazam Media › Title, `art` = Shazam Media › Artwork URL (optional, fallback cover). A field `album` is used if present.
+4. Optional: action **Show Notification** with the result of "Get Contents of URL" (shows "Artist – Title").
+
+Run it via Siri, Control Center, a widget or from Xplorio: with `window.APP_CONFIG.RECOGNIZE_SHORTCUT = 'Xplorio recognize';` in `web/config.local.js`, the menu on Apple devices gets a "Recognize track" entry that starts the shortcut (in the browser it returns to Xplorio afterwards).
+
+Trying it without an iPhone: `curl -s -H 'Content-Type: application/json' -d '{"artist":"…","title":"…"}' localhost:8766/recognized`; `-d '{"clear":true}'` removes the track again.
+
 ## Rotel Bridge (Optional)
 
 Controls a network-connected Rotel amplifier: power, volume and the remote control (see below). The bridge is a small service on the player (port 8765) that keeps the connection to the amplifier (TCP, port 9590); the interface only talks to the bridge.
