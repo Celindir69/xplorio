@@ -209,7 +209,7 @@ App und auf dem Kiosk-TV; ohne Titel oder ohne Treffer bleibt das Senderlogo. Di
 Beim Öffnen der Seite (nur mit Tag-Dienst) erscheint in der Mitte eine Karte mit Gruß nach Tageszeit (im Querformat mit
 breitem Rand): das **Album des Tages**
 (zufällig, bevorzugt lange nicht oder nie gehört; bleibt den ganzen Tag dasselbe) mit „Abspielen“ und Albumtext (wie im
-Info-Overlay, scrollbar), **Zuletzt gehört**
+Info-Overlay, scrollbar), **Passt zusammen** (siehe unten), **Zuletzt gehört**
 (Alben, von denen zuletzt mindestens zwei Titel liefen), **Um diese Zeit vor X Jahren** (Alben, die vor einem
 Jahr oder länger um dieses Datum herum liefen, ± 3 Tage), **Neu in der Sammlung** (Alben, deren Dateien in den letzten
 180 Tagen dazukamen oder sich änderten, nach dem Änderungsdatum aus MPD) und ein Zufallsmix. Tippen daneben schließt es.
@@ -349,6 +349,18 @@ Grund: „♥ Ungehört“ (Lieblingskünstler), „Wie …“ (klingt wie ein L
 dabei: Titel mit „mag ich nicht“, Alben, deren Titel überwiegend „mag ich nicht“ tragen, schon bewertete Alben,
 Künstler mit Herz und Favoriten. ↻ zieht neu. Ohne Bewertungen zählt nur der Verlauf; gibt es auch keinen,
 fehlt die Reihe.
+
+**Passt zusammen** (nur mit Tag-Dienst): Im Reiter „Künstler“ beim Entdecken und auf der Begrüßung stehen Mixe aus zwei
+oder drei Künstlern der eigenen Sammlung, die musikalisch zusammenpassen. Ausgangspunkt ist ein Künstler, den man oft
+hört oder mit Herz markiert hat; dazu kommen Künstler mit ähnlichem Klang (Genre, Stimmung, Stil und Energie aus den
+Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Nennt Last.fm einen davon als ähnlichen Künstler,
+zählt das mit (nur mit Last.fm-Key), seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
+Künstler und was sie verbindet. Ein Tipp öffnet die Vorschau: etwa 25 Titel, rund 40 % Lieblingstitel (oft gehört,
+Favorit oder Album mit 4–5 Sternen) und der Rest selten oder nie gehört (nie Gehörtes ist mit „neu“ markiert); die Künstler wechseln sich ab,
+Energie und Tempo gehen sanft ineinander über. „Mix abspielen“ ersetzt die Warteschlange, der Würfel zieht einen neuen
+Mix, + hängt ihn an. Die Mixe bleiben den ganzen Tag gleich, ↻ würfelt neue. Der Tag-Dienst merkt sich die gezeigten
+Paarungen sieben Tage in `/data/xplorio/data/together.json`, damit sie sich nicht gleich wiederholen. Nicht dabei:
+„Verschiedene“, Künstler mit weniger als sechs Titeln, Titel mit „mag ich nicht“ und Alben mit 1–2 Sternen.
 
 **Entdecken auf der Künstlerseite:** Die Künstlerseite hat drei Reiter: „Alben & Titel“, „Entdecken“ und „Hintergrund“
 (der zuletzt gewählte bleibt beim Zurück offen). „Hintergrund“ zeigt den Künstlertext wie die Info-Seite im Player. Im Reiter „Entdecken“ führen Knöpfe weiter: ähnliche Künstler aus der

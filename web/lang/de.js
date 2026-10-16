@@ -156,6 +156,12 @@ langRegister('de', 'Deutsch', {
   'gems.why.artist': '♥ Ungehört',
   'gems.why.artistRare': '♥ Kaum gehört',
   'gems.why.like': 'Wie {ar}',
+  'tog.title': 'Passt zusammen',
+  'tog.play': 'Mix abspielen',
+  'tog.lfm': 'ähnlich laut Last.fm',
+  'tog.hint': 'Rund 40 % Lieblingstitel, der Rest selten oder nie gehört. Der Würfel zieht einen neuen Mix.',
+  'tog.new': 'neu',
+  'tog.none': 'Für diese Künstler gibt es gerade keine passenden Titel.',
   'disc.reroll': 'Neue Auswahl',
 
   'genre.all': 'Alle',

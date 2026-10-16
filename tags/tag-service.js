@@ -966,6 +966,70 @@ function doGems(query, cb) {
   });
 }
 
+/* ---------- Passt zusammen (together.js) ---------- */
+/* GET /together?day=YYYY-MM-DD[&reroll=1]: Mixe des Tages aus 2–3 passenden Künstlern; Last.fm-„ähnliche Künstler“
+   der Anker zählen mit (wenn ein Key da ist). Gezeigte Paarungen merkt sich together.json 7 Tage, damit sie sich nicht
+   gleich wiederholen. GET /togethermix?ar=…&ar=…[&day=…][&shuffle=1]: die Titel eines Mixes. */
+var together = require('./together.js');
+var TOGETHER_FILE = path.join(DATA_DIR, 'together.json'), TOGETHER_KEEP = 7;
+function togetherLoad() { try { return JSON.parse(fs.readFileSync(TOGETHER_FILE, 'utf8')) || {}; } catch (e) { return {}; } }
+function togetherSave(all) {
+  var out = {};
+  Object.keys(all).sort().slice(-TOGETHER_KEEP).forEach(function(d){ out[d] = all[d]; });
+  try { mkdirs(DATA_DIR); fs.writeFileSync(TOGETHER_FILE + '.neu', JSON.stringify(out)); fs.renameSync(TOGETHER_FILE + '.neu', TOGETHER_FILE); }
+  catch (e) { console.error('together.json: ' + e.message); }
+}
+/* Last.fm: ähnliche Künstler der Anker als {ak: {ak: true}}; doLastfmApi merkt sich die Antworten 6 h */
+function togetherSimilar(g, cb) {
+  if (!keys.lastfm().key) return cb({});
+  var list = together.anchors(g), map = {}, left = list.length, done = false;
+  function fin() { if (!done) { done = true; cb(map); } }
+  if (!left) return fin();
+  var timer = setTimeout(fin, 8000);                     /* langsames Last.fm hält die Seite nicht auf */
+  list.forEach(function(a){
+    doLastfmApi({method: 'artist.getsimilar', artist: a.ar, limit: 100}, function(c, d){
+      var sim = d && d.similarartists && d.similarartists.artist;
+      if (Array.isArray(sim)) {
+        var m = map[a.ak] = {};
+        sim.forEach(function(s){ if (s && s.name) m[plays.norm(s.name)] = true; });
+      }
+      if (--left === 0) { clearTimeout(timer); fin(); }
+    });
+  });
+}
+/* together.json: {Tag: {items: [Mixe], seen: [Schlüssel aller an dem Tag gezeigten Paarungen]}};
+   die Mixe eines Tages bleiben gleich, bis man neu würfelt */
+function doTogether(query, cb) {
+  var day = /^\d{4}-\d\d-\d\d$/.test(query.day || '') ? query.day : new Date().toISOString().slice(0, 10);
+  var reroll = query.reroll === '1', all = togetherLoad(), today = all[day];
+  if (today && !Array.isArray(today.items)) today = null;
+  if (today && !reroll && today.items.length) return cb(200, {ok: true, items: today.items});
+  gemsReady(function(g){
+    if (!g) return cb(200, {ok: false, building: albumBuilding, items: []});
+    togetherSimilar(g, function(sim){
+      var avoid = {};
+      Object.keys(all).forEach(function(d){ ((all[d] && all[d].seen) || []).forEach(function(k){ avoid[k] = true; }); });
+      var rnd = together.seeded(day + (reroll ? ':' + Date.now() : ''));
+      var items = together.build(g, {rnd: rnd, similar: sim, avoid: avoid});
+      if (!items.length) items = together.build(g, {rnd: rnd, similar: sim});   /* alles schon gezeigt: dann eben wieder */
+      var seen = ((today && today.seen) || []).concat(items.map(function(it){ return it.key; }));
+      all[day] = {items: items, seen: seen.filter(function(k, i){ return seen.indexOf(k) === i; }).slice(-60)};
+      togetherSave(all);
+      cb(200, {ok: true, items: items});
+    });
+  });
+}
+function doTogetherMix(query, cb) {
+  var names = [].concat(query.ar || []).slice(0, 3).map(String);
+  if (names.length < 2) return cb(400, {ok: false, error: 'mindestens zwei Künstler (ar) nötig'});
+  var day = /^\d{4}-\d\d-\d\d$/.test(query.day || '') ? query.day : new Date().toISOString().slice(0, 10);
+  gemsReady(function(g){
+    if (!g) return cb(200, {ok: false, building: albumBuilding, items: []});
+    var rnd = query.shuffle === '1' ? Math.random : together.seeded(day + '|' + names.map(plays.norm).sort().join('+'));
+    cb(200, {ok: true, items: together.mix(g, names, {rnd: rnd, bad: ratingStore.disliked()})});
+  });
+}
+
 /* ---------- Bewertungen (ratings.js) ---------- */
 /* POST /ratings {artist, album, tracks: [uri, …]} -> {ok, artist, album, tracks}; POST /rate {kind, v, name | uri, ar, al, ti} */
 var ratingStore = new ratings.Store(path.join(DATA_DIR, 'ratings.json'));
@@ -1397,6 +1461,8 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/albumprofile') return doAlbumProfile(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/artistprofile') return doArtistProfile(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/gems') return doGems(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/together') return doTogether(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/togethermix') return doTogetherMix(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/similar') return doSimilar(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/welcome') return doWelcome(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/discover') return doDiscover(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });

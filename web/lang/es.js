@@ -156,6 +156,12 @@ langRegister('es', 'Español', {
   'gems.why.artist': '♥ Sin escuchar',
   'gems.why.artistRare': '♥ Apenas escuchado',
   'gems.why.like': 'Como {ar}',
+  'tog.title': 'Combinan bien',
+  'tog.play': 'Reproducir mezcla',
+  'tog.lfm': 'similares según Last.fm',
+  'tog.hint': 'Alrededor de un 40 % de favoritas, el resto poco o nunca escuchado. El dado crea una mezcla nueva.',
+  'tog.new': 'nuevo',
+  'tog.none': 'Ahora mismo no hay pistas adecuadas de estos artistas.',
   'disc.reroll': 'Nueva selección',
 
   'genre.all': 'Todos',
