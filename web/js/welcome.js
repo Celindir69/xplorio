@@ -78,6 +78,9 @@ function welcomeRender(r) {
   }
   var bday = histEl('div', 'dSec');                 /* Geburtstage: heute und diese Woche, sonst dieser Monat */
   if (bdayRows(bday, r.birthdays, ['today', 'week']) || bdayRows(bday, r.birthdays, ['month'])) box.appendChild(bday);
+  var tog = histEl('div', 'dSec');                  /* Passt zusammen (discover.js), lädt nach */
+  box.appendChild(tog);
+  togetherRow(tog, function(){ return welcomeBody.contains(tog); });
   var rows = [];
   if (r.recent.length) rows.push(welcomeRow(T('welcome.recent'), r.recent, function(it){ return welcomeYear(discoverTile('album', it), it.y); }));
   if (r.ago && r.ago.items.length) rows.push(welcomeRow(T('welcome.ago', {n: r.ago.years}), r.ago.items, function(it){ return welcomeYear(discoverTile('album', it), it.y); }));

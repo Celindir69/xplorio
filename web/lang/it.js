@@ -157,6 +157,12 @@ langRegister('it', 'Italiano', {
   'gems.why.artist': '♥ Mai ascoltato',
   'gems.why.artistRare': '♥ Ascoltato poco',
   'gems.why.like': 'Come {ar}',
+  'tog.title': 'Stanno bene insieme',
+  'tog.play': 'Riproduci mix',
+  'tog.lfm': 'simili secondo Last.fm',
+  'tog.hint': 'Circa il 40 % di preferiti, il resto ascoltato di rado o mai. Il dado estrae un nuovo mix.',
+  'tog.new': 'nuovo',
+  'tog.none': 'Al momento non ci sono brani adatti per questi artisti.',
   'disc.reroll': 'Nuova selezione',
 
   'genre.all': 'Tutti',
