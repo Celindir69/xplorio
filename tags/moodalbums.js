@@ -171,6 +171,7 @@ function albumProfile(idx, albumList, q, norm) {
   }
   var out = {source: source, found: !!target, n: own ? own.length : 0, moods: [], styles: [], energy: 0, year: target && target.y || 0,
              genre: target && target.ge || '', similar: [], others: []};
+  if (target) out.dir = target.dir;                     /* Ordner des Albums: kommt die Seite über die Suche (albums://…), kennt sie ihn nicht */
   if (own) {
     var v = vectorOf(own);
     out.moods = topShare(v.moods); out.styles = topShare(v.styles); out.energy = Math.round(v.energy);

@@ -598,7 +598,7 @@ function discoverAlbum(box, q, alive) {
     var any = false, chips;
     if (r.source === 'artist' && !r.found && (r.similar.length || r.moods.length || r.styles.length))
       box.appendChild(browseNote(T('more.byArtist', {ar: q.artist}), 'sHint'));
-    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true, dir && !/^[a-z]+:\/\//i.test(dir) ? dir : ''); any = true; }
+    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true, dir && !/^[a-z]+:\/\//i.test(dir) ? dir : r.dir || ''); any = true; }   /* aus der Suche (albums://…): Ordner vom Tag-Dienst */
     if (r.moods.length || r.energy) {
       chips = group(T('more.mood'));
       r.moods.forEach(function(m){ var name = mixName(m); chip(chips, name, function(){ moodset(name, 'moods=' + encodeURIComponent(m)); }); });

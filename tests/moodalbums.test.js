@@ -78,9 +78,10 @@ t('Albumprofil: über Ordner oder Titel, ähnliche Alben je Künstler eins, weit
   assert.strictEqual(p.energy, 2); assert.strictEqual(p.year, 1994); assert.strictEqual(p.genre, 'Ambient');
   assert.deepStrictEqual(p.similar.map(function(x){ return x.al; }), ['Dunst']);          /* Beta nur einmal (Dunst passt besser), Gamma passt nicht, Alpha nie */
   assert.deepStrictEqual(p.others.map(function(x){ return x.al; }), ['Laut']);
-  assert.strictEqual(ma.albumProfile(ix, al, {artist: 'alpha', album: 'Stille'}, norm).source, 'album');   /* Titel ohne Zusatz, vom Dienst */
+  var bySearch = ma.albumProfile(ix, al, {artist: 'alpha', album: 'Stille'}, norm);                   /* Titel ohne Zusatz, vom Dienst oder aus der Suche */
+  assert.strictEqual(bySearch.source, 'album'); assert.strictEqual(bySearch.dir, 'M/A1');          /* Ordner für den Würfel der ähnlichen Alben */
   var q = ma.albumProfile(ix, al, {artist: 'Gamma', album: 'Nur beim Dienst'}, norm);
-  assert.strictEqual(q.source, 'artist'); assert.strictEqual(q.found, false);
+  assert.strictEqual(q.source, 'artist'); assert.strictEqual(q.found, false); assert.strictEqual(q.dir, undefined);
   assert.deepStrictEqual(q.similar.map(function(x){ return x.al; }), ['Laut']);
   assert.deepStrictEqual(q.others.map(function(x){ return x.al; }), ['Funken']);
   var none = ma.albumProfile(ix, al, {artist: 'Delta', album: 'X'}, norm);
