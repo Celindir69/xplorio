@@ -193,8 +193,11 @@
   .disc-row.cur { color:var(--accent, var(--fg)); }
 
   /* Queue */
-  #volumioTabBar { flex:0 0 auto; display:flex;
-    border-bottom:1px solid rgba(var(--fg-rgb),.2); margin:0 calc(5 * var(--vw)); }
+  #volumioTabBar { flex:0 0 auto; display:flex; gap:calc(4 * var(--vw));
+    border-bottom:1px solid rgba(var(--fg-rgb),.2); margin:0 calc(5 * var(--vw));
+    overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }        /* fünf Reiter: auf dem Handy wischen statt aneinanderkleben */
+  #volumioTabBar::-webkit-scrollbar { display:none; }
+  #volumioTabBar .qTab { flex-shrink:0; white-space:nowrap; }
   .qTab { flex:1 1 auto; text-align:center; padding:calc(3 * var(--vw)) 0;
     font-size:calc(3.8 * var(--vw)); opacity:.5; cursor:pointer;
     border-bottom:2px solid transparent; transition:all .2s; }
