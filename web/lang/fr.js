@@ -701,6 +701,7 @@ langRegister('fr', 'Français', {
   'tag.field.albumartist': 'Artiste de l\'album',
   'tag.field.artist': 'Artiste',
   'tag.field.composer': 'Compositeur',
+  'tag.field.comment': 'Commentaire',
   'tag.field.disc': 'Disque',
   'tag.field.genre': 'Genre',
   'tag.field.title': 'Titre',

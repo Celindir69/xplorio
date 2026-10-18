@@ -98,7 +98,7 @@ Tapping a month displays the rankings for that month.
 
 ### Tag Editor and “Check library”
 
-Edit tags for individual tracks, entire albums, or all tracks by an artist, with text functions such as upper/lowercase
+Edit tags for individual tracks, entire albums, or all tracks by an artist (including the comment), with text functions such as upper/lowercase
 conversion, Undo, and cover art options (choose a file, search online, save embedded cover art as `folder.jpg`). “Check library” in the menu finds
 albums without cover art, missing or inconsistent album artists, artists with multiple spellings, inconsistent
 album names or years, tracks without track numbers and release dates that differ from MusicBrainz, and suggests one genre per album (Discogs top categories, from

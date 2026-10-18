@@ -90,6 +90,13 @@ else {
     assert.ok(r.ok); assert.strictEqual(r.changed, false);
     assert.strictEqual(run({op: 'read', path: dsf}).tags.title, '');
   });
+  t('tags.py: Kommentar schreiben, lesen und löschen', function(){
+    var r = run({op: 'write', path: dsf, tags: {comment: 'Live in Köln\nzweite Zeile'}});
+    assert.ok(r.ok && r.changed); assert.strictEqual(r.before.comment, '');
+    assert.strictEqual(run({op: 'read', path: dsf}).tags.comment, 'Live in Köln\nzweite Zeile');
+    run({op: 'write', path: dsf, tags: {comment: ''}});
+    assert.strictEqual(run({op: 'read', path: dsf}).tags.comment, '');
+  });
   t('tags.py: nicht unterstützte Endung und fehlende Datei', function(){
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'notes.txt')}).ok, false);
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'nix.flac')}).ok, false);

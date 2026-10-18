@@ -29,7 +29,7 @@ import mutagen  # noqa: E402
 from mutagen.dsf import DSF  # noqa: E402
 from mutagen.flac import FLAC  # noqa: E402
 from mutagen.flac import Picture  # noqa: E402
-from mutagen.id3 import (APIC, TALB, TCOM, TCON, TDRC, TIT2, TPE1, TPE2,  # noqa: E402
+from mutagen.id3 import (APIC, COMM, TALB, TCOM, TCON, TDRC, TIT2, TPE1, TPE2,  # noqa: E402
                          TPOS, TRCK)
 from mutagen.mp3 import MP3  # noqa: E402
 from mutagen.mp4 import MP4, MP4Cover  # noqa: E402
@@ -37,17 +37,22 @@ from mutagen.mp4 import MP4, MP4Cover  # noqa: E402
 PY2 = sys.version_info[0] == 2
 text_type = unicode if PY2 else str  # noqa: F821
 
-FIELDS = ['title', 'artist', 'album', 'albumartist', 'genre', 'date', 'composer', 'track', 'disc']
+FIELDS = ['title', 'artist', 'album', 'albumartist', 'genre', 'date', 'composer', 'track', 'disc', 'comment']
 
 MP4_KEYS = {'title': '\xa9nam', 'artist': '\xa9ART', 'album': '\xa9alb', 'albumartist': 'aART',
-            'genre': '\xa9gen', 'date': '\xa9day', 'composer': '\xa9wrt'}
+            'genre': '\xa9gen', 'date': '\xa9day', 'composer': '\xa9wrt', 'comment': '\xa9cmt'}
 FLAC_KEYS = {'title': 'title', 'artist': 'artist', 'album': 'album', 'albumartist': 'albumartist',
              'genre': 'genre', 'date': 'date', 'composer': 'composer',
-             'track': 'tracknumber', 'disc': 'discnumber'}
+             'track': 'tracknumber', 'disc': 'discnumber', 'comment': 'comment'}
 ID3_FRAMES = {'title': TIT2, 'artist': TPE1, 'album': TALB, 'albumartist': TPE2,
               'genre': TCON, 'date': TDRC, 'composer': TCOM, 'track': TRCK, 'disc': TPOS}
 
 SEP = u'; '
+
+
+def id3_comments(tags):
+    """ID3-Kommentare ohne Beschreibung; solche mit Beschreibung (z. B. iTunNORM von iTunes) sind keine Notizen"""
+    return [fr for fr in tags.getall('COMM') if not fr.desc]
 
 
 class JobError(Exception):
@@ -132,6 +137,9 @@ def read_tags(audio, kind):
             fr = tags.get(cls.__name__)
             if fr is not None:
                 out[f] = join(fr.text)
+        com = id3_comments(tags)
+        if com:
+            out['comment'] = join(com[0].text)
     return out
 
 
@@ -160,6 +168,11 @@ def write_tags(audio, kind, new):
                 tags[k] = [v]
             elif k in tags:
                 del tags[k]
+        elif f == 'comment':
+            for fr in id3_comments(tags):
+                del tags[fr.HashKey]
+            if v:
+                tags.add(COMM(encoding=3, lang='eng', desc=u'', text=[v]))
         else:
             cls = ID3_FRAMES[f]
             tags.delall(cls.__name__)

@@ -702,6 +702,7 @@ langRegister('en', 'English', {
   'tag.field.albumartist': 'Album artist',
   'tag.field.artist': 'Artist',
   'tag.field.composer': 'Composer',
+  'tag.field.comment': 'Comment',
   'tag.field.disc': 'Disc',
   'tag.field.genre': 'Genre',
   'tag.field.title': 'Title',

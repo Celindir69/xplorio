@@ -700,6 +700,7 @@ langRegister('it', 'Italiano', {
   'tag.field.albumartist': 'Artista dell\'album',
   'tag.field.artist': 'Artista',
   'tag.field.composer': 'Compositore',
+  'tag.field.comment': 'Commento',
   'tag.field.disc': 'Disco',
   'tag.field.genre': 'Genere',
   'tag.field.title': 'Titolo',

@@ -92,7 +92,7 @@ die Ranglisten für diesen Monat.
 </p>
 
 ### Tag-Editor und „Bibliothek prüfen“
-Tags einzelner Titel, ganzer Alben oder aller Titel eines Künstlers bearbeiten, mit Textfunktionen wie Groß-/Kleinschreibung,
+Tags einzelner Titel, ganzer Alben oder aller Titel eines Künstlers bearbeiten (auch den Kommentar), mit Textfunktionen wie Groß-/Kleinschreibung,
 Rückgängig und Cover (Datei wählen, online suchen, eingebettetes Cover als `folder.jpg`). „Bibliothek prüfen“ im Menü findet
 Alben ohne Cover, fehlende oder uneinheitliche Album-Künstler, Künstler in mehreren Schreibweisen, uneinheitliche
 Albumnamen oder Jahre, Titel ohne Tracknummer und Erscheinungsdaten, die von MusicBrainz abweichen, und schlägt je Album ein Genre vor (Discogs-Oberkategorien, aus
