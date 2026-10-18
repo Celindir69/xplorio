@@ -9,6 +9,7 @@ abbrechen (Ctrl-C) und später weitermachen geht jederzeit.
 
     python3 analyse.py /Volumes/Data/Musik /Volumes/Data/AllFlac
     python3 analyse.py --upload http://<player>:8766 /Volumes/Data/Musik
+    python3 analyse.py --player http://<player> /Volumes/<SMB-Freigabe des Players>/Musik
 
 Voraussetzung: macOS 15+ mit Python 3.14 (pip install essentia-tensorflow mutagen);
 Intel-Mac mit macOS 14: Python 3.13 und pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
@@ -27,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 VERSION = 2
@@ -344,6 +346,7 @@ def load_done(out):
 
 def compact(out, done, seen_roots, present):
     """doppelte Zeilen entfernen und Einträge zu gelöschten Dateien unter den gelesenen Ordnern verwerfen"""
+    seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # Share inzwischen getrennt: dessen Einträge behalten
     keep = []
     for p, o in done.items():
         if any(p.startswith(r + os.sep) for r in seen_roots) and p not in present:
@@ -354,6 +357,31 @@ def compact(out, done, seen_roots, present):
             f.write(json.dumps(o, ensure_ascii=False) + '\n')
     os.replace(out + '.neu', out)
     return len(keep)
+
+
+def player_state(base):
+    """Zustand von Volumio ('play', 'pause', 'stop' …), None wenn der Player nicht antwortet"""
+    try:
+        with urllib.request.urlopen(base.rstrip('/') + '/api/v1/getState', timeout=10) as r:
+            return str(json.loads(r.read().decode('utf-8')).get('status') or 'stop')
+    except Exception:
+        return None
+
+
+def wait_for_player(base, minutes):
+    """warten, bis der Player erreichbar ist und nicht spielt; gibt die gewartete Zeit in Sekunden zurück"""
+    t, said = time.time(), None
+    while True:
+        st = player_state(base)
+        if st is not None and st != 'play':
+            if said:
+                print('  weiter (%s)' % time.strftime('%H:%M'), flush=True)
+            return time.time() - t
+        why = 'Player spielt' if st == 'play' else 'Player nicht erreichbar'
+        if why != said:
+            print('  pausiert, %s (%s); nächste Abfrage alle %d min' % (why, time.strftime('%H:%M'), minutes), flush=True)
+            said = why
+        time.sleep(minutes * 60)
 
 
 def upload(out, base):
@@ -384,15 +412,30 @@ def main():
     ap.add_argument('--upload', metavar='URL', help='danach zum Tag-Dienst hochladen, z. B. http://<player>:8766')
     ap.add_argument('--ffmpeg', metavar='PFAD', help='ffmpeg für Dateien, die Essentia nicht lesen kann '
                                                     '(Standard: automatisch suchen; "aus" = nicht benutzen)')
+    ap.add_argument('--player', metavar='URL', help='die Dateien liegen auf diesem Player (z. B. per SMB verbunden): '
+                                                   'nur analysieren, wenn er erreichbar ist und nicht spielt, z. B. http://<player>')
+    ap.add_argument('--player-wait', type=int, default=10, metavar='MIN',
+                    help='mit --player: so viele Minuten bis zur nächsten Abfrage (Standard 10)')
     a = ap.parse_args()
     if not a.roots and not a.upload:
         ap.error('Musikordner angeben (oder nur --upload)')
+    a.player_wait = max(1, a.player_wait)
+    if a.player and '//' not in a.player:
+        a.player = 'http://' + a.player
+    if a.player and not a.upload:             # Ergebnis danach selbst hochladen: Tag-Dienst auf demselben Gerät
+        u = urllib.parse.urlsplit(a.player)
+        a.upload = '%s://%s:8766' % (u.scheme or 'http', u.hostname)
 
     if a.roots:
         fetch_models(a.models)
         ffmpeg = find_ffmpeg(a.ffmpeg)
         print('ffmpeg als Ersatz: ' + (ffmpeg or 'keins (brew install ffmpeg)'), flush=True)
         roots = [os.path.abspath(os.path.expanduser(r)) for r in a.roots]
+        if a.player:
+            wait_for_player(a.player, a.player_wait)
+        for r in roots:
+            if not os.path.isdir(r):          # z. B. Share nicht verbunden: sonst gälten alle Einträge darunter als gelöscht
+                sys.exit('Ordner nicht gefunden: %s (bei einem Netzlaufwerk: im Finder verbunden?)' % r)
         done = load_done(a.out)
         present, todo = set(), []
         for p, size, mtime in find_files(roots, a.exclude):
@@ -446,12 +489,21 @@ def main():
             try:
                 with open(a.out, 'a', encoding='utf-8') as f:
                     while queue or running or solo:
-                        if solo:                     # Verdächtige nach einem Absturz einzeln, damit klar ist, wer es war
+                        hold = False
+                        if a.player and (queue or solo) and player_state(a.player) in (None, 'play'):
+                            if running:
+                                hold = True          # spielt oder ist aus: nichts Neues anfangen, Laufendes wird fertig
+                            else:
+                                t0 += wait_for_player(a.player, a.player_wait)   # Pause nicht in die Zeitschätzung
+                        if hold:
+                            pass
+                        elif solo:                   # Verdächtige nach einem Absturz einzeln, damit klar ist, wer es war
                             if not running:
                                 job = solo.pop()
                                 running[ex.submit(analyse, job)] = job
                         else:
-                            while queue and len(running) < a.jobs * 2:
+                            # mit --player keine Dateien auf Vorrat: beim Start der Wiedergabe wird nur Laufendes fertig
+                            while queue and len(running) < a.jobs * (1 if a.player else 2):
                                 job = queue.pop()
                                 running[ex.submit(analyse, job)] = job
                         fin, _ = cf.wait(running, return_when=cf.FIRST_COMPLETED)
@@ -513,6 +565,8 @@ def main():
         print('Fertig: %d Einträge in %s, davon %d analysiert.' % (kept, a.out, ok))
 
     if a.upload:
+        if a.player:
+            wait_for_player(a.player, a.player_wait)   # nicht hochladen, während der Player spielt
         upload(a.out, a.upload)
 
 

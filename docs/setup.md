@@ -352,6 +352,13 @@ python3 analyse.py --upload http://<player>:8766
 - Matching is based on artist and title (as with the Last.fm tags), not on the path: the folder structure and drive used on the Mac do not matter. Tracks that do not exist on the player are simply ignored there.
 - Multiple folders can be specified, symlinks are followed; `--exclude "*/Audiobooks/*"` excludes matching paths.
 - Unchanged files are skipped on subsequent runs; Ctrl-C aborts the process, and the next invocation continues where it left off.
+- **Music stored on the player itself:** if the files live on the player (USB drive or internal storage), connect its
+  share in Finder (⌘K, `smb://<player>`, read-only is enough) and analyse with `--player`:
+  `caffeinate -i python3 analyse.py --player http://<player> /Volumes/<share>/<music folder>`.
+  The script then only starts a new file while the player is reachable and not playing; when playback starts, files
+  already in progress finish, then it checks again every 10 minutes (`--player-wait 20` for 20 minutes). At the end
+  it uploads the result to the tag service by itself (no `--upload` needed). If the share is not connected at
+  start, it stops instead of discarding the existing results for that folder.
 - `--seconds 120` (default) analyzes only the middle two minutes (for valence/arousal, the middle 45 seconds of that section); `--jobs` specifies the number of parallel processes.
 - Duration: on an older Intel Mac, around 9 seconds per file, or about 5 days for 50,000 tracks; Apple Silicon Macs are significantly faster. `--profile` displays the time spent on each analysis step. Using more processes than CPU cores provides no benefit.
 - An intermediate upload can be performed at any time; the Tag Service then uses the results available so far.
