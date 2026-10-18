@@ -382,21 +382,6 @@ If synchronized lyrics consistently appear too early or too late (for example, b
 
 The value applies to that track on all devices (`/data/xplorio/data/lyrics-offsets.json`); tapping the value resets it to 0.
 
-### Recognize a Track from Another Source (iPhone, iPad, Mac)
-
-When the amplifier plays something other than the player (turntable, CD, TV), a shortcut can recognize the track with Shazam and send it to Xplorio. As long as Volumio isn't playing, Xplorio shows it like a playing track: cover, lyrics (not synchronized) and artist information, marked "Recognized". It disappears as soon as Volumio plays again, at the latest after 10 minutes. A web browser can't use Shazam itself, hence the shortcut.
-
-Creating the shortcut (Shortcuts app; action names vary slightly between iOS versions):
-
-1. New shortcut, named e.g. `Xplorio recognize`.
-2. Action **Recognize Music** (Shazam).
-3. Action **Get Contents of URL**: URL `http://<player IP>:8766/recognized`, method **POST**, request body **JSON** with three text fields: `artist` = Shazam Media › Artist, `title` = Shazam Media › Title, `art` = Shazam Media › Artwork URL (optional, fallback cover). A field `album` is used if present.
-4. Optional: action **Show Notification** with the result of "Get Contents of URL" (shows "Artist – Title").
-
-Run it via Siri, Control Center, a widget or from Xplorio: with `window.APP_CONFIG.RECOGNIZE_SHORTCUT = 'Xplorio recognize';` in `web/config.local.js`, the menu on Apple devices gets a "Recognize track" entry that starts the shortcut (in the browser it returns to Xplorio afterwards).
-
-Trying it without an iPhone: `curl -s -H 'Content-Type: application/json' -d '{"artist":"…","title":"…"}' localhost:8766/recognized`; `-d '{"clear":true}'` removes the track again.
-
 ## Rotel Bridge (Optional)
 
 Controls a network-connected Rotel amplifier: power, volume and the remote control (see below). The bridge is a small service on the player (port 8765) that keeps the connection to the amplifier (TCP, port 9590); the interface only talks to the bridge.
@@ -503,7 +488,7 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 
 Other fields: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` each `[on, off]`, `bass`/`treble` each `[up, down, center]`, `balance: [right, left, center]`, `toneMax` (default 10) and `balanceMax` (15). Other Rotel devices and Rotel's Michi series (X3, X5, P5, S5, M8) use the same ASCII protocol; the commands and the port (`ROTEL_AMP_PORT`) are in the device's protocol PDF on rotel.com (the P5, for example, uses port 9596 instead of 9590). Commands are written without the trailing `!`; the bridge only accepts commands from the profile. Restart the bridge after a change (`sudo systemctl restart rotel-bridge`; the deploy script only does so when `rotel-bridge.js` itself has changed).
 
-**Active input in the player view:** when the amplifier is set to an input other than the player's (`powerOnSource`, `pcusb` if not set), the line below the title shows the input's name instead of format and quality, and an icon replaces the pencil (tapping it opens the remote control). As long as no track has been recognized, the input's icon is shown large in place of the cover, with its name as the title; with the shortcut set up (`RECOGNIZE_SHORTCUT`, see "Recognize a Track from Another Source") tapping it starts the recognition. Recognition only ever runs on a tap, never by itself. The icons follow the input: `phono`, `cd`, `tuner`, `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (also XLR), `pc` (PC-USB) and `tv`. To change the name and icon of single inputs without rewriting the whole list (also used by the remote control; restart the bridge afterwards):
+**Active input in the player view:** when the amplifier is set to an input other than the player's (`powerOnSource`, `pcusb` if not set), the line below the title shows the input's name instead of format and quality, and an icon replaces the pencil (tapping it opens the remote control). The input's icon is shown large in place of the cover, with its name as the title. The icons follow the input: `phono`, `cd`, `tuner`, `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (also XLR), `pc` (PC-USB) and `tv`. To change the name and icon of single inputs without rewriting the whole list (also used by the remote control; restart the bridge afterwards):
 
 ```js
 window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: 'Turntable', icon: 'phono'}, opt1: {name: 'TV', icon: 'tv'}};

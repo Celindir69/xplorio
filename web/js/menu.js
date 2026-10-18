@@ -18,27 +18,11 @@ var MENU_ITEMS = [
    icon: 'M3 13h4l3-8 4 14 3-6h4v2h-2.8L14 22 10 9.4 8.4 15H3z'},
   {id: 'playback', needsTags: !ROTEL_ON, title: T('menu.playback'), sub: T('menu.playbackSub'), open: function(){ openPlayback(); },
    icon: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z'},
-  {id: 'recognize', needsTags: true, show: recogShortcutOk, action: true, title: T('menu.recognize'), sub: T('menu.recognizeSub'), open: recogShortcutRun,
-   icon: 'M7 18h2V6H7v12zm4 4h2V2h-2v20zm-8-8h2v-4H3v4zm12 4h2V6h-2v12zm4-8v4h2v-4h-2z'},
   {id: 'volumio', title: T('menu.volumio'), sub: T('menu.volumioSub'), open: function(){ openVolumio(); },
    icon: 'M3 4h4.2l4.8 11.3L16.8 4H21l-7 16h-4L3 4z'},
   {id: 'help', title: T('menu.help'), sub: T('menu.helpSub'), open: function(){ openHelp(); },
    icon: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4z'}
 ];
-/* Titel erkennen: startet den Kurzbefehl (APP_CONFIG.RECOGNIZE_SHORTCUT), der per Shazam erkennt und an POST /recognized schickt.
-   Nur auf Apple-Geräten (iPhone, iPad, Mac), dort gibt es die Kurzbefehle-App */
-function recogShortcutName() { return String((window.APP_CONFIG && window.APP_CONFIG.RECOGNIZE_SHORTCUT) || '').trim(); }
-function recogShortcutOk() {
-  var ua = navigator.userAgent || '';
-  return !!recogShortcutName() && /iPhone|iPad|iPod|Macintosh/.test(ua);
-}
-function recogShortcutRun() {
-  var name = encodeURIComponent(recogShortcutName());
-  /* im Browser danach zurück zu Xplorio; als Web-App auf dem Home-Bildschirm würde das einen Safari-Tab öffnen */
-  location.href = navigator.standalone ? 'shortcuts://run-shortcut?name=' + name
-    : 'shortcuts://x-callback-url/run-shortcut?name=' + name + '&x-success=' + encodeURIComponent(location.href);
-}
-
 var MENU_CHEVRON = 'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z';
 
 function menuSvg(d, cls) {
@@ -56,7 +40,6 @@ function menuRender() {
   menuBody.appendChild(listEl);
   MENU_ITEMS.forEach(function(it){
     if (it.needsTags && !menuTags) return;
-    if (it.show && !it.show()) return;
     var row = document.createElement('div'); row.className = 'menuRow';
     var icon = document.createElement('div'); icon.className = 'menuIcon'; icon.appendChild(menuSvg(it.icon));
     var text = document.createElement('div'); text.className = 'menuText';

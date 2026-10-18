@@ -113,8 +113,6 @@ Fortschritt der Stimmungs-Tags.
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
 - Deutsch, Englisch, Französisch, Spanisch und Italienisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
   (siehe [Einrichten](docs/einrichten.md#sprache)).
-- Optional: Titel einer anderen Quelle am Verstärker per iOS-Kurzbefehl mit Shazam erkennen und mit Cover, Lyrics und Infos anzeigen
-  (siehe [Einrichten](docs/einrichten.md#titel-einer-anderen-quelle-erkennen-iphone-ipad-mac)).
 - Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`; ein anderer Eingang als der Player steht mit Icon in der Player-Ansicht.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 
   (Was auf meinem MX-Stream, aufgrund eines Session-Timeouts, etwa nach 4 Stunden ohne Tidal-Nutzung auftritt.)
