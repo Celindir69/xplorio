@@ -437,14 +437,33 @@ def main():
             if not os.path.isdir(r):          # z. B. Share nicht verbunden: sonst gälten alle Einträge darunter als gelöscht
                 sys.exit('Ordner nicht gefunden: %s (bei einem Netzlaufwerk: im Finder verbunden?)' % r)
         done = load_done(a.out)
-        present, todo = set(), []
+        # verschobene Dateien (anderes Laufwerk, andere Ordnerstruktur) über Dateiname und Größe wiedererkennen
+        by_name = {}
+        for q, o in done.items():
+            k = (os.path.basename(q), o.get('sz'))
+            if k not in by_name or (o.get('v') == VERSION and not o.get('err')):   # lieber ein aktuelles, fehlerfreies
+                by_name[k] = q
+        present, todo, moved = set(), [], []
         for p, size, mtime in find_files(roots, a.exclude):
             present.add(p)
             o = done.get(p)
+            if o is None:
+                q = by_name.get((os.path.basename(p), size))
+                if q and q in done and q not in present:
+                    o = dict(done[q], p=p, mt=mtime)
+                    done[p] = o
+                    moved.append(o)
             if o and o.get('sz') == size and o.get('mt') == mtime and o.get('v') == VERSION and not (a.retry_errors and o.get('err') and not o.get('skip')):
                 continue
             # nach einem Absturz gleich mit ffmpeg lesen, sonst stürzt es wieder ab
             todo.append((p, size, mtime, bool(ffmpeg and o and o.get('err') == CRASH)))
+        if moved:
+            with open(a.out, 'a', encoding='utf-8') as f:   # gleich festhalten, auch wenn der Lauf abgebrochen wird
+                for o in moved:
+                    f.write(json.dumps(o, ensure_ascii=False) + '\n')
+            again = set(j[0] for j in todo)
+            print('%d Dateien an neuem Ort wiedererkannt (Dateiname und Größe), davon %d ohne neue Analyse.'
+                  % (len(moved), sum(1 for o in moved if o['p'] not in again)), flush=True)
         if a.limit:
             todo = todo[:a.limit]
         print('%d Audiodateien gefunden, %d zu analysieren (%d Prozesse).' % (len(present), len(todo), a.jobs), flush=True)
@@ -560,6 +579,11 @@ def main():
                 pass
             if prof and n:
                 print('Zeit je Datei nach Schritt: ' + ', '.join('%s %.1f s' % (k, v / n) for k, v in prof.items()))
+        # Einträge vom alten Ort verschobener Dateien: gibt es die Datei dort nicht mehr, zieht der Eintrag um
+        here = set((os.path.basename(p), done[p].get('sz')) for p in present if p in done)
+        for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
+            if not os.path.exists(q):
+                del done[q]
         kept = compact(a.out, done, roots, present)
         ok = sum(1 for o in done.values() if not o.get('err'))
         print('Fertig: %d Einträge in %s, davon %d analysiert.' % (kept, a.out, ok))

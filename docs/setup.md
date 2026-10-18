@@ -352,6 +352,8 @@ python3 analyse.py --upload http://<player>:8766
 - Matching is based on artist and title (as with the Last.fm tags), not on the path: the folder structure and drive used on the Mac do not matter. Tracks that do not exist on the player are simply ignored there.
 - Multiple folders can be specified, symlinks are followed; `--exclude "*/Audiobooks/*"` excludes matching paths.
 - Unchanged files are skipped on subsequent runs; Ctrl-C aborts the process, and the next invocation continues where it left off.
+  If the collection has moved (another drive, a network share, a different folder structure), the script recognises
+  files it has already analysed by file name and size and does not analyse them again.
 - **Music stored on the player itself:** if the files live on the player (USB drive or internal storage), connect its
   share in Finder (⌘K, `smb://<player>`, read-only is enough) and analyse with `--player`:
   `caffeinate -i python3 analyse.py --player http://<player> /Volumes/<share>/<music folder>`.
