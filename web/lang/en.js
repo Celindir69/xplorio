@@ -6,6 +6,7 @@ langRegister('en', 'English', {
   'audio.connected': 'Audio output connected',
   'audio.disconnected': 'Audio output disconnected',
   'audio.unreachable': 'Audio output not reachable',
+  'audio.otherInput': 'Amplifier is set to {name}',
   'browse.albums': 'Albums',
   'browse.hintAlbum': 'Tap: play album from this track',
   'browse.hintPlaylist': 'Tap: play playlist from this track',

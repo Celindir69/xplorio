@@ -53,6 +53,8 @@
   #seekTimes { display:flex; justify-content:space-between;
     margin-top:calc(1.5 * var(--vw)); font-size:calc(3 * var(--vw)); opacity:.5; }
 
+  /* anderer Eingang am Verstärker: Zeitleiste und Tasten gesperrt (Lautstärke bleibt, sie steuert den Verstärker) */
+  html.otherInput #seekWrap, html.otherInput #ctrl { opacity:.3; pointer-events:none; }
 #ctrl { flex:0 0 auto; display:flex; align-items:center;
   justify-content:center; gap:calc(5 * var(--vw)); margin-bottom:2.4vh; width:88%; }
 

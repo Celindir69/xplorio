@@ -4,6 +4,7 @@ langRegister('es', 'Español', {
   'audio.connected': 'Salida de audio conectada',
   'audio.disconnected': 'Salida de audio desconectada',
   'audio.unreachable': 'Salida de audio no disponible',
+  'audio.otherInput': 'El amplificador está en {name}',
   'browse.albums': 'Álbumes',
   'browse.hintAlbum': 'Toca: reproducir el álbum desde esta canción',
   'browse.hintPlaylist': 'Toca: reproducir la playlist desde esta canción',

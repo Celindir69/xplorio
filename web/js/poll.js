@@ -89,10 +89,16 @@ function inputArt(inp) {
   return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 }
 
-/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio */
+/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
+   etwas anderes zum Abspielen (oder spielt Volumio), steht das da, mit gesperrter Bedienung: am Verstärker auf den
+   Player umschalten und abspielen */
+var inputSession = '', inputBaseUri = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
-  if (!inp) return st;
+  document.documentElement.classList.toggle('otherInput', !!inp);
+  if (!inp) { inputSession = ''; return st; }
+  if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* was beim Umschalten geladen war */
+  if (st.status === 'play' || (st.uri || '') !== inputBaseUri) return st;
   var r = {};
   for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
   r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp);
