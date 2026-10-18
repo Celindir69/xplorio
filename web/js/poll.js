@@ -92,6 +92,32 @@ function inputArt(inp) {
 /* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
    etwas anderes zum Abspielen (oder spielt Volumio), steht das da, mit gesperrter Bedienung: am Verstärker auf den
    Player umschalten und abspielen */
+/* Streaming-Titel, dessen Wiedergabe nicht starten konnte (z. B. anderer Eingang): Volumio meldet dann nur Position und
+   Lautstärke. Titel, Künstler, Album und Cover kommen aus der Warteschlange (Eintrag an der Position); höchstens alle 5 s
+   neu geholt, bei anderer Position sofort */
+var stateFillCache = {pos: -1, at: 0, item: null};
+function stateFill(st) {
+  if (!st || st.uri || st.title || typeof st.position !== 'number') return st;
+  var c = stateFillCache, p = st.position;
+  var got = (c.pos === p && Date.now() - c.at < 5000) ? Promise.resolve(c.item)
+    : withTimeout(fetch('/api/v1/getQueue'), 4000).then(function(r){ return r.json(); }).then(function(j){
+        var q = (j && j.queue) || [];
+        stateFillCache = {pos: p, at: Date.now(), item: q[p] || null};
+        return q[p] || null;
+      });
+  return got.then(function(it){
+    if (!it || !it.uri) return st;
+    var r = {};
+    for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];
+    ['uri', 'title', 'artist', 'album', 'albumart', 'trackType', 'service', 'duration', 'samplerate', 'bitdepth'].forEach(function(k){
+      if (it[k] !== undefined && it[k] !== '') r[k] = it[k];
+    });
+    if (!r.title && it.name) r.title = it.name;
+    if (!r.status) { r.status = 'stop'; r.seek = 0; }        /* läuft nicht: Zeit am Anfang */
+    return r;
+  }, function(){ return st; });
+}
+
 var inputSession = '', inputBaseUri = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
@@ -113,7 +139,7 @@ function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
   if (!volDrag && ROTEL_ON) rotel('/state');  
-withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(function(st){
+withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateFill).then(function(st){
 st = inputApply(st);
 
 curDur = Number(st.duration) || 0;
