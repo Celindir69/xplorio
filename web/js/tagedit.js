@@ -3,7 +3,8 @@
 var TAGS = 'http://' + location.hostname + ':' + ((window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766);
 var TAG_LOCAL_RE = /^(music-library\/|\/?mnt\/)?(USB|INTERNAL|NAS)\//;
 var TAG_COMMON = [['artist', T('tag.field.artist')], ['albumartist', T('tag.field.albumartist')], ['album', T('tag.field.album')],
-                  ['genre', T('tag.field.genre')], ['date', T('tag.field.year')], ['composer', T('tag.field.composer')], ['disc', T('tag.field.disc')]];
+                  ['genre', T('tag.field.genre')], ['date', T('tag.field.year')], ['composer', T('tag.field.composer')], ['disc', T('tag.field.disc')],
+                  ['comment', T('tag.field.comment')]];
 
 var overlayTags = document.getElementById('overlayTags');
 var tagBody     = document.getElementById('tagBody');
@@ -174,8 +175,9 @@ function tagApplyFn(input, fn) {
 }
 
 function tagInput(value, cls) {
-  var i = document.createElement('input');
-  i.type = 'text'; i.className = 'tagIn' + (cls ? ' ' + cls : '');
+  var i = document.createElement(cls === 'tagMulti' ? 'textarea' : 'input');   /* Kommentar: mehrzeilig */
+  if (cls === 'tagMulti') i.rows = 2; else i.type = 'text';
+  i.className = 'tagIn' + (cls ? ' ' + cls : '');
   i.value = value || '';
   i.autocomplete = 'off'; i.autocorrect = 'off'; i.spellcheck = false;
   i.addEventListener('input', function(){ i.setAttribute('data-dirty', '1'); });
@@ -221,10 +223,10 @@ function tagRender(files, items) {
   TAG_COMMON.forEach(function(fd){
     var vals = good.map(function(f){ return f.tags[fd[0]] || ''; });
     var same = vals.every(function(v){ return v === vals[0]; });
-    var inp = tagInput(same ? vals[0] : '');
+    var inp = tagInput(same ? vals[0] : '', fd[0] === 'comment' ? 'tagMulti' : '');
     if (!same) inp.placeholder = T('tag.mixed');
     tagCommon[fd[0]] = {input: inp, mixed: !same};
-    var aa = fd[0] === 'date' || fd[0] === 'disc' ? null : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
+    var aa = fd[0] === 'date' || fd[0] === 'disc' || fd[0] === 'comment' ? null : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
     if (fd[0] === 'genre') { var both = document.createDocumentFragment(); both.appendChild(tagGenreMenu(inp)); both.appendChild(aa); aa = both; }
     tagBody.appendChild(tagField(fd[1], inp, aa));
   });

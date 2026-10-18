@@ -352,6 +352,7 @@
     border-radius:calc(2.5 * var(--vw)); color:var(--fg); font-family:inherit; font-size:calc(4.3 * var(--vw));
     padding:calc(2.2 * var(--vw)) calc(3.5 * var(--vw)); outline:none; -webkit-appearance:none; }
   .tagIn::placeholder { opacity:.45; }
+  textarea.tagIn.tagMulti { display:block; resize:vertical; font:inherit; line-height:1.35; }
   .tagIn:focus { border-color:var(--accent, var(--fg)); }
   .tagRow { display:flex; gap:calc(2 * var(--vw)); margin-bottom:calc(2 * var(--vw)); }
   .tagRow.err { font-size:calc(3.2 * var(--vw)); color:var(--err); }

@@ -700,6 +700,7 @@ langRegister('es', 'Español', {
   'tag.field.albumartist': 'Artista del álbum',
   'tag.field.artist': 'Artista',
   'tag.field.composer': 'Compositor',
+  'tag.field.comment': 'Comentario',
   'tag.field.disc': 'Disco',
   'tag.field.genre': 'Género',
   'tag.field.title': 'Título',
