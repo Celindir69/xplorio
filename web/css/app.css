@@ -96,6 +96,8 @@
   #topBar { position:fixed; z-index:5; display:flex; justify-content:space-between; pointer-events:none;
     top:calc(var(--sat) + 12px);
     left:max(env(safe-area-inset-left,0px), 12px); right:max(env(safe-area-inset-right,0px), 12px); }
+  /* Handy hochkant: über dem Cover ist Platz, die Knöpfe rücken weiter unter Statusleiste und Dynamic Island hervor */
+  @media (orientation:portrait) and (max-width:600px) { #topBar { top:calc(var(--sat) + 28px); } }
   .topBtn { pointer-events:auto; cursor:pointer; display:flex; align-items:center; justify-content:center;
     width:clamp(34px, calc(9 * var(--vw)), 44px); height:clamp(34px, calc(9 * var(--vw)), 44px);
     border-radius:50%; opacity:.55; transition:opacity .2s, background .2s;
