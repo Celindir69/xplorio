@@ -317,6 +317,7 @@ function tracksItems(list) {
 function tracksPlay(list) {
   var items = tracksItems(list);
   browseOrigin = null;
+  if (queueForInput(items)) return;
   fetch('/api/v1/replaceAndPlay', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({item: items[0]})

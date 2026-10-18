@@ -165,6 +165,7 @@ function poll() {
   if (!volDrag && ROTEL_ON) rotel('/state');  
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateFill).then(function(st){
 st = inputApply(st);
+if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* läuft schon: Play wieder normal */
 
 curDur = Number(st.duration) || 0;
 /* gestoppt zählt Volumio die Zeit teils weiter (Wiedergabe angefordert, aber das Ausgabegerät ließ sich nicht öffnen):

@@ -41,6 +41,21 @@ socket.on('pushUiSettings', function(s){
 });
 /* Volumio meldet Fehler beim Abspielen als Hinweis (MPD: „Failed to open "alsa"…“, „No such device“ bzw. Volumios
    Text dazu): Ausgabegerät aus oder belegt -> eigener kurzer Hinweis */
+/* Abspielen, während der Verstärker auf einem anderen Eingang steht: nur die Warteschlange füllen (items ab Titel 1).
+   Ein Start ins Leere ließe Volumios Uhr weiterlaufen und durch die Titel springen. Play am Player-Eingang startet
+   dann den ersten Titel (ui.js). true: erledigt, sonst wie gewohnt abspielen */
+var queuedForInput = false;
+function queueForInput(items) {
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;
+  if (!inp) { queuedForInput = false; return false; }
+  if (!items || !items.length) return true;
+  queuedForInput = true;
+  socket.emit('clearQueue');
+  setTimeout(function(){ socket.emit('addToQueue', items); }, 300);
+  showToast(T('play.queuedInput', {name: inp.name}));
+  if (typeof closeAllOverlays === 'function') closeAllOverlays();
+  return true;
+}
 function audioErrorText(m) {
   var s = String((m && m.message) || '');
   if (!m || m.type !== 'error') return '';
@@ -378,6 +393,7 @@ function playArtistByName(name) {
         }
       });
       if (artistItem) {
+        if (queueForInput([{uri: artistItem.uri, service: artistItem.service || 'mpd', type: 'folder', title: artistItem.title || artistItem.name || name}])) return;
         fetch('/api/v1/replaceAndPlay', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify({item:{

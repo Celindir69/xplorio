@@ -6,6 +6,7 @@ langRegister('fr', 'Français', {
   'audio.disconnected': 'Sortie audio déconnectée',
   'audio.unreachable': 'Sortie audio injoignable',
   'audio.otherInput': 'L’amplificateur est sur {name}',
+  'play.queuedInput': 'Dans la file d’attente · l’amplificateur est sur {name}',
   'browse.albums': 'Albums',
   'browse.hintAlbum': 'Toucher : lire l\'album à partir de ce titre',
   'browse.hintPlaylist': 'Toucher : lire la playlist à partir de ce titre',

@@ -5,6 +5,7 @@ langRegister('de', 'Deutsch', {
   'audio.disconnected': 'Audioziel getrennt',
   'audio.unreachable': 'Audioziel nicht erreichbar',
   'audio.otherInput': 'Verstärker steht auf {name}',
+  'play.queuedInput': 'In der Warteschlange · Verstärker steht auf {name}',
   'browse.albums': 'Alben',
   'browse.hintAlbum': 'Tippen: Album ab diesem Titel',
   'browse.hintPlaylist': 'Tippen: Playlist ab diesem Titel',

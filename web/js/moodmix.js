@@ -437,6 +437,7 @@ function mixItems(tracks) {
 function mixPlay(tracks, replace) {
   var items = mixItems(tracks);
   if (!replace) { socket.emit('addToQueue', items); closeAllOverlays(); showToast(T('mix.added', {n: items.length})); return; }
+  if (queueForInput(items)) return;
   fetch('/api/v1/replaceAndPlay', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({item: items[0]})

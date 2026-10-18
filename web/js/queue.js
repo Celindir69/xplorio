@@ -22,6 +22,13 @@ function resetSwipe() {
 }
 
 var queueSeq = 0;              /* nur die Antwort der letzten Anfrage zeichnen (ältere kämen sonst mit veralteten Positionen) */
+/* Tipp auf einen Titel: abspielen; steht der Verstärker auf einem anderen Eingang, nur das sagen (ein Start ins Leere
+   ließe Volumio durch die Titel springen) */
+function queuePlayAt(i) {
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;
+  if (inp) { showToast(T('audio.otherInput', {name: inp.name})); return; }
+  socket.emit('play', {value: i});
+}
 function loadQueue() {
   var seq = ++queueSeq;
   fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(j){
@@ -149,7 +156,7 @@ function loadQueue() {
 
 
   e.stopPropagation();
-  socket.emit('play', {value: i});
+  queuePlayAt(i);
 }, {passive:false});
       if (i !== curPos) {
         handle.addEventListener('touchstart', function(e){
@@ -167,7 +174,7 @@ function loadQueue() {
       row.addEventListener('click', function(){
         if (Date.now() - lastTouchAt < 800) return;      /* Tippen wurde schon über touchend behandelt */
         if (drag) return;
-        socket.emit('play', {value: i});
+        queuePlayAt(i);
       });
       if (i !== curPos) {
         handle.addEventListener('click', function(e){ e.stopPropagation(); });
