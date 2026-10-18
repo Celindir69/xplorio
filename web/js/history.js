@@ -111,6 +111,7 @@ function histTrackArt(e) {
 /* ---------- Abspielen und Öffnen ---------- */
 
 function histPlayUri(uri, service, e) {
+  if (queueForInput([{uri: uri, service: service, type: 'song', title: e.ti, artist: e.ar, album: e.al || ''}])) return;
   fetch('/api/v1/replaceAndPlay', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({item: {uri: uri, service: service, type: 'song', title: e.ti, artist: e.ar, album: e.al || ''}})

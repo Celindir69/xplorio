@@ -30,6 +30,7 @@ function browseGet(uri) {
 
 function browsePlay(item) {
   browseOrigin = null;
+  if (queueForInput([item])) return;
   fetch('/api/v1/replaceAndPlay', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({item:item})
@@ -539,7 +540,10 @@ function albumPlaysInfo(play, seq, uri, album, artist) {
 var lastPlayedPlaylist = '', playlistJump = 0;
 function playlistPlay(e, tracks, from) {
   lastPlayedPlaylist = e.uri;
-  var jump = ++playlistJump;                       /* inzwischen etwas anderes gestartet: nicht mehr springen */
+  var jump = ++playlistJump;
+  if (queueForInput(tracks.slice(from || 0).map(function(t){   /* ab dem gewählten Titel */
+    return {uri: t.uri, service: t.service || e.service || 'mpd', type: 'song', title: t.title || t.name || '', artist: t.artist || '', album: t.album || ''};
+  }))) { browseOrigin = null; return; }                       /* inzwischen etwas anderes gestartet: nicht mehr springen */
   socket.emit('replaceAndPlay', {uri:e.uri, title:e.name, albumart:null, service:e.service || 'mpd', type:e.type || undefined});
   closeAllOverlays();
   browseOrigin = null;

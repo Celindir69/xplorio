@@ -125,7 +125,10 @@ document.addEventListener('touchend', function(e){
 /* ---------- Wiedergabe ---------- */
 function cmd(c) { fetch('/api/v1/commands/?cmd=' + c).catch(function(){}); }
 document.getElementById('cPrev').addEventListener('click', function(){ cmd('prev'); });
-document.getElementById('cPlay').addEventListener('click', function(){ cmd('toggle'); });
+document.getElementById('cPlay').addEventListener('click', function(){
+  if (queuedForInput) { queuedForInput = false; socket.emit('play', {value: 0}); return; }   /* am anderen Eingang gewählt (core.js) */
+  cmd('toggle');
+});
 document.getElementById('cNext').addEventListener('click', function(){ cmd('next'); });
 
 document.getElementById('seekBar').addEventListener('click', function(e){

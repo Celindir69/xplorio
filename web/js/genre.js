@@ -233,6 +233,7 @@ function genrePlayAllHead(list, match) {
   return playRow(T('browse.playAll'), '', function(){
     var items = folders();
     browseOrigin = null;
+    if (queueForInput(items)) return;
     fetch('/api/v1/replaceAndPlay', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({item: items[0]})

@@ -176,6 +176,7 @@ function loadMyRadio() {
       var items = [];
       lists.forEach(function(l){ items = items.concat(l.items || []); });
       renderPlList(items, radioPanel, function(it){
+        if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
         socket.emit('replaceAndPlay', {
           uri:      it.uri,
           title:    it.title || it.name || '',
@@ -354,6 +355,7 @@ function renderSearchResults() {
 
 function playSearchItem(it) {
   var type = searchCat === 'songs' ? 'song' : 'folder';
+  if (queueForInput([{uri: it.uri, service: it.service || 'mpd', type: type, title: it.title || it.name || '', artist: it.artist || '', album: it.album || ''}])) return;
   fetch('/api/v1/replaceAndPlay', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({item:{
