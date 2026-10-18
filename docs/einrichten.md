@@ -473,6 +473,13 @@ python3 analyse.py --upload http://<player>:8766
   auf dem Mac sind egal. Titel, die es auf dem Player nicht gibt, werden dort einfach nicht verwendet.
 - Mehrere Ordner lassen sich angeben, Symlinks werden verfolgt; `--exclude "*/Hörbücher/*"` lässt Pfade aus.
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.
+- **Musik auf dem Player selbst:** Liegen die Dateien auf dem Player (USB-Platte oder interner Speicher), die Freigabe im
+  Finder verbinden (⌘K, `smb://<player>`, nur Lesen genügt) und mit `--player` analysieren:
+  `caffeinate -i python3 analyse.py --player http://<player> /Volumes/<Freigabe>/<Musikordner>`.
+  Das Skript fängt dann nur eine neue Datei an, solange der Player erreichbar ist und nicht spielt; startet die
+  Wiedergabe, wird Laufendes noch fertig, danach fragt es alle 10 Minuten nach (`--player-wait 20` für 20 Minuten).
+  Am Ende lädt es das Ergebnis selbst zum Tag-Dienst hoch (`--upload` ist dann nicht nötig). Ist die Freigabe beim
+  Start nicht verbunden, bricht es ab, statt die bisherigen Ergebnisse dieses Ordners zu verwerfen.
 - `--seconds 120` (Standard) hört nur die mittleren zwei Minuten an (Valenz/Erregung davon die mittleren 45 s), `--jobs` legt die Zahl paralleler Prozesse fest.
 - Dauer: auf einem älteren Intel-Mac rund 9 s je Datei, also etwa 5 Tage für 50.000 Titel; Apple-Silicon-Macs
   sind deutlich schneller. `--profile` zeigt die Zeit je Analyseschritt. Mehr Prozesse als Kerne bringen nichts.
