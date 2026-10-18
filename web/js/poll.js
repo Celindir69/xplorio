@@ -89,9 +89,6 @@ function inputArt(inp) {
   return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 }
 
-/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
-   etwas anderes zum Abspielen (oder spielt Volumio), steht das da, mit gesperrter Bedienung: am Verstärker auf den
-   Player umschalten und abspielen */
 /* Streaming-Titel, dessen Wiedergabe nicht starten konnte (z. B. anderer Eingang): Volumio meldet dann nur Position und
    Lautstärke. Titel, Künstler, Album und Cover kommen aus der Warteschlange (Eintrag an der Position); höchstens alle 5 s
    neu geholt, bei anderer Position sofort */
@@ -113,18 +110,33 @@ function stateFill(st) {
       if (it[k] !== undefined && it[k] !== '') r[k] = it[k];
     });
     if (!r.title && it.name) r.title = it.name;
-    if (!r.status) { r.status = 'stop'; r.seek = 0; }        /* läuft nicht: Zeit am Anfang */
+    if (!r.status) { r.status = 'stop'; r.seek = 0; r.noStatus = true; }   /* läuft nicht: Zeit am Anfang */
     return r;
   }, function(){ return st; });
 }
 
-var inputSession = '', inputBaseUri = '';
+/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
+   etwas anderes zum Abspielen (oder spielt Volumio), steht das Album da (Cover, Künstler, Albumtitel; kein Titel,
+   keine Titelinfo, kein Text, denn am Verstärker läuft gerade etwas anderes), mit gesperrter Bedienung: am Verstärker
+   auf den Player umschalten und abspielen.
+   Ließ sich die Wiedergabe nicht starten, zählt Volumio die Zeit trotzdem weiter und springt zum nächsten Titel
+   (mit „Abgespielte entfernen“ verschwinden sie aus der Warteschlange): einmal Stopp, dann bleibt das Album stehen */
+var inputSession = '', inputBaseUri = '', inputStopped = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   document.documentElement.classList.toggle('otherInput', !!inp);
   if (!inp) { inputSession = ''; return st; }
   if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* was beim Umschalten geladen war */
-  if (st.status === 'play' || (st.uri || '') !== inputBaseUri) return st;
+  if (st.status === 'play' || (st.uri || '') !== inputBaseUri) {
+    if (st.noStatus && inputStopped !== inp.name + '|' + st.uri) {
+      inputStopped = inp.name + '|' + st.uri;
+      fetch('/api/v1/commands/?cmd=stop').catch(function(){});
+    }
+    var a = {};
+    for (var j in st) if (st.hasOwnProperty(j)) a[j] = st[j];
+    a.inputAlbum = true;
+    return a;
+  }
   var r = {};
   for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
   r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp);
@@ -184,16 +196,18 @@ updateSyncedLyrics();
     var artist = st.artist || '', album = st.album || '';
     var title  = st.title  || '';
     var radio  = (st.trackType === 'webradio');
+    var preview = !!st.inputAlbum;                      /* anderer Eingang, Album gewählt: Albumtitel groß, kein Titel */
+    if (preview) title = '';
 
-    marqueeSet(mTitle, title);
+    marqueeSet(mTitle, preview ? album : title);
     mArtist.textContent = artist;
-    if ((radio ? '' : album) !== curAlbumTitle || st.uri !== curAlbumUri) {   /* nur bei Wechsel: das Jahr kommt verzögert dazu */
-      curAlbumTitle = radio ? '' : album; curAlbumUri = st.uri;
+    if ((radio || preview ? '' : album) !== curAlbumTitle || st.uri !== curAlbumUri) {   /* nur bei Wechsel: das Jahr kommt verzögert dazu */
+      curAlbumTitle = radio || preview ? '' : album; curAlbumUri = st.uri;
       mAlbum.textContent = curAlbumTitle;
       if (typeof playerYear === 'function') playerYear(st.uri || '', curAlbumTitle, artist);
     }
     mArtist.classList.toggle('link', !radio && !!artist);      /* Klick öffnet Alben bzw. Titel (browse.js) */
-    mAlbum.classList.toggle('link',  !radio && !!album);
+    mAlbum.classList.toggle('link',  !radio && !preview && !!album);
     paintQuality(st);
     tagPaintPlayer(st);
     if (radio) {
@@ -212,7 +226,7 @@ updateSyncedLyrics();
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
       setTrackInfo(lyrKey, title, null, radio);                   /* Reiter des vorigen Titels weg */
-      if (!artist) showLyrics(null);                               /* z. B. anderer Eingang */
+      if (!artist || !title) showLyrics(null);                     /* z. B. anderer Eingang */
       else {
         askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* späte Antwort des vorigen Titels verwerfen */
         (function(k, ti){
