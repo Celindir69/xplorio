@@ -473,6 +473,8 @@ python3 analyse.py --upload http://<player>:8766
   auf dem Mac sind egal. Titel, die es auf dem Player nicht gibt, werden dort einfach nicht verwendet.
 - Mehrere Ordner lassen sich angeben, Symlinks werden verfolgt; `--exclude "*/Hörbücher/*"` lässt Pfade aus.
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.
+  Liegt die Sammlung inzwischen woanders (anderes Laufwerk, Freigabe, andere Ordnerstruktur), erkennt das Skript bereits
+  analysierte Dateien an Dateiname und Größe wieder und analysiert sie nicht noch einmal.
 - **Musik auf dem Player selbst:** Liegen die Dateien auf dem Player (USB-Platte oder interner Speicher), die Freigabe im
   Finder verbinden (⌘K, `smb://<player>`, nur Lesen genügt) und mit `--player` analysieren:
   `caffeinate -i python3 analyse.py --player http://<player> /Volumes/<Freigabe>/<Musikordner>`.
