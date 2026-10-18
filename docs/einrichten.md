@@ -635,7 +635,7 @@ neu starten (`sudo systemctl restart rotel-bridge`; das Einspielen-Skript tut da
 
 **Aktiver Eingang in der Player-Ansicht:** Ist am Verstärker ein anderer Eingang gewählt als der des Players
 (`powerOnSource`, ohne Angabe `pcusb`), steht unter dem Titel statt Format und Qualität der Name des Eingangs, und statt
-des Stifts ein Icon (Tippen öffnet die Fernbedienung). An Stelle des Covers steht groß das Icon des Eingangs und als Titel sein Name. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
+des Stifts ein Icon (Tippen öffnet die Fernbedienung). An Stelle des Covers steht groß das Icon des Eingangs und als Titel sein Name; Zeitleiste und Tasten sind gesperrt (die Lautstärke nicht). Wählt man in dieser Zeit in Xplorio ein Album oder einen Titel zum Abspielen, steht das in der Player-Ansicht; nach dem Umschalten auf den Eingang des Players startet ein Tipp auf Abspielen die Wiedergabe. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
 `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (auch XLR), `pc` (PC-USB) und `tv`. Name und Icon einzelner Eingänge
 ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung; Bridge danach neu starten):
 ```js

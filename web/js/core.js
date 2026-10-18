@@ -45,7 +45,10 @@ function audioErrorText(m) {
   var s = String((m && m.message) || '');
   if (!m || m.type !== 'error') return '';
   if (/resource busy|device is busy/i.test(s)) return T('audio.busy');
-  if (/failed to open|alsa|no such device|output device/i.test(s)) return T('audio.unreachable');
+  if (/failed to open|alsa|no such device|output device/i.test(s)) {
+    var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* Verstärker auf anderem Eingang: das sagen */
+    return inp ? T('audio.otherInput', {name: inp.name}) : T('audio.unreachable');
+  }
   return '';
 }
 /* Ausgabegerät getrennt: Volumio öffnet dazu ein Fenster mit Bestätigung (openModal, Titel „Kein Audio-Gerät
