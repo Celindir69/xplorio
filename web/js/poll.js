@@ -89,14 +89,23 @@ function inputArt(inp) {
   return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 }
 
-/* Streaming-Titel, dessen Wiedergabe nicht starten konnte (z. B. anderer Eingang): Volumio meldet dann nur Position und
-   Lautstärke. Titel, Künstler, Album und Cover kommen aus der Warteschlange (Eintrag an der Position); höchstens alle 5 s
-   neu geholt, bei anderer Position sofort */
-var stateFillCache = {pos: -1, at: 0, item: null};
+/* Titel, dessen Wiedergabe nicht starten konnte (z. B. anderer Eingang): Volumio meldet dann teils nur Position und
+   Lautstärke, teils noch den vorigen (pausierten) Titel, obwohl die Warteschlange schon das neue Album enthält.
+   Titel, Künstler, Album und Cover kommen dann aus der Warteschlange (Eintrag an der Position); ab einem anderen
+   Eingang wird dafür abgeglichen, bis wieder etwas spielt, und einmal Stopp geschickt, damit Volumio nicht ungehört
+   durch das Album springt bzw. beim Abspielen den alten Titel fortsetzt. Höchstens alle 3 s neu geholt, bei anderer
+   Position sofort */
+var stateFillCache = {pos: -1, at: 0, item: null}, stateFillWatch = false, stateFillStopped = '';
+function stateUriKey(u) { return String(u || '').replace(/^(music-library\/|mnt\/)/, ''); }   /* Präfixe unterscheiden sich */
 function stateFill(st) {
-  if (!st || st.uri || st.title || typeof st.position !== 'number') return st;
+  if (!st || typeof st.position !== 'number') return st;
+  if (typeof rotelInput === 'function' && rotelInput()) stateFillWatch = true;
+  else if (st.status === 'play') stateFillWatch = false;
+  var empty = !st.uri && !st.title;
+  var check = !empty && st.status !== 'play' && stateFillWatch;
+  if (!empty && !check) return st;
   var c = stateFillCache, p = st.position;
-  var got = (c.pos === p && Date.now() - c.at < 5000) ? Promise.resolve(c.item)
+  var got = (c.pos === p && Date.now() - c.at < 3000) ? Promise.resolve(c.item)
     : withTimeout(fetch('/api/v1/getQueue'), 4000).then(function(r){ return r.json(); }).then(function(j){
         var q = (j && j.queue) || [];
         stateFillCache = {pos: p, at: Date.now(), item: q[p] || null};
@@ -104,13 +113,22 @@ function stateFill(st) {
       });
   return got.then(function(it){
     if (!it || !it.uri) return st;
+    if (check && stateUriKey(it.uri) === stateUriKey(st.uri)) return st;   /* Volumio meldet schon den richtigen Titel */
     var r = {};
     for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];
+    if (check) {                                                    /* veralteter Titel: dessen Angaben ganz ersetzen */
+      ['title', 'artist', 'album', 'albumart', 'samplerate', 'bitdepth', 'bitrate', 'channels'].forEach(function(k){ r[k] = ''; });
+      r.status = 'stop'; r.seek = 0;
+    }
     ['uri', 'title', 'artist', 'album', 'albumart', 'trackType', 'service', 'duration', 'samplerate', 'bitdepth'].forEach(function(k){
       if (it[k] !== undefined && it[k] !== '') r[k] = it[k];
     });
     if (!r.title && it.name) r.title = it.name;
     if (!r.status) { r.status = 'stop'; r.seek = 0; r.noStatus = true; }   /* läuft nicht: Zeit am Anfang */
+    if (stateFillWatch && (r.noStatus || check) && stateFillStopped !== r.uri) {
+      stateFillStopped = r.uri;
+      fetch('/api/v1/commands/?cmd=stop').catch(function(){});
+    }
     return r;
   }, function(){ return st; });
 }
@@ -118,20 +136,14 @@ function stateFill(st) {
 /* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
    etwas anderes zum Abspielen (oder spielt Volumio), steht das Album da (Cover, Künstler, Albumtitel; kein Titel,
    keine Titelinfo, kein Text, denn am Verstärker läuft gerade etwas anderes), mit gesperrter Bedienung: am Verstärker
-   auf den Player umschalten und abspielen.
-   Ließ sich die Wiedergabe nicht starten, zählt Volumio die Zeit trotzdem weiter und springt zum nächsten Titel
-   (mit „Abgespielte entfernen“ verschwinden sie aus der Warteschlange): einmal Stopp, dann bleibt das Album stehen */
-var inputSession = '', inputBaseUri = '', inputStopped = '';
+   auf den Player umschalten und abspielen (Abgleich mit der Warteschlange und Stopp: stateFill) */
+var inputSession = '', inputBaseUri = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   document.documentElement.classList.toggle('otherInput', !!inp);
   if (!inp) { inputSession = ''; return st; }
   if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* was beim Umschalten geladen war */
   if (st.status === 'play' || (st.uri || '') !== inputBaseUri) {
-    if (st.noStatus && inputStopped !== inp.name + '|' + st.uri) {
-      inputStopped = inp.name + '|' + st.uri;
-      fetch('/api/v1/commands/?cmd=stop').catch(function(){});
-    }
     var a = {};
     for (var j in st) if (st.hasOwnProperty(j)) a[j] = st[j];
     a.inputAlbum = true;
