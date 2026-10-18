@@ -6,10 +6,6 @@ function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: dessen Name statt Format */
   if (st.trackType === 'input') { mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* großes Icon statt Cover */
-  if (st.trackType === 'recognized') {                 /* erkannter Titel einer anderen Quelle: nichts über die Qualität bekannt */
-    mTech.textContent = inp ? inp.name : ''; mBadge.textContent = T('recog.badge'); mBadge.className = 'qBadge recog';
-    return;
-  }
   if (inp) { mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: Codec aus der Datei, sobald bekannt */
   var q = classifyQuality(st, window.APP_CONFIG);
@@ -80,70 +76,30 @@ function radioArt(st, stationArt) {
   return stationArt;
 }
 
-/* Erkannter Titel (iOS-Kurzbefehl mit Shazam, POST /recognized im Tag-Dienst): solange Volumio nichts spielt, steht er
-   wie ein laufender Titel da, mit Cover, Lyrics und Infos. Abgefragt nur, während Volumio nicht spielt */
-var recogTrack = null, recogBusy = false, recogCovers = {};
-function recogFetch() {
-  if (recogBusy || typeof TAGS === 'undefined') return;
-  recogBusy = true;
-  withTimeout(fetch(TAGS + '/recognized'), 4000).then(function(r){ return r.json(); })
-    .then(function(j){ recogTrack = (j && j.track) || null; }, function(){ /* Tag-Dienst gerade nicht da: alten Stand lassen */ })
-    .then(function(){ recogBusy = false; });
-}
-/* Cover: über den Tag-Dienst (iTunes/Deezer; so lassen sich die Farben fürs Hintergrund-Thema lesen),
-   bis dahin und ohne Treffer das vom Kurzbefehl mitgeschickte, sonst das Bild von Volumio für „kein Cover“ */
-function recogArt(t) {
-  var k = t.artist + '|' + t.title, fallback = t.art || '/albumart';
-  if (recogCovers[k]) return recogCovers[k];
-  if (recogCovers[k] === undefined) {
-    recogCovers[k] = null;
-    var u = TAGS + '/radiocover?artist=' + encodeURIComponent(t.artist) + '&title=' + encodeURIComponent(t.title);
-    var img = new Image();
-    img.onload = function(){ recogCovers[k] = u; poll(); };
-    img.onerror = function(){ recogCovers[k] = false; };
-    img.src = u;
-  }
-  return fallback;
-}
-/* Anderer Eingang am Verstärker ohne erkannten Titel: großes Icon des Eingangs statt Cover (als SVG-Bild).
-   Gibt es den Kurzbefehl, steht darunter, dass ein Tipp die Erkennung startet; sie läuft nur auf Tippen, nie von selbst */
+/* Anderer Eingang am Verstärker: großes Icon des Eingangs statt Cover (als SVG-Bild) */
 var inputArtCache = {};
-function inputArt(inp, hint) {
+function inputArt(inp) {
   var light = document.documentElement.classList.contains('light'), fg = light ? '#000' : '#fff';
-  var k = inp.icon + '|' + (hint ? 1 : 0) + '|' + (light ? 1 : 0);
+  var k = inp.icon + '|' + (light ? 1 : 0);
   if (inputArtCache[k]) return inputArtCache[k];
-  var txt = String(T('recog.tapHint')).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; });
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">' +
     '<rect width="600" height="600" rx="24" fill="' + fg + '" fill-opacity=".07"/>' +
-    '<g transform="translate(180 ' + (hint ? 150 : 180) + ') scale(10)"><path fill-rule="evenodd" fill="' + fg + '" fill-opacity=".5" d="' +
-    (ROTEL_ICONS[inp.icon] || ROTEL_ICONS.aux) + '"/></g>' +
-    (hint ? '<text x="300" y="505" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif" font-size="27" fill="' +
-            fg + '" fill-opacity=".6">' + txt + '</text>' : '') + '</svg>';
+    '<g transform="translate(180 180) scale(10)"><path fill-rule="evenodd" fill="' + fg + '" fill-opacity=".5" d="' +
+    (ROTEL_ICONS[inp.icon] || ROTEL_ICONS.aux) + '"/></g></svg>';
   return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 }
-function recogCanTap() { return typeof recogShortcutOk === 'function' && recogShortcutOk(); }
 
-/* Was der Player zeigt: erkannter Titel (Volumio spielt nicht oder ist am Verstärker nicht zu hören),
-   sonst bei anderem Eingang dessen Icon, sonst Volumio */
-function recogApply(st) {
-  var t = recogTrack, inp = typeof rotelInput === 'function' ? rotelInput() : null;
-  if (!inp && (!t || st.status === 'play')) return st;
+/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio */
+function inputApply(st) {
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;
+  if (!inp) return st;
   var r = {};
   for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
-  if (t) {
-    r.artist = t.artist; r.title = t.title; r.album = t.album || ''; r.albumart = recogArt(t);
-    r.trackType = 'recognized';
-  } else {
-    r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp, recogCanTap());
-    r.trackType = 'input';
-  }
-  r.service = r.trackType; r.uri = ''; r.duration = 0; r.seek = 0;
+  r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp);
+  r.trackType = r.service = 'input'; r.uri = ''; r.duration = 0; r.seek = 0;
   r.samplerate = r.bitdepth = r.bitrate = r.fileFormat = '';
   return r;
 }
-/* Tipp aufs Eingangs-Icon startet die Erkennung (Kurzbefehl) */
-var coverTapRecog = false;
-document.getElementById('coverWrap').addEventListener('click', function(){ if (coverTapRecog && recogCanTap()) recogShortcutRun(); });
 
 var playIconShown = null;                              /* zuletzt gezeichnetes Symbol (nur bei Wechsel neu setzen) */
 var pollBusy = false;                                   /* nie mehrere getState gleichzeitig (Volumio hängt z. B. beim Einlesen) */
@@ -151,17 +107,14 @@ function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
   if (!volDrag && ROTEL_ON) rotel('/state');  
-  if (!playing || (typeof rotelInput === 'function' && rotelInput())) recogFetch();
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(function(st){
-st = recogApply(st);
+st = inputApply(st);
 
 curDur = Number(st.duration) || 0;
 /* gestoppt zählt Volumio die Zeit teils weiter (Wiedergabe angefordert, aber das Ausgabegerät ließ sich nicht öffnen):
    dann steht der Titel am Anfang */
 seekBase = st.status === 'stop' ? 0 : (Number(st.seek) || 0); seekStamp = Date.now();
-playing = (st.status === 'play') && st.trackType !== 'recognized' && st.trackType !== 'input';   /* erkannter Titel oder anderer Eingang: keine laufende Zeit */
-coverTapRecog = st.trackType === 'input';
-document.getElementById('coverWrap').classList.toggle('tapRecog', coverTapRecog && recogCanTap());
+playing = (st.status === 'play') && st.trackType !== 'input';   /* anderer Eingang: keine laufende Zeit */
 paintTime();
 updateSyncedLyrics();
 
@@ -227,7 +180,7 @@ updateSyncedLyrics();
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
       setTrackInfo(lyrKey, title, null, radio);                   /* Reiter des vorigen Titels weg */
-      if (!artist) showLyrics(null);                               /* z. B. anderer Eingang ohne erkannten Titel */
+      if (!artist) showLyrics(null);                               /* z. B. anderer Eingang */
       else {
         askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* späte Antwort des vorigen Titels verwerfen */
         (function(k, ti){
@@ -242,7 +195,7 @@ updateSyncedLyrics();
 curArtist = artist;    
 if (!artist) { showInfo([]); return; }
 
-if (radio || (st.trackType === 'recognized' && !album)) {      /* Erkennung ohne Album: nur der Künstler */
+if (radio) {
   Promise.all([ask({mode:'storyArtist', artist:artist}), askDiscography(artist)])
     .then(function(res){
       if (key !== lastKey) return;                   /* inzwischen läuft etwas anderes */
@@ -279,7 +232,7 @@ Promise.all([
 
 /* kleine Zwischenspeicher im Dauerbetrieb (iPad läuft tagelang) begrenzen: älteste Einträge zuerst */
 setInterval(function(){
-  [[radioCovers, 300], [recogCovers, 100], [radioLogoSent, 300], [similarCache, 300], [similarAllCache, 300], [streamSimilarCache, 200], [moodCache, 300], [creditCache, 300]]
+  [[radioCovers, 300], [radioLogoSent, 300], [similarCache, 300], [similarAllCache, 300], [streamSimilarCache, 200], [moodCache, 300], [creditCache, 300]]
     .forEach(function(p){
       var keys = Object.keys(p[0]);
       keys.slice(0, Math.max(0, keys.length - p[1])).forEach(function(k){ delete p[0][k]; });

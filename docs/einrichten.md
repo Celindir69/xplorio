@@ -519,26 +519,6 @@ Laufen synchrone Lyrics konstant zu früh oder zu spät (andere Fassung des Tite
 Überschrift „Lyrics“ (Bühnenansicht: runde Knöpfe oben rechts) den Text um je 0,5 s. Der Wert gilt für diesen Titel auf
 allen Geräten (`/data/xplorio/data/lyrics-offsets.json`); Tippen auf den Wert setzt ihn auf 0 zurück.
 
-### Titel einer anderen Quelle erkennen (iPhone, iPad, Mac)
-Läuft am Verstärker etwas anderes als der Player (Plattenspieler, CD, Fernsehen), kann ein Kurzbefehl den Titel mit Shazam
-erkennen und an Xplorio schicken. Solange Volumio nichts spielt, zeigt Xplorio ihn dann wie einen laufenden Titel an:
-Cover, Lyrics (ohne Mitlaufen) und Infos zum Künstler, gekennzeichnet mit „Erkannt“. Er verschwindet, sobald Volumio
-wieder spielt, spätestens nach 10 Minuten. Ein Webbrowser selbst kann Shazam nicht nutzen, deshalb der Kurzbefehl.
-
-Kurzbefehl anlegen (Kurzbefehle-App, Namen der Aktionen je nach iOS-Version leicht anders):
-1. Neuer Kurzbefehl, Name z. B. `Xplorio erkennen`.
-2. Aktion **Musik erkennen** (Shazam).
-3. Aktion **Inhalte von URL abrufen**: URL `http://<IP des Players>:8766/recognized`, Methode **POST**,
-   Anfragetext **JSON** mit drei Textfeldern: `artist` = Shazam-Medium › Interpret, `title` = Shazam-Medium › Titel,
-   `art` = Shazam-Medium › Artwork-URL (optional, Cover als Ersatz). Ein Feld `album` wird mitgenommen, falls vorhanden.
-4. Optional: Aktion **Mitteilung anzeigen** mit dem Ergebnis von „Inhalte von URL abrufen“ (zeigt „Künstler – Titel“).
-
-Starten lässt er sich über Siri, das Kontrollzentrum, ein Widget oder aus Xplorio: Mit
-`window.APP_CONFIG.RECOGNIZE_SHORTCUT = 'Xplorio erkennen';` in `web/config.local.js` erscheint im Menü auf Apple-Geräten
-der Eintrag „Titel erkennen“, der den Kurzbefehl startet (im Browser kehrt er danach zu Xplorio zurück).
-Ausprobieren ohne iPhone: `curl -s -H 'Content-Type: application/json' -d '{"artist":"…","title":"…"}' localhost:8766/recognized`;
-`-d '{"clear":true}'` entfernt den Titel wieder.
-
 ## Rotel-Bridge (optional)
 Steuert einen Rotel-Verstärker im Netz: Ein/Aus, Lautstärke und die Fernbedienung (siehe unten). Die Bridge ist ein
 kleiner Dienst auf dem Player (Port 8765), der die Verbindung zum Verstärker hält (TCP, Port 9590); die Oberfläche
@@ -646,9 +626,7 @@ neu starten (`sudo systemctl restart rotel-bridge`; das Einspielen-Skript tut da
 
 **Aktiver Eingang in der Player-Ansicht:** Ist am Verstärker ein anderer Eingang gewählt als der des Players
 (`powerOnSource`, ohne Angabe `pcusb`), steht unter dem Titel statt Format und Qualität der Name des Eingangs, und statt
-des Stifts ein Icon (Tippen öffnet die Fernbedienung). Solange kein Titel erkannt ist, steht an Stelle des Covers groß das
-Icon des Eingangs und als Titel sein Name; mit eingerichtetem Kurzbefehl (`RECOGNIZE_SHORTCUT`, siehe „Titel einer
-anderen Quelle erkennen“) startet ein Tipp darauf die Erkennung. Erkannt wird nur auf Tippen, nie von selbst. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
+des Stifts ein Icon (Tippen öffnet die Fernbedienung). An Stelle des Covers steht groß das Icon des Eingangs und als Titel sein Name. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
 `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (auch XLR), `pc` (PC-USB) und `tv`. Name und Icon einzelner Eingänge
 ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung; Bridge danach neu starten):
 ```js

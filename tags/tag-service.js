@@ -619,7 +619,6 @@ function albumsEnsure(cb) {
    GET /moodtags -> {ok, status, summary}; GET /moodtags?artist=…&title=… -> Rohtags und Ergebnis für einen Titel */
 var moodtags = require('./moodtags.js');
 var essentia = require('./essentia.js');
-var recognized = new (require('./recognized.js').Recognized)();   /* vom iOS-Kurzbefehl erkannter Titel */
 var ESSENTIA_FILE = path.join(DATA_DIR, 'essentia.jsonl');      /* Audio-Analyse vom Mac (tools/essentia), per POST /essentia oder scp */
 var ESSENTIA_MAX = 100 * 1024 * 1024;             /* rund 1 kB je Titel: reicht für weit über 50 000 Titel */
 var essentiaBusy = false;
@@ -1420,13 +1419,6 @@ function doLastfmApi(query, cb) {
   });
 }
 
-/* POST /recognized {artist, title, album?, art?} vom iOS-Kurzbefehl; {clear: true} vergisst den Titel */
-function doRecognized(body, cb) {
-  var r = recognized.set(body);
-  if (r.ok && !body.clear) console.log('erkannt: ' + r.text);
-  cb(r.ok ? 200 : 400, r);
-}
-
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -1491,9 +1483,8 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/plays/resolve') return doResolve(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
-  if (req.method === 'GET' && route === '/recognized') return send(res, 200, {ok: true, track: recognized.get()});
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/recognized'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unbekannter Pfad'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1501,7 +1492,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'Ungültiges JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/recognized': doRecognized}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('Anfrage ' + route + ' gescheitert: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'interner Fehler'}); }
   });
