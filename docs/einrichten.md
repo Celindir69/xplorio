@@ -473,6 +473,8 @@ python3 analyse.py --upload http://<player>:8766
   auf dem Mac sind egal. Titel, die es auf dem Player nicht gibt, werden dort einfach nicht verwendet.
 - Mehrere Ordner lassen sich angeben, Symlinks werden verfolgt; `--exclude "*/Hörbücher/*"` lässt Pfade aus.
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.
+  Mit `--upload` oder `--player` lädt es beim Abbrechen den bisherigen Stand hoch (ein zweites Ctrl-C bricht auch das ab;
+  spielt der Player gerade, holt das der nächste Lauf nach).
   Liegt die Sammlung inzwischen woanders (anderes Laufwerk, Freigabe, andere Ordnerstruktur), erkennt das Skript bereits
   analysierte Dateien an Dateiname und Größe wieder und analysiert sie nicht noch einmal.
 - **Musik auf dem Player selbst:** Liegen die Dateien auf dem Player (USB-Platte oder interner Speicher), die Freigabe im
@@ -480,7 +482,8 @@ python3 analyse.py --upload http://<player>:8766
   `caffeinate -i python3 analyse.py --player http://<player> /Volumes/<Freigabe>/<Musikordner>`.
   Das Skript fängt dann nur eine neue Datei an, solange der Player erreichbar ist und nicht spielt; startet die
   Wiedergabe, wird Laufendes noch fertig, danach fragt es alle 10 Minuten nach (`--player-wait 20` für 20 Minuten).
-  Am Ende lädt es das Ergebnis selbst zum Tag-Dienst hoch (`--upload` ist dann nicht nötig). Ist die Freigabe beim
+  Am Ende lädt es das Ergebnis selbst zum Tag-Dienst hoch (`--upload` ist dann nicht nötig), zwischendurch alle 2 Stunden
+  den bisherigen Stand, wenn der Player gerade nicht spielt (`--upload-every 60` für jede Stunde, `0` nur am Ende). Ist die Freigabe beim
   Start nicht verbunden, bricht es ab, statt die bisherigen Ergebnisse dieses Ordners zu verwerfen.
 - `--seconds 120` (Standard) hört nur die mittleren zwei Minuten an (Valenz/Erregung davon die mittleren 45 s), `--jobs` legt die Zahl paralleler Prozesse fest.
 - Dauer: auf einem älteren Intel-Mac rund 9 s je Datei, also etwa 5 Tage für 50.000 Titel; Apple-Silicon-Macs

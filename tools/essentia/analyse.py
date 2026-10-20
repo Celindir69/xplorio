@@ -5,7 +5,8 @@ Hört jeden Titel an und schreibt je Titel eine Zeile nach essentia.jsonl: BPM, 
 (fröhlich, traurig, entspannt, aggressiv, Party), Tanzbarkeit, Gesang, Valenz/Erregung (DEAM) und
 Discogs-Stile. Der Tag-Dienst auf dem Player ordnet die Zeilen über Künstler und Titel zu, die
 Ordnerstruktur ist also egal. Bereits analysierte, unveränderte Dateien werden übersprungen;
-abbrechen (Ctrl-C) und später weitermachen geht jederzeit.
+abbrechen (Ctrl-C) und später weitermachen geht jederzeit. Mit --upload oder --player wird der bisherige Stand
+beim Abbrechen hochgeladen, mit --player außerdem alle 2 Stunden (--upload-every).
 
     python3 analyse.py /Volumes/Data/Musik /Volumes/Data/AllFlac
     python3 analyse.py --upload http://<player>:8766 /Volumes/Data/Musik
@@ -396,6 +397,31 @@ def upload(out, base):
     print('Hochgeladen: %d Einträge; auf dem Player %d von %d Titeln zugeordnet.' % (j['tracks'], j['matched'], j['library']))
 
 
+def upload_partial(done, out, base, player):
+    """Zwischenstand hochladen (je Datei nur der neueste Eintrag), ohne den Lauf zu beenden; True wenn hochgeladen.
+    Spielt der Player gerade, nicht: das holt der nächste Zwischenstand bzw. das Ende des Laufs nach."""
+    if player and player_state(player) in (None, 'play'):
+        return False
+    tmp = out + '.zwischenstand'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            for o in done.values():
+                f.write(json.dumps(o, ensure_ascii=False) + '\n')
+        print('  Zwischenstand hochladen (%s) …' % time.strftime('%H:%M'), flush=True)
+        upload(tmp, base)
+        return True
+    except SystemExit as e:                   # Antwort des Tag-Diensts: Fehler
+        print('  ' + str(e), flush=True)
+    except Exception as e:
+        print('  Hochladen fehlgeschlagen: %s' % e, flush=True)
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    return True                               # nicht gleich noch einmal versuchen
+
+
 def main():
     ap = argparse.ArgumentParser(description='Musiksammlung mit Essentia analysieren (BPM, Stimmung, Energie, Stil).')
     ap.add_argument('roots', nargs='*', help='Musikordner (mehrere möglich; Symlinks werden verfolgt)')
@@ -416,6 +442,9 @@ def main():
                                                    'nur analysieren, wenn er erreichbar ist und nicht spielt, z. B. http://<player>')
     ap.add_argument('--player-wait', type=int, default=10, metavar='MIN',
                     help='mit --player: so viele Minuten bis zur nächsten Abfrage (Standard 10)')
+    ap.add_argument('--upload-every', type=int, default=None, metavar='MIN',
+                    help='Zwischenstand so oft hochladen, nur wenn der Player nicht spielt '
+                         '(Standard mit --player 120, sonst 0 = nur am Ende)')
     a = ap.parse_args()
     if not a.roots and not a.upload:
         ap.error('Musikordner angeben (oder nur --upload)')
@@ -425,6 +454,8 @@ def main():
     if a.player and not a.upload:             # Ergebnis danach selbst hochladen: Tag-Dienst auf demselben Gerät
         u = urllib.parse.urlsplit(a.player)
         a.upload = '%s://%s:8766' % (u.scheme or 'http', u.hostname)
+    if a.upload_every is None:
+        a.upload_every = 120 if a.player else 0
 
     if a.roots:
         fetch_models(a.models)
@@ -505,6 +536,7 @@ def main():
             ff_tried = set()                  # nach einem Absturz schon einmal mit ffmpeg versucht
             ex = pool()
             running = {}
+            up_t, up_n = time.time(), 0          # letzter Zwischenstand: Zeit und Zahl der Dateien bis dahin
             try:
                 with open(a.out, 'a', encoding='utf-8') as f:
                     while queue or running or solo:
@@ -534,6 +566,9 @@ def main():
                             except cf.process.BrokenProcessPool:
                                 broken = True
                                 queue.append(job)
+                        if a.upload and a.upload_every and n > up_n and time.time() - up_t >= a.upload_every * 60:
+                            if upload_partial(done, a.out, a.upload, a.player):
+                                up_t, up_n = time.time(), n
                         if broken:
                             # ein Arbeitsprozess ist abgestürzt (und hat die anderen mitgerissen). Die Dateien auf den
                             # Merkzetteln sind verdächtig: einzeln wiederholen; stürzt eine allein ab, gilt sie als Fehler.
@@ -571,6 +606,15 @@ def main():
             except KeyboardInterrupt:
                 ex.shutdown(wait=False, cancel_futures=True)
                 print('\nAbgebrochen. Beim nächsten Aufruf geht es hier weiter.')
+                if a.upload and n > up_n:          # bisherigen Stand nicht erst am Ende des nächsten Laufs zum Player
+                    if a.player and player_state(a.player) in (None, 'play'):
+                        print('Player spielt oder ist nicht erreichbar: nicht hochgeladen, das macht der nächste Lauf.')
+                    else:
+                        print('Lade den bisherigen Stand hoch (Ctrl-C bricht ab) …', flush=True)
+                        try:
+                            upload_partial(done, a.out, a.upload, None)
+                        except KeyboardInterrupt:
+                            print('\nHochladen abgebrochen.')
                 sys.exit(1)
             ex.shutdown()
             try:
