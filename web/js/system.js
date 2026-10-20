@@ -1,8 +1,8 @@
-/* Seite „System“ (Zahnrad-Menü): CPU-Last live und über 24 h, Temperatur, Arbeitsspeicher, Laufwerke (interne
-   Karte, USB, jede NAS-Verbindung), Systemangaben und die laufende Datei. Werte vom Tag-Dienst (GET /sysinfo,
-   tags/sysinfo.js), Dienste (GET /services, POST /service, tags/services.js), Protokolle (POST /logs, tags/logs.js)
-   und von Volumio (getState). Solange die Seite offen ist: Live-Werte alle 2 s, alles andere jede Minute.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* "System" page (gear menu): CPU load live and over 24 h, temperature, memory, drives (internal
+   card, USB, each NAS connection), system details and the current file. Values from the tag service (GET /sysinfo,
+   tags/sysinfo.js), services (GET /services, POST /service, tags/services.js), logs (POST /logs, tags/logs.js)
+   and from Volumio (getState). While the page is open: live values every 2 s, everything else every minute.
+   Classic script, shared global scope; see xplorio.html for load order. */
 var overlaySystem = document.getElementById('overlaySystem');
 var sysBody = document.getElementById('sysBody');
 var sysTimer = null, sysFullTimer = null, sysSeq = 0, sysData = null, sysHistKind = 'cpu', sysEls = null;
@@ -14,7 +14,7 @@ function openSystem() {
   overlaySystem.classList.add('on');
   sysSeq++;
   sysEls = null; sysSvcPending = null; sysSvcBusy = {}; sysSvcMsg = '';
-  clearTimeout(sysLog.timer); sysLog.src = ''; sysLog.live = false; sysLog.data = null; sysLog.filter = ''; sysLog.focus = false;   /* Protokoll erst nach Wahl einer Quelle */
+  clearTimeout(sysLog.timer); sysLog.src = ''; sysLog.live = false; sysLog.data = null; sysLog.filter = ''; sysLog.focus = false;   /* log only after a source is chosen */
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
   sysBody.appendChild(browseNote(T('hist.loading')));
   sysFull();
@@ -32,7 +32,7 @@ function sysFull() {
       sysData = res[0];
       sysSvc = res[2] && res[2].ok ? res[2] : null;
       if (!sysData || !sysData.ok) throw new Error('keine Daten');
-      if (!sysSvcPending || !sysEls) sysKeepScroll(function(){ sysRender(res[1]); });   /* nicht während der Passworteingabe */
+      if (!sysSvcPending || !sysEls) sysKeepScroll(function(){ sysRender(res[1]); });   /* not during password entry */
       sysLive(seq);
       sysFullTimer = setTimeout(function(){ if (seq === sysSeq && sysOpen()) sysFull(); }, 60000);
     }).catch(function(){
@@ -46,8 +46,8 @@ function sysLive(seq) {
   clearTimeout(sysTimer);
   sysTimer = setTimeout(function(){
     if (seq !== sysSeq) return;
-    if (!overlaySystem.classList.contains('on')) return;  /* Seite zu: aufhören */
-    if (document.hidden) return sysLive(seq);              /* im Hintergrund: nicht abfragen, aber dranbleiben */
+    if (!overlaySystem.classList.contains('on')) return;  /* page closed: stop */
+    if (document.hidden) return sysLive(seq);              /* in the background: do not poll, but stay on */
     tagGetJson('/sysinfo').then(function(r){
       if (seq !== sysSeq || !r || !r.ok) return;
       ['cpu', 'cores', 'live', 'load', 'mem', 'temp', 'uptime'].forEach(function(k){ sysData[k] = r[k]; });
@@ -56,7 +56,7 @@ function sysLive(seq) {
   }, 2000);
 }
 
-/* Seite neu aufbauen, ohne dass die Bildlaufposition verloren geht (Höhe halten, Position zurücksetzen) */
+/* rebuild the page without losing the scroll position (keep height, restore position) */
 function sysKeepScroll(fn) {
   var keep = [];
   for (var el = sysBody; el && el.nodeType === 1; el = el.parentNode) if (el.scrollTop) keep.push([el, el.scrollTop]);
@@ -69,7 +69,7 @@ function sysKeepScroll(fn) {
   keep.forEach(function(k){ k[0].scrollTop = k[1]; });
 }
 
-/* ---------- Formate ---------- */
+/* ---------- Formats ---------- */
 function sysNum(x, d) {
   try { return Number(x).toLocaleString(LANG_LOCALE, {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0}); } catch (e) { return Number(x).toFixed(d || 0); }
 }
@@ -95,7 +95,7 @@ function sysDiskName(k) {
   return p[1] === 'mnt' && p.length > 3 ? p[2] + ' · ' + p.slice(3).join('/') : last;
 }
 
-/* ---------- Bausteine ---------- */
+/* ---------- Building blocks ---------- */
 function sysCard(title, cls) {
   var c = histEl('div', 'syCard' + (cls ? ' ' + cls : ''));
   c.appendChild(histEl('div', 'syTitle', title));
@@ -115,19 +115,19 @@ function sysSvg(tag, attrs, parent) {
   return e;
 }
 
-/* Flächendiagramm [[Zeit, Wert], …] mit fester Skala lo..hi; Lücken (Dienst lief nicht) unterbrechen die Linie.
-   opts: {lo, hi, h, fmt(v), grid:[Werte], gap (ms), labels: true, hover: true} */
+/* Area chart [[time, value], …] with fixed scale lo..hi; gaps (service was not running) break the line.
+   opts: {lo, hi, h, fmt(v), grid:[values], gap (ms), labels: true, hover: true} */
 function sysArea(box, pts, opts) {
   var W = Math.max(200, box.clientWidth || 320), H = opts.h || 120;
-  box.style.height = H + 'px';                             /* Höhe fest: beim Neuzeichnen wird die Seite nie kürzer (sonst springt sie nach oben) */
+  box.style.height = H + 'px';                             /* fixed height: redrawing never makes the page shorter (otherwise it jumps up) */
   while (box.firstChild) box.removeChild(box.firstChild);
   var padB = opts.labels ? 18 : 2, padT = 6;
   var svg = sysSvg('svg', {viewBox: '0 0 ' + W + ' ' + H, width: '100%', height: H, 'class': 'syChart'}, box);
   var lo = opts.lo, hi = opts.hi, ph = H - padB - padT;
-  pts = pts.filter(function(p){                          /* nur Werte im gezeigten Zeitraum: ältere lägen links außerhalb der Karte */
+  pts = pts.filter(function(p){                          /* only values in the shown period: older ones would lie left outside the card */
     return p[1] !== null && p[1] !== undefined && (opts.t0 === undefined || p[0] >= opts.t0) && (opts.t1 === undefined || p[0] <= opts.t1);
   });
-  if (opts.bucket && pts.length > W / 3) {                 /* 24 h = 1440 Werte: auf etwa 3 px je Punkt mitteln */
+  if (opts.bucket && pts.length > W / 3) {                 /* 24 h = 1440 values: average to about 3 px per point */
     var n = Math.max(1, Math.round(W / 3)), span = ((opts.t1 || pts[pts.length - 1][0]) - (opts.t0 || pts[0][0])) / n, acc = {}, keys = [];
     pts.forEach(function(p){
       var k = Math.floor((p[0] - (opts.t0 || pts[0][0])) / span);
@@ -135,7 +135,7 @@ function sysArea(box, pts, opts) {
       acc[k][0] += p[0]; acc[k][1] += p[1]; acc[k][2]++;
     });
     pts = keys.map(function(k){ return [acc[k][0] / acc[k][2], acc[k][1] / acc[k][2]]; });
-    opts.gap = Math.max(opts.gap || 0, span * 2.5);        /* gemittelte Punkte liegen weiter auseinander: keine Scheinlücken */
+    opts.gap = Math.max(opts.gap || 0, span * 2.5);        /* averaged points are further apart: no false gaps */
   }
   var t0 = opts.t0 !== undefined ? opts.t0 : (pts.length ? pts[0][0] : 0), t1 = opts.t1 !== undefined ? opts.t1 : (pts.length ? pts[pts.length - 1][0] : 1);
   if (t1 <= t0) t1 = t0 + 1;
@@ -145,7 +145,7 @@ function sysArea(box, pts, opts) {
     sysSvg('line', {x1: 0, x2: W, y1: y(g), y2: y(g), 'class': 'syGrid'}, svg);
     if (opts.labels) { var tx = sysSvg('text', {x: W - 2, y: y(g) - 3, 'class': 'syAxis', 'text-anchor': 'end'}, svg); tx.textContent = opts.fmt(g); }
   });
-  /* in Abschnitte ohne Lücke teilen */
+  /* split into sections without gaps */
   var segs = [], cur = [];
   pts.forEach(function(p, i){
     if (i && p[0] - pts[i - 1][0] > (opts.gap || 180000)) { segs.push(cur); cur = []; }
@@ -158,7 +158,7 @@ function sysArea(box, pts, opts) {
     sysSvg('path', {d: line + 'L' + x(s[s.length - 1][0]).toFixed(1) + ' ' + (padT + ph) + 'L' + x(s[0][0]).toFixed(1) + ' ' + (padT + ph) + 'Z', 'class': 'syFill'}, svg);
     sysSvg('path', {d: line, 'class': 'syLine'}, svg);
   });
-  if (opts.labels) {                                       /* Uhrzeiten unten: alle 6 h */
+  if (opts.labels) {                                       /* times at the bottom: every 6 h */
     var first = Math.ceil(t0 / 3600000) * 3600000;
     for (var tt = first; tt <= t1; tt += 3600000) {
       if (new Date(tt).getHours() % 6) continue;
@@ -169,7 +169,7 @@ function sysArea(box, pts, opts) {
     }
   }
   if (!opts.hover || !pts.length) return;
-  /* Fadenkreuz mit Wert und Uhrzeit (Maus: Zeigen, Touch: Tippen und Wischen) */
+  /* crosshair with value and time (mouse: hover, touch: tap and swipe) */
   var cross = sysSvg('line', {y1: padT, y2: padT + ph, 'class': 'syCross'}, svg);
   var dot = sysSvg('circle', {r: 4, 'class': 'syDot'}, svg);
   var tip = histEl('div', 'syTip');
@@ -192,7 +192,7 @@ function sysArea(box, pts, opts) {
   svg.addEventListener('pointerleave', hide);
 }
 
-/* ---------- Seite ---------- */
+/* ---------- Page ---------- */
 function sysRender(st) {
   var d = sysData;
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
@@ -200,7 +200,7 @@ function sysRender(st) {
   sysBody.appendChild(grid);
   sysEls = {};
 
-  /* Prozessor: aktuelle Last groß, Verlauf der letzten 3 Minuten, je Kern ein Balken */
+  /* processor: current load large, history of the last 3 minutes, one bar per core */
   var cpu = sysCard(T('sys.cpu'), 'syWide');
   var hero = histEl('div', 'syHero');
   sysEls.cpuVal = histEl('span', 'syBig', '–');
@@ -214,7 +214,7 @@ function sysRender(st) {
   cpu.appendChild(sysEls.cores);
   grid.appendChild(cpu);
 
-  /* 24 Stunden: eine Größe auf einmal (Last, Temperatur oder Speicher), umschaltbar */
+  /* 24 hours: one quantity at a time (load, temperature or memory), switchable */
   var hist = sysCard(T('sys.hist'), 'syWide');
   var seg = histEl('div', 'mxChips syKinds');
   [['cpu', T('sys.kind.cpu')], ['temp', T('sys.kind.temp')], ['mem', T('sys.kind.mem')]].forEach(function(k){
@@ -233,7 +233,7 @@ function sysRender(st) {
   hist.appendChild(sysEls.histNote);
   grid.appendChild(hist);
 
-  /* Temperatur */
+  /* temperature */
   var temp = sysCard(T('sys.temp'));
   sysEls.tempVal = histEl('div', 'syBig', '–');
   temp.appendChild(sysEls.tempVal);
@@ -243,7 +243,7 @@ function sysRender(st) {
   temp.appendChild(sysEls.tempNote);
   grid.appendChild(temp);
 
-  /* Arbeitsspeicher */
+  /* memory */
   var mem = sysCard(T('sys.mem'));
   sysEls.memVal = histEl('div', 'syBig', '–');
   mem.appendChild(sysEls.memVal);
@@ -253,7 +253,7 @@ function sysRender(st) {
   mem.appendChild(sysEls.memNote);
   grid.appendChild(mem);
 
-  /* Laufwerke */
+  /* drives */
   var disks = sysCard(T('sys.disks'), 'syWide');
   (d.disks || []).forEach(function(k){
     var row = histEl('div', 'syDisk');
@@ -270,7 +270,7 @@ function sysRender(st) {
   if (!(d.disks || []).length) disks.appendChild(histEl('div', 'syNote', T('sys.diskNone')));
   grid.appendChild(disks);
 
-  /* Dienste: Zustand, Neustart; Kiosk auch Start und Stopp (fehlt bei einem älteren Tag-Dienst) */
+  /* services: state, restart; kiosk also start and stop (missing with an older tag service) */
   if (sysSvc) {
     var svc = sysCard(T('sys.svc'), 'syWide');
     sysEls.svc = histEl('div', 'sySvcList');
@@ -282,7 +282,7 @@ function sysRender(st) {
     grid.appendChild(svc);
     sysPaintSvc();
 
-    /* Protokolle: letzte Zeilen, Quelle und Länge wählbar, „Live“ holt alle 3 s nach */
+    /* logs: last lines, source and length selectable, "Live" refreshes every 3 s */
     var lg = sysCard(T('sys.log'), 'syWide');
     sysEls.logSrc = histEl('div', 'mxChips syKinds');
     lg.appendChild(sysEls.logSrc);
@@ -307,7 +307,7 @@ function sysRender(st) {
     if (!sysLog.data || sysLog.seq !== sysSeq) sysLogLoad();
   }
 
-  /* Systemangaben */
+  /* system details */
   var s = d.sys || {}, info = sysCard(T('sys.info'));
   function kv(box, k, v) {
     if (!v) return;
@@ -329,7 +329,7 @@ function sysRender(st) {
   info.appendChild(ur);
   grid.appendChild(info);
 
-  /* laufende Datei (Volumio getState) */
+  /* current file (Volumio getState) */
   if (st) {
     var pl = sysCard(T('sys.playing'));
     kv(pl, T('sys.state'), [st.status, st.service].filter(Boolean).join(' · '));
@@ -344,7 +344,7 @@ function sysRender(st) {
   sysPaintHist();
 }
 
-/* ---------- Dienste ---------- */
+/* ---------- Services ---------- */
 function sysSvcState(u) {
   if (sysSvcBusy[u.id]) return T('sys.svc.busy');
   if (u.active === 'active') return u.since ? T('sys.svc.since', {d: sysDuration(Math.max(60, (Date.now() - u.since) / 1000))}) : T('sys.svc.running');
@@ -378,7 +378,7 @@ function sysPaintSvc() {
     row.appendChild(btns);
     e.svc.appendChild(row);
   });
-  /* der ganze Player: Neustart und Ausschalten (mit Passwort nur, wenn eines festgelegt ist) */
+  /* the whole player: restart and power off (with password only if one is set) */
   var pr = histEl('div', 'sySvc sySvcPlayer'), pb = sysSvcBusy.player;
   pr.appendChild(histEl('span', 'sySvcDot ' + (pb ? 'busy' : 'on')));
   var pt = histEl('div', 'sySvcText');
@@ -399,15 +399,15 @@ function sysPaintSvc() {
   e.svcLogin.style.display = sysSvcPending ? '' : 'none';
 }
 
-/* Anmeldung je Gerät: Passwort einmal eingeben, der Tag-Dienst gibt einen Schlüssel für 30 Tage (localStorage) */
+/* login per device: enter the password once, the tag service issues a key for 30 days (localStorage) */
 function sysSvcToken(v) {
   try {
     if (v === undefined) return localStorage.getItem('xplorio.svcToken') || '';
     if (v) localStorage.setItem('xplorio.svcToken', v); else localStorage.removeItem('xplorio.svcToken');
-  } catch (e) { /* privates Fenster: dann jedes Mal anmelden */ }
+  } catch (e) { /* private window: then log in every time */ }
   return v || '';
 }
-var sysSvcMem = '';                                        /* Schlüssel ohne localStorage, solange die Seite offen ist */
+var sysSvcMem = '';                                        /* key without localStorage, while the page is open */
 function sysSvcLoginForm() {
   var f = histEl('form', 'sySvcLogin');
   f.appendChild(histEl('div', 'syNote', T('sys.svc.loginHint')));
@@ -465,7 +465,7 @@ function sysSvcRun(u, action) {
   sysPaintSvc();
   tagPostJson(player ? '/power' : '/service', player ? {action: action, token: token} : {unit: u.id, action: action, token: token}).then(function(r){
     if (seq !== sysSeq) return;
-    if (r && r.error === 'auth') {                         /* abgelaufen oder neues Passwort: neu anmelden */
+    if (r && r.error === 'auth') {                         /* expired or new password: log in again */
       delete sysSvcBusy[u.id];
       sysSvcMem = sysSvcToken(null);
       return sysSvcAskLogin(u, action);
@@ -475,13 +475,13 @@ function sysSvcRun(u, action) {
       sysSvcMsg = r && r.error === 'nosudo' ? T('sys.svc.nosudo') : r && r.error === 'unset' ? T('sys.svc.nopw') : T('sys.svc.error');
       return sysPaintSvc();
     }
-    if (player) {                                          /* Player fährt herunter; nach einem Neustart in 1 und 2 Minuten neu laden */
+    if (player) {                                          /* player shuts down; after a restart, reload in 1 and 2 minutes */
       if (action === 'reboot') [60000, 120000].forEach(function(ms){
         sysSvcTimers.push(setTimeout(function(){ if (seq === sysSeq) { delete sysSvcBusy.player; sysFull(); } }, ms));
       });
       return;
     }
-    if (r.self) {                                          /* der Tag-Dienst startet sich selbst neu: kurz warten, dann alles neu laden */
+    if (r.self) {                                          /* the tag service restarts itself: wait briefly, then reload everything */
       return sysSvcTimers.push(setTimeout(function(){ if (seq === sysSeq) { delete sysSvcBusy[u.id]; sysFull(); } }, 6000));
     }
     [1500, 5000, 12000, 30000].forEach(function(ms, i, all){
@@ -504,7 +504,7 @@ function sysSvcRun(u, action) {
   });
 }
 
-/* ---------- Protokolle ---------- */
+/* ---------- Logs ---------- */
 var sysLog = {src: '', filter: '', focus: false, n: 50, live: false, data: null, seq: -1, timer: null, busy: false, scroll: 0, bottom: true};
 function sysLogAtBottom(b) { return b.scrollTop + b.clientHeight >= b.scrollHeight - 24; }
 function sysLogLoad() {
@@ -525,7 +525,7 @@ function sysLogLoad() {
     sysPaintLog();
     if (sysLog.live) sysLog.timer = setTimeout(function tick(){
       if (seq !== sysSeq || !sysLog.live || !overlaySystem.classList.contains('on')) return;
-      if (document.hidden) sysLog.timer = setTimeout(tick, 3000);   /* im Hintergrund: nicht abfragen, aber dranbleiben */
+      if (document.hidden) sysLog.timer = setTimeout(tick, 3000);   /* in the background: do not poll, but stay on */
       else sysLogLoad();
     }, 3000);
   });
@@ -558,7 +558,7 @@ function sysPaintLog() {
     var c = histEl('div', 'mxChip mxSmall' + (id === sysLog.src ? ' on' : ''), T('sys.log.src.' + id));
     c.addEventListener('click', function(){
       clearTimeout(sysLog.timer);
-      if (id === sysLog.src) { sysLog.src = ''; sysLog.live = false; sysLog.data = {ok: true, source: '', lines: [], sources: srcs}; return sysPaintLog(); }   /* noch einmal: zuklappen */
+      if (id === sysLog.src) { sysLog.src = ''; sysLog.live = false; sysLog.data = {ok: true, source: '', lines: [], sources: srcs}; return sysPaintLog(); }   /* once more: collapse */
       sysLog.src = id; sysLog.data = {ok: true, source: id, lines: [], sources: srcs}; sysLog.bottom = true;
       sysLogLoad(); sysPaintLog();
     });
@@ -567,7 +567,7 @@ function sysPaintLog() {
   sysPaintLogCtl();
   e.logCtl.style.display = e.logFilter.style.display = sysLog.src ? '' : 'none';
   var box = e.logBox, all = d && d.ok ? d.lines || [] : [], lines = all;
-  var q = sysLog.filter.trim().toLowerCase();             /* Filter: Zeilen, die den Text enthalten (Groß-/Kleinschreibung egal) */
+  var q = sysLog.filter.trim().toLowerCase();             /* filter: lines containing the text (case-insensitive) */
   if (q) lines = all.filter(function(l){ return l.toLowerCase().indexOf(q) >= 0; });
   box.textContent = lines.join('\n');
   box.style.display = lines.length ? '' : 'none';
@@ -603,7 +603,7 @@ function sysPaintLive() {
   var now = d.now || Date.now(), live = d.live || [];
   sysArea(e.cpuLive, live, {lo: 0, hi: 100, h: 64, fmt: function(v){ return sysNum(v) + ' %'; }, grid: [50], gap: 10000,
                             t0: live.length ? live[live.length - 1][0] - 180000 : now - 180000, t1: live.length ? live[live.length - 1][0] : now, hover: true});
-  (d.cores || []).forEach(function(c, i){                 /* Zeilen bleiben stehen, nur Werte ändern sich */
+  (d.cores || []).forEach(function(c, i){                 /* lines stay in place, only values change */
     var b = e.cores.children[i];
     if (!b) {
       b = histEl('div', 'syCore');
@@ -618,7 +618,7 @@ function sysPaintLive() {
   if (d.temp !== null && d.temp !== undefined) {
     e.tempVal.textContent = sysNum(d.temp, 1) + ' °C';
     if (!e.tempMeter.firstChild) e.tempMeter.appendChild(sysMeter(0));
-    sysMeterSet(e.tempMeter.firstChild, (d.temp - 30) / 55);           /* Skala 30–85 °C: ab 80 °C drosselt der Raspberry Pi */
+    sysMeterSet(e.tempMeter.firstChild, (d.temp - 30) / 55);           /* scale 30–85 °C: from 80 °C the Raspberry Pi throttles */
     e.tempNote.textContent = d.temp >= 80 ? '⚠ ' + T('sys.tempHot') : d.temp >= 70 ? '⚠ ' + T('sys.tempWarm') : T('sys.tempOk');
     e.tempNote.className = 'syNote' + (d.temp >= 70 ? ' syWarn' : '');
   } else e.tempVal.textContent = T('sys.none');

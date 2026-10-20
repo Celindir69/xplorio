@@ -1,18 +1,18 @@
-/* Erscheinungsdaten der Alben für die Geburtstage: volles Date-Tag aus den Dateien (albums.json: rd), sonst einmal bei
-   MusicBrainz nachgeschlagen (Release-Group, erstes Erscheinen), höchstens eine Anfrage je STEP_MS.
-   Gespeichert in releasedates.jsonl ({dir, d: 'JJJJ-MM-TT' oder '' = nicht gefunden, at}); nicht Gefundenes nach
-   RETRY_DAYS erneut. Node 8, nur ES5. */
+/* Release dates of the albums for the birthdays: full Date tag from the files (albums.json: rd), else looked up once at
+   MusicBrainz (release group, first release), at most one request per STEP_MS.
+   Stored in releasedates.jsonl ({dir, d: 'YYYY-MM-DD' or '' = not found, at}); items not found are retried after
+   RETRY_DAYS. Node 8, ES5 only. */
 var fs = require('fs');
 var coversearch = require('./coversearch.js');
 
-var STEP_MS = 1500;              /* MusicBrainz erlaubt eine Anfrage je Sekunde */
+var STEP_MS = 1500;              /* MusicBrainz allows one request per second */
 var RETRY_DAYS = 90;
 var MIN_SCORE = 90;
 var MB = process.env.MB_URL || 'https://musicbrainz.org';
 var DAY = 86400;
 
 function full(d) { return /^\d{4}-\d\d-\d\d$/.test(d || '') ? d : ''; }
-/* Vergleich der Titel: wie coversearch.key, aber Klammerzusätze zählen mit ("(Live)" ist ein anderes Album) */
+/* title comparison: like coversearch.key, but bracketed additions count ("(Live)" is a different album) */
 function tkey(s) {
   s = String(s || '');
   if (s.normalize) s = s.normalize('NFKD');
@@ -20,7 +20,7 @@ function tkey(s) {
 }
 function quote(s) { return '"' + String(s || '').replace(/["\\]/g, '\\$&') + '"'; }
 
-/* bester Treffer einer MusicBrainz-Antwort: Titel und Künstler passen, Datum vollständig, nicht jünger als das eigene Jahr */
+/* best hit of a MusicBrainz response: title and artist match, date complete, not later than the own year */
 function pickDate(j, al, ar, y) {
   var hit = ((j && j['release-groups']) || []).filter(function(g){
     var credit = (g['artist-credit'] || []).map(function(c){ return c.name || (c.artist && c.artist.name) || ''; }).join(' ');
@@ -31,7 +31,7 @@ function pickDate(j, al, ar, y) {
   return hit ? hit['first-release-date'] : '';
 }
 
-/* opts: file, list() -> Albenliste (albums.json), getJson(url, cb) zum Testen, stepMs */
+/* opts: file, list() -> album list (albums.json), getJson(url, cb) for testing, stepMs */
 function Collector(opts) {
   this.file = opts.file; this.list = opts.list; this.stepMs = opts.stepMs || STEP_MS;
   this.getJson = opts.getJson || function(u, cb){
@@ -42,14 +42,14 @@ function Collector(opts) {
   };
   this.by = {}; this.timer = null; this.running = false; this.fetched = 0; this.rev = 0;
   var self = this, txt = '';
-  try { txt = fs.readFileSync(this.file, 'utf8'); } catch (e) { /* noch leer */ }
-  txt.split('\n').forEach(function(l){ try { var o = l && JSON.parse(l); if (o && o.dir) self.by[o.dir] = o; } catch (x) { /* überspringen */ } });
+  try { txt = fs.readFileSync(this.file, 'utf8'); } catch (e) { /* still empty */ }
+  txt.split('\n').forEach(function(l){ try { var o = l && JSON.parse(l); if (o && o.dir) self.by[o.dir] = o; } catch (x) { /* skip */ } });
 }
 
-/* Datum eines Albums: Date-Tag, sonst nachgeschlagen; '' unbekannt */
+/* date of an album: Date tag, else looked up; '' unknown */
 Collector.prototype.dateOf = function(a) { return full(a.rd) || (this.by[a.dir] && this.by[a.dir].d) || ''; };
 
-/* nächstes Album ohne Datum, das noch nicht (oder vor RETRY_DAYS erfolglos) nachgeschlagen wurde */
+/* next album without date that has not been looked up yet (or unsuccessfully more than RETRY_DAYS ago) */
 Collector.prototype.next = function(now) {
   var list = this.list() || [];
   for (var i = 0; i < list.length; i++) {
@@ -76,22 +76,22 @@ Collector.prototype.schedule = function(ms) {
 
 Collector.prototype.step = function(done) {
   var self = this, now = Math.floor(Date.now() / 1000), a = this.next(now);
-  if (!(this.list() || []).length) { this.schedule(60000); return done && done(); }   /* Albenliste noch nicht gelesen */
-  if (!a) { this.schedule(3600000); return done && done(); }           /* alles erledigt: stündlich nach neuen Alben sehen */
+  if (!(this.list() || []).length) { this.schedule(60000); return done && done(); }   /* album list not read yet */
+  if (!a) { this.schedule(3600000); return done && done(); }           /* all done: check hourly for new albums */
   var q = 'releasegroup:' + quote(a.al) + ' AND artist:' + quote(a.ar);
   this.getJson(MB + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
-    if (e) { self.schedule(60000); return done && done(e); }           /* Netz oder MusicBrainz weg: später weiter */
+    if (e) { self.schedule(60000); return done && done(e); }           /* network or MusicBrainz gone: continue later */
     var rec = {dir: a.dir, d: pickDate(j, a.al, a.ar, a.y), at: now};
     self.by[a.dir] = rec; self.fetched++; self.rev++;
-    try { fs.appendFileSync(self.file, JSON.stringify(rec) + '\n'); } catch (x) { /* nächstes Mal */ }
+    try { fs.appendFileSync(self.file, JSON.stringify(rec) + '\n'); } catch (x) { /* next time */ }
     self.schedule(self.stepMs);
     if (done) done();
   });
 };
 
-/* Geburtstage zum Tag day ('JJJJ-MM-TT', Datum beim Hörer): heute, in dieser Woche (Montag bis Sonntag, ohne heute),
-   in diesem Monat (ohne die Woche). dateOf(a) -> 'JJJJ-MM-TT' oder ''. Je Eintrag {dir, al, ar, y, date, years, mark}:
-   mark 'jubilee' bei 25, 50, 75 … Jahren, 'round' bei 10, 20, 30 …; ausgezeichnete zuerst, sonst nach Tag. */
+/* birthdays for the day day ('YYYY-MM-DD', date at the listener): today, this week (Monday to Sunday, without today),
+   this month (without the week). dateOf(a) -> 'YYYY-MM-DD' or ''. Per entry {dir, al, ar, y, date, years, mark}:
+   mark 'jubilee' at 25, 50, 75 … years, 'round' at 10, 20, 30 …; marked ones first, else by day. */
 function birthdays(list, dateOf, day, limit) {
   var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(day || '');
   if (!m) return {today: [], week: [], month: []};
@@ -120,9 +120,9 @@ function birthdays(list, dateOf, day, limit) {
   return out;
 }
 
-/* Bibliotheks-Check: Alben, deren Date-Tag vom Erscheinungsdatum bei MusicBrainz abweicht (anderes Jahr, anderes volles
-   Datum oder gar keins). Nur ein Jahr im Tag, das zum Jahr bei MusicBrainz passt, gilt als stimmig.
-   albumList: albums.fromSongs(songs); songs: wie mpdWalk; mbOf(dir) -> 'JJJJ-MM-TT' oder ''; albumDir wie albums.albumDir
+/* library check: albums whose Date tag differs from the MusicBrainz release date (different year, different full
+   date or none at all). A year-only tag that matches the MusicBrainz year counts as consistent.
+   albumList: albums.fromSongs(songs); songs: as from mpdWalk; mbOf(dir) -> 'YYYY-MM-DD' or ''; albumDir as in albums.albumDir
    -> [{dir, name, artist, count, tag, mb, files: [{uri, title}]}] */
 function diffs(albumList, songs, mbOf, albumDir) {
   var byDir = {};

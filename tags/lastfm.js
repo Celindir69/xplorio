@@ -1,6 +1,6 @@
-/* Last.fm: verbinden (Freigabe im Browser), scrobbeln, "läuft gerade" und den bisherigen Verlauf einlesen.
-   Braucht LASTFM_KEY und LASTFM_SECRET (keys.json im Datenordner, siehe appdata.js). Der Sitzungsschlüssel bleibt auf dem Player
-   (lastfm.json neben dem Verlauf) und geht nie an den Browser. Node 8, nur ES5. */
+/* Last.fm: connect (authorization in the browser), scrobble, "now playing" and import the existing history.
+   Needs LASTFM_KEY and LASTFM_SECRET (keys.json in the data folder, see appdata.js). The session key stays on the player
+   (lastfm.json next to the history) and never goes to the browser. Node 8, ES5 only. */
 var fs     = require('fs');
 var path   = require('path');
 var crypto = require('crypto');
@@ -12,10 +12,10 @@ var qs     = require('querystring');
 var API  = process.env.LASTFM_URL      || 'https://ws.audioscrobbler.com';
 var AUTH = process.env.LASTFM_AUTH_URL || 'https://www.last.fm/api/auth/';
 var UA   = 'Xplorio/1.0 ( https://github.com/Celindir69/xplorio )';
-var BATCH = 50;                       /* Scrobbles je Anfrage (Höchstwert von Last.fm) */
-var RETRY = 10 * 60 * 1000;           /* Warteschlange erneut senden */
-var PAGE_PAUSE = 300;                 /* ms zwischen Seiten beim Einlesen (Last.fm erlaubt ~5 Anfragen/s) */
-var MAX_AGE = 14 * 86400;             /* ältere Scrobbles nimmt Last.fm nicht mehr an */
+var BATCH = 50;                       /* scrobbles per request (Last.fm maximum) */
+var RETRY = 10 * 60 * 1000;           /* resend the queue */
+var PAGE_PAUSE = 300;                 /* ms between pages when importing (Last.fm allows ~5 requests/s) */
+var MAX_AGE = 14 * 86400;             /* Last.fm no longer accepts older scrobbles */
 
 function sign(params, secret) {
   var s = Object.keys(params).filter(function(k){ return k !== 'format' && k !== 'callback'; }).sort()
@@ -23,7 +23,7 @@ function sign(params, secret) {
   return crypto.createHash('md5').update(s + secret, 'utf8').digest('hex');
 }
 
-/* cfg {key, secret}; signed: mit api_sig; post: als Formular; cb(err, json) */
+/* cfg {key, secret}; signed: with api_sig; post: as a form; cb(err, json) */
 function call(cfg, method, params, signed, post, cb) {
   var p = {method: method, api_key: cfg.key};
   Object.keys(params).forEach(function(k){ if (params[k] !== undefined && params[k] !== '') p[k] = String(params[k]); });
@@ -42,12 +42,12 @@ function call(cfg, method, params, signed, post, cb) {
     res.on('end', function(){
       var j;
       try { j = JSON.parse(Buffer.concat(parts).toString('utf8')); } catch (e) { return finish({code: 0, message: 'HTTP ' + res.statusCode}); }
-      if (j && j.error) return finish({code: j.error, message: j.message || ('Fehler ' + j.error)});
+      if (j && j.error) return finish({code: j.error, message: j.message || ('error ' + j.error)});
       if (res.statusCode !== 200) return finish({code: 0, message: 'HTTP ' + res.statusCode});
       finish(null, j);
     });
   });
-  req.setTimeout(20000, function(){ req.abort(); finish({code: 0, message: 'Zeitüberschreitung'}); });
+  req.setTimeout(20000, function(){ req.abort(); finish({code: 0, message: 'timeout'}); });
   req.on('error', function(e){ finish({code: 0, message: e.message}); });
   if (post) req.write(body);
   req.end();
@@ -56,7 +56,7 @@ function call(cfg, method, params, signed, post, cb) {
 function arr(x) { return Array.isArray(x) ? x : (x ? [x] : []); }
 function text(x) { return x && typeof x === 'object' ? (x['#text'] || x.name || '') : (x || ''); }
 
-/* eine Seite user.getRecentTracks -> {tracks:[Verlaufseinträge], pages} */
+/* one page of user.getRecentTracks -> {tracks:[history entries], pages} */
 function recentPage(cfg, user, page, from, to, cb) {
   call(cfg, 'user.getrecenttracks', {user: user, limit: 200, page: page, from: from || undefined, to: to || undefined}, false, false, function(e, j){
     if (e) return cb(e);
@@ -71,21 +71,21 @@ function recentPage(cfg, user, page, from, to, cb) {
   });
 }
 
-/* ---------- Abgleich mit dem Verlauf ---------- */
+/* ---------- sync with the history ---------- */
 
 /* store: plays.Store; file: lastfm.json; getCfg(): {key, secret} */
 function Sync(file, store, getCfg) {
   this.file = file; this.store = store; this.getCfg = getCfg;
   this.state = {};
-  try { this.state = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch (e) { /* noch nicht verbunden */ }
+  try { this.state = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch (e) { /* not connected yet */ }
   if (!Array.isArray(this.state.queue)) this.state.queue = [];
   this.importRun = null; this.importError = null; this.sendError = null;
   this.sending = false; this.timer = null; this.token = null;
 }
 
 Sync.prototype.save = function() {
-  try { fs.mkdirSync(path.dirname(this.file)); } catch (e) { /* existiert schon */ }
-  try { fs.writeFileSync(this.file + '.neu', JSON.stringify(this.state)); fs.renameSync(this.file + '.neu', this.file); } catch (e) { /* nächstes Mal */ }
+  try { fs.mkdirSync(path.dirname(this.file)); } catch (e) { /* already exists */ }
+  try { fs.writeFileSync(this.file + '.neu', JSON.stringify(this.state)); fs.renameSync(this.file + '.neu', this.file); } catch (e) { /* next time */ }
 };
 Sync.prototype.cfg = function() { var c = this.getCfg() || {}; return {key: c.key || '', secret: c.secret || ''}; };
 Sync.prototype.connected = function() { return !!this.state.sk; };
@@ -97,25 +97,25 @@ Sync.prototype.status = function() {
           importedTo: this.state.importedTo || null, lastImport: this.state.lastImport || null, importing: this.importRun, importError: this.importError};
 };
 
-/* 1. Schritt: Freigabe-Adresse holen; der Nutzer bestätigt sie bei Last.fm */
+/* step 1: get the authorization URL; the user confirms it at Last.fm */
 Sync.prototype.connect = function(cb) {
   var self = this, c = this.cfg();
-  if (!c.key || !c.secret) return cb('LASTFM_KEY und LASTFM_SECRET fehlen (keys.json im Datenordner)');
+  if (!c.key || !c.secret) return cb('LASTFM_KEY and LASTFM_SECRET missing (keys.json in the data folder)');
   call(c, 'auth.gettoken', {}, true, false, function(e, j){
-    if (e || !j.token) return cb('Last.fm: ' + (e ? e.message : 'kein Token'));
+    if (e || !j.token) return cb('Last.fm: ' + (e ? e.message : 'no token'));
     self.token = j.token;
     cb(null, AUTH + '?api_key=' + encodeURIComponent(c.key) + '&token=' + encodeURIComponent(j.token));
   });
 };
 
-/* 2. Schritt: nach der Freigabe den Sitzungsschlüssel holen */
+/* step 2: after authorization fetch the session key */
 Sync.prototype.finish = function(cb) {
   var self = this, c = this.cfg();
-  if (!this.token) return cb('Erst „Mit Last.fm verbinden“ tippen');
+  if (!this.token) return cb('Tap “Connect to Last.fm” first');
   call(c, 'auth.getsession', {token: this.token}, true, false, function(e, j){
-    if (e) return cb(e.code === 14 ? 'Noch nicht freigegeben. Bitte bei Last.fm „Zulassen“ tippen und dann erneut versuchen.' : 'Last.fm: ' + e.message);
+    if (e) return cb(e.code === 14 ? 'Not authorized yet. Please tap “Allow” on Last.fm and try again.' : 'Last.fm: ' + e.message);
     var s = j.session || {};
-    if (!s.key) return cb('Last.fm: keine Sitzung');
+    if (!s.key) return cb('Last.fm: no session');
     self.token = null;
     self.state.sk = s.key; self.state.user = s.name || '';
     self.sendError = null;
@@ -130,7 +130,7 @@ Sync.prototype.disconnect = function() {
   this.save();
 };
 
-/* neue Wiedergabe: in die Warteschlange und senden */
+/* new play: into the queue and send */
 Sync.prototype.played = function(entry) {
   if (!this.connected()) return;
   this.state.queue.push(entry);
@@ -162,19 +162,19 @@ Sync.prototype.flush = function() {
     self.sending = false;
     if (e) {
       self.sendError = e.message;
-      if (e.code === 9) { self.state.sk = null; self.save(); return; }       /* Sitzung ungültig: neu verbinden */
-      if (e.code === 13 || e.code === 6) { self.state.queue = self.state.queue.slice(part.length); self.save(); }   /* fehlerhafte Anfrage: verwerfen */
+      if (e.code === 9) { self.state.sk = null; self.save(); return; }       /* session invalid: reconnect */
+      if (e.code === 13 || e.code === 6) { self.state.queue = self.state.queue.slice(part.length); self.save(); }   /* bad request: discard */
       self.timer = setTimeout(function(){ self.flush(); }, RETRY);
       return;
     }
     self.sendError = null;
-    self.state.queue = self.state.queue.slice(part.length);   /* angenommen oder von Last.fm ignoriert: erledigt */
+    self.state.queue = self.state.queue.slice(part.length);   /* accepted or ignored by Last.fm: done */
     self.save();
     if (self.state.queue.length) self.flush();
   });
 };
 
-/* Verlauf von Last.fm einlesen; beim ersten Mal alles, danach nur Neues seit dem letzten Einlesen */
+/* import the history from Last.fm; everything the first time, afterwards only what is new since the last import */
 Sync.prototype.importAll = function() {
   var self = this, c = this.cfg(), user = this.state.user;
   if (this.importRun || !c.key || !user) return;
@@ -183,9 +183,9 @@ Sync.prototype.importAll = function() {
   this.importError = null;
   var maxT = this.state.importedTo || 0;
   (function step(page) {
-    recentPage(c, user, page, from, started, function(e, r){   /* bis zum Start: Seiten verrutschen nicht */
+    recentPage(c, user, page, from, started, function(e, r){   /* up to the start: pages don't shift */
       if (e) {
-        if (e.code === 29 && run.retries !== 3) { run.retries = (run.retries || 0) + 1; return setTimeout(function(){ step(page); }, 5000); }   /* zu viele Anfragen */
+        if (e.code === 29 && run.retries !== 3) { run.retries = (run.retries || 0) + 1; return setTimeout(function(){ step(page); }, 5000); }   /* too many requests */
         self.importError = e.message; self.importRun = null; return;
       }
       run.retries = 0;

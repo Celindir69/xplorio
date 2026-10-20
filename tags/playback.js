@@ -1,7 +1,7 @@
-/* Seite „Wiedergabe“ (Zahnrad-Menü): Crossfade und ReplayGain direkt in MPD, dazu zum Anzeigen Volumios
-   Normalisierung (volume_normalization, steht in der MPD-Konfiguration) und die Automatik des AutoDJ-Plugins.
-   Crossfade und ReplayGain-Modus setzt MPD zur Laufzeit (ohne Neustart). Node 8, nur ES5.
-   opts: mpd(cmd, cb(err, felder)), files: {mpdConf, volumioMpd, autodj} (Tests) */
+/* "Playback" page (gear menu): crossfade and ReplayGain directly in MPD, plus, for display, Volumio's
+   normalization (volume_normalization, in the MPD configuration) and the automatic mode of the AutoDJ plugin.
+   MPD sets crossfade and ReplayGain mode at runtime (without restart). Node 8, ES5 only.
+   opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd, autodj} (tests) */
 var fs = require('fs');
 
 var MODES = ['off', 'track', 'album', 'auto'], MAX_XFADE = 30;
@@ -12,7 +12,7 @@ var FILES = {
 };
 
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return null; } }
-/* Volumio-Konfiguration: {"name": {"type": …, "value": …}} oder schlicht {"name": wert} */
+/* Volumio configuration: {"name": {"type": …, "value": …}} or plain {"name": value} */
 function cfgValue(j, k) {
   if (!j || !Object.prototype.hasOwnProperty.call(j, k)) return undefined;
   var v = j[k];
@@ -20,7 +20,7 @@ function cfgValue(j, k) {
 }
 function yes(v) { return v === true || /^(yes|true|on|1)$/i.test(String(v)); }
 
-/* volume_normalization: erst Volumios Einstellung, sonst die MPD-Konfiguration; null = unbekannt */
+/* volume_normalization: Volumio's setting first, else the MPD configuration; null = unknown */
 function normalization(files) {
   var v = cfgValue(readJson(files.volumioMpd), 'volume_normalization');
   if (v !== undefined && v !== '') return yes(v);
@@ -30,7 +30,7 @@ function normalization(files) {
   return m ? yes(m[1]) : false;
 }
 
-/* AutoDJ-Plugin: installiert? Automatik für Angleichen und Crossfade an? */
+/* AutoDJ plugin: installed? automatic leveling and crossfade on? */
 function autodjInfo(files) {
   var j = readJson(files.autodj);
   if (!j) return null;
@@ -38,7 +38,7 @@ function autodjInfo(files) {
   return {replayGain: yes(cfgValue(j, 'autoReplayGain')), crossfade: xf > 0 ? xf : 0};
 }
 
-/* Eingabe prüfen -> MPD-Befehle; Fehlertext bei ungültigen Werten */
+/* validate input -> MPD commands; error code for invalid values */
 function commands(body) {
   var cmds = [];
   if (body.crossfade !== undefined) {

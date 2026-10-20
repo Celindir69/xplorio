@@ -1,23 +1,23 @@
-/* Versteckte Perlen (Suchen & Entdecken): selten oder nie Gehörtes aus der Bibliothek, das zum eigenen Geschmack passt.
-   Geschmack: Künstler mit Herz, Alben mit 4–5 Sternen, Volumio-Favoriten (Daumen hoch) und, schwächer, der Verlauf.
-   Ähnlichkeit: Genre, Stimmung, Stil und Energie (Stimmungs-Tags) als Merkmalsvektor, Kosinus zum Geschmacksprofil.
-   Dazu ungehörte Alben und Titel von Künstlern, die man mag. Aussortiert: „mag ich nicht“, Alben mit 1–2 Sternen,
-   schon Bewertetes. Jede Perle trägt einen Grund (why). Node 8, nur ES5. */
+/* Hidden gems (Search & Discover): rarely or never heard items from the library that match one's own taste.
+   Taste: artists with a heart, albums with 4–5 stars, Volumio favorites (thumbs up) and, weaker, the history.
+   Similarity: genre, mood, style and energy (mood tags) as a feature vector, cosine to the taste profile.
+   Plus unheard albums and tracks by artists one likes. Filtered out: "don't like", albums with 1–2 stars,
+   already rated items. Each gem carries a reason (why). Node 8, ES5 only. */
 var plays  = require('./plays.js');
 var albums = require('./albums.js');
 
-var ROW = 12;                    /* Kacheln je Reihe */
-var POOL = 48;                   /* aus den so vielen Besten wird gezogen (Würfel) */
-var MIN_SCORE = 0.35;            /* darunter ist es keine Perle */
-var MAX_PLAYS = {artist: 2, album: 2, track: 1};   /* höchstens so oft gehört */
-var LIKE = 0.75;                 /* ab dieser Ähnlichkeit zu einem Lieblingskünstler: „Wie X“ */
-var PLAY_WEIGHT = 0.4;           /* Anteil des Verlaufs am Profil, wenn es Bewertungen gibt */
+var ROW = 12;                    /* tiles per shelf */
+var POOL = 48;                   /* drawn from this many best (dice) */
+var MIN_SCORE = 0.35;            /* below this it is no gem */
+var MAX_PLAYS = {artist: 2, album: 2, track: 1};   /* heard at most this often */
+var LIKE = 0.75;                 /* from this similarity to a favorite artist on: "Like X" */
+var PLAY_WEIGHT = 0.4;           /* share of the history in the profile when there are ratings */
 var STARS_W = {4: 2, 5: 3}, HEART_W = 3, FAV_W = 1;
 
 function rel(f) { return String(f || '').replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, ''); }
 function nk(s) { return plays.norm(s); }
 
-/* Merkmale eines Titels: Genre, Stimmungen, Stile, Energie (r: moodtags-Ergebnis oder null) */
+/* features of a track: genre, moods, styles, energy (r: moodtags result or null) */
 function trackVec(ge, r) {
   var v = {};
   if (ge) v['g:' + String(ge).toLowerCase()] = 1;
@@ -32,14 +32,14 @@ function trackVec(ge, r) {
 function add(into, v, w) { for (var k in v) into[k] = (into[k] || 0) + v[k] * w; }
 function norm2(v) { var s = 0; for (var k in v) s += v[k] * v[k]; return Math.sqrt(s); }
 function unit(v) { var l = norm2(v), o = {}; if (!l) return o; for (var k in v) o[k] = v[k] / l; return o; }
-function cos(a, b) {                                     /* a, b: Einheitsvektoren */
+function cos(a, b) {                                     /* a, b: unit vectors */
   var s = 0;
   for (var k in a) if (b[k]) s += a[k] * b[k];
   return s;
 }
 function empty(v) { for (var k in v) return false; return true; }
 
-/* Mittel der Titelvektoren je Gruppe -> {key: Einheitsvektor} */
+/* mean of the track vectors per group -> {key: unit vector} */
 function groupVecs(tracks, keyOf) {
   var sum = {};
   tracks.forEach(function(t){ var k = keyOf(t); if (k) add(sum[k] || (sum[k] = {}), t.v, 1); });
@@ -48,9 +48,9 @@ function groupVecs(tracks, keyOf) {
   return out;
 }
 
-/* Geschmack und Merkmale aufbauen (teuer; einmal je Stand von Bibliothek, Bewertungen, Favoriten und Verlauf).
+/* build taste and features (expensive; once per state of library, ratings, favorites and history).
    inp: {lib: [[ar, ti, f, d, al, ge], …], moodOf: f -> r|null, albums: [{dir, al, ar, ge}], artists: [{ar, n, dir}],
-         rated: {artists, albums, tracks} (ratings.json), favs: {Datei: true}, stats: discover.statIndex(Verlauf)} */
+         rated: {artists, albums, tracks} (ratings.json), favs: {file: true}, stats: discover.statIndex(history)} */
 function prepare(inp) {
   var rated = inp.rated || {artists: {}, albums: {}, tracks: {}}, favs = inp.favs || {}, stats = inp.stats;
   var albGe = {}, geName = {};
@@ -60,14 +60,14 @@ function prepare(inp) {
     if (!p || !p[2]) return;
     var f = rel(p[2]), dir = albums.albumDir(f), r = inp.moodOf ? inp.moodOf(p[2]) : null;
     var ge = p[5] || albGe[dir], v = trackVec(ge, r);
-    if (ge && !geName[String(ge).toLowerCase()]) geName[String(ge).toLowerCase()] = ge;   /* für die Anzeige */
+    if (ge && !geName[String(ge).toLowerCase()]) geName[String(ge).toLowerCase()] = ge;   /* for display */
     if (empty(v)) return;
     tracks.push({p: p, f: f, dir: dir, ak: nk(p[0]), v: v, r: r, n: stats.track(p).n, bad: !!(rated.tracks[f] && rated.tracks[f].v === -1)});
   });
   var byDir = groupVecs(tracks, function(t){ return t.dir; });
   var byArtist = groupVecs(tracks, function(t){ return t.ak; });
 
-  /* Lieblingskünstler: Herz, Künstler eines Albums mit 4–5 Sternen, Künstler von Favoriten */
+  /* favorite artists: heart, artist of an album with 4–5 stars, artists of favorites */
   var liked = {}, seeds = {}, pr = {};
   function seed(ak, name, w) { if (!ak) return; liked[ak] = true; var s = seeds[ak] || (seeds[ak] = {ar: name, w: 0}); s.w += w; }
   Object.keys(rated.artists || {}).forEach(function(ak){
@@ -89,7 +89,7 @@ function prepare(inp) {
     add(pr, unit(t.v), FAV_W);
     seed(t.ak, t.p[0], FAV_W);
   });
-  /* Verlauf: oft Gehörtes (ab zweimal), gedeckelt */
+  /* history: often heard (from twice on), capped */
   var pp = {}, played = {};
   tracks.forEach(function(t){
     if (t.n < 2) return;
@@ -99,7 +99,7 @@ function prepare(inp) {
   var rUnit = unit(pr), pUnit = unit(pp), profile;
   if (empty(rUnit)) {
     profile = pUnit;
-    /* ohne Bewertungen: die meistgehörten Künstler als Vergleich für „Wie X“ */
+    /* without ratings: the most played artists as comparison for "Like X" */
     Object.keys(played).sort(function(a, b){ return played[b] - played[a]; }).slice(0, 10).forEach(function(ak){
       var t = tracks.filter(function(x){ return x.ak === ak; })[0];
       seeds[ak] = {ar: t.p[0], w: played[ak]};
@@ -116,7 +116,7 @@ function prepare(inp) {
           rated: rated, favs: favs, stats: stats, albums: inp.albums || [], artists: inp.artists || []};
 }
 
-/* Grund: ungehört von einem Lieblingskünstler, ähnlich wie ein Lieblingskünstler oder die passendsten Merkmale */
+/* reason: unheard by a favorite artist, similar to a favorite artist, or the best matching features */
 function reason(g, v, ak, name) {
   if (ak && g.liked[ak]) return {why: 'artist', ar: name};
   var best = null, bs = LIKE;
@@ -135,21 +135,21 @@ function reason(g, v, ak, name) {
   return {why: 'tags', mood: mood, ge: g.geName[ge] || ge};
 }
 
-/* Ungehörtes zählt voll, ein- oder zweimal Gehörtes etwas weniger */
+/* unheard counts fully, heard once or twice a bit less */
 function novelty(n) { return n === 0 ? 1 : n === 1 ? 0.85 : 0.7; }
 
-/* Kandidaten mit Punktzahl für kind (artist|album|track) */
+/* candidates with score for kind (artist|album|track) */
 function candidates(g, kind) {
   var out = [], max = MAX_PLAYS[kind];
   if (empty(g.profile)) return out;
   function score(v, n, ak) {
     var s = cos(g.profile, v) * novelty(n);
-    if (ak && g.liked[ak]) s = Math.max(s, 0.5) + 0.3;   /* Ungehörtes von Lieblingskünstlern immer dabei */
+    if (ak && g.liked[ak]) s = Math.max(s, 0.5) + 0.3;   /* unheard items by favorite artists always included */
     return s;
   }
   if (kind === 'track') {
     g.tracks.forEach(function(t){
-      if (t.bad || t.n > max || g.favs[t.f] || !t.r) return;           /* nur Titel mit Stimmungs-Tags */
+      if (t.bad || t.n > max || g.favs[t.f] || !t.r) return;           /* only tracks with mood tags */
       var v = unit(t.v), s = score(v, t.n, t.ak);
       if (s >= MIN_SCORE) out.push({s: s, x: t, v: v, ak: t.ak, name: t.p[0]});
     });
@@ -174,7 +174,7 @@ function candidates(g, kind) {
   return out;
 }
 
-/* k aus den POOL Besten, gewichtet nach Punktzahl (neu gewürfelt bei jedem Aufruf) -> Einträge für die Oberfläche */
+/* k out of the POOL best, weighted by score (rerolled on every call) -> entries for the UI */
 function pick(g, kind, k, rnd) {
   rnd = rnd || Math.random;
   var pool = candidates(g, kind).slice(0, POOL);

@@ -1,10 +1,10 @@
-/* Playlisten, Web-Radio und Suche
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
-/* ---------- Playlisten / Radio ---------- */
-function renderPlList(items, container, clickFn, tiles, note) {   /* tiles: Playlisten mit Künstler-Kachel; note: Hinweis oben */
+/* Playlists, web radio and search
+   Classic script, shared global scope; see xplorio.html for load order. */
+/* ---------- Playlists / radio ---------- */
+function renderPlList(items, container, clickFn, tiles, note) {   /* tiles: playlists with artist tile; note: notice at the top */
   while (container.firstChild) container.removeChild(container.firstChild);
   if (note) container.appendChild(volumioLink(note));
-  if (plTileSeen) plTileSeen.disconnect();                 /* alte Kacheln nicht weiter beobachten (läuft sonst tagelang voll) */
+  if (plTileSeen) plTileSeen.disconnect();                 /* stop observing old tiles (would otherwise fill up over days) */
   plTileQueue = plTileQueue.filter(function(j){ return document.body.contains(j.icon); });
   if (!items.length) {
     var empty = document.createElement('div');
@@ -34,7 +34,7 @@ function renderPlList(items, container, clickFn, tiles, note) {   /* tiles: Play
   });
 }
 
-/* Hinweis über der Liste, wie „Tippen: … ab diesem Titel“; ein Tipp öffnet die Volumio-Oberfläche (Zahnrad -> Volumio) */
+/* note above the list, like "Tap: … from this track"; a tap opens the Volumio UI (gear -> Volumio) */
 function volumioLink(text) {
   var h = listHint(text);
   h.classList.add('listLink');
@@ -43,10 +43,10 @@ function volumioLink(text) {
   return h;
 }
 
-/* ---------- Kachel aus Künstlerfotos statt des Playlist-Symbols ---------- */
-/* Künstler nach Häufigkeit: 1 Bild, 2–3 Künstler zwei Hälften, ab 4 vier Viertel. Fotos vom Tag-Dienst (Deezer),
-   fehlt eins, das Cover eines Titels dieses Künstlers. Playlisten werden erst gelesen, wenn ihre Zeile sichtbar ist,
-   eine nach der anderen; das Ergebnis bleibt einen Tag im Browser gespeichert. */
+/* ---------- Tile of artist photos instead of the playlist icon ---------- */
+/* Artists by frequency: 1 image, 2–3 artists two halves, 4 or more four quarters. Photos from the tag service (Deezer),
+   if one is missing, the cover of a track by that artist. Playlists are read only once their row is visible,
+   one after another; the result stays stored in the browser for a day. */
 var PL_TILE_TTL = 86400000, plTileQueue = [], plTileBusy = false, plTileSeen = null;
 
 function plTileArtists(tracks) {
@@ -130,7 +130,7 @@ function loadPlaylists() {
       var items = (j && j.navigation && j.navigation.lists && j.navigation.lists[0])
                   ? j.navigation.lists[0].items : [];
       renderPlList(items, playlistResults, function(pl){
-        openBrowse({kind:'playlist', name:pl.title || pl.name || '', uri:pl.uri, service:pl.service || 'mpd'});   /* Titel der Playlist; zurück-Pfeil führt hierher */
+        openBrowse({kind:'playlist', name:pl.title || pl.name || '', uri:pl.uri, service:pl.service || 'mpd'});   /* playlist tracks; back arrow leads here */
       }, true, T('pl.manageHint'));
     }).catch(function(){
       while (playlistResults.firstChild) playlistResults.removeChild(playlistResults.firstChild);
@@ -140,8 +140,8 @@ function loadPlaylists() {
     });
 }
 
-/* Senderlogos vom Tag-Dienst (auf dem Player gespeichert) statt des Symbols; ohne Logo bleibt die bisherige Anzeige */
-/* Sendername je Adresse merken: läuft der Sender, meldet poll.js das Logo aus dem Player unter diesem Namen (radioLogoLearn) */
+/* station logos from the tag service (stored on the player) instead of the icon; without a logo the previous display stays */
+/* remember the station name per address: when the station plays, poll.js reports the player's logo under this name (radioLogoLearn) */
 function radioNames() { try { return JSON.parse(localStorage.getItem('radioNames') || '{}') || {}; } catch (e) { return {}; } }
 function radioLogos(items, container) {
   if (typeof TAGS === 'undefined') return;
@@ -149,14 +149,14 @@ function radioLogos(items, container) {
   items.forEach(function(it){ var n = it.title || it.name || ''; if (it.uri && n) { delete names[it.uri]; names[it.uri] = n; } });
   keys = Object.keys(names);
   keys.slice(0, Math.max(0, keys.length - 500)).forEach(function(k){ delete names[k]; });
-  try { localStorage.setItem('radioNames', JSON.stringify(names)); } catch (e) { /* egal */ }
+  try { localStorage.setItem('radioNames', JSON.stringify(names)); } catch (e) { /* ignore */ }
   var rows = container.querySelectorAll('.plRow');
   items.forEach(function(it, i){
     var icon = rows[i] && rows[i].querySelector('.plIcon'), name = it.title || it.name || '';
     if (!icon || !name) return;
-    if (!it.albumart) icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3.24 6.15C2.51 6.43 2 7.17 2 8v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-1.11-.89-2-2-2H8.3l8.26-3.34L15.88 1 3.24 6.15zM7 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-8h-2v-2h-2v2H4V8h16v4z"/></svg>';   /* Radio statt Playlist */
+    if (!it.albumart) icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3.24 6.15C2.51 6.43 2 7.17 2 8v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-1.11-.89-2-2-2H8.3l8.26-3.34L15.88 1 3.24 6.15zM7 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-8h-2v-2h-2v2H4V8h16v4z"/></svg>';   /* radio instead of playlist */
     var a = it.albumart || '', img = new Image(), tid = radioTuneInId(it.uri);
-    if (!/^https?:\/\//.test(a) && tid) a = 'https://cdn-profiles.tunein.com/' + tid + '/images/logoq.jpg';   /* TuneIn-Favorit: Logo direkt über die Sender-ID */
+    if (!/^https?:\/\//.test(a) && tid) a = 'https://cdn-profiles.tunein.com/' + tid + '/images/logoq.jpg';   /* TuneIn favorite: logo directly via the station ID */
     img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:calc(1.5 * var(--vw));background:#fff;';
     img.onload = function(){ while (icon.firstChild) icon.removeChild(icon.firstChild); icon.appendChild(img); };
     img.src = TAGS + '/stationlogo?name=' + encodeURIComponent(name) + (/^https?:\/\//.test(a) ? '&url=' + encodeURIComponent(a) : '');
@@ -194,8 +194,8 @@ function loadMyRadio() {
     });
 }
 
-/* Reiter 0 Mood Mix (moodmix.js, nur mit Tag-Dienst sichtbar), 1 Playlisten, 2 Radio;
-   der zuletzt gewählte gilt beim nächsten Öffnen wieder */
+/* Tabs 0 Mood Mix (moodmix.js, visible only with the tag service), 1 playlists, 2 radio;
+   the last selected one applies again on next opening */
 var PL_TABS = [[T('pl.tab.mix'), 'mixBody'], [T('pl.tab.playlists'), 'playlistResults'], [T('pl.tab.radio'), 'radioPanel']];
 try { plTabActive = +(localStorage.getItem('plTab') || 0) || 0; } catch (e) { plTabActive = 0; }
 function plShowTab(n) {
@@ -213,12 +213,12 @@ function plShowTab(n) {
 }
 PL_TABS.forEach(function(t, i){
   document.getElementById('plTab' + i).addEventListener('click', function(){
-    try { localStorage.setItem('plTab', String(i)); } catch (e) { /* egal */ }
+    try { localStorage.setItem('plTab', String(i)); } catch (e) { /* ignore */ }
     plShowTab(i);
   });
 });
 
-/* ---------- Suche ---------- */
+/* ---------- Search ---------- */
 document.getElementById('searchTabBar').querySelectorAll('.qTab').forEach(function(t){
   t.addEventListener('click', function(){
     document.getElementById('searchTabBar').querySelectorAll('.qTab').forEach(function(x){
@@ -241,9 +241,9 @@ function triggerSearch() {
   doSearch(q);
 }
 
-var searchShowLocal = true;     /* Kontrollkästchen "Lokal" neben der Überschrift; die der Streamingdienste: STREAMS[i].show */
-var searchSeq = 0;          /* verwirft Antworten veralteter Suchen */
-var SEARCH_SLOW_MS = 5000;  /* danach Hinweis "Warte auf TIDAL/Qobuz" */
+var searchShowLocal = true;     /* "Local" checkbox next to the heading; those of the streaming services: STREAMS[i].show */
+var searchSeq = 0;          /* discards answers to outdated searches */
+var SEARCH_SLOW_MS = 5000;  /* then the note "Waiting for TIDAL/Qobuz" */
 var SEARCH_TIMEOUT_MS = 20000;
 
 function searchMessage(text) {
@@ -288,11 +288,11 @@ function searchRow(it, stream) {
   meta.appendChild(ti);
   if (sub.textContent) meta.appendChild(sub);
   row.appendChild(img); row.appendChild(meta);
-  if (searchCat === 'songs' && !stream) {                   /* lokaler Titel: Tags bearbeiten */
+  if (searchCat === 'songs' && !stream) {                   /* local track: edit tags */
     var pen = tagTrackButton(it);
     if (pen) row.appendChild(pen);
   }
-  if (searchCat === 'albums' && !stream) {                  /* lokales Album: Tags aller Titel */
+  if (searchCat === 'albums' && !stream) {                  /* local album: tags of all tracks */
     var apen = tagAlbumButton(it);
     if (apen) row.appendChild(apen);
   }
@@ -303,7 +303,7 @@ function searchRow(it, stream) {
       return;
     }
     openBrowse({kind:'album', artist:it.artist || '', album:it.title || it.name || '', uri:it.uri,
-                albumart:it.albumart, service:it.service});          /* zurück-Pfeil führt in die Suche */
+                albumart:it.albumart, service:it.service});          /* back arrow leads to the search */
   });
   return row;
 }
@@ -319,7 +319,7 @@ function renderSearchResults() {
   }).filter(function(p){ return p.list.length; });
 
   if (!list.length && !parts.length) {
-    if (!searchQuery && typeof discoverShow === 'function' && discoverShow()) return;     /* Entdecken (discover.js) */
+    if (!searchQuery && typeof discoverShow === 'function' && discoverShow()) return;     /* Discover (discover.js) */
     var hint = document.createElement('div');
     hint.className = 'sHint';
     var none = !searchShowLocal && !streamsOn().some(function(s){ return s.show; });
@@ -382,14 +382,14 @@ STREAMS.forEach(function(s){
   if (box) box.addEventListener('change', function(){ s.show = this.checked; renderSearchResults(); });
 });
 
-/* x im Suchfeld: Eingabe löschen */
+/* x in the search field: clear input */
 var searchClear = document.getElementById('searchClear');
 function paintSearchClear() { searchClear.style.display = searchInput.value ? 'block' : 'none'; }
 searchInput.addEventListener('input', paintSearchClear);
 searchClear.addEventListener('click', function(){
   searchInput.value = '';
   paintSearchClear();
-  searchSeq++;                                  /* laufende Suche verwerfen */
+  searchSeq++;                                  /* discard the running search */
   searchQuery = '';
   searchData = streamEmptySearch();
   renderSearchResults();

@@ -1,4 +1,4 @@
-/* Mehr wie dieser Titel (tags/similar.js): Ähnlichkeit, Startpunkt, Auswahl je Künstler, Ausschlüsse */
+/* more like this track (tags/similar.js): similarity, seed, selection per artist, exclusions */
 var assert = require('assert');
 var sim = require('../tags/similar.js'), moodtags = require('../tags/moodtags.js');
 var n = 0;
@@ -19,7 +19,7 @@ var idx = [
 ];
 var seed = sim.seedOf(idx, {f: 'USB/A/Start.flac', ar: 'A', ti: 'Start'});
 
-t('Startpunkt über die Datei (mit oder ohne mnt/) oder Künstler+Titel; sonst moodOf; sonst null', function(){
+t('seed via the file (with or without mnt/) or artist+title; else moodOf; else null', function(){
   assert.strictEqual(seed.it.ti, 'Start');
   assert.strictEqual(sim.seedOf(idx, {f: '', ar: 'a', ti: 'start'}).it.ti, 'Start');
   var s2 = sim.seedOf(idx, {f: 'USB/X/y.flac', ar: 'X', ti: 'Y'}, function(){ return {mood: ['dark'], energy: 1, style: []}; });
@@ -27,7 +27,7 @@ t('Startpunkt über die Datei (mit oder ohne mnt/) oder Künstler+Titel; sonst m
   assert.strictEqual(sim.seedOf(idx, {f: 'USB/X/y.flac', ar: 'X', ti: 'Y'}, function(){ return null; }), null);
 });
 
-t('Ähnlichkeit: gleiche Stimmung/Energie/Tempo vorn, halbes Tempo zählt, ohne gemeinsame Stimmung 0', function(){
+t('similarity: same mood/energy/tempo first, half tempo counts, no shared mood 0', function(){
   var s = seed.r;
   assert.ok(sim.score(s, idx[1].r, 'Jazz', 'Jazz') > 0.95);
   assert.ok(sim.score(s, idx[2].r, 'Jazz', 'Jazz') > 0.6);
@@ -36,7 +36,7 @@ t('Ähnlichkeit: gleiche Stimmung/Energie/Tempo vorn, halbes Tempo zählt, ohne 
   assert.strictEqual(sim.bpmGap(90, 180), 0);
 });
 
-t('Auswahl: ohne den Titel selbst, höchstens 2 je Künstler, ohne skip, Unähnliches fällt weg', function(){
+t('selection: without the track itself, at most 2 per artist, without skip, dissimilar dropped', function(){
   var names = sim.pick(idx, seed, {n: 25}).map(function(y){ return y.it.ti; });
   assert.ok(names.indexOf('Start') < 0 && names.indexOf('Laut') < 0, names);
   assert.strictEqual(names.filter(function(ti){ return ['Zwilling', 'Dritter', 'Vierter'].indexOf(ti) >= 0; }).length, 2, names);
@@ -46,7 +46,7 @@ t('Auswahl: ohne den Titel selbst, höchstens 2 je Künstler, ohne skip, Unähnl
   assert.strictEqual(sim.pick(idx, seed, {n: 1}).length, 1);
 });
 
-t('Würfel (shuffle) bleibt bei ähnlichen Titeln; Grund: gemeinsame Stimmungen, Energie, Tempo', function(){
+t('dice (shuffle) stays with similar tracks; reason: shared moods, energy, tempo', function(){
   var r = 0, rnd = function(){ r = (r * 9301 + 49297) % 233280; return r / 233280 || 0.5; };
   var names = sim.pick(idx, seed, {n: 3, shuffle: true, rnd: rnd}).map(function(y){ return y.it.ti; });
   assert.strictEqual(names.length, 3);
@@ -54,4 +54,4 @@ t('Würfel (shuffle) bleibt bei ähnlichen Titeln; Grund: gemeinsame Stimmungen,
   assert.deepStrictEqual(sim.why(seed.r, idx[2].r), {mood: ['melancholic'], energy: 2, bpm: 180});
 });
 
-console.log(n + ' Prüfungen bestanden');
+console.log(n + ' checks passed');

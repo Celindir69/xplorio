@@ -1,9 +1,9 @@
-/* Mehr wie dieser Titel: Titel der Bibliothek mit ähnlicher Stimmung, Energie und ähnlichem Tempo (Audio-Analyse),
-   dazu etwas Stil und Genre. Grundlage ist moodmix.index (Titel mit Stimmungsdaten). Node 8, nur ES5. */
+/* More like this track: library tracks with similar mood, energy and tempo (audio analysis),
+   plus a little style and genre. Based on moodmix.index (tracks with mood data). Node 8, ES5 only. */
 var moodtags = require('./moodtags.js');
 
-var MIN_SCORE = 0.35;            /* darunter ist ein Titel nicht mehr „ähnlich“ */
-var BPM_SPAN = 24;               /* so viele BPM Abstand: Tempo zählt nicht mehr */
+var MIN_SCORE = 0.35;            /* below this a track is no longer "similar" */
+var BPM_SPAN = 24;               /* this many BPM apart: tempo no longer counts */
 
 function jaccard(a, b) {
   a = a || []; b = b || [];
@@ -12,26 +12,26 @@ function jaccard(a, b) {
   return both / (a.length + b.length - both);
 }
 
-/* Tempo-Abstand, halbes und doppeltes Tempo zählen als gleich (90 und 180 BPM) */
+/* tempo distance; half and double tempo count as equal (90 and 180 BPM) */
 function bpmGap(a, b) { return Math.min(Math.abs(a - b), Math.abs(a - 2 * b), Math.abs(2 * a - b)); }
 
-/* Ähnlichkeit 0..1 zwischen Startpunkt s und Titel r ({mood, style, energy, bpm, src}); ge*: Genre der beiden */
+/* similarity 0..1 between seed s and track r ({mood, style, energy, bpm, src}); ge*: genre of both */
 function score(s, r, geS, geR) {
   var m = jaccard(s.mood, r.mood);
-  if (s.mood && s.mood.length && !m) return 0;                    /* ohne gemeinsame Stimmung nicht ähnlich */
+  if (s.mood && s.mood.length && !m) return 0;                    /* without a shared mood not similar */
   var parts = s.mood && s.mood.length ? [[0.4, m]] : [];
   if (s.energy !== null && s.energy !== undefined) {
-    parts.push([0.3, r.energy === null || r.energy === undefined ? 0.4 : Math.max(0, 1 - Math.abs(s.energy - r.energy) / 2.5)]);   /* 3 Stufen daneben: passt nicht */
+    parts.push([0.3, r.energy === null || r.energy === undefined ? 0.4 : Math.max(0, 1 - Math.abs(s.energy - r.energy) / 2.5)]);   /* 3 levels off: no match */
   }
   if (s.bpm && r.bpm) parts.push([0.2, 1 - Math.min(bpmGap(s.bpm, r.bpm) / BPM_SPAN, 1)]);
   if (s.style && s.style.length) parts.push([0.15, jaccard(s.style, r.style)]);
   if (geS) parts.push([0.05, String(geS).toLowerCase() === String(geR || '').toLowerCase() ? 1 : 0]);
   var w = 0, v = 0;
   parts.forEach(function(p){ w += p[0]; v += p[0] * p[1]; });
-  return (w ? v / w : 0) * (r.src === 'artist' ? 0.85 : 1);          /* nur Künstler-Tags: weniger sicher */
+  return (w ? v / w : 0) * (r.src === 'artist' ? 0.85 : 1);          /* artist tags only: less certain */
 }
 
-/* Startpunkt: Eintrag aus dem Index (Datei oder Künstler+Titel) oder Stimmungsdaten von moodOf */
+/* seed: entry from the index (file or artist+title) or mood data from moodOf */
 function seedOf(idx, q, moodOf) {
   var f = q.f, k = moodtags.trackKey(q.ar, q.ti), hit = null;
   for (var i = 0; i < idx.length && !hit; i++) {
@@ -43,8 +43,8 @@ function seedOf(idx, q, moodOf) {
   return r ? {it: {f: f || '', ar: q.ar, ti: q.ti, al: q.al || '', k: k, ge: q.ge || ''}, r: r} : null;
 }
 
-/* Ähnliche Titel: höchstens n, je Künstler höchstens maxPer, ohne den Titel selbst und skip(it);
-   shuffle (Würfel): aus den besten 3n gewichtet gezogen statt der besten n, kürzlich Gehörtes (o.recent) zuletzt. -> {seed, items: [{it, r, s}]} */
+/* similar tracks: at most n, at most maxPer per artist, without the track itself and skip(it);
+   shuffle (dice): weighted draw from the best 3n instead of the best n, recently heard (o.recent) last. -> {seed, items: [{it, r, s}]} */
 function pick(idx, seed, o) {
   o = o || {};
   var n = o.n || 25, maxPer = o.maxPer || 2, rnd = o.rnd || Math.random;
@@ -60,7 +60,7 @@ function pick(idx, seed, o) {
   cand.sort(function(a, b){ return b.s - a.s; });
   if (o.shuffle) {
     cand = cand.slice(0, n * 3);
-    cand.forEach(function(x){                          /* Ähnlichere öfter, kürzlich Gehörtes (o.recent) nur zum Auffüllen */
+    cand.forEach(function(x){                          /* more similar more often, recently heard (o.recent) only as filler */
       x.key = Math.pow(rnd() || 1e-9, 1 / (x.s * x.s)) - (o.recent && o.recent(x.it) ? 1 : 0);
     });
     cand.sort(function(a, b){ return b.key - a.key; });
@@ -75,7 +75,7 @@ function pick(idx, seed, o) {
   return out;
 }
 
-/* Grund für die Anzeige: gemeinsame Stimmungen (höchstens zwei), Energie und Tempo des Titels */
+/* reason for display: shared moods (at most two), energy and tempo of the track */
 function why(s, r) {
   return {mood: (r.mood || []).filter(function(m){ return (s.mood || []).indexOf(m) >= 0; }).slice(0, 2),
           energy: r.energy === undefined ? null : r.energy, bpm: r.bpm || null};

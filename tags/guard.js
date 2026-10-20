@@ -1,19 +1,19 @@
-/* Zugriffsschutz für die Dienste auf dem Player (Tag-Dienst; rotel/rotel-bridge.js hat eine Kopie).
-   - Host: nur Adressen aus dem Heimnetz (IP, Name ohne Punkt, .local/.lan/…, eigene Liste).
-     Schützt vor "DNS-Rebinding", bei dem eine fremde Webseite ihren Namen auf den Player umbiegt.
-   - Origin: schickt der Browser eine Herkunft mit, muss sie zum selben Gerät gehören.
-     Fremde Webseiten dürfen so weder schreiben noch Antworten lesen.
-   - Ändernde Anfragen ohne Origin (curl, analyse.py) brauchen den Kopf X-Xplorio
-     oder einen JSON-Inhaltstyp; beides kann eine fremde Seite nicht unbemerkt senden. */
+/* Access protection for the services on the player (tag service; rotel/rotel-bridge.js has a copy).
+   - Host: only addresses from the home network (IP, name without dot, .local/.lan/…, own list).
+     Protects against "DNS rebinding", where a foreign website points its name at the player.
+   - Origin: if the browser sends an origin, it must belong to the same device.
+     That way foreign websites can neither write nor read responses.
+   - Modifying requests without Origin (curl, analyse.py) need the X-Xplorio header
+     or a JSON content type; a foreign page cannot send either unnoticed. */
 
 var LOCAL_SUFFIX = /\.(local|lan|home|internal|home\.arpa|fritz\.box|localdomain)$/;
 
-/* "Name:Port" bzw. "[::1]:Port" -> Name in Kleinbuchstaben */
+/* "name:port" or "[::1]:port" -> name in lower case */
 function hostName(h) {
   h = String(h || '').trim().toLowerCase();
   if (h.charAt(0) === '[') { var e = h.indexOf(']'); return e > 0 ? h.slice(1, e) : ''; }
   var i = h.indexOf(':');
-  if (i >= 0 && h.indexOf(':', i + 1) < 0) h = h.slice(0, i);    /* IPv6 ohne Klammern: unverändert */
+  if (i >= 0 && h.indexOf(':', i + 1) < 0) h = h.slice(0, i);    /* IPv6 without brackets: unchanged */
   return h.replace(/\.$/, '');
 }
 
@@ -21,7 +21,7 @@ function isIp(h) {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || (h.indexOf(':') >= 0 && /^[0-9a-f:.]+$/.test(h));
 }
 
-/* extra: zusätzliche erlaubte Namen (APP_CONFIG.ALLOWED_HOSTS) */
+/* extra: additional allowed names (APP_CONFIG.ALLOWED_HOSTS) */
 function hostOk(h, extra) {
   var n = hostName(h);
   if (!n) return false;
@@ -29,15 +29,15 @@ function hostOk(h, extra) {
   return n === 'localhost' || isIp(n) || /^[a-z0-9-]+$/.test(n) || LOCAL_SUFFIX.test(n);
 }
 
-/* Herkunft "http://name:port" -> Name, sonst '' ("null", file:, Unsinn) */
+/* origin "http://name:port" -> name, else '' ("null", file:, garbage) */
 function originName(o) {
   var m = /^https?:\/\/([^\/?#]+)$/i.exec(String(o || '').trim());
   return m ? hostName(m[1].replace(/^[^@]*@/, '')) : '';
 }
 
-/* Prüft eine Anfrage. Ergebnis: {ok, origin, reason}
-   origin: die erlaubte Herkunft für Access-Control-Allow-Origin ('' = keine)
-   write:  true für Anfragen, die etwas ändern */
+/* checks a request. Result: {ok, origin, reason}
+   origin: the allowed origin for Access-Control-Allow-Origin ('' = none)
+   write:  true for requests that change something */
 function check(req, write, extra) {
   var h = req.headers || {}, host = h.host, origin = h.origin;
   if (!hostOk(host, extra)) return {ok: false, origin: '', reason: 'host'};
@@ -52,7 +52,7 @@ function check(req, write, extra) {
   return {ok: true, origin: '', reason: ''};
 }
 
-/* Kopfzeilen für CORS: nur für die erlaubte Herkunft */
+/* CORS headers: only for the allowed origin */
 function corsHeaders(origin) {
   var o = {'Vary': 'Origin'};
   if (origin) {
@@ -64,7 +64,7 @@ function corsHeaders(origin) {
   return o;
 }
 
-/* Liste aus APP_CONFIG.ALLOWED_HOSTS bzw. Umgebungsvariable XPLORIO_HOSTS ("a,b") */
+/* list from APP_CONFIG.ALLOWED_HOSTS or the environment variable XPLORIO_HOSTS ("a,b") */
 function extraHosts(cfg, env) {
   var l = [].concat(cfg && cfg.ALLOWED_HOSTS || []);
   if (env) l = l.concat(String(env).split(','));

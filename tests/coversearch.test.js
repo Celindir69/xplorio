@@ -1,4 +1,4 @@
-/* Cover online suchen: iTunes, Last.fm, Cover Art Archive (nachgebaut), Auswahl der Treffer, Bilder über /coverimage */
+/* search covers online: iTunes, Last.fm, Cover Art Archive (faked), choice of hits, images via /coverimage */
 var assert = require('assert'), http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), url = require('url');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -46,30 +46,30 @@ fake.listen(0, function(){
     }
     get('/coversearch?artist=Billy%20Joel&album=The%20Stranger', function(r, b){
       var j = JSON.parse(b);
-      t('drei Quellen, in fester Reihenfolge', function(){
+      t('three sources, in fixed order', function(){
         assert.ok(j.ok);
         assert.deepStrictEqual(j.results.map(function(x){ return x.source; }), ['iTunes', 'Last.fm', 'Cover Art Archive']);
-        assert.ok(seen.some(function(s){ return /api_key=KEY/.test(s); }), 'Last.fm-Schlüssel aus config.local.js');
+        assert.ok(seen.some(function(s){ return /api_key=KEY/.test(s); }), 'Last.fm key from config.local.js');
       });
       get('/coverimage?id=' + j.results[0].id, function(r1, b1){
-        t('iTunes: passendes Album (Zusatz in Klammern egal), 1200 px', function(){
+        t('iTunes: matching album (bracketed addition ignored), 1200 px', function(){
           assert.strictEqual(r1.statusCode, 200); assert.strictEqual(r1.headers['content-type'], 'image/jpeg');
           assert.ok(b1.equals(JPG)); assert.ok(seen.indexOf('/it/a/1200x1200bb.jpg') >= 0);
         });
         get('/coverimage?id=' + j.results[1].id, function(r2, b2){
-          t('Last.fm: Originalgröße statt 300x300', function(){ assert.strictEqual(r2.headers['content-type'], 'image/png'); assert.ok(b2.equals(PNG)); });
+          t('Last.fm: original size instead of 300x300', function(){ assert.strictEqual(r2.headers['content-type'], 'image/png'); assert.ok(b2.equals(PNG)); });
           get('/coverimage?id=' + j.results[2].id, function(r3, b3){
-            t('Cover Art Archive: über Weiterleitung', function(){ assert.strictEqual(r3.statusCode, 200); assert.ok(b3.equals(JPG)); });
+            t('Cover Art Archive: via redirect', function(){ assert.strictEqual(r3.statusCode, 200); assert.ok(b3.equals(JPG)); });
             get('/coverimage?id=999', function(r4){
-              t('unbekannte id: 404 (keine fremden Adressen)', function(){ assert.strictEqual(r4.statusCode, 404); });
+              t('unknown id: 404 (no foreign URLs)', function(){ assert.strictEqual(r4.statusCode, 404); });
               get('/coversearch?artist=X&album=Nichts', function(r5, b5){
-                t('nichts gefunden: leere Liste (Platzhalter von Last.fm und schwacher MusicBrainz-Treffer zählen nicht)', function(){
+                t('nothing found: empty list (Last.fm placeholder and weak MusicBrainz hit do not count)', function(){
                   assert.deepStrictEqual(JSON.parse(b5).results, []);
                 });
                 get('/coversearch?artist=X', function(r6, b6){
-                  t('ohne Album: Fehler', function(){ assert.strictEqual(JSON.parse(b6).ok, false); });
+                  t('no album: error', function(){ assert.strictEqual(JSON.parse(b6).ok, false); });
                   svc.close(); fake.close();
-                  console.log(n + ' Prüfungen');
+                  console.log(n + ' checks');
                 });
               });
             });

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-"""Tags lesen und schreiben (m4a, flac, mp3, dsf). Läuft mit Python 2.7 und 3.
+"""Read and write tags (m4a, flac, mp3, dsf). Runs on Python 2.7 and 3.
 
-Aufruf: python tags.py   -- Auftrag als JSON auf stdin, Antwort als JSON auf stdout
+Usage: python tags.py   -- job as JSON on stdin, response as JSON on stdout
   {"op":"read",  "path":"/mnt/USB/..."}
   {"op":"write", "path":"/mnt/USB/...", "tags":{"title":"...", "track":"3/12"}}
-Felder: title artist album albumartist genre date composer track disc
-Bei "write" werden nur die genannten Felder geändert; ein leerer Wert löscht das Feld.
-Antwort von "write": {"ok":true, "before":{...}, "after":{...}} (before = Werte der geänderten Felder vorher)
+Fields: title artist album albumartist genre date composer track disc
+With "write" only the given fields are changed; an empty value deletes the field.
+Response of "write": {"ok":true, "before":{...}, "after":{...}} (before = previous values of the changed fields)
 
-Cover (eingebettetes Frontcover):
-  {"op":"cover_get", "path":"..."}  -> {"ok":true, "mime":"image/jpeg", "data":"<base64>"} oder {"ok":true, "mime":null}
-  {"op":"cover_set", "path":"...", "image":"/pfad/bild.jpg", "mime":"image/jpeg", "backup":"/pfad/sicherung"}
-      ersetzt das Frontcover durch die Bilddatei; ohne "image" wird es entfernt. Mit "backup" wird das alte Cover
-      vorher nach <backup>.jpg/.png gesichert. Antwort: {"ok":true, "changed":true, "backup":"<datei>"|null}
+Cover (embedded front cover):
+  {"op":"cover_get", "path":"..."}  -> {"ok":true, "mime":"image/jpeg", "data":"<base64>"} or {"ok":true, "mime":null}
+  {"op":"cover_set", "path":"...", "image":"/path/image.jpg", "mime":"image/jpeg", "backup":"/path/backup"}
+      replaces the front cover with the image file; without "image" it is removed. With "backup" the old cover
+      is first saved to <backup>.jpg/.png. Response: {"ok":true, "changed":true, "backup":"<file>"|null}
 
-Mehrere Aufträge in einem Aufruf (spart den Python-Start je Datei, wichtig bei vielen Dateien):
-  {"op":"batch", "jobs":[{...}, {...}]}  -> {"ok":true, "results":[{...}, {...}]}  (je Auftrag eine Antwort wie oben)
+Several jobs in one call (saves the Python startup per file, important with many files):
+  {"op":"batch", "jobs":[{...}, {...}]}  -> {"ok":true, "results":[{...}, {...}]}  (one response per job as above)
 """
 import base64
 import json
@@ -51,7 +51,7 @@ SEP = u'; '
 
 
 def id3_comments(tags):
-    """ID3-Kommentare ohne Beschreibung; solche mit Beschreibung (z. B. iTunNORM von iTunes) sind keine Notizen"""
+    """ID3 comments without description; those with a description (e.g. iTunNORM from iTunes) are not notes"""
     return [fr for fr in tags.getall('COMM') if not fr.desc]
 
 
@@ -68,7 +68,7 @@ def txt(v):
 
 
 def plain(v):
-    # nur Text und Zahlen als Tag-Wert; null, Listen o. Ä. würden sonst als "None" bzw. "[...]" geschrieben
+    # only text and numbers as tag value; null, lists etc. would otherwise be written as "None" or "[...]"
     return isinstance(v, (text_type, str, int, float)) and not isinstance(v, bool)
 
 
@@ -112,7 +112,7 @@ def parse_pair(s):
     try:
         return (int(a.strip() or 0), int(b.strip() or 0))
     except ValueError:
-        raise ValueError(u'Ungültige Nummer: %s' % s)
+        raise ValueError(u'Invalid number: %s' % s)
 
 
 def read_tags(audio, kind):
@@ -182,8 +182,8 @@ def write_tags(audio, kind, new):
 
 # ---------- Cover ----------
 
-FRONT = 3     # Bildtyp "Front Cover" (FLAC, ID3)
-OTHER = 0     # "Other": manche Programme legen das Cover so ab
+FRONT = 3     # picture type "Front Cover" (FLAC, ID3)
+OTHER = 0     # "Other": some programs store the cover this way
 
 
 def mime_of(data):
@@ -191,7 +191,7 @@ def mime_of(data):
 
 
 def get_cover(audio, kind):
-    """-> (bytes, mime) oder (None, None); bevorzugt das Frontcover"""
+    """-> (bytes, mime) or (None, None); prefers the front cover"""
     if kind == 'm4a':
         covr = audio.tags.get('covr') if audio.tags is not None else None
         if covr:
@@ -209,7 +209,7 @@ def get_cover(audio, kind):
 
 
 def set_cover(audio, kind, data, mime):
-    """Frontcover ersetzen (data=None: entfernen). Andere Bilder (z. B. Rückseite) bleiben."""
+    """Replace the front cover (data=None: remove). Other images (e.g. back cover) are kept."""
     if kind == 'm4a':
         if audio.tags is None:
             audio.add_tags()
@@ -287,14 +287,14 @@ def run_job(job):
     path = job.get('path')
     op = job.get('op')
     if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set'):
-        fail('Ungültiger Auftrag')
+        fail('invalid job')
     if PY2 and isinstance(path, text_type):
         path = path.encode('utf-8')
     kind = kind_of(path)
     if not kind:
-        fail('Dateityp nicht unterstützt')
+        fail('file type not supported')
     if not os.path.isfile(path):
-        fail('Datei nicht gefunden')
+        fail('file not found')
     try:
         audio = open_file(path, kind)
         if op.startswith('cover_'):
@@ -318,8 +318,8 @@ def run_job(job):
         fail(txt(e))
 
 
-# SIGTERM vom Tag-Dienst (Zeitüberschreitung): die laufende Datei fertig schreiben, die übrigen auslassen.
-# Hartes Abbrechen könnte eine m4a- oder mp3-Datei halb geschrieben zurücklassen.
+# SIGTERM from the tag service (timeout): finish writing the current file, skip the rest.
+# Aborting hard could leave an m4a or mp3 file half written.
 STOP = []
 
 
@@ -329,12 +329,12 @@ def on_term(signum, frame):
 
 def safe_job(job):
     if STOP:
-        return {'ok': False, 'error': 'abgebrochen (Zeitüberschreitung)'}
+        return {'ok': False, 'error': 'aborted (timeout)'}
     try:
         return run_job(job if isinstance(job, dict) else {})
     except JobError as e:
         return {'ok': False, 'error': e.args[0]}
-    except Exception as e:                    # ein kaputter Auftrag soll die anderen im Stapel nicht mitreißen
+    except Exception as e:                    # one broken job must not take down the others in the batch
         return {'ok': False, 'error': txt(e) or e.__class__.__name__}
 
 
@@ -345,7 +345,7 @@ def main():
     except ValueError:
         job = None
     if not isinstance(job, dict):
-        out = {'ok': False, 'error': 'Ungültiger Auftrag'}
+        out = {'ok': False, 'error': 'invalid job'}
     elif job.get('op') == 'batch':
         out = {'ok': True, 'results': [safe_job(j) for j in (job.get('jobs') or [])]}
     else:

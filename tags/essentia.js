@@ -1,8 +1,8 @@
-/* Audio-Analyse mit Essentia (läuft auf dem Mac, tools/essentia/analyse.py): Ergebnisdatei essentia.jsonl lesen
-   und je Titel in Stimmung, Energie 1-5, Stil, BPM und Tonart umrechnen. Zuordnung über Künstler und Titel
-   (wie die Last.fm-Tags), damit Ordnerstruktur und Laufwerk auf dem Mac keine Rolle spielen. Node 8, nur ES5.
+/* Audio analysis with Essentia (runs on the Mac, tools/essentia/analyse.py): read the result file essentia.jsonl
+   and convert it per track into mood, energy 1-5, style, BPM and key. Matched by artist and title
+   (like the Last.fm tags), so folder structure and drive on the Mac don't matter. Node 8, ES5 only.
 
-   Eine Zeile der Datei (v = Fassung des Analyse-Skripts):
+   One line of the file (v = version of the analysis script):
    {"v":1,"p":"Musik/A/B/01.flac","ar":"…","ti":"…","al":"…","d":245,"bpm":118.2,"key":"A","scale":"minor",
     "mood":{"happy":0.12,"sad":0.71,"relaxed":0.64,"aggressive":0.03,"party":0.08},"dance":0.31,"voice":0.88,
     "val":4.1,"aro":3.6,"styles":[["Electronic---Trip Hop",0.41],…]} */
@@ -10,11 +10,11 @@ var fs = require('fs');
 var moodtags = require('./moodtags.js');
 var jsonl = require('./jsonl.js');
 
-var PROB = 0.6;                  /* ab dieser Wahrscheinlichkeit zählt eine Stimmung */
-var RELOAD_CHECK_MS = 10000;     /* so oft höchstens nachsehen, ob die Datei neu ist */
-var DROP = ['p', 'sz', 'mt', 'v', 'kstr'];   /* braucht nur das Analyse-Skript auf dem Mac: nicht im Speicher halten */
+var PROB = 0.6;                  /* from this probability on a mood counts */
+var RELOAD_CHECK_MS = 10000;     /* check at most this often whether the file is new */
+var DROP = ['p', 'sz', 'mt', 'v', 'kstr'];   /* needed only by the analysis script on the Mac: don't keep in memory */
 
-/* Wert an Stelle q (0..1) einer sortierten Liste */
+/* value at position q (0..1) of a sorted list */
 function quantile(sorted, q) {
   if (!sorted.length) return null;
   var i = Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))));
@@ -26,7 +26,7 @@ function Store(file) {
   this.reload();
 }
 
-/* neu lesen, wenn sich die Datei geändert hat; true = Daten haben sich geändert */
+/* reread if the file has changed; true = data has changed */
 Store.prototype.reload = function(force) {
   if (!force && Date.now() - this.checked < RELOAD_CHECK_MS) return false;
   this.checked = Date.now();
@@ -37,7 +37,7 @@ Store.prototype.reload = function(force) {
   }
   if (!force && st.mtime.getTime() === this.mtime) return false;
   var by = {}, n = 0, aro = [], val = [];
-  var ok = jsonl.eachLine(this.file, function(l){            /* zeilenweise: die ganze Datei nie auf einmal im Speicher */
+  var ok = jsonl.eachLine(this.file, function(l){            /* line by line: never the whole file in memory at once */
     var o = jsonl.parse(l);
     if (!o || !o.ar || !o.ti || o.err) return;
     DROP.forEach(function(f){ delete o[f]; });
@@ -50,14 +50,14 @@ Store.prototype.reload = function(force) {
   });
   if (!ok) return false;
   aro.sort(function(a, b){ return a - b; }); val.sort(function(a, b){ return a - b; });
-  /* Energie und Stimmungsquadranten relativ zur eigenen Sammlung: DEAM-Werte drängen sich sonst in der Mitte */
+  /* energy and mood quadrants relative to the own collection: DEAM values otherwise crowd in the middle */
   this.stats = {aLo: quantile(aro, 0.02), aHi: quantile(aro, 0.98), vLow: quantile(val, 0.33), vHigh: quantile(val, 0.67),
                 aLow: quantile(aro, 0.33), aHigh: quantile(aro, 0.67)};
   this.byKey = by; this.n = n; this.mtime = st.mtime.getTime(); this.at = this.mtime;
   return true;
 };
 
-/* passender Eintrag: gleiches Album bevorzugt, sonst der erste */
+/* matching entry: same album preferred, else the first */
 Store.prototype.get = function(ar, ti, al) {
   this.reload();
   var list = this.byKey[moodtags.trackKey(ar, ti)];
@@ -69,7 +69,7 @@ Store.prototype.get = function(ar, ti, al) {
   return list[0];
 };
 
-/* Eintrag -> {mood, energy, style, bpm, key, dance, voice} im Vokabular der Stimmungs-Tags (je Datei-Stand einmal) */
+/* entry -> {mood, energy, style, bpm, key, dance, voice} in the mood tag vocabulary (once per file version) */
 Store.prototype.classify = function(o) {
   if (!o) return null;
   if (o._c && o._c.at === this.mtime) return o._c.r;
@@ -95,7 +95,7 @@ Store.prototype.classifyNow = function(o) {
       if (v >= s.vHigh && a <= s.aLow) add('calm');
     }
   }
-  /* Discogs-Stile wie Last.fm-Tags durch die vorhandene Zuordnung schicken (Gewicht = Wahrscheinlichkeit) */
+  /* send Discogs styles through the existing mapping like Last.fm tags (weight = probability) */
   var raw = [];
   (o.styles || []).forEach(function(x){
     var parts = String(x[0] || '').split('---'), w = Math.round((x[1] || 0) * 100);
@@ -108,7 +108,7 @@ Store.prototype.classifyNow = function(o) {
           dance: typeof o.dance === 'number' ? o.dance : null, voice: typeof o.voice === 'number' ? o.voice : null};
 };
 
-/* Ergebnis der Stimmungs-Tags (lf, darf null sein) um die Audio-Analyse ergänzen */
+/* extend the mood tag result (lf, may be null) with the audio analysis */
 Store.prototype.combine = function(lf, ar, ti, al) {
   var o = this.get(ar, ti, al);
   return o ? merge(lf, this.classify(o)) : lf;
@@ -119,8 +119,8 @@ Store.prototype.status = function() {
   return {tracks: this.n, at: this.at || null};
 };
 
-/* Last.fm-Ergebnis (track/artist) und Audio-Analyse zusammenführen:
-   Energie und BPM aus dem Audio, Stimmungen und Stile aus beiden (Audio zuerst) */
+/* merge the Last.fm result (track/artist) and the audio analysis:
+   energy and BPM from the audio, moods and styles from both (audio first) */
 function merge(lf, au) {
   if (!au) return lf;
   var r = {mood: au.mood.slice(), energy: au.energy, style: au.style.slice(), src: lf && lf.src === 'track' ? 'track' : 'audio',

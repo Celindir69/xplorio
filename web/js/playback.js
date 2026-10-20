@@ -1,22 +1,22 @@
-/* Seite „Wiedergabe“ (Zahnrad-Menü): Crossfade und Lautstärke angleichen (ReplayGain) direkt in MPD, dazu Volumios
-   Normalisierung zum Ansehen (ändern in Volumio) und ein Hinweis zur Automatik des AutoDJ-Plugins.
-   Werte vom Tag-Dienst (GET/POST /playback, tags/playback.js). Mit Rotel (APP_CONFIG.ROTEL) außerdem eine Fernbedienung
-   für den Verstärker: Bedienelemente laut Geräteprofil der Rotel-Bridge (GET /profile, rotel/rotel-bridge.js).
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* "Playback" page (gear menu): crossfade and volume leveling (ReplayGain) directly in MPD, plus Volumio's
+   normalization for viewing (change it in Volumio) and a note about the AutoDJ plugin's automatic mode.
+   Values from the tag service (GET/POST /playback, tags/playback.js). With Rotel (APP_CONFIG.ROTEL) also a remote control
+   for the amplifier: controls according to the Rotel bridge's device profile (GET /profile, rotel/rotel-bridge.js).
+   Classic script, shared global scope; see xplorio.html for load order. */
 var overlayPlayback = document.getElementById('overlayPlayback');
 var pbBody = document.getElementById('pbBody');
 var pbData = null, pbSeq = 0, pbMsg = '', pbOffline = false;
 var pbAmp = null, pbAmpProf = null, pbAmpState = null, pbAmpTimer = null, pbAmpDrag = false;
 var PB_RG = ['off', 'track', 'album', 'auto'];
 
-function pbLastXfade(v) {                                  /* zuletzt gewählte Sekunden, für „An“ */
+function pbLastXfade(v) {                                  /* last selected seconds, for "On" */
   try {
     if (v) localStorage.setItem('xplorio.crossfade', String(v));
     return parseInt(localStorage.getItem('xplorio.crossfade'), 10) || 5;
   } catch (e) { return v || 5; }
 }
 
-/* amp: gleich zur Verstärker-Karte (Fernbedienungs-Symbol im Player) */
+/* amp: straight to the amplifier card (remote control icon in the player) */
 function openPlayback(amp) {
   closeAllOverlays();
   overlayPlayback.classList.add('on');
@@ -35,7 +35,7 @@ function pbLoad(amp) {
   }).catch(function(){ pbOffline = true; }).then(function(){
     if (seq !== pbSeq) return;
     pbRender();
-    if (amp && pbAmp) setTimeout(function(){ if (seq === pbSeq) pbAmp.scrollIntoView({block: 'start', behavior: 'smooth'}); }, 350);   /* nach dem Einblenden */
+    if (amp && pbAmp) setTimeout(function(){ if (seq === pbSeq) pbAmp.scrollIntoView({block: 'start', behavior: 'smooth'}); }, 350);   /* after fading in */
   });
 }
 function pbSet(body) {
@@ -48,7 +48,7 @@ function pbSet(body) {
   }).catch(function(){ if (seq === pbSeq) { pbMsg = T('pb.error'); pbRender(); } });
 }
 
-/* again: auch der gewählte Eintrag sendet erneut (Verstärker, falls die Anzeige nicht zum Gerät passt) */
+/* again: the selected entry sends again too (amplifier, in case the display does not match the device) */
 function pbChips(list, cur, fn, again) {
   var box = histEl('div', 'mxChips pbChips');
   list.forEach(function(it){
@@ -64,13 +64,13 @@ function pbRender() {
   while (pbBody.firstChild) pbBody.removeChild(pbBody.firstChild);
   var grid = histEl('div', 'syGridBox');
   pbBody.appendChild(grid);
-  if (!d) {                                                /* ohne Tag-Dienst: nur die Fernbedienung */
+  if (!d) {                                                /* without tag service: only the remote control */
     grid.appendChild(histEl('div', 'syNote pbFoot', T('pb.offline')));
     if (ROTEL_ON) grid.appendChild(pbAmpCard());
     return;
   }
 
-  /* Crossfade: an/aus und Sekunden */
+  /* crossfade: on/off and seconds */
   var xf = sysCard(T('pb.xfade'), 'syWide'), on = d.crossfade > 0;
   var row = histEl('div', 'pbRow');
   row.appendChild(pbChips([['off', T('pb.off')], ['on', T('pb.on')]], on ? 'on' : 'off', function(v){
@@ -90,7 +90,7 @@ function pbRender() {
   row.appendChild(inp);
   row.appendChild(histEl('span', 'sySub', T('pb.seconds')));
   xf.appendChild(row);
-  if (pbMsg === T('pb.xfadeBad')) xf.appendChild(histEl('div', 'syNote syWarn', pbMsg));   /* gleich am Eingabefeld */
+  if (pbMsg === T('pb.xfadeBad')) xf.appendChild(histEl('div', 'syNote syWarn', pbMsg));   /* right at the input field */
   xf.appendChild(histEl('div', 'syNote', T('pb.xfadeNote')));
   grid.appendChild(xf);
 
@@ -103,7 +103,7 @@ function pbRender() {
 
   if (ROTEL_ON) grid.appendChild(pbAmpCard());
 
-  /* Volumios Normalisierung: nur anzeigen, ändern in Volumio */
+  /* Volumio's normalization: display only, change it in Volumio */
   var nm = sysCard(T('pb.norm'), 'syWide');
   var kv = histEl('div', 'syKv');
   kv.appendChild(histEl('span', 'syK', T('pb.normState')));
@@ -115,7 +115,7 @@ function pbRender() {
   nm.appendChild(link);
   grid.appendChild(nm);
 
-  /* AutoDJ: Automatik im Plugin besser aus, wenn hier eingestellt */
+  /* AutoDJ: better turn off the plugin's automatic mode when set here */
   if (d.autodj) {
     var ad = sysCard(T('pb.autodj'), 'syWide'), auto = [];
     if (d.autodj.replayGain) auto.push(T('pb.autodjRg'));
@@ -131,7 +131,7 @@ function pbRender() {
   grid.appendChild(foot);
 }
 
-/* ---------- Fernbedienung für den Rotel ---------- */
+/* ---------- Remote control for the Rotel ---------- */
 function pbNorm(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }   /* pcusb = pc_usb */
 function pbAmpStart() {
   var seq = pbSeq;
@@ -154,7 +154,7 @@ function pbAmpStart() {
 }
 function pbAmpShow(st) {
   pbAmpState = st || null;
-  if (st && typeof showRotel === 'function') showRotel(st);          /* Player-Anzeige gleich mitziehen */
+  if (st && typeof showRotel === 'function') showRotel(st);          /* update the player display right away */
   pbAmpPaint();
 }
 function pbAmpCmd(c) {
@@ -163,7 +163,7 @@ function pbAmpCmd(c) {
   fetch(ROTEL + '/cmd?c=' + encodeURIComponent(c)).then(function(r){ return r.json(); })
     .then(function(j){ if (seq === pbSeq && j && j.state) pbAmpShow(j.state); })
     .catch(function(){});
-  setTimeout(function(){                                   /* Rückmeldung des Verstärkers abholen */
+  setTimeout(function(){                                   /* fetch the amplifier's feedback */
     if (seq !== pbSeq) return;
     fetch(ROTEL + '/state').then(function(r){ return r.json(); }).then(function(j){ if (seq === pbSeq) pbAmpShow(j && j.state); }).catch(function(){});
   }, 450);
@@ -177,7 +177,7 @@ function pbSigned(v) { return v > 0 ? '+' + v : String(v); }
 function pbAmpPaint() {
   var card = pbAmp, p = pbAmpProf, st = pbAmpState;
   if (!card || pbAmpDrag) return;
-  while (card.childNodes.length > 1) card.removeChild(card.lastChild);   /* Titel bleibt */
+  while (card.childNodes.length > 1) card.removeChild(card.lastChild);   /* heading stays */
   if (!st) return card.appendChild(histEl('div', 'syNote', T('pb.ampOffline')));
   if (!st.connected) return card.appendChild(histEl('div', 'syNote', T('controls.rotel.notLinked')));
   function line(label, el) {
@@ -197,7 +197,7 @@ function pbAmpPaint() {
   line(T('pb.ampPower'), pbChips([['off', T('pb.ampStandby')], ['on', T('pb.on')]], power ? 'on' : 'off', function(){ btnRotelPower.click(); setTimeout(pbAmpStart, 600); }));
   if (!power) return;
 
-  /* Lautstärke und Mute */
+  /* volume and mute */
   var max = p && p.maxVol || +vSlider.max || 70, vol = typeof st.volume === 'number' ? st.volume : 0;
   var sl = histEl('input', 'pbVol'), val = histEl('span', 'pbAmpVal', String(vol));
   sl.type = 'range'; sl.min = 0; sl.max = max; sl.step = 1; sl.value = Math.min(vol, max);
@@ -213,7 +213,7 @@ function pbAmpPaint() {
 
   if (!p) return card.appendChild(histEl('div', 'syNote', T('pb.ampOld')));
 
-  /* Eingang */
+  /* input */
   if (p.sources && p.sources.length) {
     var src = histEl('div', 'mxChips pbChips');
     p.sources.forEach(function(x){
@@ -222,7 +222,7 @@ function pbAmpPaint() {
     line(T('pb.ampSource'), src);
   }
 
-  /* Klang: Bypass, Bass, Höhen; Balance */
+  /* sound: bypass, bass, treble; balance */
   if (p.bypass) line(T('pb.ampBypass'), [pbChips([['off', T('pb.off')], ['on', T('pb.on')]], st.bypass ? 'on' : 'off', function(v){ pbAmpCmd(p.cmd.bypass[v === 'on' ? 0 : 1]); }, true)]
     .concat(st.bypass && (p.cmd.bass || p.cmd.treble) ? [histEl('span', 'pbAmpHint', T('pb.ampBypassNote'))] : []));
   function stepper(key, label, fmt) {
@@ -243,14 +243,14 @@ function pbAmpPaint() {
                               chip(T('pb.ampCenter'), false, function(){ pbAmpCmd(b[2]); }, 'mxMore')]);
   }
 
-  /* Lautsprecher A und B */
+  /* speakers A and B */
   var spk = [];
   if (p.cmd.speakerA) spk.push(chip('A', !!st.speakerA, function(){ pbAmpCmd(p.cmd.speakerA[st.speakerA ? 1 : 0]); }));
   if (p.cmd.speakerB) spk.push(chip('B', !!st.speakerB, function(){ pbAmpCmd(p.cmd.speakerB[st.speakerB ? 1 : 0]); }));
   if (spk.length) line(T('pb.ampSpeakers'), spk);
 }
 
-/* Fernbedienungs-Symbol oben rechts im Player, nur mit Rotel */
+/* remote control icon at the top right of the player, Rotel only */
 var btnRemote = document.getElementById('btnRemote');
 if (ROTEL_ON) { btnRemote.style.display = ''; btnRemote.addEventListener('click', function(){ openPlayback(true); }); }
 

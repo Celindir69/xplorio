@@ -1,8 +1,8 @@
-/* Bewertungen: Herz für Künstler, 1–5 Sterne für Alben, Daumen für Titel (neutral, mag ich, mag ich nicht).
-   „Mag ich“ ist der Volumio-Favorit: Daumen hoch legt den Titel in die Favoriten von Volumio, ein Favorit aus Volumio
-   zeigt hier den Daumen hoch. „Mag ich nicht“, Herzen und Sterne speichert der Tag-Dienst (POST /ratings, /rate).
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach browse.js und tagedit.js geladen. */
-var rateReady = false;           /* Tag-Dienst erreichbar */
+/* Ratings: heart for artists, 1–5 stars for albums, thumbs for tracks (neutral, like, dislike).
+   "Like" is the Volumio favourite: thumbs up adds the track to Volumio's favourites, a favourite from Volumio
+   shows thumbs up here. "Dislike", hearts and stars are stored by the tag service (POST /ratings, /rate).
+   Classic script, shared global scope; loaded after browse.js and tagedit.js. */
+var rateReady = false;           /* tag service reachable */
 function rateSvg(d) { return '<svg viewBox="0 0 24 24"><path d="' + d + '"/></svg>'; }
 var RATE_SVG = {
   up0: rateSvg('M21 8h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2c0-1.1-.9-2-2-2zm0 4l-3 7H9V9l4.34-4.34L12.23 10H21v2zM1 9h4v12H1z'),
@@ -14,15 +14,15 @@ var RATE_SVG = {
   star1: rateSvg('M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z')
 };
 
-/* Tipps auf Bewertungen lösen nie die Zeile oder den Kopf darunter aus (Abspielen) */
+/* taps on ratings never trigger the row or header below (playback) */
 function rateStop(el) {
   ['touchstart', 'touchend', 'pointerdown'].forEach(function(ev){
     el.addEventListener(ev, function(e){ e.stopPropagation(); }, {passive:true});
   });
 }
 
-/* ---------- Volumio-Favoriten (= Daumen hoch) ---------- */
-/* Schlüssel wie im Tag-Dienst: Datei ohne music-library/ bzw. mnt/ davor, Streaming-URIs unverändert */
+/* ---------- Volumio favourites (= thumbs up) ---------- */
+/* key as in the tag service: file without leading music-library/ or mnt/, streaming URIs unchanged */
 function rateFileKey(uri) { return String(uri || '').replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, ''); }
 var favMap = {}, favAt = 0, favLoading = null;
 function favRefresh(force) {
@@ -37,7 +37,7 @@ function favRefresh(force) {
   return favLoading;
 }
 
-/* t: {uri, service, title, artist, album, albumart}; v: 1 mag ich (Favorit), -1 mag ich nicht, 0 neutral */
+/* t: {uri, service, title, artist, album, albumart}; v: 1 like (favourite), -1 dislike, 0 neutral */
 function rateTrackSet(t, v) {
   var k = rateFileKey(t.uri), fav = favMap[k];
   if (v === 1 && !fav) {
@@ -48,7 +48,7 @@ function rateTrackSet(t, v) {
     socket.emit('removeFromFavourites', {uri: fav.uri, service: fav.service || 'mpd', name: t.title || ''});
     delete favMap[k];
   }
-  favAt = Date.now();                                  /* Volumio braucht einen Moment, bis die Liste stimmt */
+  favAt = Date.now();                                  /* Volumio needs a moment until the list is correct */
   showToast(T(v === 1 ? 'rate.liked' : v === -1 ? 'rate.disliked' : 'rate.cleared'));
   return tagPostJson('/rate', {kind: 'track', uri: t.uri, v: v === -1 ? -1 : 0, ar: t.artist || '', ti: t.title || ''})
     .catch(function(){ if (v === -1) showToast(T('rate.saveError')); });
@@ -56,7 +56,7 @@ function rateTrackSet(t, v) {
 
 function rateTrackValue(t, down) { return down === -1 ? -1 : favMap[rateFileKey(t.uri)] ? 1 : 0; }
 
-/* Daumen: Tipp schaltet neutral -> mag ich -> mag ich nicht -> neutral */
+/* thumb: a tap cycles neutral -> like -> dislike -> neutral */
 function rateThumb(t, v) {
   var b = histEl('div', 'rateThumb');
   b.title = T('rate.track');
@@ -76,8 +76,8 @@ function rateThumb(t, v) {
   return b;
 }
 
-/* Daumen in Titelzeilen nachtragen: items (Volumio-Einträge) und rows in gleicher Reihenfolge, vor dem Stift
-   (sonst vor before, z. B. dem Papierkorb der Warteschlange); alive() false: Liste inzwischen neu aufgebaut */
+/* Add thumbs to track rows: items (Volumio entries) and rows in the same order, before the pen
+   (else before `before`, e.g. the queue's trash can); alive() false: list rebuilt in the meantime */
 function rateRows(items, rows, alive, before, extra) {
   var idx = [];
   items.forEach(function(t, i){ if (t.uri && (t.service || 'mpd') !== 'webradio' && t.trackType !== 'webradio') idx.push(i); });
@@ -96,16 +96,16 @@ function rateRows(items, rows, alive, before, extra) {
   });
 }
 
-/* ---------- Warteschlange: Daumen je Titel ---------- */
+/* ---------- Queue: thumbs per track ---------- */
 var rateQueueSeq = 0;
 function rateQueue(items, rows) {
   var seq = ++rateQueueSeq;
   rateRows(items, rows, function(){ return seq === rateQueueSeq; }, '.qTrash').catch(function(){});
 }
-/* Favorit geändert (auch in der Volumio-Oberfläche) */
+/* favourite changed (also in the Volumio UI) */
 socket.on('urifavourites', function(){ favRefresh(true); });
 
-/* ---------- Künstlerseite: Herz ---------- */
+/* ---------- Artist page: heart ---------- */
 function rateArtistHeart(name) {
   var b = histEl('div', 'rateHeart'), v = 0;
   b.title = T('rate.artist');
@@ -123,8 +123,8 @@ function rateArtistHeart(name) {
   return b;
 }
 
-/* ---------- Albumseite: Sterne im Kopf, Daumen je Titel ---------- */
-/* meta: Textblock im Kopf; rows: Zeilen in der Reihenfolge von tracks; seq: verwirft veraltete Antworten */
+/* ---------- Album page: stars in the header, thumbs per track ---------- */
+/* meta: text block in the header; rows: rows in the order of tracks; seq: discards outdated answers */
 function rateAlbumPage(seq, e, who, tracks, meta, rows) {
   if (!rateReady) return;
   var local = tracks.filter(isLocalTrack)[0];
@@ -138,10 +138,10 @@ function rateAlbumPage(seq, e, who, tracks, meta, rows) {
       s.innerHTML = n <= v ? RATE_SVG.star1 : RATE_SVG.star0;
       s.addEventListener('click', function(ev){
         ev.stopPropagation();
-        v = (v === n) ? 0 : n;                            /* gleicher Stern noch einmal: Bewertung weg */
+        v = (v === n) ? 0 : n;                            /* same star again: remove rating */
         show();
-        var hint = false;                                 /* Erklärung zum Entfernen nur beim ersten Mal */
-        if (!v) try { hint = !localStorage.getItem('rateClearHint'); localStorage.setItem('rateClearHint', '1'); } catch (er) { /* egal */ }
+        var hint = false;                                 /* explain removal only the first time */
+        if (!v) try { hint = !localStorage.getItem('rateClearHint'); localStorage.setItem('rateClearHint', '1'); } catch (er) { /* ignore */ }
         showToast(v ? T('rate.albumSet', {n: v}) : hint ? T('rate.albumClearedHint') : T('rate.cleared'));
         tagPostJson('/rate', {kind: 'album', uri: albumUri, al: e.album || '', ar: who || '', v: v}).catch(function(){ showToast(T('rate.saveError')); });
       });

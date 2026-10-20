@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Audio-Analyse der Musiksammlung mit Essentia (auf dem Mac, nicht auf dem Player).
+"""Audio analysis of the music collection with Essentia (on the Mac, not on the player).
 
-Hört jeden Titel an und schreibt je Titel eine Zeile nach essentia.jsonl: BPM, Tonart, Stimmungen
-(fröhlich, traurig, entspannt, aggressiv, Party), Tanzbarkeit, Gesang, Valenz/Erregung (DEAM) und
-Discogs-Stile. Der Tag-Dienst auf dem Player ordnet die Zeilen über Künstler und Titel zu, die
-Ordnerstruktur ist also egal. Bereits analysierte, unveränderte Dateien werden übersprungen;
-abbrechen (Ctrl-C) und später weitermachen geht jederzeit. Mit --upload oder --player wird der bisherige Stand
-beim Abbrechen hochgeladen, mit --player außerdem alle 2 Stunden (--upload-every).
+Listens to every track and writes one line per track to essentia.jsonl: BPM, key, moods
+(happy, sad, relaxed, aggressive, party), danceability, vocals, valence/arousal (DEAM) and
+Discogs styles. The tag service on the player matches the lines by artist and title, so the
+folder structure does not matter. Files already analysed and unchanged are skipped; you can
+abort (Ctrl-C) and continue later at any time. With --upload or --player the progress so far is
+uploaded on abort, with --player also every 2 hours (--upload-every).
 
     python3 analyse.py /Volumes/Data/Musik /Volumes/Data/AllFlac
     python3 analyse.py --upload http://<player>:8766 /Volumes/Data/Musik
-    python3 analyse.py --player http://<player> /Volumes/<SMB-Freigabe des Players>/Musik
+    python3 analyse.py --player http://<player> /Volumes/<SMB share of the player>/Musik
 
-Voraussetzung: macOS 15+ mit Python 3.14 (pip install essentia-tensorflow mutagen);
-Intel-Mac mit macOS 14: Python 3.13 und pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
-Die vortrainierten Modelle (rund 100 MB) lädt das Skript beim ersten Lauf selbst herunter.
-Optional ffmpeg (brew install ffmpeg): liest Dateien, an denen Essentia scheitert oder abstürzt. Nach dem Einrichten
-holt "python3 analyse.py --retry-errors …" die bisher fehlgeschlagenen Dateien nach.
-Modelle: CC BY-NC-SA 4.0 (nur nicht-kommerziell), https://essentia.upf.edu/models
+Requires: macOS 15+ with Python 3.14 (pip install essentia-tensorflow mutagen);
+Intel Mac with macOS 14: Python 3.13 and pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
+The script downloads the pretrained models (about 100 MB) itself on the first run.
+Optional ffmpeg (brew install ffmpeg): reads files on which Essentia fails or crashes. Once it is set up,
+"python3 analyse.py --retry-errors …" catches up on the files that failed so far.
+Models: CC BY-NC-SA 4.0 (non-commercial only), https://essentia.upf.edu/models
 """
 import argparse
 import concurrent.futures as cf
@@ -38,7 +38,7 @@ AUDIO_EXT = {'.flac', '.m4a', '.mp4', '.mp3', '.wav', '.aif', '.aiff', '.dsf', '
 MODEL_URL = 'https://essentia.upf.edu/models/'
 EFFNET = 'feature-extractors/discogs-effnet/discogs-effnet-bs64-1'
 MUSICNN = 'feature-extractors/musicnn/msd-musicnn-1'
-HEADS = {                                    # Name in der Ausgabe -> Modell, gesuchte Klasse
+HEADS = {                                    # name in the output -> model, wanted class
     'happy': ('mood_happy', 'happy'),
     'sad': ('mood_sad', 'sad'),
     'relaxed': ('mood_relaxed', 'relaxed'),
@@ -51,31 +51,32 @@ GENRE = 'classification-heads/genre_discogs400/genre_discogs400-discogs-effnet-1
 DEAM = 'classification-heads/deam/deam-msd-musicnn-2'
 SR = 44100
 SR_MODEL = 16000
-# Die Discogs-Effnet-Fassung rechnet immer 64 Ausschnitte auf einmal (rund 131 s Musik ohne Überlappung); bis dahin
-# kostet längeres Anhören also nichts extra. MusiCNN (nur für Valenz/Erregung) ist auf dem Mac der teuerste Schritt
-# und bekommt deshalb nur die mittleren 45 s, so lang wie die DEAM-Ausschnitte, mit denen das Modell gelernt hat.
+# The Discogs-Effnet build always computes 64 patches at once (about 131 s of music without overlap); up to that,
+# listening longer costs nothing extra. MusiCNN (only for valence/arousal) is the most expensive step on the Mac
+# and so gets only the middle 45 s, as long as the DEAM excerpts the model was trained on.
 EFFNET_HOP = 128
 MUSICNN_SECONDS = 45
 MUSICNN_HOP = 187
-CRASH = 'Analyse abgestürzt (Datei beschädigt oder zu groß?)'
-FFMPEG_PATHS = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg']   # falls nicht im PATH (z. B. aus cron)
+CRASH = 'analysis crashed (file damaged or too large?)'
+CRASH_OLD = 'Analyse abgest\u00fcrzt (Datei besch\u00e4digt oder zu gro\u00df?)'   # written by earlier versions
+FFMPEG_PATHS = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg']   # in case it is not in PATH (e.g. from cron)
 
 
 def find_ffmpeg(arg):
-    """ffmpeg für Dateien, die Essentia nicht lesen kann: --ffmpeg PFAD, 'aus' = nie, sonst suchen"""
+    """ffmpeg for files Essentia cannot read: --ffmpeg PATH, 'off' (or 'aus') = never, else search for it"""
     if arg is not None:
         return '' if arg in ('', 'aus', 'off', 'no') else arg
     return shutil.which('ffmpeg') or next((p for p in FFMPEG_PATHS if os.access(p, os.X_OK)), '')
 
 
 def ffmpeg_load(ffmpeg, path):
-    """ganze Datei als Mono, 44,1 kHz, float32 (wie MonoLoader)"""
+    """whole file as mono, 44.1 kHz, float32 (like MonoLoader)"""
     import numpy as np
     r = subprocess.run([ffmpeg, '-v', 'error', '-nostdin', '-i', path, '-vn', '-ac', '1', '-ar', str(SR), '-f', 'f32le', '-'],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
     audio = np.frombuffer(r.stdout, dtype=np.float32)
     if r.returncode != 0 and len(audio) < SR * 5:
-        raise RuntimeError('ffmpeg: ' + (r.stderr.decode('utf-8', 'replace').strip().splitlines() or ['Fehler'])[-1][:150])
+        raise RuntimeError('ffmpeg: ' + (r.stderr.decode('utf-8', 'replace').strip().splitlines() or ['error'])[-1][:150])
     return audio
 
 
@@ -89,7 +90,7 @@ def all_models():
 
 
 def fetch_models(folder):
-    """Modelle (.pb) und Beschreibungen (.json) einmalig herunterladen."""
+    """Download the models (.pb) and descriptions (.json) once."""
     os.makedirs(folder, exist_ok=True)
     for m in all_models():
         exts = ['.pb'] if m.startswith('feature-extractors/') else ['.pb', '.json']
@@ -98,7 +99,7 @@ def fetch_models(folder):
             if os.path.exists(dst) and os.path.getsize(dst) > 0:
                 continue
             url = MODEL_URL + m + ext
-            print('Lade Modell ' + os.path.basename(dst) + ' …', flush=True)
+            print('Loading model ' + os.path.basename(dst) + ' …', flush=True)
             try:
                 with urllib.request.urlopen(url, timeout=120) as r, open(dst + '.neu', 'wb') as f:
                     while True:
@@ -108,7 +109,7 @@ def fetch_models(folder):
                         f.write(b)
                 os.replace(dst + '.neu', dst)
             except Exception as e:
-                sys.exit('Modell nicht ladbar: %s (%s)' % (url, e))
+                sys.exit('Cannot load model: %s (%s)' % (url, e))
 
 
 def model_file(folder, m, ext='.pb'):
@@ -133,7 +134,7 @@ def first(v):
 
 
 def read_tags(path):
-    """-> (Künstler, Titel, Album); zuerst mutagen (kann auch DSF), sonst Essentias eigener Leser"""
+    """-> (artist, title, album); mutagen first (handles DSF too), else Essentia's own reader"""
     try:
         import mutagen
         f = mutagen.File(path, easy=True)
@@ -159,7 +160,7 @@ def read_tags(path):
         return '', '', ''
 
 
-# ---------- Analyse (je Arbeitsprozess) ----------
+# ---------- Analysis (per worker process) ----------
 
 W = {}
 
@@ -204,7 +205,7 @@ def mean_rows(a):
 def analyse(job):
     path, size, mtime, use_ffmpeg = job
     rec = {'v': VERSION, 'p': path, 'sz': size, 'mt': mtime}
-    # Merkzettel je Prozess: stürzt der Prozess bei dieser Datei ab (Essentia/TensorFlow), weiß der Hauptprozess welche
+    # marker per process: if the process crashes on this file (Essentia/TensorFlow), the main process knows which one
     mark = os.path.join(W['marks'], str(os.getpid())) if W.get('marks') else ''
     if mark:
         with open(mark, 'w', encoding='utf-8') as m:
@@ -229,8 +230,8 @@ def length_of(path):
 
 
 def load_audio(rec, path, use_ffmpeg):
-    """Essentia liest; scheitert es (Fehler oder fast nichts gelesen), liest ffmpeg. use_ffmpeg: gleich ffmpeg
-    (die Datei hat Essentia zuvor zum Absturz gebracht). rec['dec'] = 'ffmpeg', wenn ffmpeg gelesen hat."""
+    """Essentia reads; if it fails (error or hardly anything read), ffmpeg reads. use_ffmpeg: use ffmpeg right away
+    (the file crashed Essentia before). rec['dec'] = 'ffmpeg' if ffmpeg did the reading."""
     ff = W.get('ffmpeg')
     if use_ffmpeg and ff:
         rec['dec'] = 'ffmpeg'
@@ -249,16 +250,16 @@ def load_audio(rec, path, use_ffmpeg):
 def analyse_file(rec, path, use_ffmpeg=False):
     ar, ti, al = read_tags(path)
     if not ar or not ti:
-        rec['err'] = 'keine Künstler-/Titel-Tags'
+        rec['err'] = 'no artist/title tags'
         return rec
     rec.update({'ar': ar, 'ti': ti, 'al': al})
     lim = W.get('max_minutes') or 0
     if lim:
-        ln = length_of(path)                           # ganze Datei wird geladen: sehr lange Mitschnitte sprengen den Speicher
+        ln = length_of(path)                           # the whole file is loaded: very long recordings blow the memory
         if ln > lim * 60:
             rec['d'] = round(ln)
-            rec['err'] = 'länger als %d min (--max-minutes)' % lim
-            rec['skip'] = 1                            # zählt als übersprungen, nicht als Fehler
+            rec['err'] = 'longer than %d min (--max-minutes)' % lim
+            rec['skip'] = 1                            # counts as skipped, not as an error
             return rec
     try:
         es = W['es']
@@ -269,20 +270,20 @@ def analyse_file(rec, path, use_ffmpeg=False):
                 tt[name] = round(now - t0[0], 2)
                 t0[0] = now
         audio = load_audio(rec, path, use_ffmpeg)
-        lap('laden')
+        lap('load')
         n = len(audio)
         if n < SR * 5:
-            rec['err'] = 'zu kurz oder nicht lesbar'
+            rec['err'] = 'too short or not readable'
             return rec
         rec['d'] = round(n / SR)
         sec = W['seconds']
-        if sec and n > sec * SR:                       # Mittelteil reicht und spart Zeit
+        if sec and n > sec * SR:                       # the middle part is enough and saves time
             start = (n - sec * SR) // 2
             audio = audio[start:start + sec * SR]
         bpm = W['rhythm'](audio)[0]
         lap('tempo')
         key, scale, strength = W['key'](audio)
-        lap('tonart')
+        lap('key')
         a16 = W['resample'](audio)
         emb = W['effnet'](a16)
         lap('effnet')
@@ -296,7 +297,7 @@ def analyse_file(rec, path, use_ffmpeg=False):
         g = mean_rows(W['genre'](emb))
         top = sorted(range(len(g)), key=lambda i: -g[i])[:5]
         rec['styles'] = [[W['genre_cls'][i], round(float(g[i]), 3)] for i in top if g[i] >= 0.05]
-        lap('stimmung+genre')
+        lap('mood+genre')
         m = MUSICNN_SECONDS * SR_MODEL
         mid = a16[(len(a16) - m) // 2:(len(a16) - m) // 2 + m] if len(a16) > m else a16
         av = mean_rows(W['deam'](W['musicnn'](mid)))
@@ -312,7 +313,7 @@ def analyse_file(rec, path, use_ffmpeg=False):
     return rec
 
 
-# ---------- Ablauf ----------
+# ---------- Main flow ----------
 
 def find_files(roots, excludes):
     for root in roots:
@@ -346,8 +347,8 @@ def load_done(out):
 
 
 def compact(out, done, seen_roots, present):
-    """doppelte Zeilen entfernen und Einträge zu gelöschten Dateien unter den gelesenen Ordnern verwerfen"""
-    seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # Share inzwischen getrennt: dessen Einträge behalten
+    """remove duplicate lines and drop entries for deleted files under the scanned folders"""
+    seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # share disconnected in the meantime: keep its entries
     keep = []
     for p, o in done.items():
         if any(p.startswith(r + os.sep) for r in seen_roots) and p not in present:
@@ -361,7 +362,7 @@ def compact(out, done, seen_roots, present):
 
 
 def player_state(base):
-    """Zustand von Volumio ('play', 'pause', 'stop' …), None wenn der Player nicht antwortet"""
+    """Volumio state ('play', 'pause', 'stop' …), None if the player does not answer"""
     try:
         with urllib.request.urlopen(base.rstrip('/') + '/api/v1/getState', timeout=10) as r:
             return str(json.loads(r.read().decode('utf-8')).get('status') or 'stop')
@@ -370,17 +371,17 @@ def player_state(base):
 
 
 def wait_for_player(base, minutes):
-    """warten, bis der Player erreichbar ist und nicht spielt; gibt die gewartete Zeit in Sekunden zurück"""
+    """wait until the player is reachable and not playing; returns the time waited in seconds"""
     t, said = time.time(), None
     while True:
         st = player_state(base)
         if st is not None and st != 'play':
             if said:
-                print('  weiter (%s)' % time.strftime('%H:%M'), flush=True)
+                print('  continuing (%s)' % time.strftime('%H:%M'), flush=True)
             return time.time() - t
-        why = 'Player spielt' if st == 'play' else 'Player nicht erreichbar'
+        why = 'player is playing' if st == 'play' else 'player not reachable'
         if why != said:
-            print('  pausiert, %s (%s); nächste Abfrage alle %d min' % (why, time.strftime('%H:%M'), minutes), flush=True)
+            print('  paused, %s (%s); checking again every %d min' % (why, time.strftime('%H:%M'), minutes), flush=True)
             said = why
         time.sleep(minutes * 60)
 
@@ -393,13 +394,13 @@ def upload(out, base):
     with urllib.request.urlopen(req, timeout=300) as r:
         j = json.loads(r.read().decode('utf-8'))
     if not j.get('ok'):
-        sys.exit('Hochladen fehlgeschlagen: ' + str(j.get('error')))
-    print('Hochgeladen: %d Einträge; auf dem Player %d von %d Titeln zugeordnet.' % (j['tracks'], j['matched'], j['library']))
+        sys.exit('Upload failed: ' + str(j.get('error')))
+    print('Uploaded: %d entries; on the player %d of %d tracks matched.' % (j['tracks'], j['matched'], j['library']))
 
 
 def upload_partial(done, out, base, player):
-    """Zwischenstand hochladen (je Datei nur der neueste Eintrag), ohne den Lauf zu beenden; True wenn hochgeladen.
-    Spielt der Player gerade, nicht: das holt der nächste Zwischenstand bzw. das Ende des Laufs nach."""
+    """Upload the progress so far (only the newest entry per file) without ending the run; True if uploaded.
+    Not while the player is playing: the next partial upload or the end of the run catches up."""
     if player and player_state(player) in (None, 'play'):
         return False
     tmp = out + '.zwischenstand'
@@ -407,51 +408,51 @@ def upload_partial(done, out, base, player):
         with open(tmp, 'w', encoding='utf-8') as f:
             for o in done.values():
                 f.write(json.dumps(o, ensure_ascii=False) + '\n')
-        print('  Zwischenstand hochladen (%s) …' % time.strftime('%H:%M'), flush=True)
+        print('  uploading progress so far (%s) …' % time.strftime('%H:%M'), flush=True)
         upload(tmp, base)
         return True
-    except SystemExit as e:                   # Antwort des Tag-Diensts: Fehler
+    except SystemExit as e:                   # the tag service answered with an error
         print('  ' + str(e), flush=True)
     except Exception as e:
-        print('  Hochladen fehlgeschlagen: %s' % e, flush=True)
+        print('  Upload failed: %s' % e, flush=True)
     finally:
         try:
             os.remove(tmp)
         except OSError:
             pass
-    return True                               # nicht gleich noch einmal versuchen
+    return True                               # don't retry right away
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Musiksammlung mit Essentia analysieren (BPM, Stimmung, Energie, Stil).')
-    ap.add_argument('roots', nargs='*', help='Musikordner (mehrere möglich; Symlinks werden verfolgt)')
-    ap.add_argument('--out', default='essentia.jsonl', help='Ergebnisdatei (Standard: essentia.jsonl)')
-    ap.add_argument('--models', default=os.path.expanduser('~/.cache/mx-essentia'), help='Ordner für die Modelle')
-    ap.add_argument('--seconds', type=int, default=120, help='nur so viele Sekunden aus der Mitte anhören (0 = ganz)')
-    ap.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 4) // 4), help='parallele Prozesse')
-    ap.add_argument('--exclude', action='append', default=[], help='Muster für auszulassende Pfade, z. B. "*/Hörbücher/*"')
-    ap.add_argument('--retry-errors', action='store_true', help='Dateien mit Fehler erneut versuchen')
-    ap.add_argument('--profile', action='store_true', help='Zeit je Analyseschritt ausgeben (zum Beschleunigen)')
+    ap = argparse.ArgumentParser(description='Analyse the music collection with Essentia (BPM, mood, energy, style).')
+    ap.add_argument('roots', nargs='*', help='music folders (several allowed; symlinks are followed)')
+    ap.add_argument('--out', default='essentia.jsonl', help='result file (default: essentia.jsonl)')
+    ap.add_argument('--models', default=os.path.expanduser('~/.cache/mx-essentia'), help='folder for the models')
+    ap.add_argument('--seconds', type=int, default=120, help='listen to only this many seconds from the middle (0 = whole track)')
+    ap.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 4) // 4), help='parallel processes')
+    ap.add_argument('--exclude', action='append', default=[], help='pattern for paths to skip, e.g. "*/Audiobooks/*"')
+    ap.add_argument('--retry-errors', action='store_true', help='retry files that had errors')
+    ap.add_argument('--profile', action='store_true', help='print the time per analysis step (for speeding up)')
     ap.add_argument('--max-minutes', type=int, default=30,
-                    help='längere Dateien auslassen, sie werden ganz geladen (Standard 30, 0 = alle)')
-    ap.add_argument('--limit', type=int, default=0, help='höchstens so viele Dateien analysieren (zum Ausprobieren)')
-    ap.add_argument('--upload', metavar='URL', help='danach zum Tag-Dienst hochladen, z. B. http://<player>:8766')
-    ap.add_argument('--ffmpeg', metavar='PFAD', help='ffmpeg für Dateien, die Essentia nicht lesen kann '
-                                                    '(Standard: automatisch suchen; "aus" = nicht benutzen)')
-    ap.add_argument('--player', metavar='URL', help='die Dateien liegen auf diesem Player (z. B. per SMB verbunden): '
-                                                   'nur analysieren, wenn er erreichbar ist und nicht spielt, z. B. http://<player>')
+                    help='skip longer files, they are loaded whole (default 30, 0 = all)')
+    ap.add_argument('--limit', type=int, default=0, help='analyse at most this many files (for trying it out)')
+    ap.add_argument('--upload', metavar='URL', help='upload to the tag service afterwards, e.g. http://<player>:8766')
+    ap.add_argument('--ffmpeg', metavar='PATH', help='ffmpeg for files Essentia cannot read '
+                                                    '(default: search automatically; "off" = do not use)')
+    ap.add_argument('--player', metavar='URL', help='the files are on this player (e.g. connected via SMB): '
+                                                   'analyse only while it is reachable and not playing, e.g. http://<player>')
     ap.add_argument('--player-wait', type=int, default=10, metavar='MIN',
-                    help='mit --player: so viele Minuten bis zur nächsten Abfrage (Standard 10)')
+                    help='with --player: minutes until the next check (default 10)')
     ap.add_argument('--upload-every', type=int, default=None, metavar='MIN',
-                    help='Zwischenstand so oft hochladen, nur wenn der Player nicht spielt '
-                         '(Standard mit --player 120, sonst 0 = nur am Ende)')
+                    help='upload the progress this often, only while the player is not playing '
+                         '(default with --player 120, else 0 = only at the end)')
     a = ap.parse_args()
     if not a.roots and not a.upload:
-        ap.error('Musikordner angeben (oder nur --upload)')
+        ap.error('give music folders (or only --upload)')
     a.player_wait = max(1, a.player_wait)
     if a.player and '//' not in a.player:
         a.player = 'http://' + a.player
-    if a.player and not a.upload:             # Ergebnis danach selbst hochladen: Tag-Dienst auf demselben Gerät
+    if a.player and not a.upload:             # upload the result afterwards: tag service on the same device
         u = urllib.parse.urlsplit(a.player)
         a.upload = '%s://%s:8766' % (u.scheme or 'http', u.hostname)
     if a.upload_every is None:
@@ -460,19 +461,19 @@ def main():
     if a.roots:
         fetch_models(a.models)
         ffmpeg = find_ffmpeg(a.ffmpeg)
-        print('ffmpeg als Ersatz: ' + (ffmpeg or 'keins (brew install ffmpeg)'), flush=True)
+        print('ffmpeg as fallback: ' + (ffmpeg or 'none (brew install ffmpeg)'), flush=True)
         roots = [os.path.abspath(os.path.expanduser(r)) for r in a.roots]
         if a.player:
             wait_for_player(a.player, a.player_wait)
         for r in roots:
-            if not os.path.isdir(r):          # z. B. Share nicht verbunden: sonst gälten alle Einträge darunter als gelöscht
-                sys.exit('Ordner nicht gefunden: %s (bei einem Netzlaufwerk: im Finder verbunden?)' % r)
+            if not os.path.isdir(r):          # e.g. share not connected: otherwise all entries under it would count as deleted
+                sys.exit('Folder not found: %s (network drive: connected in the Finder?)' % r)
         done = load_done(a.out)
-        # verschobene Dateien (anderes Laufwerk, andere Ordnerstruktur) über Dateiname und Größe wiedererkennen
+        # recognise moved files (other drive, other folder structure) by file name and size
         by_name = {}
         for q, o in done.items():
             k = (os.path.basename(q), o.get('sz'))
-            if k not in by_name or (o.get('v') == VERSION and not o.get('err')):   # lieber ein aktuelles, fehlerfreies
+            if k not in by_name or (o.get('v') == VERSION and not o.get('err')):   # prefer a current, error-free one
                 by_name[k] = q
         present, todo, moved = set(), [], []
         for p, size, mtime in find_files(roots, a.exclude):
@@ -486,18 +487,18 @@ def main():
                     moved.append(o)
             if o and o.get('sz') == size and o.get('mt') == mtime and o.get('v') == VERSION and not (a.retry_errors and o.get('err') and not o.get('skip')):
                 continue
-            # nach einem Absturz gleich mit ffmpeg lesen, sonst stürzt es wieder ab
-            todo.append((p, size, mtime, bool(ffmpeg and o and o.get('err') == CRASH)))
+            # after a crash read with ffmpeg right away, else it crashes again
+            todo.append((p, size, mtime, bool(ffmpeg and o and o.get('err') in (CRASH, CRASH_OLD))))
         if moved:
-            with open(a.out, 'a', encoding='utf-8') as f:   # gleich festhalten, auch wenn der Lauf abgebrochen wird
+            with open(a.out, 'a', encoding='utf-8') as f:   # record right away, even if the run is aborted
                 for o in moved:
                     f.write(json.dumps(o, ensure_ascii=False) + '\n')
             again = set(j[0] for j in todo)
-            print('%d Dateien an neuem Ort wiedererkannt (Dateiname und Größe), davon %d ohne neue Analyse.'
+            print('%d files recognised in a new location (file name and size), %d of them without a new analysis.'
                   % (len(moved), sum(1 for o in moved if o['p'] not in again)), flush=True)
         if a.limit:
             todo = todo[:a.limit]
-        print('%d Audiodateien gefunden, %d zu analysieren (%d Prozesse).' % (len(present), len(todo), a.jobs), flush=True)
+        print('%d audio files found, %d to analyse (%d processes).' % (len(present), len(todo), a.jobs), flush=True)
         if todo:
             t0, n, errs, skips, prof = time.time(), 0, 0, 0, {}
             marks = a.out + '.laeuft'
@@ -520,40 +521,40 @@ def main():
                 n += 1
                 if rec.get('skip'):
                     skips += 1
-                    print('  übersprungen: %s: %s' % (rec['p'], rec['err']), flush=True)
+                    print('  skipped: %s: %s' % (rec['p'], rec['err']), flush=True)
                 elif rec.get('err'):
                     errs += 1
-                    print('  Fehler: %s: %s' % (rec['p'], rec['err']), flush=True)
+                    print('  Error: %s: %s' % (rec['p'], rec['err']), flush=True)
                 if n % 25 == 0 or n == len(todo):
                     el = time.time() - t0
                     eta = el / n * (len(todo) - n)
-                    print('  %d/%d  (%.1f s je Datei, noch etwa %d min, %d Fehler, %d übersprungen)'
+                    print('  %d/%d  (%.1f s per file, about %d min left, %d errors, %d skipped)'
                           % (n, len(todo), el / n, eta / 60, errs, skips), flush=True)
 
             queue = list(reversed(todo))
             solo = []
             blind = 0
-            ff_tried = set()                  # nach einem Absturz schon einmal mit ffmpeg versucht
+            ff_tried = set()                  # already retried once with ffmpeg after a crash
             ex = pool()
             running = {}
-            up_t, up_n = time.time(), 0          # letzter Zwischenstand: Zeit und Zahl der Dateien bis dahin
+            up_t, up_n = time.time(), 0          # last partial upload: time and number of files up to then
             try:
                 with open(a.out, 'a', encoding='utf-8') as f:
                     while queue or running or solo:
                         hold = False
                         if a.player and (queue or solo) and player_state(a.player) in (None, 'play'):
                             if running:
-                                hold = True          # spielt oder ist aus: nichts Neues anfangen, Laufendes wird fertig
+                                hold = True          # playing or off: start nothing new, running jobs finish
                             else:
-                                t0 += wait_for_player(a.player, a.player_wait)   # Pause nicht in die Zeitschätzung
+                                t0 += wait_for_player(a.player, a.player_wait)   # keep the pause out of the time estimate
                         if hold:
                             pass
-                        elif solo:                   # Verdächtige nach einem Absturz einzeln, damit klar ist, wer es war
+                        elif solo:                   # suspects after a crash one at a time, so it is clear which one it was
                             if not running:
                                 job = solo.pop()
                                 running[ex.submit(analyse, job)] = job
                         else:
-                            # mit --player keine Dateien auf Vorrat: beim Start der Wiedergabe wird nur Laufendes fertig
+                            # with --player no files queued ahead: when playback starts only running jobs finish
                             while queue and len(running) < a.jobs * (1 if a.player else 2):
                                 job = queue.pop()
                                 running[ex.submit(analyse, job)] = job
@@ -570,8 +571,8 @@ def main():
                             if upload_partial(done, a.out, a.upload, a.player):
                                 up_t, up_n = time.time(), n
                         if broken:
-                            # ein Arbeitsprozess ist abgestürzt (und hat die anderen mitgerissen). Die Dateien auf den
-                            # Merkzetteln sind verdächtig: einzeln wiederholen; stürzt eine allein ab, gilt sie als Fehler.
+                            # a worker process crashed (and took the others down with it). The files on the
+                            # markers are suspects: retry them one at a time; if one crashes alone, it counts as an error.
                             alone = len(running) == 0 and sum(1 for _ in fin) == 1
                             crashed = set()
                             for x in os.listdir(marks):
@@ -585,7 +586,7 @@ def main():
                                 for j in todo:
                                     if j[0] not in crashed:
                                         continue
-                                    if ffmpeg and not j[3] and j[0] not in ff_tried:   # noch einmal einzeln, mit ffmpeg
+                                    if ffmpeg and not j[3] and j[0] not in ff_tried:   # once more on its own, with ffmpeg
                                         ff_tried.add(j[0])
                                         solo.append((j[0], j[1], j[2], True))
                                         queue = [q for q in queue if q[0] != j[0]]
@@ -594,27 +595,27 @@ def main():
                             else:
                                 solo += [j for j in queue if j[0] in crashed]
                             queue = [j for j in queue if j[0] not in crashed]
-                            if not crashed:          # unklar welche: nichts verlieren, nur neu anfangen
+                            if not crashed:          # unclear which: lose nothing, just start again
                                 blind += 1
                                 if blind >= 3:
-                                    sys.exit('Die Arbeitsprozesse stürzen immer wieder ab (Essentia/TensorFlow-Installation prüfen).')
-                                print('  Arbeitsprozess abgestürzt, mache weiter …', flush=True)
+                                    sys.exit('The worker processes keep crashing (check the Essentia/TensorFlow installation).')
+                                print('  Worker process crashed, continuing …', flush=True)
                             else:
                                 blind = 0
                             ex.shutdown(wait=False, cancel_futures=True)
                             ex = pool()
             except KeyboardInterrupt:
                 ex.shutdown(wait=False, cancel_futures=True)
-                print('\nAbgebrochen. Beim nächsten Aufruf geht es hier weiter.')
-                if a.upload and n > up_n:          # bisherigen Stand nicht erst am Ende des nächsten Laufs zum Player
+                print('\nAborted. The next run continues from here.')
+                if a.upload and n > up_n:          # don't wait for the end of the next run to get the progress to the player
                     if a.player and player_state(a.player) in (None, 'play'):
-                        print('Player spielt oder ist nicht erreichbar: nicht hochgeladen, das macht der nächste Lauf.')
+                        print('Player is playing or not reachable: not uploaded, the next run will do it.')
                     else:
-                        print('Lade den bisherigen Stand hoch (Ctrl-C bricht ab) …', flush=True)
+                        print('Uploading the progress so far (Ctrl-C aborts) …', flush=True)
                         try:
                             upload_partial(done, a.out, a.upload, None)
                         except KeyboardInterrupt:
-                            print('\nHochladen abgebrochen.')
+                            print('\nUpload aborted.')
                 sys.exit(1)
             ex.shutdown()
             try:
@@ -622,19 +623,19 @@ def main():
             except OSError:
                 pass
             if prof and n:
-                print('Zeit je Datei nach Schritt: ' + ', '.join('%s %.1f s' % (k, v / n) for k, v in prof.items()))
-        # Einträge vom alten Ort verschobener Dateien: gibt es die Datei dort nicht mehr, zieht der Eintrag um
+                print('Time per file by step: ' + ', '.join('%s %.1f s' % (k, v / n) for k, v in prof.items()))
+        # entries at the old location of moved files: if the file is no longer there, the entry moves
         here = set((os.path.basename(p), done[p].get('sz')) for p in present if p in done)
         for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
             if not os.path.exists(q):
                 del done[q]
         kept = compact(a.out, done, roots, present)
         ok = sum(1 for o in done.values() if not o.get('err'))
-        print('Fertig: %d Einträge in %s, davon %d analysiert.' % (kept, a.out, ok))
+        print('Done: %d entries in %s, %d of them analysed.' % (kept, a.out, ok))
 
     if a.upload:
         if a.player:
-            wait_for_player(a.player, a.player_wait)   # nicht hochladen, während der Player spielt
+            wait_for_player(a.player, a.player_wait)   # don't upload while the player is playing
         upload(a.out, a.upload)
 
 

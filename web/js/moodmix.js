@@ -1,25 +1,25 @@
-/* Mood Mix (erster Reiter im Playlisten-Overlay): Stimmung, Energie und optional Stil wählen, Vorschau ansehen, dann Warteschlange ersetzen und spielen
-   (Tag-Dienst GET /moodmix). Erstellen ändert die Warteschlange noch nicht; erst „Mix abspielen“.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach check.js, history.js und discover.js geladen. */
+/* Mood Mix (first tab in the playlists overlay): pick mood, energy and optionally style, view the preview, then replace the queue and play
+   (tag service GET /moodmix). Creating does not change the queue yet; only "Play mix" does.
+   Classic script, shared global scope; loaded after check.js, history.js and discover.js. */
 var mixBody    = document.getElementById('mixBody');
 var MIX_CORE   = ['relaxed', 'dreamy', 'uplifting', 'melancholic', 'dark', 'reflective', 'happy', 'romantic'];
 var MIX_MORE   = ['calm', 'atmospheric', 'emotional', 'epic', 'intense', 'aggressive', 'sensual', 'sad'];
 var MIX_DISC   = [[0, T('mix.disc.favorites')], [0.5, T('mix.disc.balanced')], [1, T('mix.disc.hidden')]];
 var mixCrit    = {moods: [], emin: 1, emax: 5, bmin: 0, bmax: 0, ymin: 0, ymax: 0, styles: [], match: 'any', genres: [], n: 50, disc: 0.5, maxd: 20};
-var MIX_MAXD   = 20;                           /* Vorgabe Höchstlänge je Titel in Minuten (DJ-Mixe draußen); 0 = keine Grenze */
-var MIX_GENRES = 10;                           /* so viele Genre-Chips, der Rest hinter „mehr“ */
-var MIX_BPM    = [60, 180, 5];                 /* Tempo-Regler: Ende links/rechts = offen (0) */
+var MIX_MAXD   = 20;                           /* default maximum length per track in minutes (keeps DJ mixes out); 0 = no limit */
+var MIX_GENRES = 10;                           /* this many genre chips, the rest behind "more" */
+var MIX_BPM    = [60, 180, 5];                 /* tempo slider: left/right end = open (0) */
 var mixState   = {view: 'pick', fine: false, more: false, styles: null, genres: null, genresMore: false, result: null};
 var mixCountSeq = 0, mixCountTimer = null;
 
-try { var saved = JSON.parse(localStorage.getItem('moodMix') || 'null'); if (saved && saved.moods) mixCrit = saved; } catch (e) { /* ohne Speicher */ }
+try { var saved = JSON.parse(localStorage.getItem('moodMix') || 'null'); if (saved && saved.moods) mixCrit = saved; } catch (e) { /* without storage */ }
 if (!mixCrit.bmin) mixCrit.bmin = 0;
 if (!mixCrit.bmax) mixCrit.bmax = 0;
 if (!mixCrit.ymin) mixCrit.ymin = 0;
 if (!mixCrit.ymax) mixCrit.ymax = 0;
 if (!mixCrit.genres) mixCrit.genres = [];
 if (typeof mixCrit.maxd !== 'number') mixCrit.maxd = MIX_MAXD;
-function mixSave() { try { localStorage.setItem('moodMix', JSON.stringify(mixCrit)); } catch (e) { /* egal */ } }
+function mixSave() { try { localStorage.setItem('moodMix', JSON.stringify(mixCrit)); } catch (e) { /* ignore */ } }
 
 function mixName(m) { var s = MOOD_NAMES[m] || m; return s.charAt(0).toUpperCase() + s.slice(1); }
 function mixQuery() {
@@ -39,7 +39,7 @@ function mixEnergyDots(e) {
   return s;
 }
 
-/* von außen: Reiter Mood Mix öffnen, optional mit einer Stimmung vorgewählt */
+/* from outside: open the Mood Mix tab, optionally with a mood preselected */
 function openMoodMix(mood) {
   closeAllOverlays();
   if (mood) { mixCrit.moods = [mood]; mixState.view = 'pick'; }
@@ -53,7 +53,7 @@ function mixRender() {
   mixPick();
 }
 
-/* ---------- Auswahl ---------- */
+/* ---------- Selection ---------- */
 
 function mixChip(label, on, onClick, cls) {
   var c = histEl('div', 'mxChip' + (on ? ' on' : '') + (cls ? ' ' + cls : ''), label);
@@ -67,7 +67,7 @@ function mixPick() {
   function toggle(m) {
     var i = mixCrit.moods.indexOf(m);
     if (i >= 0) mixCrit.moods.splice(i, 1); else mixCrit.moods.push(m);
-    mixCrit.styles = [];                                   /* Stile hängen an der Stimmung */
+    mixCrit.styles = [];                                   /* styles depend on the mood */
     mixRender();
   }
   var more = mixState.more || MIX_MORE.some(function(m){ return mixCrit.moods.indexOf(m) >= 0; });
@@ -77,14 +77,14 @@ function mixPick() {
   if (!more) chips.appendChild(mixChip(T('mix.more'), false, function(){ mixState.more = true; mixRender(); }, 'mxMore'));
   mixBody.appendChild(chips);
 
-  /* Energie als Bereich 1–5 */
+  /* energy as range 1–5 */
   var enLabel = histEl('div', 'mxLabel', T('mix.energy'));
   mixBody.appendChild(enLabel);
   mixDual(mixBody, 1, 5, 1, mixCrit.emin, mixCrit.emax, T('mix.energy.low'), T('mix.energy.high'), function(a, b){
     return a === 1 && b === 5 ? T('mix.all') : a === b ? String(a) : a + '–' + b;
   }, function(a, b){ mixCrit.emin = a; mixCrit.emax = b; mixCount(); }, enLabel);
 
-  /* Genre (Genre-Tag des Albums); erscheint, sobald der Tag-Dienst Genres meldet */
+  /* genre (album's genre tag); appears as soon as the tag service reports genres */
   var genreWrap = histEl('div', 'mxGenre');
   genreWrap.appendChild(histEl('div', 'mxLabel', T('mix.genre')));
   var genreBox = histEl('div', 'mxChips mxGenres');
@@ -93,7 +93,7 @@ function mixPick() {
   mixState.genreWrap = genreWrap; mixState.genreBox = genreBox;
   mixGenres();
 
-  /* Feinabstimmung */
+  /* fine-tuning */
   var fold = histEl('div', 'hFold mxFold' + (mixState.fine ? ' open' : ''));
   var fineLabel = histEl('span', '', '');
   fold.appendChild(fineLabel);
@@ -116,7 +116,7 @@ function mixPick() {
   mixState.styleBox = styleBox; mixState.matchBox = matchBox;
   mixStyles();
 
-  /* Tempo (BPM) nur, wenn es Audio-Analysen gibt (tools/essentia); bis die Trefferzahl da ist, verborgen */
+  /* tempo (BPM) only if audio analyses exist (tools/essentia); hidden until the hit count arrives */
   var tempo = histEl('div', 'mxTempo');
   tempo.style.display = mixState.hasBpm || mixCrit.bmin || mixCrit.bmax ? '' : 'none';
   mixState.tempo = tempo;
@@ -131,7 +131,7 @@ function mixPick() {
   }, function(a, b){ mixCrit.bmin = a === bl ? 0 : a; mixCrit.bmax = b === bh ? 0 : b; mixCount(); }, tempoLabel);
   fine.appendChild(tempo);
 
-  /* Jahre (Jahr des Albums); Regler von der Spanne der Sammlung, sobald die Trefferzahl sie meldet */
+  /* years (album's year); slider from the collection's range once the hit count reports it */
   var years = histEl('div', 'mxYears');
   mixState.years = years;
   fine.appendChild(years);
@@ -157,8 +157,8 @@ function mixPick() {
   mixCount();
 }
 
-/* Bereich mit zwei Reglern übereinander (Energie, Tempo); fmt(a, b) -> Anzeige, set(a, b) bei jeder Änderung;
-   label: Beschriftung, daneben „alle“ (setzt den Bereich zurück), solange ein Bereich gewählt ist */
+/* Range with two stacked sliders (energy, tempo); fmt(a, b) -> display, set(a, b) on every change;
+   label: caption, next to it "all" (resets the range) while a range is selected */
 function mixDual(parent, min, max, step, a0, b0, left, right, fmt, set, label) {
   var en = histEl('div', 'mxEnergy');
   var track = histEl('div', 'mxTrack'), fill = histEl('div', 'mxFill');
@@ -200,7 +200,7 @@ function mixDual(parent, min, max, step, a0, b0, left, right, fmt, set, label) {
   paint();
 }
 
-/* Jahresregler: Ende links/rechts = offen (0); Spanne aus der Sammlung (auf Jahrzehnte gerundet), gewählte Grenzen immer darin */
+/* year slider: left/right end = open (0); range from the collection (rounded to decades), selected bounds always inside */
 function mixYearSpan() {
   var sp = mixState.yearSpan;
   if (!sp) return null;
@@ -230,7 +230,7 @@ function mixYearsPaint() {
   box.appendChild(histEl('div', 'mxHint', T('mix.years.hint')));
 }
 
-/* Auswahl aus festen Werten (Länge, Entdeckungsgrad, Stil-Verknüpfung) */
+/* choice from fixed values (length, discovery level, style combination) */
 function mixSeg(opts, cur, set) {
   var seg = histEl('div', 'mxSeg');
   opts.forEach(function(o){
@@ -245,7 +245,7 @@ function mixSeg(opts, cur, set) {
   return seg;
 }
 
-/* Stil-Chips: die häufigsten Stile unter den Treffern der gewählten Stimmung */
+/* style chips: the most frequent styles among the hits for the selected mood */
 function mixStyles() {
   var box = mixState.styleBox, mb = mixState.matchBox;
   if (!box) return;
@@ -267,7 +267,7 @@ function mixStyles() {
   }
 }
 
-/* Genre-Chips: Genres unter den Treffern der gewählten Stimmung, die häufigsten zuerst */
+/* genre chips: genres among the hits for the selected mood, most frequent first */
 function mixGenres() {
   var box = mixState.genreBox;
   if (!box) return;
@@ -287,7 +287,7 @@ function mixGenres() {
   if (shown.length < list.length) box.appendChild(mixChip(T('mix.more'), false, function(){ mixState.genresMore = true; mixGenres(); }, 'mxMore mxSmall'));
 }
 
-/* Feinabstimmung zugeklappt, aber abweichend von den Vorgaben: „(aktiv)“ hinter der Überschrift */
+/* fine-tuning collapsed but differing from the defaults: "(active)" after the heading */
 function mixFineActive() {
   return mixCrit.styles.length > 0 || !!mixCrit.bmin || !!mixCrit.bmax || !!mixCrit.ymin || !!mixCrit.ymax || mixCrit.n !== 50 || mixCrit.disc !== 0.5 || mixCrit.maxd !== MIX_MAXD;
 }
@@ -295,7 +295,7 @@ function mixFineLabel() {
   if (mixState.fineLabel) mixState.fineLabel.textContent = T('mix.fine') + (mixFineActive() ? ' ' + T('mix.fine.active') : '');
 }
 
-/* Trefferzahl live (kurz verzögert, damit der Regler nicht für jeden Schritt fragt) */
+/* live hit count (slightly delayed, so the slider does not query on every step) */
 function mixCount() {
   mixSave();
   mixFineLabel();
@@ -342,7 +342,7 @@ function mixBuild() {
   });
 }
 
-/* ---------- Vorschau ---------- */
+/* ---------- Preview ---------- */
 
 function mixSummary() {
   var parts = mixCrit.moods.map(mixName);
@@ -351,13 +351,13 @@ function mixSummary() {
   if (mixCrit.bmin || mixCrit.bmax) parts.push(!mixCrit.bmax ? T('mix.sum.bpmMin', {a: mixCrit.bmin}) : !mixCrit.bmin ? T('mix.sum.bpmMax', {b: mixCrit.bmax}) :
     T('mix.sum.bpmRange', {a: mixCrit.bmin, b: mixCrit.bmax}));
   if (mixCrit.ymin || mixCrit.ymax) parts.push(mixYearText(mixCrit.ymin, mixCrit.ymax));
-  var gs = mixCrit.genres;                     /* ohne Auswahl: die Genres im Ergebnis */
+  var gs = mixCrit.genres;                     /* without selection: the genres in the result */
   if (!gs.length && mixState.result) mixState.result.tracks.forEach(function(x){ var g = String(x.ge || '').toLowerCase(); if (g && gs.indexOf(g) < 0) gs = gs.concat([g]); });
   if (gs.length) parts.push(gs.length === 1 ? mixGenreName(gs[0]) : T('mix.sum.genres', {n: gs.length}));
   return parts.join(' · ');
 }
 
-/* gewählte Genres stehen klein geschrieben in mixCrit; angezeigt wird die Schreibweise der Bibliothek */
+/* selected genres are stored lowercase in mixCrit; the library's spelling is displayed */
 function mixGenreName(g) {
   var all = (mixState.genres || []).concat((mixState.result && mixState.result.tracks || []).map(function(x){ return [x.ge || '']; }));
   for (var i = 0; i < all.length; i++) if (String(all[i][0]).toLowerCase() === g) return all[i][0];
@@ -378,7 +378,7 @@ function mixPreview() {
   head.appendChild(edit);
   mixBody.appendChild(head);
 
-  var wide = mixCrit.bmin || mixCrit.bmax;              /* Energie und Tempo gelockert, sonst nur Energie */
+  var wide = mixCrit.bmin || mixCrit.bmax;              /* energy and tempo relaxed, otherwise energy only */
   if (r.level) mixBody.appendChild(histEl('div', 'mxHits warn', r.level === 1
     ? (wide ? T('mix.level1.tempo') : T('mix.level1'))
     : (wide ? T('mix.level2.tempo') : T('mix.level2'))));
@@ -393,7 +393,7 @@ function mixPreview() {
   reroll.addEventListener('click', function(ev){ ev.stopPropagation(); reroll.classList.add('spin'); mixBuild(); });
   var add = queueAddButton(function(){ return mixItems(tracks); }, tracks.length);
   mixBody.appendChild(playRow(T('mix.play'), T('mix.tracks', {n: tracks.length}) + (total ? ' · ' + mixDuration(total) : ''),
-    function(){ mixPlay(tracks, true); }, [reroll, add]));   /* Zeile wie auf Album- und Künstlerseite (browse.js) */
+    function(){ mixPlay(tracks, true); }, [reroll, add]));   /* row as on the album and artist page (browse.js) */
   mixBody.appendChild(listHint(T('mix.hint')));
 
   var list = histEl('div', 'mxList');
@@ -422,13 +422,13 @@ function mixPreview() {
       mixBody.scrollTop = keep;
     });
     row.appendChild(del);
-    row.addEventListener('click', function(){ mixPlay(tracks.slice(tracks.indexOf(x)), true); });   /* ab diesem Titel */
+    row.addEventListener('click', function(){ mixPlay(tracks.slice(tracks.indexOf(x)), true); });   /* from this track */
     list.appendChild(row);
   });
   mixBody.appendChild(list);
 }
 
-/* replace: Warteschlange ersetzen und ab Titel 1 spielen; sonst hinten anhängen */
+/* replace: replace the queue and play from track 1; otherwise append at the end */
 function mixItems(tracks) {
   return tracks.map(function(x){
     return {uri: 'music-library/' + x.f, service: 'mpd', type: 'song', title: x.ti, artist: x.ar, album: x.al};
@@ -447,10 +447,10 @@ function mixPlay(tracks, replace) {
   closeAllOverlays();
 }
 
-/* Reiter nur zeigen, wenn der Tag-Dienst läuft; beim ersten Mal (noch nichts gewählt) mit dem Mix beginnen */
+/* show the tab only if the tag service is running; the first time (nothing selected yet) start with the mix */
 whenTags(function(){
   document.getElementById('plTab0').style.display = '';
   var stored = null;
-  try { stored = localStorage.getItem('plTab'); } catch (e) { /* egal */ }
+  try { stored = localStorage.getItem('plTab'); } catch (e) { /* ignore */ }
   if (stored === null || stored === '0') plTabActive = 0;
 });

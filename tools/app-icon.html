@@ -1,27 +1,27 @@
 <!DOCTYPE html>
-<!-- Vorlage für die App-Icons in web/icons/ (Home-Bildschirm, Dock, Favicon). Im Browser öffnen,
-     die Bilder per Rechtsklick sichern und unter den angezeigten Namen in web/icons/ ablegen. -->
+<!-- Template for the app icons in web/icons/ (home screen, dock, favicon). Open in the browser,
+     save the images via right-click and put them in web/icons/ under the names shown. -->
 <html><head><meta charset="utf-8"><title>Xplorio-Icon</title>
 <style>body { background:#222; color:#ddd; font:14px sans-serif; display:flex; flex-wrap:wrap; gap:24px; align-items:flex-end; padding:24px; }
 figure { margin:0; text-align:center; } canvas { display:block; margin-bottom:6px; }</style></head><body>
 <script>
-/* App-Icon (Home-Bildschirm, Favicon): Schallplatte mit Kompassnadeln, die ein X bilden – Xplorio, der Entdecker */
+/* app icon (home screen, favicon): a record with compass needles forming an X – Xplorio, the explorer */
 function appIconDraw(c) {
   var S = c.width, x = c.getContext('2d'), m = S / 2;
-  var bg = x.createLinearGradient(0, 0, S, S);           /* Nachtblau bis Pflaume wie die Beispiel-Cover */
+  var bg = x.createLinearGradient(0, 0, S, S);           /* night blue to plum like the sample covers */
   bg.addColorStop(0, '#1b2140'); bg.addColorStop(1, '#4a2a4f');
   x.fillStyle = bg; x.fillRect(0, 0, S, S);
   var glow = x.createRadialGradient(m, m, S * 0.05, m, m, S * 0.62);
   glow.addColorStop(0, 'rgba(232,120,92,.35)'); glow.addColorStop(1, 'rgba(232,120,92,0)');
   x.fillStyle = glow; x.fillRect(0, 0, S, S);
-  /* Platte mit Rillen */
+  /* record with grooves */
   x.fillStyle = '#121427';
   x.beginPath(); x.arc(m, m, S * 0.39, 0, Math.PI * 2); x.fill();
   x.strokeStyle = 'rgba(255,236,214,.12)'; x.lineWidth = Math.max(1, S / 180);
   for (var r = 0.17; r < 0.38; r += 0.035) { x.beginPath(); x.arc(m, m, S * r, 0, Math.PI * 2); x.stroke(); }
-  x.strokeStyle = 'rgba(255,236,214,.35)'; x.lineWidth = S / 90;    /* Kompassring */
+  x.strokeStyle = 'rgba(255,236,214,.35)'; x.lineWidth = S / 90;    /* compass ring */
   x.beginPath(); x.arc(m, m, S * 0.39, 0, Math.PI * 2); x.stroke();
-  /* zwei Nadeln über Kreuz: lange in Koralle (Nordost), kurze in Creme (Nordwest) */
+  /* two crossed needles: long one in coral (northeast), short one in cream (northwest) */
   function needle(ang, len, wid, col1, col2) {
     x.save(); x.translate(m, m); x.rotate(ang);
     x.fillStyle = col1;
@@ -32,7 +32,7 @@ function appIconDraw(c) {
   }
   needle(-Math.PI / 4, 0.35, 0.06, '#fbd9b4', 'rgba(251,217,180,.6)');
   needle(Math.PI / 4, 0.36, 0.065, '#ee7a5c', '#9c4a45');
-  x.fillStyle = '#fbd9b4';                                /* Mitte (Etikett) */
+  x.fillStyle = '#fbd9b4';                                /* center (label) */
   x.beginPath(); x.arc(m, m, S * 0.045, 0, Math.PI * 2); x.fill();
   x.fillStyle = '#121427';
   x.beginPath(); x.arc(m, m, S * 0.015, 0, Math.PI * 2); x.fill();

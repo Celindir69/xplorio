@@ -1,15 +1,15 @@
-/* Geburtstage der Alben (tags/releasedates.js): Treffer bei MusicBrainz, Nachschlagen, heute/Woche/Monat, runde Jahre */
+/* album birthdays (tags/releasedates.js): MusicBrainz hits, lookup, today/week/month, round years */
 var assert = require('assert');
 var fs = require('fs'), os = require('os'), path = require('path');
 var rd = require('../tags/releasedates.js'), albums = require('../tags/albums.js');
 var n = 0, pending = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 
-t('volles Date-Tag je Album, nur wenn es zum Jahr passt', function(){
+t('full Date tag per album, only if it matches the year', function(){
   function s(file, date) { return {file: file, artist: 'A', albumartist: '', album: path.basename(path.dirname(file)), title: file, date: date, genre: ''}; }
   var list = albums.fromSongs([s('X/Eins/1.flac', '1981-05-12'), s('X/Eins/2.flac', '1981'), s('X/Zwei/1.flac', '2011-01-01'), s('X/Zwei/2.flac', '1994'), s('X/Zwei/3.flac', '1994')]);
   assert.strictEqual(list[0].rd, '1981-05-12');
-  assert.strictEqual(list[1].rd, undefined);          /* Remaster-Datum, Album ist von 1994 */
+  assert.strictEqual(list[1].rd, undefined);          /* remaster date, album is from 1994 */
 });
 
 var mb = {'release-groups': [
@@ -17,14 +17,14 @@ var mb = {'release-groups': [
   {score: 98, title: 'Halbschatten', 'first-release-date': '1981-10', 'artist-credit': [{name: 'Lumen Drift'}]},
   {score: 95, title: 'Halbschatten', 'first-release-date': '1981-10-14', 'artist-credit': [{name: 'Lumen Drift'}, {name: ' & Gäste'}]}
 ]};
-t('MusicBrainz: Titel und Künstler passend, Datum vollständig, nicht jünger als das Album', function(){
+t('MusicBrainz: title and artist matching, date complete, not later than the album', function(){
   assert.strictEqual(rd.pickDate(mb, 'Halbschatten', 'Lumen Drift', 1981), '1981-10-14');
   assert.strictEqual(rd.pickDate(mb, 'Halbschatten', 'Lumen Drift', 1975), '');
   assert.strictEqual(rd.pickDate(mb, 'Halbschatten', 'Polar Echo', 1981), '');
   assert.strictEqual(rd.pickDate({}, 'X', 'Y', 0), '');
 });
 
-t('Bibliotheks-Check: Date-Tag gegen MusicBrainz (Jahr, volles Datum, fehlend)', function(){
+t('library check: Date tag against MusicBrainz (year, full date, missing)', function(){
   var L = [{dir: 'A/1', al: 'Eins', ar: 'A', y: 1981}, {dir: 'A/2', al: 'Zwei', ar: 'A', y: 1994}, {dir: 'A/3', al: 'Drei', ar: 'A', y: 1990, rd: '1990-02-03'},
            {dir: 'A/4', al: 'Vier', ar: 'A'}, {dir: 'A/5', al: 'Fünf', ar: 'A', y: 2000}, {dir: 'A/6', al: 'Sechs', ar: 'A', y: 2001, rd: '2001-05-05'}];
   var mb = {'A/1': '1981-10-14', 'A/2': '1989-01-02', 'A/3': '1990-03-01', 'A/4': '1977-07-07', 'A/6': '2001-05-05'};
@@ -43,7 +43,7 @@ pending++;
     getJson: function(u, cb){ urls.push(decodeURIComponent(u)); cb(null, /Halbschatten/.test(decodeURIComponent(u)) ? mb : {}); }});
   c.step(function(){ c.step(function(){ c.step(function(){
     c.stop();
-    t('Nachschlagen: nur Alben ohne Date-Tag, ohne Sampler, einmal; gespeichert', function(){
+    t('lookup: only albums without Date tag, no compilations, once; saved', function(){
       assert.strictEqual(urls.length, 2);
       assert.ok(/releasegroup:"Halbschatten" AND artist:"Lumen Drift"/.test(urls[0]), urls[0]);
       assert.strictEqual(c.dateOf(list[0]), '1981-10-14');
@@ -52,23 +52,23 @@ pending++;
       var c2 = new rd.Collector({file: file, list: function(){ return list; }});
       assert.strictEqual(c2.dateOf(list[0]), '1981-10-14');
       assert.strictEqual(c2.next(Math.floor(Date.now() / 1000)), null);
-      assert.strictEqual(c2.next(Math.floor(Date.now() / 1000) + 91 * 86400).dir, 'L/N');   /* nicht Gefundenes später erneut */
+      assert.strictEqual(c2.next(Math.floor(Date.now() / 1000) + 91 * 86400).dir, 'L/N');   /* not found: retried later */
       assert.deepStrictEqual(c2.status(), {albums: 4, dated: 2, fetched: 0, running: false});
     });
-    t('Geburtstage: heute, diese Woche (Mo–So), dieser Monat; Jubiläen und runde zuerst', function(){
+    t('birthdays: today, this week (Mon–Sun), this month; jubilees and round ones first', function(){
       var L = [
         {dir: 'a', al: 'A', ar: 'X', d: '1981-10-09'}, {dir: 'b', al: 'B', ar: 'X', d: '2001-10-09'},
         {dir: 'c', al: 'C', ar: 'X', d: '1990-10-06'}, {dir: 'd', al: 'D', ar: 'X', d: '1976-10-11'}, {dir: 'e', al: 'E', ar: 'X', d: '1975-10-05'},
         {dir: 'f', al: 'F', ar: 'X', d: '1999-10-30'}, {dir: 'g', al: 'G', ar: 'X', d: '1999-11-09'}, {dir: 'h', al: 'H', ar: 'X', d: '2026-10-09'}, {dir: 'i', al: 'I', ar: 'X', d: ''}
       ];
-      var b = rd.birthdays(L, function(a){ return a.d; }, '2026-10-09');      /* Freitag; Woche 5.–11.10. */
+      var b = rd.birthdays(L, function(a){ return a.d; }, '2026-10-09');      /* Friday; week 5–11 Oct */
       function s(l) { return l.map(function(x){ return x.al + x.years + x.mark; }); }
       assert.deepStrictEqual(s(b.today), ['B25jubilee', 'A45']);
       assert.deepStrictEqual(s(b.week), ['D50jubilee', 'E51', 'C36']);
       assert.deepStrictEqual(s(b.month), ['F27']);
-      assert.deepStrictEqual(rd.birthdays([{d: '1980-02-29'}], function(a){ return a.d; }, '2027-02-28').today.length, 1);   /* Schalttag */
+      assert.deepStrictEqual(rd.birthdays([{d: '1980-02-29'}], function(a){ return a.d; }, '2027-02-28').today.length, 1);   /* leap day */
       assert.deepStrictEqual(rd.birthdays(L, function(a){ return a.d; }, 'x'), {today: [], week: [], month: []});
     });
-    console.log(n + ' Prüfungen');
+    console.log(n + ' checks');
   }); }); });
 })();

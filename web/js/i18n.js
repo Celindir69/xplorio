@@ -1,20 +1,20 @@
-/* Mehrsprachigkeit: Texte kommen aus web/lang/<code>.js (z. B. de.js, en.js), im Code nur Schlüssel: T('search.none').
-   Sprache: ?lang=xx in der Adresse, sonst LANGUAGE in config(.local).js, sonst die Sprache der Volumio-Oberfläche,
-   sonst die erste passende Gerätesprache aus LANGUAGES, sonst Englisch. Fehlt ein Text in der gewählten Sprache, gilt der englische, dann der deutsche.
-   Neue Sprache: en.js kopieren, übersetzen, als web/lang/<code>.js ablegen und <code> in LANGUAGES eintragen.
-   Klassisches Skript, ES5; wird nach config.js geladen und lädt selbst die nötigen Sprachdateien nach. */
-var LANG_TEXTS = {};             /* Code -> {Schlüssel: Text} */
-var LANG_NAMES = {};             /* Code -> Name der Sprache in ihr selbst ("English") */
+/* Localization: texts come from web/lang/<code>.js (e.g. de.js, en.js), the code only uses keys: T('search.none').
+   Language: ?lang=xx in the URL, else LANGUAGE in config(.local).js, else the language of the Volumio UI,
+   else the first matching device language from LANGUAGES, else English. If a text is missing in the chosen language, English applies, then German.
+   New language: copy en.js, translate it, save as web/lang/<code>.js and add <code> to LANGUAGES.
+   Classic script, ES5; loaded after config.js and loads the needed language files itself. */
+var LANG_TEXTS = {};             /* code -> {key: text} */
+var LANG_NAMES = {};             /* code -> name of the language in itself ("English") */
 var LANG = 'en', LANG_LOCALE = 'en';
 
-/* von den Sprachdateien aufgerufen; locale: für Datum und Zahlen (z. B. 'de-DE'), sonst der Code */
+/* called by the language files; locale: for dates and numbers (e.g. 'de-DE'), else the code */
 function langRegister(code, name, texts, locale) {
   LANG_TEXTS[code] = texts;
   LANG_NAMES[code] = name;
   if (code === LANG && locale) LANG_LOCALE = locale;
 }
 
-/* gewünschte Sprache: Adresse, Einstellung, Gerät; nur Codes aus avail */
+/* desired language: URL, setting, device; only codes from avail */
 function langPick(avail, query, setting, device) {
   function find(c) {
     c = String(c || '').toLowerCase();
@@ -28,12 +28,12 @@ function langPick(avail, query, setting, device) {
   return hit || (avail.indexOf('en') >= 0 ? 'en' : avail[0] || 'de');
 }
 
-/* zuletzt von Volumio gemeldete Sprache (localStorage, da die Antwort erst nach dem Laden kommt) */
+/* language last reported by Volumio (localStorage, since the answer only arrives after loading) */
 function langStored() {
   try { return (typeof localStorage !== 'undefined' && localStorage.getItem('volumioLang')) || ''; } catch (e) { return ''; }
 }
 
-/* Text zum Schlüssel; {name} wird aus vars ersetzt. Ist der Eintrag {one, other}, wählt vars.n die Form */
+/* text for the key; {name} is replaced from vars. If the entry is {one, other}, vars.n picks the form */
 function T(key, vars) {
   var s;
   [LANG, 'en', 'de'].some(function(c){ var x = LANG_TEXTS[c]; return x && (s = x[key]) !== undefined; });
@@ -44,7 +44,7 @@ function T(key, vars) {
   });
 }
 
-/* Zahlen und Datum im Format der Sprache */
+/* numbers and dates in the language's format */
 function langNum(n) {
   try { return Number(n).toLocaleString(LANG_LOCALE); } catch (e) { return String(n); }
 }
@@ -53,7 +53,7 @@ function langDate(d, opts) {
   try { return d.toLocaleDateString(LANG_LOCALE, opts || {day: 'numeric', month: 'numeric', year: 'numeric'}); }
   catch (e) { return d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear(); }
 }
-/* Monats- und Wochentagsnamen (Montag zuerst); width: 'long', 'short' oder 'narrow' */
+/* month and weekday names (Monday first); width: 'long', 'short' or 'narrow' */
 function langMonths(width) {
   var out = [];
   for (var m = 0; m < 12; m++) out.push(langDate(new Date(2024, m, 15), {month: width || 'long'}));
@@ -61,12 +61,12 @@ function langMonths(width) {
 }
 function langWeekdays(width) {
   var out = [];
-  for (var d = 0; d < 7; d++) out.push(langDate(new Date(2024, 0, 1 + d), {weekday: width || 'long'}));   /* 1.1.2024 war ein Montag */
+  for (var d = 0; d < 7; d++) out.push(langDate(new Date(2024, 0, 1 + d), {weekday: width || 'long'}));   /* 1 Jan 2024 was a Monday */
   return out;
 }
 
-/* statische Texte im HTML: data-i18n (Inhalt), data-i18n-title, data-i18n-placeholder, data-i18n-aria (aria-label),
-   data-i18n-empty (data-empty, Platzhalter per CSS content:attr(data-empty)) */
+/* static texts in the HTML: data-i18n (content), data-i18n-title, data-i18n-placeholder, data-i18n-aria (aria-label),
+   data-i18n-empty (data-empty, placeholder via CSS content:attr(data-empty)) */
 function langApply(root) {
   root = root || document;
   [['data-i18n', 'textContent'], ['data-i18n-title', 'title'], ['data-i18n-placeholder', 'placeholder'], ['data-i18n-aria', 'aria-label'], ['data-i18n-empty', 'data-empty']].forEach(function(a){
@@ -84,21 +84,21 @@ if (typeof module !== 'undefined') {
   (function(){
     var cfg = window.APP_CONFIG || {};
     var avail = cfg.LANGUAGES || ['de', 'en', 'fr', 'es', 'it'];
-    var device = [langStored()].concat(navigator.languages || [navigator.language]);   /* Volumio vor dem Gerät */
+    var device = [langStored()].concat(navigator.languages || [navigator.language]);   /* Volumio before the device */
     LANG = LANG_LOCALE = langPick(avail, location.search, cfg.LANGUAGE, device);
-    /* von core.js gerufen, sobald Volumio seine Sprache meldet: merken und, falls sie die Wahl ändert, einmal neu laden */
+    /* called by core.js as soon as Volumio reports its language: remember it and, if it changes the choice, reload once */
     window.langFromVolumio = function(code) {
       code = String(code || '').toLowerCase();
       if (!code || code === langStored()) return;
       try { localStorage.setItem('volumioLang', code); } catch (e) {}
-      if (langStored() !== code) return;                /* Speicher gesperrt: nicht neu laden, sonst endlos */
+      if (langStored() !== code) return;                /* storage blocked: do not reload, else endless loop */
       var want = langPick(avail, location.search, cfg.LANGUAGE, [code].concat(device.slice(1)));
       var once = false;
       try { once = sessionStorage.getItem('langReload') === want; sessionStorage.setItem('langReload', want); } catch (e) {}
       if (want !== LANG && !once) location.reload();
     };
     document.documentElement.lang = LANG;
-    /* Englisch und Deutsch als Rückfall immer mitladen */
+    /* always load English and German as fallback */
     [LANG, 'en', 'de'].filter(function(c, i, a){ return a.indexOf(c) === i; }).forEach(function(c){
       document.write('<script src="web/lang/' + c + '.js?v=' + (window.XV || Date.now()) + '" onerror="void 0"><\/script>');
     });

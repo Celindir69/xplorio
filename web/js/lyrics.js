@@ -1,7 +1,7 @@
-/* Lyrics-Quelle (LRCLIB) und Darstellung der synchronisierten Zeilen
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Lyrics source (LRCLIB) and display of the synchronized lines
+   Classic script, shared global scope; load order see xplorio.html. */
 /* ===================================================================
-   HIER DEINE VIERTE INFO EINSETZEN:
+   INSERT YOUR FOURTH INFO HERE:
      var EXTRA_TITLE = ...
      function extraUrl(artist, title) { ... }
      function parseSyncedLyrics(text) { ... }
@@ -111,12 +111,12 @@ function askExtra(artist, title, isRadio) {
 
 
 /* ===================================================================
-   HIER DEINE LYRICS-FUNKTIONEN EINSETZEN:
-     /* Zustand der Anzeige: aktive Zeile, Pause nach Wischen, laufende Animation */
+   INSERT YOUR LYRICS FUNCTIONS HERE:
+     /* display state: active line, pause after swiping, running animation */
 var lyrActive = -2, lyrUserUntil = 0, lyrPending = false, lyrAnim = 0, lyrLastH = 0;
 var LYR_PAUSE_MS = 4000;
 
-/* ---------- Versatz je Titel (ms, positiv = Text kommt später); gespeichert im Tag-Dienst, sonst im Browser ---------- */
+/* ---------- Offset per track (ms, positive = text comes later); stored in the tag service, else in the browser ---------- */
 var lyrOffset = 0, lyrKey = '', lyrSyncTimer = null;
 
 function lyrKeyOf(artist, title) {
@@ -135,16 +135,16 @@ function lyrLocal(key, ms) {
 
 function lyrSyncShow(on) { document.documentElement.classList.toggle('lyrSynced', !!on); lyrShiftPlace(); }
 
-/* Bühnenansicht: − und + zwischen Anfang und Mitte der Lyrics, links von den Knöpfen oben rechts */
+/* stage view: − and + between the start and middle of the lyrics, left of the buttons at the top right */
 function lyrShiftPlace() {
   var bar = document.getElementById('lyrShiftBar'), top = document.getElementById('topBar'), right = document.getElementById('topRight');
   var body = document.querySelector('#overlayLyrics .overlayBody');
   if (!bar || !body || !document.documentElement.classList.contains('stage')) return;
   var t = top.getBoundingClientRect(), l = body.getBoundingClientRect(), r = right.getBoundingClientRect();
   var w = bar.offsetWidth, start = l.left + (parseFloat(getComputedStyle(body).paddingLeft) || 0) - t.left;
-  var mid = Math.min((l.left + l.right) / 2, r.left - 12 - w / 2) - t.left;       /* Mitte der Lyrics, notfalls weiter links */
+  var mid = Math.min((l.left + l.right) / 2, r.left - 12 - w / 2) - t.left;       /* middle of the lyrics, further left if needed */
   var x = Math.max(start, ((start + w / 2) + mid) / 2 - w / 2);
-  x = Math.min(x, r.left - t.left - 16 - w);                                       /* nie unter die Knöpfe rechts (z. B. mit Fernbedienung) */
+  x = Math.min(x, r.left - t.left - 16 - w);                                       /* never under the buttons on the right (e.g. with remote control) */
   bar.style.left = Math.round(Math.max(0, x)) + 'px';
 }
 window.addEventListener('resize', lyrShiftPlace);
@@ -158,12 +158,12 @@ function lyrPaintOffset() {
 
 function lyrSetOffset(ms, save) {
   lyrOffset = ms;
-  lyrActive = -2;                               /* aktive Zeile neu bestimmen */
+  lyrActive = -2;                               /* recompute the active line */
   lyrPaintOffset();
   updateSyncedLyrics();
   if (!save || !lyrKey) return;
   var key = lyrKey;
-  clearTimeout(lyrSyncTimer);                   /* mehrfaches Tippen: einmal speichern */
+  clearTimeout(lyrSyncTimer);                   /* repeated taps: save once */
   lyrSyncTimer = setTimeout(function(){
     lyrLocal(key, ms);
     if (lyrTags()) fetch(lyrTags() + '/lyricsoffset', {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'},
@@ -220,7 +220,7 @@ function renderSyncedLyrics(lines, key) {
   updateSyncedLyrics();
 }
 
-/* sanft scrollen (scrollTo mit Optionen gibt es in alten Browsern nicht) */
+/* smooth scrolling (old browsers lack scrollTo with options) */
 function lyrScrollTo(top, animate) {
   cancelAnimationFrame(lyrAnim);
   var from = area.scrollTop;
@@ -237,7 +237,7 @@ function lyrScrollTo(top, animate) {
 
 function lyrCenter(el, animate) {
   var h = area.clientHeight;
-  body.style.paddingBottom = (h / 2) + 'px';   /* auch die letzten Zeilen können bis zur Mitte wandern; oben bewusst kein Platz: die ersten Zeilen laufen erst von oben nach unten, dann wandert der Text */
+  body.style.paddingBottom = (h / 2) + 'px';   /* the last lines can also move up to the middle; deliberately no space at the top: the first lines move from top to bottom first, then the text scrolls */
   var y = el.getBoundingClientRect().top - area.getBoundingClientRect().top + area.scrollTop;
   lyrScrollTo(y - h / 2 + el.offsetHeight / 2, animate);
 }
@@ -257,7 +257,7 @@ function updateSyncedLyrics() {
   }
 
   var changed = active !== lyrActive;
-  /* nichts Neues: nur prüfen, ob das Overlay gerade aufging (Höhe), sonst nichts anfassen */
+  /* nothing new: only check whether the overlay just opened (height), otherwise touch nothing */
   if (!changed && !lyrPending && area.clientHeight === lyrLastH) return;
   var elements = body.querySelectorAll('.lyric-line');
 
@@ -277,17 +277,17 @@ function updateSyncedLyrics() {
   if (active < 0 || !elements[active]) return;
 
   var h = area.clientHeight;
-  if (!h) return;                               /* Overlay nicht sichtbar */
-  var resized = h !== lyrLastH;                 /* Overlay geöffnet oder Fenster geändert: sofort mittig */
+  if (!h) return;                               /* overlay not visible */
+  var resized = h !== lyrLastH;                 /* overlay opened or window resized: center immediately */
   lyrLastH = h;
 
-  var paused = Date.now() < lyrUserUntil;       /* Nutzer scrollt selbst */
+  var paused = Date.now() < lyrUserUntil;       /* user is scrolling */
   if (resized) { lyrCenter(elements[active], false); lyrPending = false; }
   else if (!paused && (changed || lyrPending)) { lyrCenter(elements[active], true); lyrPending = false; }
   else if (paused && changed) lyrPending = true;
 }
 
-/* Eigenes Scrollen: automatisches Mitlaufen pausiert kurz, danach springt die Ansicht zur aktuellen Zeile zurück */
+/* Own scrolling: auto-follow pauses briefly, then the view jumps back to the current line */
 function lyrUserTouched() {
   cancelAnimationFrame(lyrAnim);
   lyrUserUntil = Date.now() + LYR_PAUSE_MS;
@@ -297,13 +297,13 @@ function lyrUserTouched() {
   area.addEventListener(ev, lyrUserTouched, { passive: true });
 });
 
-/* Tippen auf eine Zeile springt im Song an diese Stelle */
+/* tapping a line seeks the song to that position */
 body.addEventListener('click', function(e) {
   var el = e.target;
   while (el && el !== body && !(el.classList && el.classList.contains('lyric-line'))) el = el.parentNode;
   if (!el || el === body) return;
   var line = lyricLines[Number(el.dataset.index)];
-  if (!line || !curDur) return;                 /* Webradio: kein Springen */
+  if (!line || !curDur) return;                 /* web radio: no seeking */
   lyrUserUntil = 0; lyrPending = true;
   seekToMs(Math.max(0, line.time + lyrOffset));
 });

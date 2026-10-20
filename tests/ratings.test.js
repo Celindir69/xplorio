@@ -1,4 +1,4 @@
-/* Bewertungen (tags/ratings.js) */
+/* ratings (tags/ratings.js) */
 var assert = require('assert');
 var fs = require('fs'), os = require('os'), path = require('path');
 var r = require('../tags/ratings.js');
@@ -6,7 +6,7 @@ var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ratings-')), file = path.join(dir, 'ratings.json');
 
-t('Schlüssel: Datei, Albumordner (auch bei CD1), Streamingdienst, Künstler normiert', function(){
+t('keys: file, album folder (also with CD1), streaming service, normalized artist', function(){
   assert.strictEqual(r.trackKey('music-library/USB/A/B/01.flac'), 'USB/A/B/01.flac');
   assert.strictEqual(r.trackKey('mnt/USB/A/B/01.flac'), 'USB/A/B/01.flac');
   assert.strictEqual(r.albumKey('/mnt/NAS/A/B/CD2/03.flac'), 'NAS/A/B');
@@ -14,7 +14,7 @@ t('Schlüssel: Datei, Albumordner (auch bei CD1), Streamingdienst, Künstler nor
   assert.strictEqual(r.artistKey('The Beatles'), r.artistKey('beatles'));
 });
 
-t('setzen, lesen, löschen; Datei bleibt erhalten', function(){
+t('set, read, delete; file persists', function(){
   var s = new r.Store(file);
   assert.deepStrictEqual(s.get({artist: 'X', album: 'USB/X/Y/01.flac', tracks: ['USB/X/Y/01.flac']}), {artist: 0, album: 0, tracks: [0]});
   assert.strictEqual(s.set({kind: 'artist', name: 'Lumen Drift', v: 1}), 1);
@@ -27,7 +27,7 @@ t('setzen, lesen, löschen; Datei bleibt erhalten', function(){
   assert.strictEqual(new r.Store(file).get({album: 'USB/L/H/01.flac'}).album, 0);
 });
 
-t('ungültige Werte werden abgelehnt (Daumen hoch sind Volumio-Favoriten)', function(){
+t('invalid values are rejected (thumbs up are Volumio favorites)', function(){
   var s = new r.Store(file);
   assert.strictEqual(s.set({kind: 'track', uri: 'USB/a/b.flac', v: 1}), null);
   assert.strictEqual(s.set({kind: 'album', uri: 'USB/a/b.flac', v: 6}), null);
@@ -35,4 +35,4 @@ t('ungültige Werte werden abgelehnt (Daumen hoch sind Volumio-Favoriten)', func
   assert.strictEqual(s.set({kind: 'x', v: 1}), null);
 });
 
-console.log(n + ' Prüfungen');
+console.log(n + ' checks');

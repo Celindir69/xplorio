@@ -1,5 +1,5 @@
-/* Webradio: Cover zum laufenden Titel (iTunes, sonst Deezer) und Senderlogos (Adresse von Volumio, sonst radio-browser.info).
-   Beides wird einmal geladen und auf dem Player gespeichert (artistimg.Store). Node 8, nur ES5. */
+/* Web radio: cover for the current track (iTunes, else Deezer) and station logos (URL from Volumio, else radio-browser.info).
+   Both are loaded once and stored on the player (artistimg.Store). Node 8, ES5 only. */
 var coversearch = require('./coversearch.js');
 
 var ITUNES = process.env.ITUNES_URL       || 'https://itunes.apple.com';
@@ -8,7 +8,7 @@ var RADIOB = process.env.RADIOBROWSER_URL || 'https://all.api.radio-browser.info
 
 var key = coversearch.key;
 function similar(a, b) { a = key(a); b = key(b); return !!a && !!b && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0); }
-/* beste Übereinstimmung: gleicher Künstler vor ähnlichem, gleicher Titel vor ähnlichem */
+/* best match: same artist before similar, same title before similar */
 function best(list, artistOf, titleOf, artist, title) {
   var ka = key(artist), kt = key(title);
   return list.filter(function(r){ return similar(artistOf(r), artist) && similar(titleOf(r), title); })
@@ -23,7 +23,7 @@ function json(u, cb) {
   });
 }
 
-/* Bildformat am Inhalt erkennen; svg und Unbekanntes werden nicht angenommen */
+/* detect image format from content; svg and unknown formats are not accepted */
 function mime(b) {
   if (!b || b.length < 12) return '';
   if (b[0] === 0xff && b[1] === 0xd8) return 'image/jpeg';
@@ -33,18 +33,18 @@ function mime(b) {
   if (b[0] === 0 && b[1] === 0 && b[2] === 1 && b[3] === 0) return 'image/x-icon';
   return '';
 }
-/* Adressen kommen von Volumio bzw. radio-browser.info: nur öffentliche Server */
+/* URLs come from Volumio or radio-browser.info: public servers only */
 function loadImage(u, cb) {
   coversearch.fetchUrl(u, 4 * 1024 * 1024, function(e, r){ cb(e || !mime(r.body) ? null : r.body, !!e); }, {pub: !process.env.RADIO_ALLOW_LOCAL});
 }
 
-/* "Künstler - Titel" -> {artist, title}; null wenn kein Titel erkennbar */
+/* "artist - title" -> {artist, title}; null if no title can be recognized */
 function split(name) {
   var p = String(name || '').split('\n');
   return p.length === 2 && p[0].trim() && p[1].trim() ? {artist: p[0].trim(), title: p[1].trim()} : null;
 }
 
-/* Cover zu einem Titel: name = Künstler + "\n" + Titel. cb(Bild oder null, vorübergehend?) */
+/* cover for a track: name = artist + "\n" + title. cb(image or null, temporary?) */
 function songLookup(name, cb) {
   var s = split(name);
   if (!s) return cb(null);
@@ -69,7 +69,7 @@ function songLookup(name, cb) {
   }
 }
 
-/* Senderlogo: zuerst die Adresse aus Volumio (extra), sonst radio-browser.info nach dem Sendernamen */
+/* station logo: first the URL from Volumio (extra), else radio-browser.info by station name */
 function logoLookup(name, cb, extra) {
   if (extra && /^https?:\/\//.test(extra)) {
     return loadImage(extra, function(img){ if (img) cb(img); else search(); });

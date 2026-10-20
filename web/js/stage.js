@@ -1,11 +1,11 @@
-/* Display-Layout für große Bildschirme im Querformat (iPad, MacBook, Desktop), angelehnt an legacy/now_playing.html:
-   links Cover und Titel, darunter das Info-Karussell (blättert von selbst wie kioskTV.html), unten die Steuerung;
-   rechts immer die Lyrics. Umschalter oben rechts; jedes Gerät merkt sich seine Wahl.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; wird nach poll.js geladen. */
+/* Display layout for large landscape screens (iPad, MacBook, desktop), based on legacy/now_playing.html:
+   cover and title on the left, below them the info carousel (pages by itself like kioskTV.html), controls at the bottom;
+   lyrics always on the right. Toggle at the top right; each device remembers its choice.
+   Classic script, shared global scope; loaded after poll.js. */
 var STAGE_KEY = 'mxLayout';
 var STAGE_MQ = window.matchMedia('(orientation:landscape) and (min-width:900px) and (min-height:560px)');
-var STAGE_PAGE_MS = 25000;       /* Karussell: Seitenwechsel wie im Kiosk */
-var STAGE_IDLE_MS = 60000;       /* nach eigenem Wischen/Tippen so lange nicht selbst blättern */
+var STAGE_PAGE_MS = 25000;       /* carousel: page change as in the kiosk */
+var STAGE_IDLE_MS = 60000;       /* after own swiping/tapping, do not auto-page for this long */
 
 var btnStage = document.getElementById('btnStage');
 var topRight = document.getElementById('topRight');
@@ -15,12 +15,12 @@ var stageInfoTimer = null, stageInfoUserAt = 0;
 function stagePref() {
   try {
     var m = /[?&]layout=(stage|classic)\b/.exec(location.search);
-    if (m) localStorage.setItem(STAGE_KEY, m[1]);           /* z. B. xplorio.html?layout=stage für das iPad an der Anlage */
+    if (m) localStorage.setItem(STAGE_KEY, m[1]);           /* e.g. xplorio.html?layout=stage for the iPad next to the stereo */
     return localStorage.getItem(STAGE_KEY) === 'stage';
   } catch (e) { return false; }
 }
 
-/* Knöpfe Queue, Playlisten, Suche wandern in die Leiste oben rechts (und zurück) */
+/* queue, playlists and search buttons move to the bar at the top right (and back) */
 var STAGE_BTNS = ['btnQueue', 'btnPlaylists', 'btnSearch'];
 function stageMoveButtons(on) {
   var actions = document.getElementById('actions');
@@ -37,16 +37,16 @@ function stageApply() {
   stageOn = want;
   closeAllOverlays();
   var info = document.getElementById('overlayInfo');
-  if (want) document.getElementById('rightPane').insertBefore(info, document.getElementById('seekWrap'));   /* Karussell zwischen Titel und Steuerung */
+  if (want) document.getElementById('rightPane').insertBefore(info, document.getElementById('seekWrap'));   /* carousel between title and controls */
   else document.body.insertBefore(info, document.getElementById('overlayQueue'));
   stageMoveButtons(want);
   document.documentElement.classList.toggle('stage', want);
   btnStage.classList.toggle('on', want);
-  lyrLastH = 0;                                              /* Lyrics neu mittig ausrichten */
+  lyrLastH = 0;                                              /* re-center the lyrics */
   infoOverlayBody.scrollTop = 0;
   stageInfoSchedule();
   setTimeout(stagePlainSetup, 50);
-  lyrShiftPlace();                                           /* − und + über die Lyrics */
+  lyrShiftPlace();                                           /* − and + above the lyrics */
 }
 
 btnStage.addEventListener('click', function(){
@@ -54,9 +54,9 @@ btnStage.addEventListener('click', function(){
   stageApply();
 });
 if (STAGE_MQ.addEventListener) STAGE_MQ.addEventListener('change', stageApply);
-else if (STAGE_MQ.addListener) STAGE_MQ.addListener(stageApply);          /* ältere Safari-Versionen */
+else if (STAGE_MQ.addListener) STAGE_MQ.addListener(stageApply);          /* older Safari versions */
 
-/* ---------- Info-Karussell: blättert seitenweise durch den Text, dann zum nächsten Reiter ---------- */
+/* ---------- Info carousel: pages through the text, then to the next tab ---------- */
 function stageInfoSchedule() {
   clearTimeout(stageInfoTimer);
   if (stageOn) stageInfoTimer = setTimeout(stageInfoStep, STAGE_PAGE_MS);
@@ -78,7 +78,7 @@ function stageInfoStep() {
   stageInfoSchedule();
 }
 
-/* sanft scrollen, in ganzen Pixeln (scrollTo mit Optionen fehlt in alten Browsern) */
+/* smooth scrolling in whole pixels (old browsers lack scrollTo with options) */
 function stageScroll(el, top) {
   var from = el.scrollTop, t0 = Date.now(), dur = 600;
   top = Math.round(top);
@@ -94,7 +94,7 @@ function stageScroll(el, top) {
   infoOverlayBody.addEventListener(ev, function(){ stageInfoUserAt = Date.now(); }, {passive:true});
 });
 
-/* Punkte unter dem Karussell statt der Reiterleiste; Tippen springt zum Reiter */
+/* dots below the carousel instead of the tab bar; tapping jumps to the tab */
 var stageDots = document.createElement('div');
 stageDots.id = 'stageDots';
 document.getElementById('overlayInfo').appendChild(stageDots);
@@ -118,7 +118,7 @@ function stagePaintDots() {
 var stageBuildTabs = buildInfoTabs;
 buildInfoTabs = function(){ stageBuildTabs(); stagePaintDots(); };
 
-/* neuer Titel: Karussell von vorn */
+/* new track: carousel from the start */
 var stageShowInfo = showInfo;
 showInfo = function(list){
   stageShowInfo(list);
@@ -126,9 +126,9 @@ showInfo = function(list){
   stageInfoSchedule();
 };
 
-/* ---------- Lyrics ohne Zeitmarken: zu lange Texte etwas kleiner; passen sie dann nicht, scrollt man selbst
-   (kein automatisches Weiterblättern: sonst ist der Text gerade weg, wenn man ihn liest) ---------- */
-var STAGE_PLAIN_MIN = 0.72;      /* kleinste Schrift relativ zur normalen Größe */
+/* ---------- Lyrics without timestamps: overly long texts slightly smaller; if they still do not fit, the user scrolls
+   (no automatic paging: otherwise the text would vanish while reading it) ---------- */
+var STAGE_PLAIN_MIN = 0.72;      /* smallest font relative to the normal size */
 
 var stageShowLyrics = showLyrics;
 showLyrics = function(data){

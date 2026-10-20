@@ -1,4 +1,4 @@
-/* Bibliotheks-Check: Auswertung, Schreibweisen-Schlüssel, Lesen aus einem nachgebauten MPD, Ordner ohne Bild */
+/* library check: evaluation, spelling key, reading from a fake MPD, folders without image */
 var assert = require('assert'), net = require('net'), fs = require('fs'), path = require('path'), os = require('os');
 var lc = require('../tags/libcheck.js'), n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -15,29 +15,29 @@ var songs = [
   S('USB/D/Cafe/01.flac', {artist: 'Cafe Del Mar', album: 'C', track: '1'})
 ];
 var r = lc.analyze(songs, function(d){ return d !== 'USB/C/NDW'; });
-t('Zähler', function(){ assert.strictEqual(r.songs, 8); assert.strictEqual(r.albums, 5); });
-t('ohne Cover: nur der Ordner ohne Bild', function(){
+t('counters', function(){ assert.strictEqual(r.songs, 8); assert.strictEqual(r.albums, 5); });
+t('no cover: only the folder without image', function(){
   assert.deepStrictEqual(r.noCover.map(function(x){ return x.dir; }), ['USB/C/NDW']);
   assert.deepStrictEqual(r.noCover[0].files[0], {uri: 'USB/C/NDW/01.flac', title: 'Das Blech'});
 });
-t('Album-Interpret: Compilation ohne und mit uneinheitlichem Album-Interpreten', function(){
+t('album artist: compilation without and with inconsistent album artist', function(){
   assert.deepStrictEqual(r.albumArtist.map(function(x){ return x.dir; }), ['USB/C/Mix', 'USB/C/NDW']);
   var ndw = r.albumArtist[1];
   assert.strictEqual(ndw.missing, true); assert.deepStrictEqual(ndw.artists, ['SPLIFF', 'Nena']);
 });
-t('uneinheitlich: Albumname oder Jahr (gleiches Jahr in anderer Form zählt nicht)', function(){
+t('inconsistent: album name or year (same year in another format does not count)', function(){
   assert.deepStrictEqual(r.mixed.map(function(x){ return x.dir; }), ['USB/C/Mix']);
   assert.deepStrictEqual(r.mixed[0].albums, ['Mix', 'Mix 2']); assert.deepStrictEqual(r.mixed[0].years, ['2001', '2003']);
 });
-t('ohne Tracknummer', function(){
+t('no track number', function(){
   assert.deepStrictEqual(r.noTrack.map(function(x){ return [x.dir, x.missing]; }), [['USB/C/NDW', 1]]);
 });
-t('Schreibweisen: Groß/klein, The, Akzente', function(){
+t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
   assert.ok(g.indexOf('SPLIFF|Spliff') >= 0);
   assert.ok(g.indexOf('Cure|The Cure') >= 0);
   assert.ok(g.indexOf('Cafe Del Mar|Café del Mar') >= 0);
-  assert.ok(!g.some(function(x){ return /Various/.test(x); }));     /* "Various" und "Various Artists" sind verschieden */
+  assert.ok(!g.some(function(x){ return /Various/.test(x); }));     /* "Various" and "Various Artists" are different */
   assert.strictEqual(r.spelling.filter(function(x){ return x.variants[0].name === 'Spliff'; })[0].variants[0].count, 2);
 });
 t('artistKey', function(){
@@ -49,12 +49,12 @@ var root = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
 ['USB/A/Album1', 'USB/C/NDW'].forEach(function(d){ fs.mkdirSync(path.join(root, d), {recursive: true}); });
 fs.writeFileSync(path.join(root, 'USB/A/Album1/folder.JPG'), 'x');
 lc.dirsWithoutImage(songs.slice(0, 4), root, function(list){
-  t('Ordner ohne Bilddatei (asynchron)', function(){
+  t('folders without image file (asynchronous)', function(){
     assert.deepStrictEqual(list, [{dir: 'USB/C/NDW', file: 'USB/C/NDW/01.flac'}]);
   });
 });
 
-/* nachgebauter MPD: lsinfo je Ordner */
+/* fake MPD: lsinfo per folder */
 var tree = {
   '': 'directory: USB\nplaylist: x.m3u\n',
   'USB': 'directory: USB/A\ndirectory: USB/kaputt\n',
@@ -78,7 +78,7 @@ var srv = net.createServer(function(c){
 srv.listen(0, function(){
   var prog = [];
   lc.mpdWalk({port: srv.address().port}, function(err, list, dirs){
-    t('MPD lesen: alle Ordner, Titel mit Tags, kaputter Ordner übersprungen', function(){
+    t('read MPD: all folders, tracks with tags, broken folder skipped', function(){
       assert.ifError(err);
       assert.strictEqual(dirs, 4);
       assert.strictEqual(list.length, 2);
@@ -87,13 +87,13 @@ srv.listen(0, function(){
       assert.ok(prog.length >= 3);
     });
     lc.mpdWalk({port: 1}, function(err2){
-      t('MPD nicht erreichbar: Fehler statt Hängen', function(){ assert.ok(err2); });
+      t('MPD unreachable: error instead of hanging', function(){ assert.ok(err2); });
       service(srv.address().port);
     });
   }, function(d, total){ prog.push([d, total]); });
 });
 
-/* Dienst: POST /check startet, GET /check liefert Fortschritt und danach das gespeicherte Ergebnis */
+/* service: POST /check starts, GET /check returns progress and then the saved result */
 function service(mpdPort) {
   var http = require('http');
   process.env.MUSIC_ROOT = root; process.env.MPD_PORT = String(mpdPort);
@@ -108,20 +108,20 @@ function service(mpdPort) {
   }
   s2.listen(0, function(){
     call('GET', '/check', function(r0){
-      t('Dienst: vor der ersten Prüfung kein Ergebnis', function(){ assert.ok(r0.ok); assert.strictEqual(r0.result, null); });
+      t('service: no result before the first check', function(){ assert.ok(r0.ok); assert.strictEqual(r0.result, null); });
       call('POST', '/check', function(r1){
-        t('Dienst: POST /check läuft im Hintergrund', function(){ assert.ok(r1.ok && r1.running); });
+        t('service: POST /check runs in the background', function(){ assert.ok(r1.ok && r1.running); });
         (function poll(k) {
           call('GET', '/check', function(r){
             if (r.running && k < 50) return setTimeout(function(){ poll(k + 1); }, 100);
-            t('Dienst: Ergebnis gespeichert', function(){
+            t('service: result saved', function(){
               assert.ok(!r.running && !r.error && r.result);
               assert.strictEqual(r.result.songs, 2);
-              assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A']);     /* Python fehlt: zählt als ohne Cover */
+              assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A']);     /* Python missing: counts as without cover */
               assert.ok(fs.existsSync(path.join(root, 'log', 'check.json')));
             });
             s2.close(); srv.close();
-            console.log(n + ' Prüfungen');
+            console.log(n + ' checks');
           });
         })(0);
       });

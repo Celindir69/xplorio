@@ -1,8 +1,8 @@
-/* Dienste für die Seite „System“: Zustand der Player-Dienste (systemctl show) und Neustart, beim Kiosk auch
-   Start und Stopp. Nur die Dienste und Aktionen aus UNITS sind erlaubt. Der Tag-Dienst läuft als Benutzer
-   volumio und braucht dafür eine sudo-Regel (Anleitung: docs/einrichten.md, „Dienste“); ohne sie bleibt die
-   Anzeige, die Knöpfe melden „nosudo“. Außerdem Neustart und Ausschalten des ganzen Players (power).
-   Node 8, nur ES5. run: Ersatz für execFile (Tests) */
+/* Services for the "System" page: state of the player services (systemctl show) and restart, for the kiosk also
+   start and stop. Only the services and actions in UNITS are allowed. The tag service runs as user
+   volumio and needs a sudo rule for this (instructions: docs/einrichten.md, "Dienste"); without it the
+   display stays, the buttons report "nosudo". Also restart and power-off of the whole player (power).
+   Node 8, ES5 only. run: replacement for execFile (tests) */
 var fs = require('fs'), cp = require('child_process');
 
 var UNITS = [
@@ -13,7 +13,7 @@ var UNITS = [
   {id: 'volumio-kiosk', actions: ['start', 'stop', 'restart']}
 ];
 var SYSTEMCTL = '/bin/systemctl', TIMEOUT = 8000, SUDO_CACHE_MS = 300000;
-var POWER = {reboot: ['/sbin/reboot'], poweroff: ['/sbin/poweroff']};   /* dieselben Befehle wie Volumio selbst */
+var POWER = {reboot: ['/sbin/reboot'], poweroff: ['/sbin/poweroff']};   /* the same commands as Volumio itself */
 
 function unitOf(id) {
   for (var i = 0; i < UNITS.length; i++) if (UNITS[i].id === id) return UNITS[i];
@@ -23,11 +23,11 @@ function allowed(id, action) {
   var u = unitOf(id);
   return !!u && u.actions.indexOf(action) >= 0;
 }
-/* genau diese Befehlszeile steht in der sudo-Regel */
+/* exactly this command line is in the sudo rule */
 function command(id, action) { return [SYSTEMCTL, '--no-block', action, id]; }
 
-/* Ausgabe von systemctl show -p … a b c: je Dienst ein Block, getrennt durch Leerzeilen.
-   uptime (s) und now (ms) rechnen den Startzeitpunkt (monoton, µs seit Systemstart) in Epoch-ms um */
+/* output of systemctl show -p … a b c: one block per service, separated by blank lines.
+   uptime (s) and now (ms) convert the start time (monotonic, µs since boot) to epoch ms */
 function parseShow(text, uptime, now) {
   var out = [], cur = null;
   String(text || '').split('\n').concat(['']).forEach(function(l){
@@ -47,7 +47,7 @@ function parseShow(text, uptime, now) {
   });
 }
 
-/* Liste für die Seite: Reihenfolge wie UNITS, nicht eingerichtete Dienste fallen weg */
+/* list for the page: order as in UNITS, services not installed are dropped */
 function merge(parsed) {
   var by = {};
   parsed.forEach(function(p){ by[p.id] = p; });
@@ -64,14 +64,14 @@ function Services(opts) {
   this.run = opts.run || defaultRun;
   this.root = opts.root || '';
   this.sudoOk = null; this.sudoAt = 0;
-  this.stopped = {};                        /* über die Seite gestoppte Dienste (bis zum nächsten Start) */
+  this.stopped = {};                        /* services stopped via the page (until the next start) */
 }
 
 Services.prototype.uptime = function() {
   try { return parseFloat(fs.readFileSync(this.root + '/proc/uptime', 'utf8')); } catch (e) { return NaN; }
 };
 
-/* darf der Tag-Dienst die Befehle ohne Passwort ausführen? (sudo -n -l <Befehl>, 5 min gemerkt) */
+/* may the tag service run the commands without a password? (sudo -n -l <command>, cached for 5 min) */
 Services.prototype.sudoCheck = function(cb) {
   var self = this;
   if (this.sudoOk !== null && Date.now() - this.sudoAt < SUDO_CACHE_MS) return cb(this.sudoOk);
@@ -86,24 +86,24 @@ Services.prototype.status = function(cb) {
   this.run(SYSTEMCTL, ['show', '-p', 'Id,LoadState,ActiveState,SubState,ActiveEnterTimestampMonotonic'].concat(ids), function(err, out){
     if (err && !out) return cb({ok: false, error: 'systemctl'});
     var list = merge(parseShow(out, self.uptime(), Date.now()));
-    /* Der Kiosk endet beim Stoppen oft mit einem Fehlercode (Browser und X-Server werden beendet), systemd meldet
-       dann „failed“. Nach einem Stopp über diese Seite ist das kein Fehler, sondern einfach gestoppt. */
+    /* When stopped, the kiosk often exits with an error code (browser and X server are terminated), and systemd then
+       reports "failed". After a stop via this page that is not an error, just stopped. */
     list.forEach(function(u){ if (u.active === 'failed' && self.stopped[u.id]) { u.active = 'inactive'; u.sub = 'dead'; } });
     self.sudoCheck(function(ok){ cb({ok: true, units: list, sudo: ok}); });
   });
 };
 
-/* Aktion ausführen; cb(code, obj). Beim eigenen Dienst kommt die Antwort zuerst, der Befehl kurz danach */
+/* run an action; cb(code, obj). For the own service the response comes first, the command shortly after */
 Services.prototype.act = function(id, action, self_, cb) {
   var me = this;
-  if (!allowed(id, action)) return cb(400, {ok: false, error: 'nicht erlaubt'});
+  if (!allowed(id, action)) return cb(400, {ok: false, error: 'not allowed'});
   function go(done) {
     me.run('sudo', ['-n'].concat(command(id, action)), function(err){
-      if (err) { me.sudoOk = null; console.error('Dienst ' + id + ' ' + action + ' gescheitert: ' + (err.message || err)); }
+      if (err) { me.sudoOk = null; console.error('service ' + id + ' ' + action + ' failed: ' + (err.message || err)); }
       if (done) done(err);
     });
   }
-  if (id === self_) {                       /* ohne sudo-Recht gäbe es danach keine Rückmeldung mehr */
+  if (id === self_) {                       /* without sudo permission there would be no feedback afterwards */
     this.sudoOk = null;
     return this.sudoCheck(function(ok){
       if (!ok) return cb(200, {ok: false, error: 'nosudo'});
@@ -118,16 +118,16 @@ Services.prototype.act = function(id, action, self_, cb) {
   });
 };
 
-/* Player neu starten oder ausschalten: erst prüfen, ob sudo es erlaubt, dann antworten, dann ausführen */
+/* restart or power off the player: first check that sudo allows it, then respond, then run */
 Services.prototype.power = function(action, cb) {
   var me = this, cmd = POWER[action];
-  if (!cmd || !Object.prototype.hasOwnProperty.call(POWER, action)) return cb(400, {ok: false, error: 'nicht erlaubt'});
+  if (!cmd || !Object.prototype.hasOwnProperty.call(POWER, action)) return cb(400, {ok: false, error: 'not allowed'});
   this.run('sudo', ['-n', '-l'].concat(cmd), function(err){
     if (err) return cb(200, {ok: false, error: 'nosudo'});
     cb(200, {ok: true});
     setTimeout(function(){
-      console.log('Player: ' + action + ' (Seite System)');
-      me.run('sudo', ['-n'].concat(cmd), function(e){ if (e) console.error('Player ' + action + ' gescheitert: ' + (e.message || e)); });
+      console.log('Player: ' + action + ' (System page)');
+      me.run('sudo', ['-n'].concat(cmd), function(e){ if (e) console.error('Player ' + action + ' failed: ' + (e.message || e)); });
     }, 500);
   });
 };

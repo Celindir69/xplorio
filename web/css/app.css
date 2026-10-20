@@ -1,28 +1,28 @@
-  /* Ränder für Kerbe/Dynamic Island und Home-Leiste (als Variablen, damit Tests sie nachbilden können) */
+  /* insets for notch/Dynamic Island and home bar (as variables so tests can reproduce them) */
   :root { --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px); }
   #app { position:fixed; top:0; left:0; right:0; bottom:0; z-index:2;
     display:flex; flex-direction:column; align-items:center;
-    padding-top:calc(var(--sat) + 72px);   /* Platz für die Symbolleiste oben */
+    padding-top:calc(var(--sat) + 72px);   /* space for the toolbar at the top */
     justify-content:flex-end; }
   #topSpacer { flex:1 1 auto; }
   #rightPane { width:100%; display:contents; }
 
 #coverWrap { flex:0 0 auto; margin-bottom:2.5vh;
-  /* auf kurzen Bildschirmen schrumpft das Cover, damit die Symbolleiste frei bleibt: 470px für alles darunter und
-     die Symbolleiste, dazu die Ränder für Kerbe und Home-Leiste */
-  width:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab))); height:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab)));   /* Safari < 15.4: ohne dvh */
+  /* on short screens the cover shrinks so the toolbar stays clear: 470px for everything below and
+     the toolbar, plus the insets for notch and home bar */
+  width:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab))); height:min(calc(76 * var(--vw)), calc(100vh - 470px - var(--sat) - var(--sab)));   /* Safari < 15.4: without dvh */
   width:min(calc(76 * var(--vw)), calc(100dvh - 470px - var(--sat) - var(--sab))); height:min(calc(76 * var(--vw)), calc(100dvh - 470px - var(--sat) - var(--sab)));
   max-width:360px; max-height:360px; }
   #cover { width:100%; height:100%; object-fit:contain;
     border-radius:calc(3 * var(--vw)); box-shadow:0 calc(4 * var(--vw)) calc(10 * var(--vw)) rgba(0,0,0,.8); }
-  /* Cover, die nicht quadratisch sind (core.js setzt arWide/arTall): passen ins Quadrat, Schatten und Ecken am Bild */
+  /* non-square covers (core.js sets arWide/arTall): fit into the square, shadow and corners on the image */
   #coverWrap { display:flex; align-items:center; justify-content:center; }
   html:not(.stage) #coverWrap.arWide #cover { width:100%; height:auto; }
   html:not(.stage) #coverWrap.arTall #cover { width:auto; height:100%; }
 #meta { flex:0 0 auto; width:90%; text-align:center;
   padding:0 calc(4 * var(--vw)); margin-bottom:2.2vh; }
 
-  /* Reihenfolge: Interpret, Titel (mit Schatten wie die aktuelle Lyrics-Zeile), Album */
+  /* order: artist, title (with shadow like the current lyrics line), album */
   #mTitle  { font-size:calc(5.5 * var(--vw)); font-weight:700; line-height:1.2; text-shadow:var(--glow);
     margin-bottom:calc(1.2 * var(--vw)); white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; }
@@ -37,9 +37,9 @@
   #mGenre  { font-size:calc(3 * var(--vw)); opacity:.45; margin-top:calc(1.2 * var(--vw)); min-height:1.3em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #mGenre span { cursor:pointer; }
   #mGenre span:hover, #mGenre span:active { opacity:.8; }
-  /* Qualitätsanzeige */
+  /* quality display */
   .qBadge { display:none; font-size:calc(2.5 * var(--vw)); font-weight:700; letter-spacing:.06em; line-height:1;
-    padding:.46em .7em .24em; border-radius:calc(1.2 * var(--vw));   /* Großbuchstaben: Text optisch mittig */
+    padding:.46em .7em .24em; border-radius:calc(1.2 * var(--vw));   /* capitals: text visually centered */
     border:1px solid currentColor; text-transform:uppercase; white-space:nowrap; opacity:.9; }
   .qBadge.hires, .qBadge.dsd { display:inline-block; color:var(--gold); }
   .qBadge.lossless { display:inline-block; color:var(--fg); }
@@ -49,11 +49,11 @@
   #seekBar { width:100%; height:4px; background:rgba(var(--fg-rgb),.25);
     border-radius:2px; cursor:pointer; }
   #seekFill { height:100%; width:100%; background:var(--accent, var(--fg)); transition:background-color .8s; border-radius:2px;
-    pointer-events:none; transform:scaleX(0); transform-origin:left center; }   /* scaleX statt width: kein neues Layout je Takt */
+    pointer-events:none; transform:scaleX(0); transform-origin:left center; }   /* scaleX instead of width: no relayout per tick */
   #seekTimes { display:flex; justify-content:space-between;
     margin-top:calc(1.5 * var(--vw)); font-size:calc(3 * var(--vw)); opacity:.5; }
 
-  /* anderer Eingang am Verstärker: Zeitleiste und Tasten gesperrt (Lautstärke bleibt, sie steuert den Verstärker) */
+  /* other input on the amplifier: timeline and buttons locked (volume stays, it controls the amplifier) */
   html.otherInput #seekWrap, html.otherInput #ctrl { opacity:.3; pointer-events:none; }
 #ctrl { flex:0 0 auto; display:flex; align-items:center;
   justify-content:center; gap:calc(5 * var(--vw)); margin-bottom:2.4vh; width:88%; }
@@ -69,10 +69,10 @@
   #cRepeat svg { width:calc(8 * var(--vw)); height:calc(8 * var(--vw)); max-width:36px; max-height:36px;
     fill:var(--fg); opacity:.35; display:block; }
   #cRepeat.all svg, #cRepeat.one svg, #cRepeat.inf svg { opacity:1; fill:var(--accent, var(--fg)); }
-  #cRepeat .badge { position:absolute; top:calc(-1.5 * var(--vw)); left:calc(100% - 2.5 * var(--vw));   /* links bündig: ALL, 1 und ∞ beginnen an derselben Stelle */
+  #cRepeat .badge { position:absolute; top:calc(-1.5 * var(--vw)); left:calc(100% - 2.5 * var(--vw));   /* left-aligned: ALL, 1 and ∞ start at the same position */
     font-size:calc(2.4 * var(--vw)); font-weight:700; color:var(--fg); opacity:0; line-height:1; }
   #cRepeat.all .badge, #cRepeat.one .badge, #cRepeat.inf .badge { opacity:1; }
-  #cRepeat.inf .badge { transform:scale(1.6); transform-origin:left center; }   /* ∞ ist als Zeichen klein */
+  #cRepeat.inf .badge { transform:scale(1.6); transform-origin:left center; }   /* ∞ is small as a glyph */
 
   #cRandom { cursor:pointer; display:flex; align-items:center;
     justify-content:center; }
@@ -94,11 +94,11 @@
     max-width:32px; max-height:32px; }
   .actBtn.has-content { opacity:1; }
 
-  /* Symbolleiste oben: links Rotel ein/aus, rechts Zugang zur Volumio-Oberfläche */
+  /* toolbar at the top: Rotel on/off on the left, access to the Volumio UI on the right */
   #topBar { position:fixed; z-index:5; display:flex; justify-content:space-between; pointer-events:none;
     top:calc(var(--sat) + 12px);
     left:max(env(safe-area-inset-left,0px), 12px); right:max(env(safe-area-inset-right,0px), 12px); }
-  /* Handy hochkant: über dem Cover ist Platz, die Knöpfe rücken weiter unter Statusleiste und Dynamic Island hervor */
+  /* phone portrait: there is room above the cover, the buttons move further out from under the status bar and Dynamic Island */
   @media (orientation:portrait) and (max-width:600px) { #topBar { top:calc(var(--sat) + 28px); } }
   .topBtn { pointer-events:auto; cursor:pointer; display:flex; align-items:center; justify-content:center;
     width:clamp(34px, calc(9 * var(--vw)), 44px); height:clamp(34px, calc(9 * var(--vw)), 44px);
@@ -114,8 +114,8 @@
   @media (orientation:landscape) and (min-width:900px) and (min-height:560px) { #btnStage { display:flex; } }
   #btnStage.on { opacity:1; }
   #btnMenu { opacity:.75; }
-  /* solange ein Overlay offen ist, schaut das Zahnrad nicht durch die Seitenleiste (liegt sonst über dem Schließen-Kreuz) */
-  body.ovOn #btnMenu { visibility:hidden; }   /* ovOn/ovMain setzt ui.js (statt :has, fehlt in Safari < 15.4) */
+  /* while an overlay is open, the gear does not show through the sidebar (it would otherwise sit above the close cross) */
+  body.ovOn #btnMenu { visibility:hidden; }   /* ovOn/ovMain is set by ui.js (instead of :has, missing in Safari < 15.4) */
 
   #toast { position:fixed; z-index:20; left:50%; bottom:max(env(safe-area-inset-bottom,0px), 24px);
     transform:translate(-50%, 20px); opacity:0; pointer-events:none; max-width:86%; text-align:center;
@@ -147,9 +147,9 @@
     -webkit-overflow-scrolling:touch;
     padding:0 calc(5 * var(--vw)) max(env(safe-area-inset-bottom,16px),16px) calc(5 * var(--vw)); }
 
-  /* Scrollleisten in allen Overlays und der Begrüßung: schmal, halbtransparent, ohne Schiene (statt der grauen System-Leiste).
-     Chrome/Safari über ::-webkit-scrollbar; Firefox kennt das nicht und bekommt scrollbar-width/-color.
-     Wo eine Leiste ganz verborgen ist (Reiter, Kachelreihen), gilt das weiter. */
+  /* Scrollbars in all overlays and the welcome card: thin, semi-transparent, no track (instead of the grey system bar).
+     Chrome/Safari via ::-webkit-scrollbar; Firefox does not know it and gets scrollbar-width/-color.
+     Where a bar is fully hidden (tabs, tile rows), that still applies. */
   .overlay ::-webkit-scrollbar, #overlayWelcome ::-webkit-scrollbar { width:6px; height:6px; background:transparent; }
   .overlay ::-webkit-scrollbar-track, #overlayWelcome ::-webkit-scrollbar-track { background:transparent; }
   .overlay ::-webkit-scrollbar-thumb, #overlayWelcome ::-webkit-scrollbar-thumb { background:rgba(var(--fg-rgb),.18); border-radius:3px; }
@@ -167,13 +167,13 @@
   #infoTabs, .bTabs { display:flex; gap:calc(4 * var(--vw)); margin-bottom:calc(4 * var(--vw));
     border-bottom:1px solid rgba(var(--fg-rgb),.2); overflow-x:auto;
     scrollbar-width:none; -ms-overflow-style:none; }
-  #infoTabs::-webkit-scrollbar, .bTabs::-webkit-scrollbar { display:none; }      /* Reiter lassen sich wischen, aber ohne System-Scrollleiste */
+  #infoTabs::-webkit-scrollbar, .bTabs::-webkit-scrollbar { display:none; }      /* tabs can be swiped, but without a system scrollbar */
   .infoTab { flex:0 0 auto; padding:0 calc(1 * var(--vw)) calc(2.5 * var(--vw)) calc(1 * var(--vw)); cursor:pointer;
     font-size:calc(3.8 * var(--vw)); border-bottom:2px solid transparent;
     opacity:.5; transition:all .2s; white-space:nowrap; }
   .infoTab.on { border-bottom-color:var(--fg); opacity:1; }
-  #infoTabs .infoTab { padding-top:.35em; }                       /* Platz für Ä/Ö/Ü: der Streifen schneidet oben ab (overflow) */
-  .bTabs .infoTab { padding-top:calc(1.5 * var(--vw) + 4px); }   /* zwischen der Linie des Seitenkopfs und der eigenen mittig */
+  #infoTabs .infoTab { padding-top:.35em; }                       /* room for Ä/Ö/Ü: the strip clips at the top (overflow) */
+  .bTabs .infoTab { padding-top:calc(1.5 * var(--vw) + 4px); }   /* centered between the line of the page header and its own */
   #infoSlider { position:relative; overflow:hidden; }
   .infoImg { width:100%; max-height:60vh; object-fit:cover; border-radius:calc(2 * var(--vw)); margin-bottom:calc(4 * var(--vw)); display:block; }
   @media (orientation:landscape) { .infoImg.album { display:none; } }
@@ -199,7 +199,7 @@
   /* Queue */
   #volumioTabBar { flex:0 0 auto; display:flex; gap:calc(4 * var(--vw));
     border-bottom:1px solid rgba(var(--fg-rgb),.2); margin:0 calc(5 * var(--vw));
-    overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }        /* fünf Reiter: auf dem Handy wischen statt aneinanderkleben */
+    overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }        /* five tabs: swipe on the phone instead of squeezing together */
   #volumioTabBar::-webkit-scrollbar { display:none; }
   #volumioTabBar .qTab { flex-shrink:0; white-space:nowrap; }
   .qTab { flex:1 1 auto; text-align:center; padding:calc(3 * var(--vw)) 0;
@@ -243,7 +243,7 @@
   .qTrash { display:none; flex:0 0 auto; align-items:center; justify-content:center; opacity:.35;
     padding:calc(1.5 * var(--vw)) calc(2 * var(--vw)); cursor:pointer; }
   .qTrash svg { width:calc(5 * var(--vw)); height:calc(5 * var(--vw)); max-width:22px; fill:var(--fg); display:block; }
-  @media (hover:hover) and (pointer:fine) {            /* Maus/Trackpad: Papierkorb statt Wischen */
+  @media (hover:hover) and (pointer:fine) {            /* mouse/trackpad: trash can instead of swiping */
     .qTrash { display:flex; }
     .qRow:hover .qTrash { opacity:.8; }
     .qTrash:hover { opacity:1; }
@@ -257,14 +257,14 @@
   #openVolumioTab { opacity:.7; cursor:pointer; padding:calc(1 * var(--vw)); margin-left:auto; margin-right:calc(2 * var(--vw)); }
   #openVolumioTab svg { display:block; fill:var(--fg); width:calc(6 * var(--vw)); height:calc(6 * var(--vw)); max-width:28px; max-height:28px; }
 
-  /* Künstler-/Album-Overlay */
+  /* artist/album overlay */
   #browseBack { cursor:pointer; opacity:.7; padding:calc(1 * var(--vw)); margin-left:calc(-2 * var(--vw)); margin-right:calc(1 * var(--vw)); }
   #browseBack svg { display:block; fill:var(--fg); width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); max-width:32px; max-height:32px; }
   #overlayBrowse .overlayHead h2 { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #browseBody { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
     padding:calc(2 * var(--vw)) calc(5 * var(--vw)) max(env(safe-area-inset-bottom,16px),16px) calc(5 * var(--vw)); }
   .sRow.cur .sTitle { color:var(--accent, var(--fg)); }
-  #browseAlbumHead { display:flex; align-items:center; padding:calc(1 * var(--vw)) 0 calc(3 * var(--vw)) 0; }   /* Linie zieht die Abspielzeile darunter */
+  #browseAlbumHead { display:flex; align-items:center; padding:calc(1 * var(--vw)) 0 calc(3 * var(--vw)) 0; }   /* line separates the play row below */
   .playRow { display:flex; align-items:center; cursor:pointer; padding:calc(1 * var(--vw)) 0 calc(3 * var(--vw)) 0;
     border-bottom:1px solid rgba(var(--fg-rgb),.2); margin-bottom:calc(1 * var(--vw)); }
   .playRow .playCircle { margin:0 calc(3.5 * var(--vw)) 0 0; }
@@ -275,14 +275,14 @@
   .playRow .bAlbum { font-size:calc(4.2 * var(--vw)); }
   .playRow .sSub:empty { display:none; }
   .playRow .mxIcon, .playRow .mixDice, .playRow .rateHeart, .playRow .browseEditBtn { margin-left:calc(2 * var(--vw)); }
-  /* bis zu vier Symbole rechts: etwas kleiner, damit „Alle abspielen“ auf schmalen Telefonen ganz lesbar bleibt */
+  /* up to four icons on the right: slightly smaller so "Play all" stays fully readable on narrow phones */
   .playRow .mxIcon, .playRow .mixDice, .playRow .browseEditBtn { flex:0 0 calc(9 * var(--vw)); width:calc(9 * var(--vw)); height:calc(9 * var(--vw)); margin-left:calc(1.5 * var(--vw)); }
   .playRow .rateHeart { margin-left:calc(1.5 * var(--vw)); }
   #browseBody .infoSection { margin-top:calc(4 * var(--vw)); }
   .bCover { flex:0 0 calc(18 * var(--vw)); height:calc(18 * var(--vw)); object-fit:cover; background:var(--ph);
     border-radius:calc(2 * var(--vw)); margin-right:calc(3.5 * var(--vw)); }
   .bAlbum { font-size:calc(4.6 * var(--vw)); font-weight:700; white-space:normal; }
-  /* Genre: klein rechts in Albumzeilen (vor dem Stift), Künstler und Genre auf der Albumseite antippbar (genre.js) */
+  /* genre: small on the right in album rows (before the pen), artist and genre tappable on the album page (genre.js) */
   .bGenre { flex:0 1 auto; max-width:30%; margin-left:calc(2 * var(--vw)); font-size:calc(2.9 * var(--vw)); opacity:.6;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
   .bLink { cursor:pointer; }
@@ -303,20 +303,20 @@
   .bNum { flex:0 0 calc(8 * var(--vw)); text-align:right; padding-right:calc(3.5 * var(--vw)); opacity:.4;
     font-size:calc(3.2 * var(--vw)); }
   .bDur { flex:0 0 auto; margin-left:calc(3 * var(--vw)); opacity:.5; font-size:calc(3.2 * var(--vw)); }
-  /* Tag-Editor */
+  /* Tag editor */
   .browseEditBtn { flex:0 0 calc(10 * var(--vw)); height:calc(10 * var(--vw)); max-width:44px; max-height:44px;
     margin-left:calc(3 * var(--vw)); border-radius:50%; background:rgba(var(--fg-rgb),.15); cursor:pointer;
     display:flex; align-items:center; justify-content:center; }
   .browseEditBtn:active { transform:scale(.94); }
   .browseEditBtn svg { width:50%; height:50%; fill:var(--fg); display:block; }
-  /* Würfel neben „Alle abspielen“: 25 zufällige Titel (discover.js) */
+  /* dice next to "Play all": 25 random tracks (discover.js) */
   .mixDice { flex:0 0 calc(10 * var(--vw)); height:calc(10 * var(--vw)); max-width:44px; max-height:44px;
     margin-left:calc(3 * var(--vw)); border-radius:50%; background:rgba(var(--fg-rgb),.15); cursor:pointer;
     display:flex; align-items:center; justify-content:center; }
   .mixDice:active { transform:scale(.94); }
   .mixDice svg { width:55%; height:55%; fill:var(--fg); display:block; }
   .mixDice.roll svg { animation:dRoll .45s ease-out; }
-  /* kleiner Stift bei einzelnen Titeln (Zeilen, Queue) und im Player neben der Qualitätsanzeige */
+  /* small pen for single tracks (rows, queue) and in the player next to the quality display */
   .tagEditMini { flex:0 0 auto; width:calc(8 * var(--vw)); height:calc(8 * var(--vw)); max-width:36px; max-height:36px;
     margin-left:calc(1.5 * var(--vw)); border-radius:50%; cursor:pointer; opacity:.45;
     display:flex; align-items:center; justify-content:center; }
@@ -324,7 +324,7 @@
   .tagEditMini:active { opacity:1; background:rgba(var(--fg-rgb),.15); }
   @media (hover:hover) and (pointer:fine) { .tagEditMini:hover { opacity:1; background:rgba(var(--fg-rgb),.12); } }
   #mEdit { width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); margin-left:0; }
-  /* Eingang am Verstärker statt Stift (anderer Eingang als der Player); Tippen öffnet die Fernbedienung */
+  /* amplifier input instead of pen (input other than the player's); tapping opens the remote control */
   .inputIcon { flex:0 0 auto; width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); max-width:36px; max-height:36px;
     display:flex; align-items:center; justify-content:center; opacity:.6; cursor:pointer; }
   .inputIcon svg { width:70%; height:70%; fill:var(--fg); display:block; }
@@ -396,7 +396,7 @@
   #tagFoot #tagSave { background:var(--accent, var(--fg)); color:var(--on-accent); border-color:transparent; font-weight:700; }
   #tagFoot button:disabled { opacity:.4; cursor:default; }
 
-  /* Playlisten + Radio */
+  /* Playlists + radio */
   #plTabBar { flex:0 0 auto; display:flex;
     border-bottom:1px solid rgba(var(--fg-rgb),.2); margin:0 calc(5 * var(--vw)); }
 #plPanels { flex:1 1 auto; min-height:0; position:relative; }
@@ -419,7 +419,7 @@
     overflow:hidden; text-overflow:ellipsis; }
   .plHint { font-size:calc(2.8 * var(--vw)); opacity:.4; text-align:center; padding:calc(4 * var(--vw)) 0; }
 
-  /* Suche */
+  /* Search */
   #searchInputWrap { flex:0 0 auto; padding:0 calc(5 * var(--vw)) calc(3 * var(--vw)) calc(5 * var(--vw));
     display:flex; gap:calc(3 * var(--vw)); }
   #searchField { position:relative; flex:1 1 auto; min-width:0; }
@@ -429,14 +429,14 @@
   #searchClear svg { display:block; fill:var(--fg); width:calc(5 * var(--vw)); height:calc(5 * var(--vw)); max-width:22px; max-height:22px; }
   #searchSources { display:flex; gap:calc(4 * var(--vw)); margin-left:calc(4 * var(--vw)); margin-right:auto; min-width:0; overflow-x:auto; scrollbar-width:none; white-space:nowrap; font-size:calc(3.4 * var(--vw)); }
   #searchSources::-webkit-scrollbar { display:none; }
-  /* Hochformat: „Suchen & Entdecken“ in einer Zeile, die Quellen darunter */
+  /* portrait: "Search & Discover" on one line, the sources below */
   @media (orientation:portrait) {
     #overlaySearch .overlayHead { flex-wrap:wrap; }
     #overlaySearch .overlayHead h2 { flex:1 1 auto; white-space:nowrap; }
     #searchSources { order:3; flex:1 0 100%; margin:calc(2.5 * var(--vw)) 0 0 0; }
   }
   #searchSources label { flex:0 0 auto; display:flex; align-items:center; gap:calc(1.2 * var(--vw)); cursor:pointer; opacity:.85; }
-  /* eigene Kästchen: ohne Akzentfarbe (TIDAL, Radio) zeichnet Safari sonst einen weißen Haken auf weißem Grund */
+  /* custom checkboxes: without accent color (TIDAL, radio) Safari would otherwise draw a white check on white */
   #searchSources input { -webkit-appearance:none; appearance:none; margin:0; flex:0 0 auto; cursor:pointer;
     width:calc(4.4 * var(--vw)); height:calc(4.4 * var(--vw)); max-width:20px; max-height:20px;
     border:1.5px solid rgba(var(--fg-rgb),.6); border-radius:4px; background:rgba(var(--shade-rgb),.35);
@@ -516,7 +516,7 @@
     .ctrlBtn.side svg { width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); }
     #cRepeat svg, #cRandom svg { width:calc(5 * var(--vw)); height:calc(5 * var(--vw)); }
     #volWrap { width:100%; margin-bottom:0; }
-    #vVal { flex:0 0 2ch; text-align:left; }   /* Abstand + zur Zahl = Abstand Mute zu - */
+    #vVal { flex:0 0 2ch; text-align:left; }   /* gap + to number = gap mute to - */
     #actions { width:100%; margin-bottom:0;
       justify-content:flex-start; gap:calc(6 * var(--vw)); padding-bottom:0; }
     .actBtn svg { width:calc(5.5 * var(--vw)); height:calc(5.5 * var(--vw)); }
@@ -526,8 +526,8 @@
     .overlayHandle { display:none; }
   }
 
-  /* Breite Fenster im Querformat (iPad quer, Desktop): Inhalt begrenzt und zentriert,
-     Overlays als Seitenleiste von rechts statt als Blatt von unten */
+  /* Wide landscape windows (iPad landscape, desktop): content limited and centered,
+     overlays as a sidebar from the right instead of a sheet from the bottom */
   @media (orientation:landscape) and (min-width:700px) {
     #app { padding-left:max(env(safe-area-inset-left,0px), calc((100vw - 1500px) / 2), 28px);
       padding-right:max(env(safe-area-inset-right,0px), calc((100vw - 1500px) / 2), 28px);
@@ -537,22 +537,22 @@
     #rightPane { max-width:700px; }
     #cRepeat .badge { font-size:11px; top:-5px; left:calc(100% - 9px); }
     #actions { justify-content:space-between; gap:0; }
-    .overlay { --vw:min(1vw, 5.5px);   /* Inhalt der Seitenleiste in Handy-Maßstab */
+    .overlay { --vw:min(1vw, 5.5px);   /* sidebar content at phone scale */
       top:0; left:auto; right:0; bottom:0; width:min(560px, 100%);
       border-radius:0; transform:translateX(100%); }
     .overlay.on { transform:translateX(0); }
     .overlayHandle { display:none; }
   }
 
-  /* iPad und Desktop (Höhe ab 600 px): Seitenleiste nimmt zwei Drittel der Breite (Kachelreihen, Listen, Statistik
-     haben Platz), höchstens 1280 px; Schrift darin kleiner. Links bleibt das Cover sichtbar. */
+  /* iPad and desktop (height from 600 px): sidebar takes two thirds of the width (tile rows, lists, statistics
+     have room), at most 1280 px; smaller text inside. The cover stays visible on the left. */
   @media (orientation:landscape) and (min-width:700px) and (min-height:600px) {
     .overlay { --vw:min(1vw, 4.4px); width:clamp(480px, 66.7vw, 1280px); }
-    .dRow.fit { justify-content:flex-start; }   /* wenige Kacheln in der breiten Leiste: links statt verteilt */
-    .infoImg.artist { width:34%; max-width:380px; float:left; margin:0 calc(5 * var(--vw)) calc(3 * var(--vw)) 0; }   /* Text fließt daneben */
+    .dRow.fit { justify-content:flex-start; }   /* few tiles in the wide sidebar: left-aligned instead of spread out */
+    .infoImg.artist { width:34%; max-width:380px; float:left; margin:0 calc(5 * var(--vw)) calc(3 * var(--vw)) 0; }   /* text flows beside it */
   }
 
-  /* Touch im Querformat: Griff am linken Rand der Seitenleiste, Wischen nach rechts schließt */
+  /* touch in landscape: handle at the left edge of the sidebar, swiping right closes */
   @media (orientation:landscape) and (hover:none) and (pointer:coarse) {
     .overlayHandle { display:block; position:absolute; z-index:2; left:0; top:0; bottom:0; width:28px;
       margin:0; height:auto; min-height:0; background:none; border-radius:0; }
@@ -560,7 +560,7 @@
       margin-top:-28px; border-radius:3px; background:rgba(var(--fg-rgb),.35); }
   }
 
-  /* ===== HIER DEINE LYRICS-STILE EINSETZEN =====
+  /* ===== INSERT YOUR LYRICS STYLES HERE =====
      #lyricsText.synced { ... }
      .lyric-line { ... }
      .lyric-line.past { ... }
@@ -601,9 +601,9 @@
   text-shadow:var(--glow);
 }
 
-/* ===== Display-Layout (stage.js): große Bildschirme im Querformat =====
-   links Cover + Titel, darunter das Info-Karussell, unten Steuerung; rechts immer die Lyrics */
-html.stage { --stageL: 55vw; }   /* Lyrics rechts: 45 % der Breite */
+/* ===== Display layout (stage.js): large landscape screens =====
+   cover + title on the left, below them the info carousel, controls at the bottom; lyrics always on the right */
+html.stage { --stageL: 55vw; }   /* lyrics on the right: 45 % of the width */
 html.stage #app { right:auto; width:var(--stageL); display:grid;
   grid-template-columns:auto minmax(0, 1fr); grid-template-rows:auto minmax(0, 1fr) auto auto auto;
   column-gap:clamp(18px, 2.4vw, 40px); row-gap:0; align-items:center; justify-content:stretch;
@@ -634,7 +634,7 @@ html.stage #vSlider::-webkit-slider-thumb { width:20px; height:20px; }
 html.stage #vVal { flex:0 0 3ch; font-size:13px; }
 html.stage #actions { display:none; }
 
-/* Info-Karussell im linken Bereich statt als Overlay: ohne eigenen Hintergrund, bündig unter dem Cover; Punkte statt Reiter */
+/* info carousel in the left area instead of an overlay: no own background, flush below the cover; dots instead of tabs */
 html.stage #overlayInfo { --vw:min(.42vw, 4.4px); grid-row:2; grid-column:1 / -1; align-self:stretch; min-height:0;
   position:relative; top:auto; left:auto; right:auto; bottom:auto; width:auto; z-index:auto; transform:none; transition:none;
   background:none; border-radius:0; -webkit-backdrop-filter:none; backdrop-filter:none; }
@@ -652,8 +652,8 @@ html.stage #stageDots { display:flex; justify-content:center; gap:10px; padding:
 #stageDots span { width:8px; height:8px; border-radius:50%; background:var(--fg); opacity:.3; cursor:pointer; }
 #stageDots span.on { opacity:1; }
 
-/* Lyrics rechts, immer sichtbar */
-/* beginnt unter den Knöpfen oben rechts: Auf dem iPad nahm sonst die scrollende Lyrics-Fläche die Tipps auf die Knöpfe an */
+/* lyrics on the right, always visible */
+/* starts below the buttons at the top right: on the iPad the scrolling lyrics area otherwise caught the taps on the buttons */
 html.stage #overlayLyrics { --vw:clamp(4.4px, .42vw, 6.5px); top:calc(var(--sat) + 64px); bottom:0; left:var(--stageL); right:0; width:auto;
   z-index:3; transform:none; transition:none; border-radius:0; background:none;
   -webkit-backdrop-filter:none; backdrop-filter:none; }
@@ -663,26 +663,26 @@ html.stage #overlayLyrics .overlayBody { padding:12px max(env(safe-area-inset-ri
   mask-image:linear-gradient(to bottom, transparent 0, #000 56px, #000 calc(100% - 8vh), transparent 100%); }
 html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; font-size:.8em; }
 
-/* Queue, Playlisten, Suche … oben rechts als runde Knöpfe */
+/* queue, playlists, search … at the top right as round buttons */
 html.stage #topRight .actBtn { padding:0; opacity:.55; }
 html.stage #topRight .actBtn svg { width:58%; height:58%; max-width:none; max-height:none; }
 html.stage #topBar .topBtn { width:44px; height:44px; }
-/* offenes Seitenfenster (Queue, Suche …) liegt über den Lyrics: Knöpfe oben rechts ausblenden */
+/* open side panel (queue, search …) lies over the lyrics: hide the buttons at the top right */
 html.stage body.ovMain #topRight { visibility:hidden; }
 
 
-/* Bilder, die nicht laden oder keine Quelle haben: nichts zeigen (kein Fragezeichen), Platz bleibt */
+/* images that fail to load or have no source: show nothing (no question mark), space stays */
 img.imgFail, img:not([src]), img[src=""] { visibility:hidden; }
 
-/* ohne Streamingdienst: keine Auswahl Lokal/TIDAL/Qobuz in der Suche; je Dienst nur sein Kästchen ausblenden */
+/* without a streaming service: no Local/TIDAL/Qobuz choice in the search; per service hide only its checkbox */
 html.noStream #searchSources { display:none; }
-/* mehr als zwei Dienste: Kästchen in eigener Zeile unter der Überschrift */
+/* more than two services: checkboxes on their own line below the heading */
 html.manyStreams #overlaySearch .overlayHead { flex-wrap:wrap; }
 html.manyStreams #searchSources { order:10; flex-basis:100%; margin:calc(2 * var(--vw)) 0 calc(2 * var(--vw)); }
 html.noTidal #searchSources .srcTidal, html.noQobuz #searchSources .srcQobuz,
 html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { display:none; }
 
-/* ---------- Bibliotheks-Check ---------- */
+/* ---------- Library check ---------- */
 #overlayCheck .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 #checkBack { cursor:pointer; opacity:.7; display:flex; }
 #checkBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
@@ -717,19 +717,19 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .ckEnBar { flex:1 1 auto; width:100%; display:flex; align-items:flex-end; }
 .ckEnBar div { width:100%; min-height:1px; background:rgba(var(--fg-rgb),.35); border-radius:calc(.8 * var(--vw)) calc(.8 * var(--vw)) 0 0; }
 
-/* Vorschläge der Online-Cover-Suche im Tag-Editor */
+/* suggestions of the online cover search in the tag editor */
 .tagOnline { display:flex; flex-wrap:wrap; gap:calc(3 * var(--vw)); margin:calc(3 * var(--vw)) 0 calc(1 * var(--vw)); }
 .tagOnline .tagPick { cursor:pointer; border-radius:calc(1.5 * var(--vw)); outline:2px solid transparent; outline-offset:3px; }
 .tagOnline .tagPick.on { outline-color:var(--accent, var(--fg)); }
 
-/* Verlauf und Statistik */
+/* History and statistics */
 .qEmptyBtn { display:block; margin:2vh auto; }
 #historyBack, #welcomeBack, #systemBack, #helpBack { cursor:pointer; opacity:.7; display:flex; }
 #welcomeBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
 #historyBack svg, #systemBack svg, #helpBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
 #overlayHistory .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 
-/* ---------- Menü (Zahnrad) ---------- */
+/* ---------- Menu (gear) ---------- */
 #menuBody { padding:0 calc(5 * var(--vw)) calc(6 * var(--vw)); display:flex; flex-direction:column; }
 .menuAbout { margin-top:auto; padding-top:calc(10 * var(--vw)); display:flex; flex-direction:column; align-items:center; text-align:center; }
 .menuLogo { width:calc(18 * var(--vw)); height:calc(18 * var(--vw)); max-width:80px; max-height:80px; border-radius:22%;
@@ -799,7 +799,7 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .hgRow:active .hgName, .hgRow:hover .hgName { opacity:.8; }
 .hBars:has(.hBar.on) .hBar:not(.on) .hFill { opacity:.45; }
 
-/* Lyrics-Versatz: "− sync +" neben der Überschrift, in der Bühnenansicht − und + oben rechts; nur bei synchronen Lyrics */
+/* lyrics offset: "− sync +" next to the heading, in the stage view − and + at the top right; only for synced lyrics */
 #lyrSync { display:none; align-items:center; gap:calc(2 * var(--vw)); margin:0 auto 0 calc(4 * var(--vw)); }
 html.lyrSynced #lyrSync { display:flex; }
 #lyrSync button { background:rgba(var(--fg-rgb),.12); color:var(--fg); border:1px solid rgba(var(--fg-rgb),.25); border-radius:50%;
@@ -812,15 +812,15 @@ html.lyrSynced #lyrSync { display:flex; }
 html.stage.lyrSynced #lyrShiftBar { display:flex; }
 html.stage body.ovMain #lyrShiftBar { visibility:hidden; }
 
-/* Verlauf, Rückblick: Veränderung zum Vorjahr */
+/* history, review: change from the previous year */
 .hDelta { font-size:calc(2.4 * var(--vw)); opacity:.45; margin-top:calc(.5 * var(--vw)); white-space:nowrap; }
 
-/* Suche ohne Eingabe: Entdecken */
+/* search without input: discover */
 .dBox { padding-bottom:calc(6 * var(--vw)); }
 .dRow { display:flex; gap:calc(3 * var(--vw)); overflow-x:auto; padding-bottom:calc(2 * var(--vw)); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
 .dRow::-webkit-scrollbar { display:none; }
 .dRow.fit { justify-content:space-evenly; }
-.dRow.dLeft.fit { justify-content:flex-start; }   /* Albumseite: Reihen bündig unter ihrer Überschrift */
+.dRow.dLeft.fit { justify-content:flex-start; }   /* album page: rows flush below their heading */
 .dTile { flex:0 0 calc(26 * var(--vw)); max-width:140px; min-width:0; cursor:pointer; }
 .dTile .sCover { width:calc(26 * var(--vw)); height:calc(26 * var(--vw)); max-width:140px; max-height:140px; object-fit:cover; margin:0 0 calc(1.2 * var(--vw)); border-radius:calc(1.5 * var(--vw)); }
 .dTi { font-size:calc(3.2 * var(--vw)); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -845,9 +845,9 @@ html.stage body.ovMain #lyrShiftBar { visibility:hidden; }
 .dSub { font-size:calc(2.6 * var(--vw)); opacity:.45; margin-top:calc(.4 * var(--vw)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dTile .sCover.hRound, .dBig.hRound { border-radius:50%; }
 
-/* Passt zusammen (discover.js): breitere Kachel, 2–3 runde Künstlerfotos überlappend und versetzt */
-.dTogether { flex-basis:calc(40 * var(--vw)); max-width:216px; padding-top:3px; }   /* Platz für den Rand der Fotos oben */
-.dTogether .dTi { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }   /* Namen auf zwei Zeilen */
+/* Goes together (discover.js): wider tile, 2–3 round artist photos overlapping and offset */
+.dTogether { flex-basis:calc(40 * var(--vw)); max-width:216px; padding-top:3px; }   /* room for the photos' border at the top */
+.dTogether .dTi { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }   /* names on two lines */
 .tgArt { display:flex; align-items:flex-start; height:calc(26 * var(--vw)); max-height:140px; margin:0 0 calc(1.2 * var(--vw)); }
 .dTile .tgArt .sCover { flex:0 0 auto; width:calc(19 * var(--vw)); height:calc(19 * var(--vw)); max-width:102px; max-height:102px; margin:0;
   border-radius:50%; box-shadow:0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35); background:rgba(var(--fg-rgb),.08); }
@@ -857,16 +857,16 @@ html.stage body.ovMain #lyrShiftBar { visibility:hidden; }
 .dTile .tgArt.n3 .sCover:nth-child(3) { align-self:center; }
 .tgMark { flex:0 0 auto; font-size:calc(2.6 * var(--vw)); opacity:.45; }
 
-/* Geburtstage (discover.js): Abzeichen mit den Jahren bei runden Geburtstagen, Jubiläen zusätzlich mit goldenem Rand */
+/* Birthdays (discover.js): badge with the years for round birthdays, anniversaries also with a golden border */
 .dRound, .dJubilee { position:relative; }
 .dBadge { position:absolute; top:calc(1.5 * var(--vw)); left:calc(1.5 * var(--vw)); line-height:1.2;
-  padding:.3em calc(2 * var(--vw)) .18em;   /* Century Gothic sitzt hoch: oben etwas mehr, damit die Schrift mittig wirkt */
+  padding:.3em calc(2 * var(--vw)) .18em;   /* Century Gothic sits high: a bit more at the top so the text looks centered */
   border-radius:999px; font-size:calc(2.6 * var(--vw)); font-weight:700; background:rgba(0,0,0,.62); color:#fff; }
 .dJubilee .dBadge { background:var(--gold); color:var(--ink); }
-.dJubilee .sCover { outline:3px solid var(--gold); outline-offset:-3px; }   /* innen: die Reihe schneidet außen ab */
+.dJubilee .sCover { outline:3px solid var(--gold); outline-offset:-3px; }   /* inside: the row clips on the outside */
 
-/* Begrüßung (welcome.js): Karte in der Mitte über abgedunkeltem Hintergrund (Tipp darauf schließt); im Querformat mit
-   breitem Rand und Album des Tages neben seinen Angaben. Darin Album des Tages, Reihen, Zufallsmix und Schalter */
+/* Welcome (welcome.js): card in the middle over a darkened background (a tap on it closes); in landscape with
+   a wide margin and the album of the day next to its details. Inside: album of the day, rows, random mix and switch */
 #overlayWelcome { position:fixed; inset:0; z-index:15; display:flex; align-items:center; justify-content:center;
   padding:max(env(safe-area-inset-top,0px), 12px) 12px max(env(safe-area-inset-bottom,0px), 12px);
   background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .3s; }
@@ -875,9 +875,9 @@ html.stage body.ovMain #lyrShiftBar { visibility:hidden; }
   -webkit-backdrop-filter:blur(30px); backdrop-filter:blur(30px); border-radius:calc(4 * var(--vw));
   border:1px solid rgba(var(--fg-rgb),.16); box-shadow:0 20px 60px rgba(0,0,0,.45);
   transform:scale(.96); transition:transform .3s cubic-bezier(.4,0,.2,1); }
-html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller als der abgedunkelte Hintergrund */
+html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dark: lighter than the darkened background */
 #overlayWelcome.on .wCard { transform:none; }
-.wCard .dRow.fit { justify-content:flex-start; }   /* wenige Kacheln: links statt über die breite Karte verteilt */
+.wCard .dRow.fit { justify-content:flex-start; }   /* few tiles: left-aligned instead of spread across the wide card */
 @media (orientation:landscape) {
   #overlayWelcome { padding:8vh 12vw; }
   .wCard { --vw:min(1vw, 6px); max-width:1100px; border-radius:20px; }
@@ -896,14 +896,14 @@ html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller a
     column-gap:calc(6 * var(--vw)); height:240px; align-items:start; text-align:left; }
   .wDay .dBig { grid-row:1 / 3; width:240px; height:240px; max-width:none; max-height:none; }
   .wDay .dMeta { grid-column:2; margin-top:0; min-width:0; }
-  .wDay .wPlay { grid-column:3; align-self:center; margin-top:0; }        /* auf Höhe des Künstlers */
+  .wDay .wPlay { grid-column:3; align-self:center; margin-top:0; }        /* level with the artist */
   .wDay .wInfo { grid-column:2 / 4; align-self:stretch; max-height:none; min-height:0; margin-top:calc(3 * var(--vw)); }
 }
 .wMix { display:flex; align-items:center; gap:calc(2.5 * var(--vw)); margin:calc(4 * var(--vw)) 0 calc(2 * var(--vw)); cursor:pointer; font-size:calc(3.4 * var(--vw)); }
 .wAuto { display:flex; align-items:center; gap:calc(2 * var(--vw)); margin:calc(4 * var(--vw)) 0 calc(6 * var(--vw)); font-size:calc(3 * var(--vw)); opacity:.6; cursor:pointer; }
 .wAuto input { width:1.1em; height:1.1em; accent-color:var(--fg); }
 
-/* Rückblick: Rubriken zum Aufklappen */
+/* review: collapsible sections */
 .hFold { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:calc(1.5 * var(--vw)) 0;
          border-bottom:1px solid rgba(var(--fg-rgb),.12); -webkit-user-select:none; user-select:none; }
 .hFold:after { content:''; width:calc(2 * var(--vw)); height:calc(2 * var(--vw)); max-width:10px; max-height:10px; margin-right:calc(1 * var(--vw));
@@ -911,7 +911,7 @@ html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller a
 .hFold.open:after { transform:rotate(-135deg); }
 .hNoImg .sMeta { padding-left:calc(1 * var(--vw)); }
 
-/* Rückblick: Monat für die Ranglisten wählen */
+/* review: choose the month for the rankings */
 .hSelect .hBar { cursor:pointer; }
 .hHasSel .hBar:not(.sel) .hFill { opacity:.35; }
 .hScope { display:flex; align-items:center; justify-content:space-between; gap:calc(2 * var(--vw)); margin-top:calc(3 * var(--vw));
@@ -928,7 +928,7 @@ html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller a
 .mxChip.mxMore { background:none; opacity:.7; }
 .mxChip.mxSmall { font-size:calc(3.1 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(2.8 * var(--vw)); }
 .dMore { padding-bottom:calc(4 * var(--vw)); }
-.dMoreSec .mxLabel { padding-top:calc(3 * var(--vw)); text-transform:none; letter-spacing:.14em; font-size:calc(2.8 * var(--vw)); }   /* Abschnitt wie „Zuletzt gehört“, keine Formularbeschriftung */
+.dMoreSec .mxLabel { padding-top:calc(3 * var(--vw)); text-transform:none; letter-spacing:.14em; font-size:calc(2.8 * var(--vw)); }   /* section like "Recently played", not a form label */
 .mxChip.dMixChip { display:inline-flex; align-items:center; justify-content:center; padding-left:calc(2.8 * var(--vw)); padding-right:calc(2.8 * var(--vw)); }
 .mxChip.dMixChip svg { width:calc(4.6 * var(--vw)); height:calc(4.6 * var(--vw)); max-width:22px; max-height:22px; fill:var(--fg); }
 .mxChip.dMixChip.roll svg { animation:dRoll .45s ease-out; }
@@ -985,7 +985,7 @@ html:not(.light) .wCard { background:rgba(40,40,46,.86); }   /* dunkel: heller a
 .mxDel { flex:0 0 auto; cursor:pointer; opacity:.4; padding:calc(1.5 * var(--vw)); display:flex; }
 .mxDel svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); max-width:20px; max-height:20px; fill:var(--fg); }
 
-/* Light-Mode: was sich nicht über die Farbvariablen in base.css lösen lässt */
+/* Light mode: what cannot be solved via the color variables in base.css */
 html.light #cover { box-shadow:0 calc(3 * var(--vw)) calc(9 * var(--vw)) rgba(0,0,0,.28); }
 html.light .dBig { box-shadow:0 8px 24px rgba(0,0,0,.18); }
 html.light #searchSources input:checked {
@@ -996,7 +996,7 @@ html.light .mxRange::-webkit-slider-thumb { background:#fff; box-shadow:0 1px 4p
 html.light .mxRange::-moz-range-thumb { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35); }
 html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 
-/* Bewertungen (rating.js): Daumen je Titel (Albumseite, Warteschlange), Herz auf der Künstlerseite, Sterne im Albumkopf */
+/* Ratings (rating.js): thumbs per track (album page, queue), heart on the artist page, stars in the album header */
 .rateThumb { flex:0 0 auto; width:calc(8 * var(--vw)); height:calc(8 * var(--vw)); max-width:36px; max-height:36px;
   margin-left:calc(1.5 * var(--vw)); border-radius:50%; cursor:pointer; opacity:.35;
   display:flex; align-items:center; justify-content:center; }
@@ -1014,14 +1014,14 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 .rateStar svg { width:100%; height:100%; fill:var(--fg); opacity:.4; display:block; }
 .rateStar.on svg { fill:var(--accent, var(--fg)); opacity:1; }
 
-/* Tippflächen etwa 44 px (Apple-Richtwert): Polster plus gleich großer Gegenrand, Symbole und Abstände bleiben gleich */
+/* tap targets about 44 px (Apple guideline): padding plus equal negative margin, icons and spacing stay the same */
 .vBtn { padding:9px; margin:-9px; align-items:center; justify-content:center; }
 #checkBack, #historyBack, #welcomeBack, #volumioBack, #systemBack, #helpBack { padding:10px; margin:-10px; }
 #browseBack { padding:8px; margin:-8px calc(1 * var(--vw) - 6px) -8px calc(-2 * var(--vw) - 6px); }
 .rateStars { gap:0; margin-left:calc(-1.8 * var(--vw)); margin-top:0; }
 .rateStar { box-sizing:content-box; padding:calc(1.8 * var(--vw)); }
 
-/* Seite „System“ (system.js): Karten, ab iPad-Breite zweispaltig; Diagramme in der Akzentfarbe */
+/* "System" page (system.js): cards, two columns from iPad width; charts in the accent color */
 #overlaySystem .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 #sysBody { padding:calc(2 * var(--vw)) calc(5 * var(--vw)) calc(6 * var(--vw)); }
 .syGridBox { display:grid; grid-template-columns:1fr; gap:calc(3 * var(--vw)); }
@@ -1107,14 +1107,14 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
   .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath, .sySvcState { font-size:13px; } .syBig { font-size:30px; } .syDiskHead, .sySvcName { font-size:15px; }
 }
 
-/* Antippbare Zeilen in allen Listen gleich: mit der Maus hinterlegt, beim Tippen kurz hinterlegt
-   (Titel, Alben, Suche, Warteschlange, Playlisten, Radio, Menü, Verlauf, Hinweise mit Verweis) */
+/* Tappable rows look the same in all lists: highlighted on mouse hover, briefly highlighted on tap
+   (tracks, albums, search, queue, playlists, radio, menu, history, notes with links) */
 .sRow:active, .plRow:active, .menuRow:active, .hgRow:active, .sHint.listLink:active { background:rgba(var(--fg-rgb),.08); border-radius:calc(2 * var(--vw)); }
 @media (hover:hover) and (pointer:fine) {
   .sRow:hover, .qRow:hover, .plRow:hover, .menuRow:hover, .hgRow:hover, .sHint.listLink:hover { background:rgba(var(--fg-rgb),.06); border-radius:calc(2 * var(--vw)); }
 }
 
-/* Seite „Hilfe“ (help.js): Karten wie bei „System“, je Zeile die Handlung hervorgehoben */
+/* "Help" page (help.js): cards as in "System", the action highlighted in each line */
 #overlayHelp .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 #helpBody { padding:calc(2 * var(--vw)) calc(5 * var(--vw)) calc(6 * var(--vw)); }
 .hlIntro { font-size:calc(3.2 * var(--vw)); color:rgba(var(--fg-rgb),.7); margin:0 0 calc(3 * var(--vw)); line-height:1.45; }
@@ -1128,7 +1128,7 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 @media (min-width:700px) {
   .hlIntro { font-size:15px; } .hlTitle { font-size:17px; } .hlRow { font-size:14px; }
 }
-/* System: Protokolle */
+/* System: logs */
 .syLogCtl { margin-top:calc(1.5 * var(--vw)); }
 .syLog { margin:calc(2 * var(--vw)) 0 0; max-height:55vh; overflow:auto; -webkit-overflow-scrolling:touch; padding:calc(2 * var(--vw));
   background:rgba(var(--fg-rgb),.05); border:1px solid rgba(var(--fg-rgb),.08); border-radius:10px;

@@ -1,6 +1,6 @@
-/* Hell oder dunkel: ?theme=light|dark|auto in der Adresse, sonst THEME in config(.local).js, sonst 'auto' (wie das Gerät,
-   wechselt mit, z. B. abends). Setzt html.light; die Farben stehen in web/css/base.css. Gilt auch für die Bühnenansicht; kioskTV.html bleibt dunkel.
-   Klassisches Skript, ES5; wird im <head> nach config.js geladen, damit die Seite gleich in der richtigen Farbe erscheint. */
+/* Light or dark: ?theme=light|dark|auto in the URL, else THEME in config(.local).js, else 'auto' (follows the device,
+   switches along, e.g. in the evening). Sets html.light; the colors are in web/css/base.css. Also applies to the stage view; kioskTV.html stays dark.
+   Classic script, ES5; loaded in <head> after config.js so the page appears in the right colors right away. */
 (function(){
   var cfg = window.APP_CONFIG || {};
   var m = /[?&]theme=(light|dark|auto)\b/.exec(location.search);

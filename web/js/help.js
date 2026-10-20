@@ -1,10 +1,10 @@
-/* Seite „Hilfe“ (Zahnrad-Menü): das Bedienkonzept in kurzen Abschnitten, je Zeile „was man tut | was passiert“
-   (Texte in web/lang/*.js unter help.*, Zeilen durch \n getrennt); oben ein Verweis auf die Anleitung im Repo.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* "Help" page (gear menu): the usage concept in short sections, each line "what you do | what happens"
+   (texts in web/lang/*.js under help.*, lines separated by \n); at the top a link to the guide in the repo.
+   Classic script, shared global scope; load order see xplorio.html. */
 var overlayHelp = document.getElementById('overlayHelp');
 var helpBody = document.getElementById('helpBody');
 
-/* id und Symbol (Material-Pfad) je Abschnitt */
+/* id and icon (Material path) per section */
 var HELP_SECTIONS = [
   {id: 'player', icon: 'M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z'},
   {id: 'lists', icon: 'M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z'},
@@ -16,7 +16,7 @@ var HELP_SECTIONS = [
   {id: 'tips', icon: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'}
 ];
 
-var HELP_EXT = 'M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z';   /* externer Verweis */
+var HELP_EXT = 'M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z';   /* external link */
 
 function openHelp() {
   closeAllOverlays();

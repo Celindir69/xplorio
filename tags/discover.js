@@ -1,15 +1,15 @@
-/* Entdecken: Reihen für die Suche ohne Eingabe (Zufällige Entdeckungen, Lange nicht gehört, Noch nie gehört,
-   Früher oft gehört) je Künstler, Album oder Titel, und der Zufallsmix für den Würfel neben „Alle abspielen“.
-   Node 8, nur ES5. */
+/* Discover: shelves for the search without input (random discoveries, not heard for a long time, never heard,
+   often heard in the past) per artist, album or track, and the random mix for the dice next to "Play all".
+   Node 8, ES5 only. */
 var plays  = require('./plays.js');
 var albums = require('./albums.js');
 
 var DAY = 86400;
-var ROW = 12;                                            /* Kacheln je Reihe */
-var LONG = 180 * DAY;                                    /* lange nicht gehört: über ein halbes Jahr her */
-var OLDFAV_GAP = 180 * DAY;                              /* früher oft gehört: seit einem halben Jahr nicht mehr */
-var OLDFAV_MIN = {artist: 10, album: 5, track: 4};       /* … und mindestens so oft gehört */
-var OLDFAV_POOL = 36;                                    /* aus den so vielen Meistgehörten wird gezogen */
+var ROW = 12;                                            /* tiles per shelf */
+var LONG = 180 * DAY;                                    /* not heard for long: over half a year ago */
+var OLDFAV_GAP = 180 * DAY;                              /* often heard in the past: not for half a year */
+var OLDFAV_MIN = {artist: 10, album: 5, track: 4};       /* … and heard at least this often */
+var OLDFAV_POOL = 36;                                    /* drawn from this many most played */
 var STREAM_RE = /^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)\/|spotify:)/i;
 
 function bump(map, k, t) {
@@ -19,7 +19,7 @@ function bump(map, k, t) {
   if (t > s.last) s.last = t;
 }
 
-/* Verlauf -> Zähler {last, n} je Künstler, Album und Titel; NONE, wenn nie gehört */
+/* history -> counters {last, n} per artist, album and track; NONE if never heard */
 var NONE = {last: 0, n: 0};
 function statIndex(list) {
   var ar = {}, tr = {}, dir = {}, alk = {};
@@ -32,14 +32,14 @@ function statIndex(list) {
   return {
     artist: function(a){ return ar[plays.norm(a.ar)] || NONE; },
     track:  function(t){ return tr[plays.norm(t[0]) + '|' + plays.norm(t[1])] || NONE; },
-    album:  function(a){                                 /* Ordner (sicher) oder Album+Künstler (Last.fm-Einträge ohne Pfad), der größere Wert */
+    album:  function(a){                                 /* folder (reliable) or album+artist (Last.fm entries without path), the larger value */
       var d = dir[a.dir] || NONE, k = alk[plays.norm(a.al) + '|' + plays.norm(a.ar)] || NONE;
       return d.n >= k.n ? {n: d.n, last: Math.max(d.last, k.last)} : {n: k.n, last: Math.max(d.last, k.last)};
     }
   };
 }
 
-/* k zufällige Einträge (ohne Wiederholung) */
+/* k random entries (without repetition) */
 function sample(arr, k, rnd) {
   rnd = rnd || Math.random;
   var a = arr.slice(), n = Math.min(k, a.length);
@@ -50,7 +50,7 @@ function sample(arr, k, rnd) {
   return a.slice(0, n);
 }
 
-/* k Einträge, gewichtet wie das Zufallsalbum: nie oder lange nicht gehört öfter (albums.weight) */
+/* k entries, weighted like the random album: never or long unheard more often (albums.weight) */
 function weighted(arr, statOf, now, k, rnd) {
   rnd = rnd || Math.random;
   var cand = sample(arr, k * 4, rnd).map(function(x){ return {x: x, w: albums.weight(statOf(x).last || null, now)}; }), out = [];
@@ -64,7 +64,7 @@ function weighted(arr, statOf, now, k, rnd) {
   return out;
 }
 
-/* Eintrag für die Oberfläche */
+/* entry for the UI */
 function item(kind, x, s) {
   var o = kind === 'artist' ? {ar: x.ar, n: x.n, dir: x.dir}
         : kind === 'track' ? {ar: x[0], ti: x[1], f: x[2], d: x[3] || 0, al: x[4] || ''}
@@ -74,7 +74,7 @@ function item(kind, x, s) {
   return o;
 }
 
-/* Reihen für kind (artist|album|track); ents: Künstler (albums.artists), Alben (albums.json) bzw. Titel (library-tracks.json) */
+/* shelves for kind (artist|album|track); ents: artists (albums.artists), albums (albums.json) or tracks (library-tracks.json) */
 function shelves(kind, ents, stats, now, rnd) {
   var statOf = stats[kind], forgotten = [], never = [], often = [], min = OLDFAV_MIN[kind];
   ents.forEach(function(x){
@@ -94,8 +94,8 @@ function shelves(kind, ents, stats, now, rnd) {
   ];
 }
 
-/* Zufallsmix: bis zu k Titel aus pool ([[Künstler, Titel, Datei, …], …]), rein zufällig, derselbe Künstler nie
-   direkt hintereinander (außer es bleibt nur noch einer, z. B. auf der Künstlerseite); jede Datei höchstens einmal */
+/* random mix: up to k tracks from pool ([[artist, title, file, …], …]), purely random, the same artist never
+   directly in a row (unless only one is left, e.g. on the artist page); each file at most once */
 function mix(pool, k, rnd) {
   var seen = {}, a = sample(pool.filter(function(t){ return seen[t[2]] ? false : (seen[t[2]] = true); }), pool.length, rnd);
   var out = [], prev = null;
@@ -109,8 +109,8 @@ function mix(pool, k, rnd) {
   return out;
 }
 
-/* Titel für den Mix: {artist} -> Titel des Künstlers und seiner Alben; {artists: [...]} -> dasselbe für mehrere;
-   {dirs: [...]} -> Titel dieser Albumordner */
+/* tracks for the mix: {artist} -> tracks of the artist and their albums; {artists: [...]} -> same for several;
+   {dirs: [...]} -> tracks of these album folders */
 function mixPool(tracks, albumList, q) {
   var dirs = {}, want = {}, any = false;
   (q.dirs || []).forEach(function(d){ dirs[String(d)] = true; });
@@ -119,11 +119,11 @@ function mixPool(tracks, albumList, q) {
   return tracks.filter(function(t){ return (any && want[plays.norm(t[0])]) || dirs[albums.albumDir(t[2])]; });
 }
 
-/* Mix über mehrere Künstler (ähnliche Künstler): jeder Künstler etwa gleich oft, egal wie viel von ihm da ist;
-   es zählt der Künstler des Titels, auf seinem eigenen Album der des Albums ("Spliff feat. Nina" auf einem
-   Spliff-Album zählt als Spliff). Sampler mit Album-Künstler "Various Artists" o. Ä. zählen so nicht als ein Künstler. Je Künstler zuerst nicht kürzlich Gehörtes (recent(t)),
-   über die Alben verteilt. Nie derselbe Künstler direkt hintereinander, solange
-   ein anderer übrig ist; jede Datei höchstens einmal. */
+/* mix across several artists (similar artists): each artist about equally often, however much of them there is;
+   the track's artist counts, on their own album the album's artist ("Spliff feat. Nina" on a
+   Spliff album counts as Spliff). Compilations with album artist "Various Artists" or similar thus don't count as one artist. Per artist, not recently heard first (recent(t)),
+   spread across the albums. Never the same artist directly in a row as long as
+   another is left; each file at most once. */
 function mixBalanced(pool, k, albumList, rnd, recent) {
   rnd = rnd || Math.random;
   var dirArtist = {}, by = {}, seen = {};
@@ -135,7 +135,7 @@ function mixBalanced(pool, k, albumList, rnd, recent) {
     var a = aa && ta.indexOf(aa) === 0 ? aa : (ta || aa || '');
     (by[a] || (by[a] = [])).push(t);
   });
-  Object.keys(by).forEach(function(a){                  /* je Künstler: nicht kürzlich Gehörtes zuerst, quer durch die Alben */
+  Object.keys(by).forEach(function(a){                  /* per artist: not recently heard first, across the albums */
     var nth = {}, list = sample(by[a], by[a].length, rnd).map(function(t, i){
       var al = albums.albumDir(t[2]);
       nth[al] = (nth[al] || 0) + 1;
@@ -148,7 +148,7 @@ function mixBalanced(pool, k, albumList, rnd, recent) {
   while (out.length < k) {
     var left = Object.keys(by).filter(function(a){ return by[a].length; });
     if (!left.length) break;
-    /* am wenigsten gespielte zuerst, darunter zufällig; den vorigen nur, wenn er als einziger übrig ist */
+    /* least played first, random among those; the previous one only if it is the only one left */
     var cand = left.filter(function(a){ return a !== prev; });
     if (!cand.length) cand = left;
     var min = Math.min.apply(null, cand.map(function(a){ return used[a] || 0; }));
@@ -161,8 +161,8 @@ function mixBalanced(pool, k, albumList, rnd, recent) {
   return out;
 }
 
-/* Titel einer Entdecken-Reihe für deren Würfel (immer Titel, egal welcher Reiter): random gewichtet wie die Reihe,
-   forgotten/never/oldfav nach denselben Regeln wie die Reihe, ago: extra.keys (Künstler|Titel), gems: extra.files */
+/* tracks of a discover shelf for its dice (always tracks, whatever the tab): random weighted like the shelf,
+   forgotten/never/oldfav by the same rules as the shelf, ago: extra.keys (artist|title), gems: extra.files */
 function shelfPool(shelf, tracks, stats, now, extra, rnd) {
   extra = extra || {};
   if (shelf === 'gems') return tracks.filter(function(t){ return extra.files && extra.files[t[2]]; });
@@ -178,8 +178,8 @@ function shelfPool(shelf, tracks, stats, now, extra, rnd) {
   return [];
 }
 
-/* Würfel einer Reihe im Reiter Künstler bzw. Alben: welche Künstler (norm. Name) bzw. Alben (Ordner) gehören zur ganzen
-   Reihe (nicht nur zu den gezeigten Kacheln); gleiche Regeln wie shelves(). ents: Künstler bzw. Alben */
+/* dice of a shelf in the artists or albums tab: which artists (normalized name) or albums (folder) belong to the whole
+   shelf (not just the tiles shown); same rules as shelves(). ents: artists or albums */
 function shelfKeys(shelf, kind, ents, stats, now) {
   var statOf = stats[kind], keys = {}, often = [];
   function key(x) { return kind === 'artist' ? plays.norm(x.ar) : x.dir; }
@@ -191,7 +191,7 @@ function shelfKeys(shelf, kind, ents, stats, now) {
   often.sort(function(a, b){ return statOf(b).n - statOf(a).n; }).slice(0, OLDFAV_POOL).forEach(function(x){ keys[key(x)] = true; });
   return keys;
 }
-/* Titel dieser Künstler (Titel- oder Albumkünstler) bzw. Alben */
+/* tracks of these artists (track or album artist) or albums */
 function groupPool(tracks, albumList, kind, keys) {
   if (kind === 'album') return tracks.filter(function(t){ return keys[albums.albumDir(t[2])]; });
   var dirArtist = {};
@@ -199,15 +199,15 @@ function groupPool(tracks, albumList, kind, keys) {
   return tracks.filter(function(t){ return keys[plays.norm(t[0])] || keys[dirArtist[albums.albumDir(t[2])]]; });
 }
 
-/* Zufallsmix mit Regeln (Würfel): o.artist Titel je Künstler (Titel-Künstler), o.album je Album (Ordner),
-   o.recent(t): kürzlich gehört. Zuerst nicht kürzlich Gehörtes innerhalb der Grenzen, dann darüber hinaus, erst
-   zuletzt kürzlich Gehörtes; jede Datei einmal, Reihenfolge wie mix() (nie derselbe Künstler direkt hintereinander). */
+/* random mix with rules (dice): o.artist tracks per artist (track artist), o.album per album (folder),
+   o.recent(t): recently heard. First not recently heard within the limits, then beyond them, only
+   last recently heard; each file once, order as in mix() (never the same artist directly in a row). */
 function mixCapped(pool, k, o, rnd) {
   o = o || {};
   var maxAr = o.artist || Infinity, maxAl = o.album || Infinity, recent = o.recent || function(){ return false; };
   var seen = {}, list = sample(pool.filter(function(t){ return seen[t[2]] ? false : (seen[t[2]] = true); }), pool.length, rnd);
   var per = {}, perAl = {}, out = [], taken = {};
-  function pass(old, capped) {                        /* old: kürzlich Gehörtes an der Reihe */
+  function pass(old, capped) {                        /* old: recently heard ones' turn */
     list.forEach(function(t){
       if (out.length >= k || taken[t[2]] || !!recent(t) !== old) return;
       var a = plays.norm(t[0]), al = albums.albumDir(t[2]);
@@ -221,7 +221,7 @@ function mixCapped(pool, k, o, rnd) {
   return mix(out, k, rnd);
 }
 
-/* kürzlich gehört (Würfel stellt es hinten an): Titel seit days Tagen gespielt */
+/* recently heard (dice puts it at the end): track played within days days */
 var RECENT_DAYS = 14;
 function recentFn(stats, now, days) {
   var since = now - (days || RECENT_DAYS) * DAY;

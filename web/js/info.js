@@ -1,5 +1,5 @@
-/* Lyrics-Overlay und Info-Overlay mit Reitern und Wischgesten
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Lyrics overlay and info overlay with tabs and swipe gestures
+   Classic script, shared global scope; see xplorio.html for load order. */
 /* ---------- Lyrics ---------- */
 function showLyrics(data) {
   lyricLines = [];
@@ -19,9 +19,9 @@ paintTime();
 }
 
 /* ---------- Info ---------- */
-/* Reiter "Titel" (Text zum einzelnen Lied): nur wenn etwas gefunden wurde. Bei Alben als zweiter Reiter (Album bleibt
-   der Startreiter, damit nichts springt); beim Webradio ganz vorn, dort gibt es kein Album und der Titel ist das Neue */
-var trackInfo = null;            /* {key, item, radio} des laufenden Titels */
+/* "Track" tab (text about the single song): only if something was found. For albums as the second tab (album stays
+   the start tab, so nothing jumps); for web radio at the very front, since there is no album and the track is what's new */
+var trackInfo = null;            /* {key, item, radio} of the current track */
 function trackInfoAt() { return trackInfo && trackInfo.radio ? 0 : 1; }
 function withTrackInfo(list) {
   if (!trackInfo || !trackInfo.item || !list.length) return list;
@@ -34,15 +34,15 @@ function setTrackInfo(key, title, data, radio) {
   trackInfo = {key: key, item: item, radio: !!radio};
   var at = -1;
   infoItems.forEach(function(it, i){ if (it.track) at = i; });
-  if (!infoItems.length || (at < 0 && !item)) return;  /* Album/Künstler noch nicht da: kommt mit showInfo */
+  if (!infoItems.length || (at < 0 && !item)) return;  /* album/artist not there yet: comes with showInfo */
   if (at >= 0) infoItems.splice(at, 1);
   if (item) infoItems.splice(trackInfoAt(), 0, item);
-  var idx = infoItems.indexOf(cur);                    /* auf dem gleichen Reiter bleiben */
-  if (item && radio && infoIdx === 0) idx = -1;        /* Radio: stand der Startreiter offen, den Titel zeigen */
+  var idx = infoItems.indexOf(cur);                    /* stay on the same tab */
+  if (item && radio && infoIdx === 0) idx = -1;        /* radio: if the start tab was open, show the track */
   infoIdx = idx >= 0 ? idx : 0;
   btnInfo.className = 'actBtn' + (infoItems.length ? ' has-content' : '');
   buildInfoTabs();
-  if (idx < 0) renderInfo(false);                      /* der alte Titel-Reiter war offen */
+  if (idx < 0) renderInfo(false);                      /* the old track tab was open */
 }
 
 function showInfo(list) {
@@ -99,7 +99,7 @@ function renderInfo(dir) {
   while (infoContent.firstChild) infoContent.removeChild(infoContent.firstChild);
 
 
-  /* Reiter „Entdecken“: wie auf der Künstlerseite (discover.js); einmal gebaut, beim Zurückwechseln nicht neu laden */
+  /* "Discover" tab: as on the artist page (discover.js); built once, not reloaded when switching back */
   if (it.discover) {
     if (!it.el) {
       var box = document.createElement('div'), note = browseNote(T('browse.loading'));
@@ -118,14 +118,14 @@ function renderInfo(dir) {
     loading.className = 'plHint';
     loading.textContent = T('info.similar.searching');
     infoContent.appendChild(loading);
-    if (it.loading) return;                                /* schon unterwegs (Reiter erneut gewählt): nicht doppelt laden */
+    if (it.loading) return;                                /* already in progress (tab selected again): do not load twice */
     it.loading = true;
     loadSimilarArtists(it.artist).then(function(matches){
-      var streams = {};                                    /* je Dienst: null = wird noch gesucht */
+      var streams = {};                                    /* per service: null = still searching */
       streamsOn().forEach(function(svc){ streams[svc.id] = null; });
       it.data = {kind:'similarArtists', value: matches, streams: streams};
       if (infoItems[infoIdx] === it) renderInfo(false);
-      var data = it.data;                                  /* Dienste danach (nacheinander), damit die Sammlung sofort erscheint */
+      var data = it.data;                                  /* services afterwards (one after another), so the collection appears immediately */
       streamsOn().reduce(function(chain, svc){
         return chain.then(function(){
           return loadStreamSimilar(svc, it.artist, matches).then(function(list){
@@ -143,7 +143,7 @@ if (!it.data || it.data.kind === 'story') {
   var img = document.createElement('img');
   if (it.title === curAlbum || it.track) {
     img.src = lastArt || tinyart(curArtist, curAlbum);
-    img.className = 'infoImg album';             /* im Querformat ausgeblendet: das Cover ist dort ohnehin zu sehen */
+    img.className = 'infoImg album';             /* hidden in landscape: the cover is visible there anyway */
   } else {
     img.src = tinyart(it.title);
     img.className = 'infoImg artist';
@@ -165,7 +165,7 @@ if (!it.data || it.data.kind === 'story') {
       row.className = 'disc-row' + (isCur ? ' cur' : '');
       row.textContent = al.title;
       row.addEventListener('click', function(){
-        openBrowse({kind:'album', artist:curArtist, album:al.title, uri:al.uri});   /* Titel des Albums; zurück-Pfeil führt hierher */
+        openBrowse({kind:'album', artist:curArtist, album:al.title, uri:al.uri});   /* album tracks; back arrow leads here */
       });
       infoContent.appendChild(row);
     });
@@ -189,7 +189,7 @@ if (!it.data || it.data.kind === 'story') {
       row.className = 'disc-row';
       row.textContent = name;
       row.addEventListener('click', function(){
-        openBrowse({kind:'artist', artist:name});                                  /* Alben des Künstlers; zurück-Pfeil führt hierher */
+        openBrowse({kind:'artist', artist:name});                                  /* the artist's albums; back arrow leads here */
       });
       infoContent.appendChild(row);
     });
@@ -203,7 +203,7 @@ if (!it.data || it.data.kind === 'story') {
         row.className = 'disc-row';
         row.textContent = t.title;
         row.addEventListener('click', function(){
-          openBrowse({kind:'artist', artist:t.title, uri:t.uri});     /* Alben beim Dienst (browse.js) */
+          openBrowse({kind:'artist', artist:t.title, uri:t.uri});     /* albums at the service (browse.js) */
         });
         infoContent.appendChild(row);
       });
@@ -222,7 +222,7 @@ if (!it.data || it.data.kind === 'story') {
   creditsRender(infoContent, it.data.value);
 }
 
-/* Mitwirkende als Zeilen in box (Info-Seite, Reiter „Hintergrund“ der Albumseite) */
+/* credits as rows in box (info page, "Background" tab of the album page) */
 function creditsRender(box, value) {
   value.forEach(function(row){
     var line = document.createElement('div');
@@ -231,7 +231,7 @@ function creditsRender(box, value) {
     k.className = 'credit-key'; k.textContent = row.key;
     var v = document.createElement('div');
     v.className = 'credit-val';
-    var more = document.createElement('div');                  /* aufgeklappte Infos unter der Zeile */
+    var more = document.createElement('div');                  /* expanded info below the row */
     more.className = 'credit-more';
     (row.values || []).forEach(function(x, i){
       if (i) v.appendChild(document.createTextNode(', '));
@@ -246,7 +246,7 @@ function creditsRender(box, value) {
   });
 }
 
-/* Mitwirkende verlinkt Volumio per MusicBrainz-Kennung (mbid:/artist|place|label/…) */
+/* Volumio links credits via MusicBrainz ID (mbid:/artist|place|label/…) */
 function creditLink(uri) {
   var m = /^mbid:\/(artist|place|label)\/([0-9a-f-]+)/i.exec(uri || '');
   return m ? {mode: 'story' + m[1].charAt(0).toUpperCase() + m[1].slice(1), mbid: m[2]} : null;
@@ -256,12 +256,12 @@ var creditCache = {};
 function creditStory(name, link) {
   var k = link.mode + '|' + link.mbid;
   if (creditCache[k]) return creditCache[k];
-  var p = link.mode === 'storyArtist'                          /* Personen: bei Bedarf auch eigene Quellen (Last.fm, Wikipedia) */
+  var p = link.mode === 'storyArtist'                          /* people: own sources too if needed (Last.fm, Wikipedia) */
     ? ask({mode: link.mode, mbid: link.mbid, artist: name})
     : askVolumio({mode: link.mode, mbid: link.mbid});
   creditCache[k] = p.then(function(res){
     if (!res || res.kind !== 'story' || !res.value) { delete creditCache[k]; return null; }
-    var txt = new DOMParser().parseFromString(String(res.value), 'text/html').body.textContent.trim();   /* Volumio liefert teils HTML */
+    var txt = new DOMParser().parseFromString(String(res.value), 'text/html').body.textContent.trim();   /* Volumio sometimes delivers HTML */
     return txt || null;
   });
   return creditCache[k];
@@ -277,7 +277,7 @@ function toggleCredit(n, more, name, link) {
   var t = document.createElement('div');
   t.textContent = '…';
   box.appendChild(h); box.appendChild(t);
-  box.addEventListener('click', function(){ box.remove(); n.classList.remove('open'); });   /* Tipp auf die Info schließt sie wieder */
+  box.addEventListener('click', function(){ box.remove(); n.classList.remove('open'); });   /* a tap on the info closes it again */
   more.appendChild(box); n.classList.add('open');
   box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
   creditStory(name, link).then(function(txt){

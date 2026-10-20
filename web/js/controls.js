@@ -1,5 +1,5 @@
-/* Repeat/Random und Lautstärke (Rotel-Dienst oder, mit APP_CONFIG.ROTEL = false, Volumio)
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Repeat/random and volume (Rotel service or, with APP_CONFIG.ROTEL = false, Volumio)
+   Classic script, shared global scope; load order see xplorio.html. */
 /* ---------- Repeat / Random ---------- */
 function updateCtrlUI() {
   var shown = repeatShown(stRepeatMode, autodj);                 /* ∞ = AutoDJ (autodj.js) */
@@ -25,7 +25,7 @@ cRandom.addEventListener('click', function(){
 });
 
 
-/* ---------- Rotel Lautstärke ---------- */
+/* ---------- Rotel volume ---------- */
 var ROTEL_ON = !!(window.APP_CONFIG && window.APP_CONFIG.ROTEL);
 var ROTEL    = 'http://' + location.hostname + ':' + ((window.APP_CONFIG && window.APP_CONFIG.ROTEL_PORT) || 8765);
 var volWrap  = document.getElementById('volWrap');
@@ -46,14 +46,14 @@ function paintSlider() {
   vVal.textContent = vSlider.value;
 }
 
-/* Rotel ein/aus (Symbol oben links). Die Befehlsnamen stehen in web/config.js.
-   Ausschalten: erst die Wiedergabe stoppen, dann Rotel aus. */
+/* Rotel on/off (icon top left). The command names are in web/config.js.
+   Switching off: stop playback first, then Rotel off. */
 var btnRotelPower = document.getElementById('btnRotelPower');
-var rotelOn = false;          /* was die Anzeige gerade zeigt */
-var rotelReachable = false;   /* antwortet der Rotel-Dienst überhaupt? */
-var rotelLinked = false;      /* hat der Rotel-Dienst eine Verbindung zum Verstärker? (Standby: oft nein) */
-var rotelBusy = false;        /* Ausschalten läuft (Wiedergabe wird gestoppt) */
-var rotelPowerHold = null;    /* {want:true/false, until:ms}: nach dem Tippen dem Wunsch folgen, bis der Dienst es bestätigt */
+var rotelOn = false;          /* what the display currently shows */
+var rotelReachable = false;   /* does the Rotel service answer at all? */
+var rotelLinked = false;      /* is the Rotel service connected to the amplifier? (standby: often not) */
+var rotelBusy = false;        /* switching off in progress (playback is being stopped) */
+var rotelPowerHold = null;    /* {want:true/false, until:ms}: after a tap, follow the wish until the service confirms it */
 
 function paintRotelPower() {
   var cls = 'topBtn';
@@ -70,7 +70,7 @@ function sendRotelPower(want) {
   return rotel('/cmd?c=' + encodeURIComponent(c));
 }
 
-/* Wiedergabe stoppen und kurz warten, bis Volumio sie nicht mehr als laufend meldet (höchstens 4 s) */
+/* stop playback and wait briefly until Volumio no longer reports it as playing (at most 4 s) */
 function stopPlaybackThen(done) {
   var tries = 0;
   function check() {
@@ -88,7 +88,7 @@ btnRotelPower.addEventListener('click', function(){
   if (rotelBusy) return;
   var want = !rotelOn;
   if (want && !rotelLinked) {
-    /* Der Dienst erreicht den Verstärker nicht (im Standby meist ohne Netzwerk): Befehl würde verworfen */
+    /* The service cannot reach the amplifier (in standby usually without network): command would be dropped */
     showToast(T('controls.rotel.notLinked'));
 
     return;
@@ -101,9 +101,9 @@ btnRotelPower.addEventListener('click', function(){
   stopPlaybackThen(function(){ sendRotelPower(false); rotelBusy = false; });
 });
 
-/* Aktiver Eingang am Verstärker: ist es nicht der des Players, zeigt der Player statt Format und Stift
-   den Namen und ein Icon des Eingangs (poll.js paintQuality, tagedit.js tagPaintPlayer).
-   Namen und Icons kommen aus dem Profil der Bridge (ROTEL_PROFILE, ROTEL_INPUTS) */
+/* Active input on the amplifier: if it is not the player's, the player shows the input's name and an icon
+   instead of format and pen (poll.js paintQuality, tagedit.js tagPaintPlayer).
+   Names and icons come from the bridge profile (ROTEL_PROFILE, ROTEL_INPUTS) */
 var ROTEL_ICONS = {
   phono: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z',
   cd: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 3.8a8.2 8.2 0 1 0 0 16.4a8.2 8.2 0 1 0 0-16.4zM12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7zM12 10.8a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4zM6.2 11.4A5.9 5.9 0 0 1 11.4 6.2v1.6A4.3 4.3 0 0 0 7.8 11.4z',
@@ -115,16 +115,16 @@ var ROTEL_ICONS = {
   aux: 'M21 3.01H3c-1.1 0-2 .9-2 2V9h2V4.99h18v14.03H3V15H1v4.01c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98v-14c0-1.11-.9-2-2-2zM11 16l4-4-4-4v3H1v2h10v3z',
   pc: 'M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z'
 };
-var rotelSource = null;       /* zuletzt gemeldeter Eingang */
+var rotelSource = null;       /* last reported input */
 var rotelProf = null, rotelProfAt = 0;
 function rotelNorm(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }   /* pc_usb = pcusb */
 function rotelProfLoad() {
-  if (rotelProf || Date.now() - rotelProfAt < 60000) return;          /* höchstens einmal je Minute versuchen */
+  if (rotelProf || Date.now() - rotelProfAt < 60000) return;          /* try at most once per minute */
   rotelProfAt = Date.now();
   fetch(ROTEL + '/profile').then(function(r){ return r.json(); })
     .then(function(j){ if (j && j.profile) { rotelProf = j.profile; rotelInputRepaint(); } }).catch(function(){});
 }
-/* {name, icon} des aktiven fremden Eingangs oder null (Verstärker aus, Player-Eingang, noch unbekannt) */
+/* {name, icon} of the active foreign input or null (amp off, player input, not yet known) */
 function rotelInput() {
   if (!ROTEL_ON || !rotelProf || !rotelOn || !rotelLinked || !rotelSource) return null;
   var src = rotelNorm(rotelSource);
@@ -164,7 +164,7 @@ function showRotel(s) {
   rotelInputRepaint();
 }
 
-/* ohne Rotel: Lautstärke von Volumio (getState/pushState); ausgeblendet, wenn Volumio keine Lautstärkeregelung hat */
+/* without Rotel: volume from Volumio (getState/pushState); hidden if Volumio has no volume control */
 function showVolumio(st) {
   if (ROTEL_ON) return;
   var none = st.disableVolumeControl || typeof st.volume !== 'number';

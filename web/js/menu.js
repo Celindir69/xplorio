@@ -1,9 +1,9 @@
-/* Menü hinter dem Zahnrad oben rechts: Werkzeuge, die nicht zur Suche gehören.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach check.js, history.js, system.js, playback.js und volumio.js geladen (help.js danach, openHelp erst beim Tippen).
-   Weitere Einträge: eine Zeile in MENU_ITEMS (needsTags: nur, wenn der Tag-Dienst läuft). */
+/* Menu behind the gear at the top right: tools that do not belong to the search.
+   Classic script, shared global scope; loaded after check.js, history.js, system.js, playback.js and volumio.js (help.js after it, openHelp only on tap).
+   More entries: one line in MENU_ITEMS (needsTags: only when the tag service is running). */
 var overlayMenu = document.getElementById('overlayMenu');
 var menuBody    = document.getElementById('menuBody');
-var menuTags    = false;          /* Tag-Dienst erreichbar */
+var menuTags    = false;          /* tag service reachable */
 
 var MENU_ITEMS = [
   {id: 'welcome', needsTags: true, title: T('menu.welcome'), sub: T('menu.welcomeSub'), open: function(){ openWelcome(false); },
@@ -55,16 +55,16 @@ function menuRender() {
   menuBody.appendChild(menuAbout());
 }
 
-/* Unten im Menü: Logo, Name, Leitsatz; Stand (web/version.json, schreibt xplorio-deploy), Copyright, Lizenz */
+/* Bottom of the menu: logo, name, claim; version (web/version.json, written by xplorio-deploy), copyright, license */
 var MENU_REPO = 'https://github.com/Celindir69/xplorio';
-/* fremde Bestandteile und Dienste: Name, Text (i18n) */
+/* third-party components and services: name, text (i18n) */
 var MENU_THIRD = [
   ['mutagen', 'about.3.mutagen'],
   ['Volumio, socket.io', 'about.3.volumio'],
   ['Essentia', 'about.3.essentia'],
   ['Last.fm, MusicBrainz, Cover Art Archive, Deezer, iTunes, LRCLIB, radio-browser.info', 'about.3.services']
 ];
-var menuVersion = null;          /* einmal geladen: {branch, commit, date} oder {} */
+var menuVersion = null;          /* loaded once: {branch, commit, date} or {} */
 function menuAbout() {
   var box = document.createElement('div'); box.className = 'menuAbout';
   var logo = document.createElement('img'); logo.className = 'menuLogo'; logo.src = 'web/icons/icon-180.png'; logo.alt = '';
@@ -84,7 +84,7 @@ function menuAbout() {
   });
   more.addEventListener('click', function(){
     box.classList.toggle('third');
-    if (box.classList.contains('third')) list.scrollIntoView({behavior: 'smooth', block: 'end'});   /* klappt sonst unter dem Rand auf */
+    if (box.classList.contains('third')) list.scrollIntoView({behavior: 'smooth', block: 'end'});   /* would otherwise expand below the edge */
   });
   [logo, name, claim, ver, copy, lic, more, list].forEach(function(el){ box.appendChild(el); });
   function show(v) {
@@ -111,5 +111,5 @@ document.getElementById('btnMenu').addEventListener('click', function(){
 });
 document.getElementById('closeMenu').addEventListener('click', closeAllOverlays);
 
-/* Einträge mit Tag-Dienst nur, wenn er läuft */
+/* entries needing the tag service only when it is running */
 whenTags(function(){ menuTags = true; if (overlayMenu.classList.contains('on')) menuRender(); });

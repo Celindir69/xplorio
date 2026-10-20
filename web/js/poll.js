@@ -1,28 +1,28 @@
-/* Zustandsabfrage (Poll) und Start der Takte
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* State polling and start of the timers
+   Classic script, shared global scope; see xplorio.html for load order. */
 /* ---------- Poll ---------- */
 var qualityState = null;
 function paintQuality(st) {
   qualityState = st;
-  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: dessen Name statt Format */
-  if (st.trackType === 'input') { mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* großes Icon statt Cover */
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
+  if (st.trackType === 'input') { mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* large icon instead of cover */
   if (inp) { mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
-  mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: Codec aus der Datei, sobald bekannt */
+  mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
   var q = classifyQuality(st, window.APP_CONFIG);
   mTech.textContent = q.tech.join('  ·  ');
   mBadge.textContent = q.label;
   mBadge.className = 'qBadge' + (q.kind ? ' ' + q.kind : '');
 }
 
-/* Webradio: zeigt der Player ein Senderlogo (Adresse von Volumio), es dem Tag-Dienst für die Senderliste melden.
-   Den Namen kennt die Senderliste (radioNames in library.js); einmal je Sender und Adresse */
+/* Web radio: if the player shows a station logo (address from Volumio), report it to the tag service for the station list.
+   The station list knows the name (radioNames in library.js); once per station and address */
 var radioLogoSent = {};
-/* Sendername zum laufenden Stream, aus der Senderliste (radioNames):
-   0. TuneIn: dieselbe Sender-ID im Logo (cdn-profiles.tunein.com/s250282/…) und in der Favoriten-Adresse (Tune.ashx?id=s250282)
-   1. gleiche Adresse (auch ohne / am Ende, http oder https)
-   2. gleicher Server und gleicher Senderpfad (z. B. stream.klassikradio.de/piano, egal welche Bitrate), wenn eindeutig
-   3. ein Sender vom selben Server, dessen Name das enthält, was Volumio als Künstler meldet (z. B. „Piano“)
-   sonst der Künstler selbst (bei TuneIn meist der Sendername) */
+/* Station name for the current stream, from the station list (radioNames):
+   0. TuneIn: same station ID in the logo (cdn-profiles.tunein.com/s250282/…) and in the favorite address (Tune.ashx?id=s250282)
+   1. same address (also without trailing /, http or https)
+   2. same server and same station path (e.g. stream.klassikradio.de/piano, regardless of bitrate), if unique
+   3. a station on the same server whose name contains what Volumio reports as artist (e.g. "Piano")
+   otherwise the artist itself (with TuneIn usually the station name) */
 function radioUriKey(u) { return String(u || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[\/;]+$/, ''); }
 function radioTuneInId(u) { var m = /(?:tune\.ashx\?(?:[^#]*&)?id=|tunein\.com\/)(s\d+)(?!\d)/i.exec(String(u || '')); return m ? m[1].toLowerCase() : ''; }
 function radioUriParts(u) { var p = radioUriKey(u).replace(/[?#].*$/, '').split('/'); return {host: p[0].replace(/^www\./, ''), first: p[1] || ''}; }
@@ -37,7 +37,7 @@ function radioStationName(st) {
   all.some(function(u){ if (radioUriKey(u) === k) { hit = names[u]; return true; } return false; });
   if (hit) return hit;
   var ar = String(st.artist || '').trim(), ti = String(st.title || '');
-  if (ar && ti.indexOf(ar + ' - ') === 0) ar = '';             /* „Künstler - Titel“ mit demselben Künstler: kein Sendername */
+  if (ar && ti.indexOf(ar + ' - ') === 0) ar = '';             /* "artist - title" with the same artist: no station name */
   var sameHost = all.filter(function(u){ return me.host && radioUriParts(u).host === me.host; });
   hit = me.first && radioUnique(sameHost.filter(function(u){ return radioUriParts(u).first === me.first; }));
   if (hit) return names[hit];
@@ -56,8 +56,8 @@ function radioLogoLearn(st) {
   new Image().src = TAGS + '/stationlogo?name=' + encodeURIComponent(name) + '&url=' + encodeURIComponent(a);
 }
 
-/* Webradio: Cover zum laufenden Titel vom Tag-Dienst (iTunes/Deezer); bis es geladen ist und ohne Treffer das Senderlogo */
-var radioCovers = {};            /* "Künstler|Titel" -> Bildadresse, false (kein Cover) oder null (lädt) */
+/* web radio: cover for the current track from the tag service (iTunes/Deezer); the station logo until loaded and if not found */
+var radioCovers = {};            /* "artist|title" -> image address, false (no cover) or null (loading) */
 function radioArt(st, stationArt) {
   if (st.trackType !== 'webradio' || typeof TAGS === 'undefined') return stationArt;
   var t = st.title || '', p = t.indexOf(' - ');
@@ -76,7 +76,7 @@ function radioArt(st, stationArt) {
   return stationArt;
 }
 
-/* Anderer Eingang am Verstärker: großes Icon des Eingangs statt Cover (als SVG-Bild) */
+/* other input on the amplifier: large icon of the input instead of the cover (as an SVG image) */
 var inputArtCache = {};
 function inputArt(inp) {
   var light = document.documentElement.classList.contains('light'), fg = light ? '#000' : '#fff';
@@ -89,14 +89,14 @@ function inputArt(inp) {
   return (inputArtCache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 }
 
-/* Titel, dessen Wiedergabe nicht starten konnte (z. B. anderer Eingang): Volumio meldet dann teils nur Position und
-   Lautstärke, teils noch den vorigen (pausierten) Titel, obwohl die Warteschlange schon das neue Album enthält.
-   Titel, Künstler, Album und Cover kommen dann aus der Warteschlange (Eintrag an der Position); ab einem anderen
-   Eingang wird dafür abgeglichen, bis wieder etwas spielt, und einmal Stopp geschickt, damit Volumio nicht ungehört
-   durch das Album springt bzw. beim Abspielen den alten Titel fortsetzt. Höchstens alle 3 s neu geholt, bei anderer
-   Position sofort */
+/* Track whose playback could not start (e.g. other input): Volumio then sometimes reports only position and
+   volume, sometimes still the previous (paused) track, although the queue already contains the new album.
+   Title, artist, album and cover then come from the queue (entry at the position); starting from another
+   input this is reconciled until something plays again, and stop is sent once, so that Volumio does not skip
+   unheard through the album or resume the old track on play. Refetched at most every 3 s, immediately on a
+   different position */
 var stateFillCache = {pos: -1, at: 0, item: null}, stateFillWatch = false, stateFillStopped = '';
-function stateUriKey(u) { return String(u || '').replace(/^(music-library\/|mnt\/)/, ''); }   /* Präfixe unterscheiden sich */
+function stateUriKey(u) { return String(u || '').replace(/^(music-library\/|mnt\/)/, ''); }   /* prefixes differ */
 function stateFill(st) {
   if (!st || typeof st.position !== 'number') return st;
   if (typeof rotelInput === 'function' && rotelInput()) stateFillWatch = true;
@@ -113,10 +113,10 @@ function stateFill(st) {
       });
   return got.then(function(it){
     if (!it || !it.uri) return st;
-    if (check && stateUriKey(it.uri) === stateUriKey(st.uri)) return st;   /* Volumio meldet schon den richtigen Titel */
+    if (check && stateUriKey(it.uri) === stateUriKey(st.uri)) return st;   /* Volumio already reports the right track */
     var r = {};
     for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];
-    if (check) {                                                    /* veralteter Titel: dessen Angaben ganz ersetzen */
+    if (check) {                                                    /* stale track: replace its details entirely */
       ['title', 'artist', 'album', 'albumart', 'samplerate', 'bitdepth', 'bitrate', 'channels'].forEach(function(k){ r[k] = ''; });
       r.status = 'stop'; r.seek = 0;
     }
@@ -124,7 +124,7 @@ function stateFill(st) {
       if (it[k] !== undefined && it[k] !== '') r[k] = it[k];
     });
     if (!r.title && it.name) r.title = it.name;
-    if (!r.status) { r.status = 'stop'; r.seek = 0; r.noStatus = true; }   /* läuft nicht: Zeit am Anfang */
+    if (!r.status) { r.status = 'stop'; r.seek = 0; r.noStatus = true; }   /* not playing: time at the start */
     if (stateFillWatch && (r.noStatus || check) && stateFillStopped !== r.uri) {
       stateFillStopped = r.uri;
       fetch('/api/v1/commands/?cmd=stop').catch(function(){});
@@ -133,16 +133,16 @@ function stateFill(st) {
   }, function(){ return st; });
 }
 
-/* Was der Player zeigt: bei anderem Eingang dessen Icon und Name, sonst Volumio. Wählt man währenddessen in Xplorio
-   etwas anderes zum Abspielen (oder spielt Volumio), steht das Album da (Cover, Künstler, Albumtitel; kein Titel,
-   keine Titelinfo, kein Text, denn am Verstärker läuft gerade etwas anderes), mit gesperrter Bedienung: am Verstärker
-   auf den Player umschalten und abspielen (Abgleich mit der Warteschlange und Stopp: stateFill) */
+/* What the player shows: with another input its icon and name, otherwise Volumio. If you meanwhile pick something
+   else to play in Xplorio (or Volumio plays), the album is shown (cover, artist, album title; no title,
+   no track info, no lyrics, since the amplifier is playing something else), with controls locked: switch the amplifier
+   to the player and play (reconciled with the queue and stop: stateFill) */
 var inputSession = '', inputBaseUri = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   document.documentElement.classList.toggle('otherInput', !!inp);
   if (!inp) { inputSession = ''; return st; }
-  if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* was beim Umschalten geladen war */
+  if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* what was loaded when switching */
   if (st.status === 'play' || (st.uri || '') !== inputBaseUri) {
     var a = {};
     for (var j in st) if (st.hasOwnProperty(j)) a[j] = st[j];
@@ -150,28 +150,28 @@ function inputApply(st) {
     return a;
   }
   var r = {};
-  for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* Lautstärke, Zufall, Wiederholen bleiben von Volumio */
+  for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];          /* volume, shuffle, repeat stay from Volumio */
   r.artist = ''; r.title = inp.name; r.album = ''; r.albumart = inputArt(inp);
   r.trackType = r.service = 'input'; r.uri = ''; r.duration = 0; r.seek = 0;
   r.samplerate = r.bitdepth = r.bitrate = r.fileFormat = '';
   return r;
 }
 
-var playIconShown = null;                              /* zuletzt gezeichnetes Symbol (nur bei Wechsel neu setzen) */
-var pollBusy = false;                                   /* nie mehrere getState gleichzeitig (Volumio hängt z. B. beim Einlesen) */
+var playIconShown = null;                              /* last drawn icon (set again only on change) */
+var pollBusy = false;                                   /* never several getState at once (Volumio hangs e.g. while scanning) */
 function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
   if (!volDrag && ROTEL_ON) rotel('/state');  
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateFill).then(function(st){
 st = inputApply(st);
-if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* läuft schon: Play wieder normal */
+if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* already playing: play back to normal */
 
 curDur = Number(st.duration) || 0;
-/* gestoppt zählt Volumio die Zeit teils weiter (Wiedergabe angefordert, aber das Ausgabegerät ließ sich nicht öffnen):
-   dann steht der Titel am Anfang */
+/* when stopped, Volumio sometimes keeps counting the time (playback requested, but the output device could not be opened):
+   then the track is at the start */
 seekBase = st.status === 'stop' ? 0 : (Number(st.seek) || 0); seekStamp = Date.now();
-playing = (st.status === 'play') && st.trackType !== 'input';   /* anderer Eingang: keine laufende Zeit */
+playing = (st.status === 'play') && st.trackType !== 'input';   /* other input: no running time */
 paintTime();
 updateSyncedLyrics();
 
@@ -209,17 +209,17 @@ updateSyncedLyrics();
     var artist = st.artist || '', album = st.album || '';
     var title  = st.title  || '';
     var radio  = (st.trackType === 'webradio');
-    var preview = !!st.inputAlbum;                      /* anderer Eingang, Album gewählt: Albumtitel groß, kein Titel */
+    var preview = !!st.inputAlbum;                      /* other input, album selected: album title large, no track title */
     if (preview) title = '';
 
     marqueeSet(mTitle, preview ? album : title);
     mArtist.textContent = artist;
-    if ((radio || preview ? '' : album) !== curAlbumTitle || st.uri !== curAlbumUri) {   /* nur bei Wechsel: das Jahr kommt verzögert dazu */
+    if ((radio || preview ? '' : album) !== curAlbumTitle || st.uri !== curAlbumUri) {   /* only on change: the year arrives later */
       curAlbumTitle = radio || preview ? '' : album; curAlbumUri = st.uri;
       mAlbum.textContent = curAlbumTitle;
       if (typeof playerYear === 'function') playerYear(st.uri || '', curAlbumTitle, artist);
     }
-    mArtist.classList.toggle('link', !radio && !!artist);      /* Klick öffnet Alben bzw. Titel (browse.js) */
+    mArtist.classList.toggle('link', !radio && !!artist);      /* click opens albums or tracks (browse.js) */
     mAlbum.classList.toggle('link',  !radio && !preview && !!album);
     paintQuality(st);
     tagPaintPlayer(st);
@@ -229,19 +229,19 @@ updateSyncedLyrics();
       title  = (p > 0) ? title.slice(p + 3).trim() : title;
       album  = '';
     }
-    radioArtist = radio ? artist : '';                 /* "Künstler - Titel" im Stream-Titel erkannt */
+    radioArtist = radio ? artist : '';                 /* "artist - title" recognized in the stream title */
     curUri = st.uri || ''; curTitle = radio ? '' : title;
-    mTitle.classList.toggle('link', !!radioArtist || similarOk());   /* Klick öffnet dessen Alben bzw. ähnliche Titel (browse.js) */
+    mTitle.classList.toggle('link', !!radioArtist || similarOk());   /* click opens their albums or similar tracks (browse.js) */
 
     var key    = artist + '|' + album + '|' + (radio ? title : '');
     var lyrKey = artist + '|' + title;
 
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
-      setTrackInfo(lyrKey, title, null, radio);                   /* Reiter des vorigen Titels weg */
-      if (!artist || !title) showLyrics(null);                     /* z. B. anderer Eingang */
+      setTrackInfo(lyrKey, title, null, radio);                   /* remove the previous track's tab */
+      if (!artist || !title) showLyrics(null);                     /* e.g. other input */
       else {
-        askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* späte Antwort des vorigen Titels verwerfen */
+        askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* discard a late answer for the previous track */
         (function(k, ti){
           askTrack(artist, ti).then(function(res){ if (k === lastLyrKey) setTrackInfo(k, ti, res, radio); });
         })(lyrKey, title);
@@ -257,7 +257,7 @@ if (!artist) { showInfo([]); return; }
 if (radio) {
   Promise.all([ask({mode:'storyArtist', artist:artist}), askDiscography(artist)])
     .then(function(res){
-      if (key !== lastKey) return;                   /* inzwischen läuft etwas anderes */
+      if (key !== lastKey) return;                   /* something else is playing meanwhile */
       showInfo([
         {title:artist,            label:T('info.tab.artist'), data:res[0], always:true},
         {title:T('info.collection'), label:T('info.tab.collection'), data:res[1]},
@@ -274,8 +274,8 @@ Promise.all([
   ask({mode:'creditsAlbum', artist:artist, album:album}),
   askDiscography(artist)
 ]).then(function(res){
-  if (key !== lastKey) return;    /* inzwischen läuft etwas anderes: späte Antwort verwerfen */
-  showInfo([                      /* title: Überschrift im Overlay; label: kurzer Reitername (lange Namen würden die Leiste sprengen) */
+  if (key !== lastKey) return;    /* something else is playing meanwhile: discard late answer */
+  showInfo([                      /* title: heading in the overlay; label: short tab name (long names would break the bar) */
     {title:album,             label:T('info.tab.album'),       data:res[0], always:true},
     {title:artist,            label:T('info.tab.artist'),    data:res[1], always:true},
     {title:T('info.credits'), label:T('info.tab.credits'), data:res[2]},
@@ -285,11 +285,11 @@ Promise.all([
   ]);
 });
 
-  }).catch(function(){ playing = false; })            /* Volumio nicht erreichbar: Zeit nicht weiterlaufen lassen */
+  }).catch(function(){ playing = false; })            /* Volumio unreachable: stop the time from running */
     .then(function(){ pollBusy = false; });
 }
 
-/* kleine Zwischenspeicher im Dauerbetrieb (iPad läuft tagelang) begrenzen: älteste Einträge zuerst */
+/* limit small caches in continuous operation (the iPad runs for days): oldest entries first */
 setInterval(function(){
   [[radioCovers, 300], [radioLogoSent, 300], [similarCache, 300], [similarAllCache, 300], [streamSimilarCache, 200], [moodCache, 300], [creditCache, 300]]
     .forEach(function(p){

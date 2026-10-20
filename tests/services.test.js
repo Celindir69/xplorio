@@ -1,10 +1,10 @@
-/* Dienste (tags/services.js): systemctl show auslesen, erlaubte Aktionen, sudo-Befehle */
+/* services (tags/services.js): parse systemctl show, allowed actions, sudo commands */
 var assert = require('assert'), fs = require('fs'), path = require('path'), os = require('os');
 var sv = require('../tags/services.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function ta(name, fn) { fn(function(){ n++; console.log('ok   ' + name); }); }
-process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 8, 'nicht alle Prüfungen fertig'); console.log(n + ' Prüfungen'); } });
+process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 8, 'not all checks finished'); console.log(n + ' checks'); } });
 
 var SHOW = [
   'Id=volumio.service', 'LoadState=loaded', 'ActiveState=active', 'SubState=running', 'ActiveEnterTimestampMonotonic=1000000000', '',
@@ -14,8 +14,8 @@ var SHOW = [
   'Id=volumio-kiosk.service', 'LoadState=loaded', 'ActiveState=inactive', 'SubState=dead', 'ActiveEnterTimestampMonotonic=0'
 ].join('\n') + '\n';
 
-t('systemctl show: ein Block je Dienst, Startzeit aus der monotonen Uhr', function(){
-  var p = sv.parseShow(SHOW, 4000, 10000000);          /* 4000 s seit Systemstart, aktiv seit 1000 s nach Start */
+t('systemctl show: one block per service, start time from the monotonic clock', function(){
+  var p = sv.parseShow(SHOW, 4000, 10000000);          /* 4000 s since boot, active since 1000 s after boot */
   assert.strictEqual(p.length, 5);
   assert.deepStrictEqual(p[0], {id: 'volumio', load: 'loaded', active: 'active', sub: 'running', since: 10000000 - 3000000});
   assert.strictEqual(p[1].active, 'failed');
@@ -23,14 +23,14 @@ t('systemctl show: ein Block je Dienst, Startzeit aus der monotonen Uhr', functi
   assert.strictEqual(p[3].load, 'not-found');
 });
 
-t('Liste: Reihenfolge fest, nicht eingerichtete Dienste fehlen, Kiosk mit Start und Stopp', function(){
+t('list: fixed order, services not installed are missing, kiosk with start and stop', function(){
   var m = sv.merge(sv.parseShow(SHOW, 4000, 10000000));
   assert.deepStrictEqual(m.map(function(u){ return u.id; }), ['volumio', 'mpd', 'tag-service', 'volumio-kiosk']);
   assert.deepStrictEqual(m[3].actions, ['start', 'stop', 'restart']);
   assert.deepStrictEqual(m[0].actions, ['restart']);
 });
 
-t('nur erlaubte Dienste und Aktionen', function(){
+t('only allowed services and actions', function(){
   assert.ok(sv.allowed('volumio', 'restart'));
   assert.ok(sv.allowed('volumio-kiosk', 'stop'));
   assert.ok(!sv.allowed('volumio', 'stop'));
@@ -43,9 +43,9 @@ var root = fs.mkdtempSync(path.join(os.tmpdir(), 'services-'));
 fs.mkdirSync(path.join(root, 'proc'));
 fs.writeFileSync(path.join(root, 'proc/uptime'), '4000.00 1.00\n');
 
-ta('Status: systemctl show und sudo-Prüfung', function(done){
+ta('status: systemctl show and sudo check', function(done){
   var calls = [];
-  var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(f === 'sudo' ? new Error('nein') : null, f === 'sudo' ? '' : SHOW); }});
+  var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(f === 'sudo' ? new Error('no') : null, f === 'sudo' ? '' : SHOW); }});
   s.status(function(r){
     assert.ok(r.ok);
     assert.strictEqual(r.sudo, false);
@@ -56,7 +56,7 @@ ta('Status: systemctl show und sudo-Prüfung', function(done){
   });
 });
 
-ta('Aktion: sudo ohne Passwort, Fehler als nosudo, Unerlaubtes abgelehnt', function(done){
+ta('action: sudo without password, error as nosudo, disallowed rejected', function(done){
   var calls = [], fail = false, err = console.error;
   console.error = function(){};
   var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(fail ? new Error('x') : null, ''); }});
@@ -75,12 +75,12 @@ ta('Aktion: sudo ohne Passwort, Fehler als nosudo, Unerlaubtes abgelehnt', funct
   });
 });
 
-ta('eigener Neustart: erst Antwort, dann Befehl; ohne sudo-Recht gleich nosudo', function(done){
+ta('own restart: response first, then command; without sudo permission nosudo right away', function(done){
   var calls = [], allow = true;
   var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(allow ? null : new Error('x'), ''); }});
   s.act('tag-service', 'restart', 'tag-service', function(c, o){
     assert.ok(o.ok && o.self);
-    assert.ok(calls.every(function(x){ return x.indexOf(' -l ') > 0; }));    /* noch nicht ausgeführt */
+    assert.ok(calls.every(function(x){ return x.indexOf(' -l ') > 0; }));    /* not run yet */
     setTimeout(function(){
       assert.strictEqual(calls[calls.length - 1], 'sudo -n /bin/systemctl --no-block restart tag-service');
       allow = false;
@@ -92,7 +92,7 @@ ta('eigener Neustart: erst Antwort, dann Befehl; ohne sudo-Recht gleich nosudo',
   });
 });
 
-ta('Player neu starten/ausschalten: nur reboot und poweroff, erst Antwort, dann Befehl', function(done){
+ta('restart/power off player: only reboot and poweroff, response first, then command', function(done){
   var calls = [];
   var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(null, ''); }});
   s.power('rm', function(c){
@@ -104,7 +104,7 @@ ta('Player neu starten/ausschalten: nur reboot und poweroff, erst Antwort, dann 
         assert.deepStrictEqual(calls, ['sudo -n -l /sbin/reboot']);
         setTimeout(function(){
           assert.strictEqual(calls[1], 'sudo -n /sbin/reboot');
-          var s2 = new sv.Services({root: root, run: function(f, a, cb){ cb(new Error('nein'), ''); }});
+          var s2 = new sv.Services({root: root, run: function(f, a, cb){ cb(new Error('no'), ''); }});
           s2.power('poweroff', function(c3, o3){ assert.strictEqual(o3.error, 'nosudo'); done(); });
         }, 600);
       });
@@ -112,17 +112,17 @@ ta('Player neu starten/ausschalten: nur reboot und poweroff, erst Antwort, dann 
   });
 });
 
-ta('Kiosk nach eigenem Stopp „failed“: als gestoppt anzeigen, nach Start wieder echt', function(done){
+ta('kiosk "failed" after own stop: show as stopped, real state again after start', function(done){
   var show = SHOW.replace('Id=volumio-kiosk.service\nLoadState=loaded\nActiveState=inactive\nSubState=dead', 'Id=volumio-kiosk.service\nLoadState=loaded\nActiveState=failed\nSubState=failed');
   assert.notStrictEqual(show, SHOW);
   var s = new sv.Services({root: root, run: function(f, a, cb){ cb(null, f === 'sudo' ? '' : show); }});
   function kiosk(r){ return r.units.filter(function(u){ return u.id === 'volumio-kiosk'; })[0]; }
   s.status(function(r0){
-    assert.strictEqual(kiosk(r0).active, 'failed');                 /* ohne eigenen Stopp: echter Fehler */
+    assert.strictEqual(kiosk(r0).active, 'failed');                 /* without own stop: real error */
     s.act('volumio-kiosk', 'stop', 'tag-service', function(){
       s.status(function(r1){
         assert.strictEqual(kiosk(r1).active, 'inactive');
-        assert.strictEqual(r1.units.filter(function(u){ return u.id === 'mpd'; })[0].active, 'failed');   /* andere bleiben */
+        assert.strictEqual(r1.units.filter(function(u){ return u.id === 'mpd'; })[0].active, 'failed');   /* others stay */
         s.act('volumio-kiosk', 'start', 'tag-service', function(){
           s.status(function(r2){ assert.strictEqual(kiosk(r2).active, 'failed'); done(); });
         });

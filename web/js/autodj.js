@@ -1,13 +1,13 @@
-/* Endlos-Wiedergabe über das AutoDJ-Plugin (Celindir69/autodj-plugin, REST-Endpunkt "autodj"): vierter Zustand ∞ am
-   Wiederholen-Knopf (aus → alle → einer → ∞). AutoDJ pausiert, solange Wiederholen an ist; die Zustände schließen
-   sich also aus. Ohne Plugin oder ohne Last.fm-Key im Plugin bleibt es bei drei Zuständen.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Endless playback via the AutoDJ plugin (Celindir69/autodj-plugin, REST endpoint "autodj"): fourth state ∞ on the
+   repeat button (off → all → one → ∞). AutoDJ pauses while repeat is on, so the states are mutually
+   exclusive. Without the plugin or without a Last.fm key in the plugin, there are only three states.
+   Classic script, shared global scope; load order see xplorio.html. */
 var autodj = {avail: false, enabled: false, ready: false};
 
-/* angezeigter Zustand: AutoDJ an und Wiederholen aus = ∞ */
+/* displayed state: AutoDJ on and repeat off = ∞ */
 function repeatShown(mode, adj) { return (mode === 'off' && adj.avail && adj.enabled) ? 'inf' : mode; }
 
-/* nächster Zustand beim Tippen: {mode, repeat: Werte für setRepeat oder null, autodj: true/false oder null (nichts tun)} */
+/* next state on tap: {mode, repeat: values for setRepeat or null, autodj: true/false or null (do nothing)} */
 function repeatNext(shown, adj) {
   var OFF = {value: false, repeatSingle: false};
   if (shown === 'off') return {mode: 'all', repeat: {value: true, repeatSingle: false}, autodj: null};
@@ -16,10 +16,10 @@ function repeatNext(shown, adj) {
     if (adj.avail && adj.ready) return {mode: 'inf', repeat: OFF, autodj: true};
     return {mode: 'off', repeat: OFF, autodj: (adj.avail && adj.enabled) ? false : null};
   }
-  return {mode: 'off', repeat: null, autodj: false};                       /* ∞ → aus */
+  return {mode: 'off', repeat: null, autodj: false};                       /* ∞ → off */
 }
 
-/* Plugin fragen ({} = Zustand, {enabled: …} = schalten); ohne Antwort gilt es als nicht vorhanden */
+/* query the plugin ({} = state, {enabled: …} = switch); no answer means it is not installed */
 var autodjTimer = null;
 function autodjCall(data) {
   clearTimeout(autodjTimer);
@@ -29,13 +29,13 @@ function autodjCall(data) {
   }), 5000).then(function(r){ return r.json(); })
     .then(function(j){
       var d = j && j.data;
-      if (!d || typeof d.enabled !== 'boolean') throw new Error('kein AutoDJ');
+      if (!d || typeof d.enabled !== 'boolean') throw new Error('no AutoDJ');
       autodj = {avail: true, enabled: d.enabled, ready: d.ready !== false};
     })
     .catch(function(){ autodj = {avail: false, enabled: false, ready: false}; })
     .then(function(){
       if (typeof updateCtrlUI === 'function') updateCtrlUI();
-      /* Zustand nachhalten (auch in Volumio umgeschaltet); ohne Plugin selten nachsehen */
+      /* keep the state in sync (also when switched in Volumio); without plugin check rarely */
       autodjTimer = setTimeout(function(){ autodjCall(); }, autodj.avail ? 30000 : 300000);
     });
 }
@@ -43,5 +43,5 @@ function autodjCall(data) {
 if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext};
 else {
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) autodjCall(); });
-  setTimeout(function(){ autodjCall(); }, 0);                               /* nach dem Laden aller Skripte */
+  setTimeout(function(){ autodjCall(); }, 0);                               /* after all scripts have loaded */
 }

@@ -1,55 +1,55 @@
-/* Verlauf: Wiedergaben mitschreiben (über Volumios getState), speichern und auswerten.
-   Ein Titel zählt als gespielt, wenn er länger als 30 s ist und zur Hälfte oder 4 Minuten lief (wie beim Scrobbeln).
-   Jede Wiedergabe ist eine Zeile in plays.jsonl: {t: Start (Unix-Sekunden), ar, ti, al, u: uri, d: Dauer s, s: Quelle}.
-   Node 8, nur ES5. */
+/* History: record plays (via Volumio's getState), store and evaluate them.
+   A track counts as played if it is longer than 30 s and played for half its length or 4 minutes (as with scrobbling).
+   Each play is one line in plays.jsonl: {t: start (Unix seconds), ar, ti, al, u: uri, d: duration s, s: source}.
+   Node 8, ES5 only. */
 var fs   = require('fs');
 var path = require('path');
 var jsonl = require('./jsonl.js');
 
-var MIN_TRACK  = 30;          /* s: kürzere Titel zählen nie */
-var MAX_NEEDED = 240;         /* s: nach 4 Minuten zählt jeder Titel */
-var MAX_STEP   = 30000;       /* ms: mehr Spielzeit pro Abfrage wird nicht angerechnet (Dienst hing, Rechner schlief) */
-var DUP_WINDOW = 300;         /* s: gleicher Titel innerhalb von 5 min = dieselbe Wiedergabe (Last.fm-Abgleich) */
+var MIN_TRACK  = 30;          /* s: shorter tracks never count */
+var MAX_NEEDED = 240;         /* s: after 4 minutes every track counts */
+var MAX_STEP   = 30000;       /* ms: more play time per poll is not counted (service hung, computer slept) */
+var DUP_WINDOW = 300;         /* s: same track within 5 min = the same play (Last.fm sync) */
 
-/* Vergleichsschlüssel: ohne Akzente, Groß-/Kleinschreibung, Satzzeichen */
+/* comparison key: ignoring accents, case, punctuation */
 function norm(s) {
   s = String(s || '');
   if (s.normalize) s = s.normalize('NFKD');
   return s.replace(/[̀-ͯ]/g, '').toLowerCase().replace(/^the\s+/, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
 }
-/* normierte Schlüssel einmal je Eintrag rechnen (nicht aufzählbar: landen nicht in JSON und Datei) */
+/* compute normalized keys once per entry (non-enumerable: they don't end up in JSON or the file) */
 function keys(e) {
   if (!e._n) Object.defineProperty(e, '_n', {value: {ar: norm(e.ar), ti: norm(e.ti), al: e.al ? norm(e.al) : ''}});
   return e._n;
 }
 function trackKey(e) { var k = keys(e); return k.ar + '|' + k.ti; }
 
-/* ---------- Speicher ---------- */
+/* ---------- storage ---------- */
 
 function Store(file) { this.file = file; this.list = null; }
 
 Store.prototype.load = function() {
   if (this.list) return this.list;
   var list = [];
-  jsonl.eachLine(this.file, function(line){                 /* fehlt die Datei: noch leer */
-    var e = jsonl.parse(line); if (e && e.t && e.ti) list.push(e);   /* kaputte Zeilen überspringen */
+  jsonl.eachLine(this.file, function(line){                 /* file missing: still empty */
+    var e = jsonl.parse(line); if (e && e.t && e.ti) list.push(e);   /* skip broken lines */
   });
   list.sort(function(a, b){ return a.t - b.t; });
   this.list = list;
   return list;
 };
 
-/* Einträge anhängen (Datei und Speicher); liefert true, wenn geschrieben */
+/* append entries (file and memory); returns true if written */
 Store.prototype.add = function(entries) {
   if (!entries.length) return true;
   var list = this.load(), ok = true;
-  try { fs.mkdirSync(path.dirname(this.file)); } catch (e) { /* existiert schon */ }
+  try { fs.mkdirSync(path.dirname(this.file)); } catch (e) { /* already exists */ }
   try { fs.appendFileSync(this.file, entries.map(function(e){ return JSON.stringify(e); }).join('\n') + '\n'); }
   catch (e) { ok = false; }
   var idx = this.idx;
   entries.forEach(function(e){ if (idx) { var k = trackKey(e); (idx[k] || (idx[k] = [])).push(e.t); } });
   var add = entries.slice().sort(function(a, b){ return a.t - b.t; });
-  /* in die nach t sortierte Liste einreihen, von hinten (Last.fm-Import bringt ältere Seiten: kein neues Sortieren des ganzen Verlaufs) */
+  /* merge into the list sorted by t, from the back (Last.fm import brings older pages: no re-sorting of the whole history) */
   var i = list.length - 1, j = add.length - 1, w = list.length + add.length - 1;
   list.length += add.length;
   while (j >= 0) {
@@ -59,10 +59,10 @@ Store.prototype.add = function(entries) {
   return ok;
 };
 
-/* nur die Einträge, die noch nicht im Verlauf stehen (gleicher Titel innerhalb von 5 min) */
+/* only the entries not yet in the history (same track within 5 min) */
 Store.prototype.fresh = function(entries) {
   var idx = this.idx, seen = {};
-  if (!idx) {                                            /* Titel -> Zeiten; bleibt danach im Speicher (add pflegt ihn mit) */
+  if (!idx) {                                            /* track -> times; stays in memory afterwards (add keeps it up to date) */
     idx = this.idx = {};
     this.load().forEach(function(e){ var k = trackKey(e); (idx[k] || (idx[k] = [])).push(e.t); });
   }
@@ -74,10 +74,10 @@ Store.prototype.fresh = function(entries) {
   });
 };
 
-/* ---------- Mitschreiben ---------- */
+/* ---------- recording ---------- */
 
-/* update(state, jetzt in ms) mit jeder getState-Antwort aufrufen; onPlay(entry) für jede gezählte Wiedergabe,
-   onStart(entry) wenn ein neuer Titel zu spielen beginnt (für "läuft gerade") */
+/* call update(state, now in ms) with every getState response; onPlay(entry) for each counted play,
+   onStart(entry) when a new track starts playing (for "now playing") */
 function Tracker(onPlay, onStart) {
   this.cur = null;
   this.onPlay = onPlay;
@@ -104,11 +104,11 @@ Tracker.prototype.update = function(st, now) {
   var c = this.cur, seek = Math.max(0, Number(st.seek) || 0);
   var playing = st.status === 'play';
   var same = !!c && stateKey(st) === c.key;
-  if (same && playing && seek + 5000 < c.seek && seek < 15000) same = false;     /* von vorn (Wiederholen) */
+  if (same && playing && seek + 5000 < c.seek && seek < 15000) same = false;     /* from the start (repeat) */
 
   if (c && c.playing) {
     var step = Math.min(now - c.last, MAX_STEP);
-    if (!same && playing) step -= seek;                  /* der neue Titel läuft schon seit "seek" */
+    if (!same && playing) step -= seek;                  /* the new track has been playing since "seek" */
     c.played += Math.max(0, step);
   }
   if (c && (!same || st.status === 'stop')) this.finish();
@@ -127,11 +127,11 @@ Tracker.prototype.update = function(st, now) {
   if (c) { c.playing = playing; c.last = now; c.seek = seek; }
 };
 
-/* ---------- Auswerten ---------- */
+/* ---------- evaluate ---------- */
 
 var DAY = 86400;
 
-/* Ortszeit: Versatz in Minuten für Winter (tzw) und Sommer (tzs); Umstellung nach EU-Regel */
+/* local time: offset in minutes for winter (tzw) and summer (tzs); switch by the EU rule */
 function lastSunday(y, m) { var d = new Date(Date.UTC(y, m + 1, 0, 1)); d.setUTCDate(d.getUTCDate() - d.getUTCDay()); return d.getTime() / 1000; }
 function local(t, tz) {
   var off = tz.w;
@@ -139,7 +139,7 @@ function local(t, tz) {
     var y = new Date(t * 1000).getUTCFullYear();
     if (t >= lastSunday(y, 2) && t < lastSunday(y, 9)) off = tz.s;
   }
-  return new Date((t + off * 60) * 1000);              /* nur getUTC… verwenden */
+  return new Date((t + off * 60) * 1000);              /* use only getUTC… */
 }
 function two(n) { return (n < 10 ? '0' : '') + n; }
 function dayKey(d) { return d.getUTCFullYear() + '-' + two(d.getUTCMonth() + 1) + '-' + two(d.getUTCDate()); }
@@ -151,29 +151,29 @@ function rangeStart(range, now) {
   return 0;
 }
 function firstAt(list, t) {
-  var lo = 0, hi = list.length;                           /* Liste ist nach t sortiert */
+  var lo = 0, hi = list.length;                           /* list is sorted by t */
   while (lo < hi) { var mid = (lo + hi) >> 1; if (list[mid].t < t) lo = mid + 1; else hi = mid; }
   return lo;
 }
 function since(list, t) { return list.slice(firstAt(list, t)); }
-/* Einträge mit from <= t < to (to fehlt: bis jetzt) */
+/* entries with from <= t < to (to missing: until now) */
 function between(list, from, to) { return list.slice(firstAt(list, from), to ? firstAt(list, to) : list.length); }
 
-/* neueste zuerst, vor "before" */
+/* newest first, before "before" */
 function recent(list, before, limit) {
   var out = [];
   for (var i = list.length - 1; i >= 0 && out.length < limit; i--) if (!before || list[i].t < before) out.push(list[i]);
   return out;
 }
 
-/* Meistgespielt: kind track|album|artist */
+/* most played: kind track|album|artist */
 function top(list, kind, from, limit, to) {
   var part = between(list, from, to), groups = {}, order = [];
-  var albumDir = {};                                     /* Album+Interpret -> Ordner: Sampler-Titel verschiedener Interpreten zusammen */
+  var albumDir = {};                                     /* album+artist -> folder: compilation tracks by different artists together */
   if (kind === 'album') part.forEach(function(e){
     if (e.al && e.u && !/^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)\/|spotify:)/i.test(e.u)) albumDir[keys(e).al + '|' + keys(e).ar] = path.dirname(e.u);
   });
-  for (var i = part.length - 1; i >= 0; i--) {           /* neueste zuerst: Anzeige und uri vom letzten Mal */
+  for (var i = part.length - 1; i >= 0; i--) {           /* newest first: display and uri from the last time */
     var e = part[i], k;
     if (kind === 'artist') k = keys(e).ar;
     else if (kind === 'album') { if (!e.al) continue; k = keys(e).al + '|' + keys(e).ar; k = albumDir[k] || k; }
@@ -199,7 +199,7 @@ function top(list, kind, from, limit, to) {
   }).sort(function(a, b){ return b.n - a.n || b.last - a.last; }).slice(0, limit);
 }
 
-/* Summen: Wiedergaben, Hörzeit (ohne bekannte Länge geschätzt mit dem Median), verschiedene Titel, Künstler, Alben */
+/* totals: plays, listening time (estimated with the median without known length), distinct tracks, artists, albums */
 function totals(part) {
   var known = part.filter(function(e){ return e.d > 0; }).map(function(e){ return e.d; }).sort(function(a, b){ return a - b; });
   var est = known.length ? known[known.length >> 1] : MAX_NEEDED;
@@ -213,7 +213,7 @@ function totals(part) {
   return res;
 }
 
-/* Statistik: Summen, Verlauf (Tage/Monate/Jahre), Tageszeit, Wochentag; mit genreOf (albums.genreIndex) die Top 8 Genres */
+/* statistics: totals, timeline (days/months/years), time of day, weekday; with genreOf (albums.genreIndex) the top 8 genres */
 function stats(list, range, now, tz, genreOf) {
   var from = rangeStart(range, now), part = since(list, from);
   var res = totals(part);
@@ -235,21 +235,21 @@ function stats(list, range, now, tz, genreOf) {
     var k = res.unit === 'day' ? dayKey(d) : res.unit === 'month' ? monthKey(d) : String(d.getUTCFullYear());
     if (k in idx) counts[idx[k]]++;
     res.hours[d.getUTCHours()]++;
-    res.weekdays[(d.getUTCDay() + 6) % 7]++;            /* Montag zuerst */
+    res.weekdays[(d.getUTCDay() + 6) % 7]++;            /* Monday first */
   });
   res.buckets = bkeys.map(function(k, i){ return {k: k, n: counts[i]}; });
   res.genres = genreOf ? topGenres(part, genreOf, 8) : [];
   return res;
 }
 
-/* Beginn eines Ortsdatums (Jahr, Monat 0-11, Tag) als Unix-Sekunden */
+/* start of a local date (year, month 0-11, day) as Unix seconds */
 function localStart(y, m, d, tz) {
   var t = Date.UTC(y, m, d) / 1000 - tz.w * 60;
-  return t - (local(t, tz).getUTCHours() ? (tz.s - tz.w) * 60 : 0);     /* Sommerzeit */
+  return t - (local(t, tz).getUTCHours() ? (tz.s - tz.w) * 60 : 0);     /* daylight saving time */
 }
 
-/* Jahresrückblick für das Ortsjahr y: Summen, Monate, Top-Alben, -Künstler, -Titel, neu entdeckte Künstler.
-   Vergleich mit dem Vorjahr; im laufenden Jahr nur mit demselben Zeitraum (bis heute) */
+/* year in review for the local year y: totals, months, top albums, artists, tracks, newly discovered artists.
+   Comparison with the previous year; in the current year only with the same period (up to today) */
 function year(list, y, tz, now, limit, genreOf, month) {
   limit = limit || 10;
   var from = localStart(y, 0, 1, tz), to = localStart(y + 1, 0, 1, tz), pfrom = localStart(y - 1, 0, 1, tz);
@@ -259,13 +259,13 @@ function year(list, y, tz, now, limit, genreOf, month) {
   res.prev = totals(between(list, pfrom, res.partial ? pfrom + Math.max(0, now - from) : from));
   res.months = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   part.forEach(function(e){ res.months[local(e.t, tz).getUTCMonth()]++; });
-  /* Ranglisten für das ganze Jahr oder einen Monat (month 0-11) */
+  /* rankings for the whole year or one month (month 0-11) */
   if (month >= 0 && month < 12) { res.month = month; from = localStart(y, month, 1, tz); to = localStart(y, month + 1, 1, tz); part = between(list, from, to); }
   res.albums_top  = top(list, 'album', from, limit, to);
   res.artists_top = top(list, 'artist', from, limit, to);
   res.tracks_top  = top(list, 'track', from, 5, to);
   res.genres_top  = genreOf ? topGenres(part, genreOf, limit) : [];
-  /* neu entdeckt: Künstler, die vorher nie liefen; nur wenn der Verlauf vorher beginnt */
+  /* newly discovered: artists that never played before; only if the history starts earlier */
   res.newArtists = [];
   res.hasBefore = !!list.length && list[0].t < from;
   if (res.hasBefore) {
@@ -276,8 +276,8 @@ function year(list, y, tz, now, limit, genreOf, month) {
   return res;
 }
 
-/* Top-Genres: Wiedergaben je Genre; mehrere Genres ("Rock; Pop", "Rock/Pop") zählen je einzeln.
-   withAlbum: dazu das meistgespielte Album des Genres (ar, al, u = Ordner) für das Bild */
+/* top genres: plays per genre; multiple genres ("Rock; Pop", "Rock/Pop") count separately.
+   withAlbum: plus the genre's most played album (ar, al, u = folder) for the image */
 function topGenres(part, genreOf, limit, withAlbum) {
   var groups = {};
   part.forEach(function(e){
@@ -307,12 +307,12 @@ function topGenres(part, genreOf, limit, withAlbum) {
   }).sort(function(a, b){ return b.n - a.n || a.g.localeCompare(b.g); }).slice(0, limit);
 }
 
-/* Meistgespielt nach Genre (genreOf wie bei stats) */
+/* most played by genre (genreOf as in stats) */
 function topGenre(list, genreOf, from, limit, to) {
   return topGenres(between(list, from, to), genreOf, limit, true);
 }
 
-/* Jahre mit Wiedergaben (Ortszeit), neueste zuerst */
+/* years with plays (local time), newest first */
 function years(list, tz) {
   if (!list.length) return [];
   var out = [], a = local(list[0].t, tz).getUTCFullYear(), b = local(list[list.length - 1].t, tz).getUTCFullYear();
@@ -320,8 +320,8 @@ function years(list, tz) {
   return out;
 }
 
-/* "Vor einem Jahr gehört": Alben (kind 'artist'/'track': Künstler/Titel), die um dieses Datum (±3 Tage) vor einem Jahr liefen;
-   sonst vor 2, 3 … Jahren */
+/* "Heard a year ago": albums (kind 'artist'/'track': artists/tracks) that played around this date (±3 days) a year ago;
+   else 2, 3 … years ago */
 var AGO_DAYS = 3;
 function ago(list, now, tz, limit, kind) {
   if (!list.length) return {years: 0, items: []};
@@ -334,9 +334,9 @@ function ago(list, now, tz, limit, kind) {
   }
 }
 
-/* Zuletzt gehörte Alben, neueste zuerst: Alben, von denen zuletzt mindestens minTracks verschiedene Titel liefen
-   (ein einzelner Titel aus einem Mix zählt nicht); durchsucht höchstens die letzten scan Einträge.
-   -> [{ti (Album), ar, u (Ordner, nur lokal), last}] */
+/* recently heard albums, newest first: albums of which at least minTracks distinct tracks played recently
+   (a single track from a mix doesn't count); searches at most the last scan entries.
+   -> [{ti (album), ar, u (folder, local only), last}] */
 function recentAlbums(list, limit, minTracks, scan) {
   var groups = {}, order = [], stop = Math.max(0, list.length - (scan || 3000));
   minTracks = minTracks || 2;
@@ -361,15 +361,15 @@ function recentAlbums(list, limit, minTracks, scan) {
   return out;
 }
 
-/* Ein Album auf seiner Seite: wie oft gehört und wann zuletzt. Ein „Hören“ sind Titel des Albums ohne Pause über
-   ALBUM_GAP; ein einzelner Titel zählt auch. dir: Ordner (lokal, wie rel() ihn liefert), sonst Album und Interpret.
-   -> {n, tracks (Titel-Wiedergaben), first, last} oder null */
+/* An album on its page: how often heard and when last. One "listen" is tracks of the album without a break longer than
+   ALBUM_GAP; a single track counts too. dir: folder (local, as returned by rel()), else album and artist.
+   -> {n, tracks (track plays), first, last} or null */
 var ALBUM_GAP = 3 * 3600;
 function albumStats(list, rel, dir, al, ar) {
   var kal = norm(al), kar = norm(ar), out = null, prev = 0;
   for (var i = 0; i < list.length; i++) {
     var e = list[i], hit;
-    if (dir) { var d = e.u ? path.dirname(rel(e.u)) : ''; hit = d === dir || d.indexOf(dir + '/') === 0; }   /* auch CD1/CD2 darunter */
+    if (dir) { var d = e.u ? path.dirname(rel(e.u)) : ''; hit = d === dir || d.indexOf(dir + '/') === 0; }   /* also CD1/CD2 below it */
     else hit = !!e.al && keys(e).al === kal && (!kar || keys(e).ar === kar);
     if (!hit) continue;
     if (!out) out = {n: 0, tracks: 0, first: e.t, last: e.t};

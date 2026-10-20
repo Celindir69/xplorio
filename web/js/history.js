@@ -1,13 +1,13 @@
-/* Verlauf und Statistik: zuletzt gespielt, meistgespielt, Statistik und Last.fm (Tag-Dienst GET /plays, /lastfm).
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach tagedit.js und browse.js geladen. */
+/* History and statistics: recently played, most played, statistics and Last.fm (tag service GET /plays, /lastfm).
+   Classic script, shared global scope; loaded after tagedit.js and browse.js. */
 var overlayHistory = document.getElementById('overlayHistory');
 var histBody       = document.getElementById('histBody');
 var histTab        = 'recent';
 var histKind       = 'track';
 var histRange      = 'd30';
-var histSeq        = 0;          /* verwirft Antworten veralteter Anfragen */
+var histSeq        = 0;          /* discards answers to outdated requests */
 var histTimer      = null;
-/* kurze Namen in der Sprache, ohne Abkürzungspunkt ("Mo." -> "Mo") */
+/* short names in the language, without abbreviation dot ("Mo." -> "Mo") */
 var HIST_DAYS      = langWeekdays('short').map(function(x){ return x.replace(/\.$/, ''); });
 var HIST_MONTHS    = langMonths('short').map(function(x){ return x.replace(/\.$/, ''); });
 var HIST_RANGES    = [['d30', T('hist.range.d30')], ['m12', T('hist.range.m12')], ['all', T('hist.range.all')]];
@@ -29,7 +29,7 @@ function histDay(t) {
   if (diff === 1) return T('hist.yesterday');
   return T('hist.dayDate', {day: HIST_DAYS[(d.getDay() + 6) % 7], date: langDate(d)});
 }
-/* wie histDay, aber "heute"/"gestern" klein (mitten im Satz) */
+/* like histDay, but "today"/"yesterday" lowercase (mid-sentence) */
 function histDayLower(t) {
   var s = histDay(t);
   return s === T('hist.today') || s === T('hist.yesterday') ? s.toLowerCase() : s;
@@ -65,7 +65,7 @@ function histFail(seq) {
   histBody.appendChild(browseNote(T('hist.offlinePort', {port: (window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766})));
 }
 
-/* Auswahl-Knöpfe (Zeitraum, Art) */
+/* choice buttons (period, kind) */
 function histChips(list, cur, onPick) {
   var row = histEl('div', 'hChips');
   list.forEach(function(it){
@@ -76,9 +76,9 @@ function histChips(list, cur, onPick) {
   return row;
 }
 
-/* ---------- Bilder (Volumios /albumart mit Zwischenspeicher; lokal aus dem Ordner, sonst einmal online) ---------- */
+/* ---------- Images (Volumio's /albumart with cache; local from the folder, otherwise once online) ---------- */
 
-/* uri bzw. Ordner relativ zu /mnt ("USB/…"); '' bei TIDAL und Co. */
+/* uri or folder relative to /mnt ("USB/…"); '' for TIDAL and co. */
 function histRel(u) {
   if (!u || /^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)\/|spotify:)/i.test(u)) return '';
   return u.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
@@ -88,7 +88,7 @@ function histAlbumArt(artist, album, dir) {
   var path = dir ? 'path=' + encodeURIComponent('/mnt/' + dir) : '';
   return web || path ? '/albumart?' + [web, path].filter(Boolean).join('&') : '';
 }
-/* Künstlerfoto vom Tag-Dienst (Deezer); gibt es keins, Volumios Künstler-Symbol */
+/* artist photo from the tag service (Deezer); if there is none, Volumio's artist icon */
 function histArtistArt(artist) { return TAGS + '/artistimage?name=' + encodeURIComponent(artist); }
 function histArtistFallback(img, artist) {
   img.addEventListener('error', function once(){
@@ -108,7 +108,7 @@ function histTrackArt(e) {
   return histAlbumArt(e.ar, e.al, rel ? rel.replace(/\/[^\/]*$/, '') : '');
 }
 
-/* ---------- Abspielen und Öffnen ---------- */
+/* ---------- Playing and opening ---------- */
 
 function histPlayUri(uri, service, e) {
   if (queueForInput([{uri: uri, service: service, type: 'song', title: e.ti, artist: e.ar, album: e.al || ''}])) return;
@@ -139,7 +139,7 @@ function histRow(title, sub, right, onClick, img) {
   return row;
 }
 
-/* ---------- Zuletzt gespielt ---------- */
+/* ---------- Recently played ---------- */
 
 function histRecent(seq) {
   var lastDay = '', before = 0;
@@ -173,10 +173,10 @@ function histRecent(seq) {
   more(null);
 }
 
-/* ---------- Meistgespielt ---------- */
+/* ---------- Most played ---------- */
 
-/* eine Zeile mit Rang, Bild und Anzahl; kind track|album|artist|genre (Bild: meistgespieltes Album des Genres) */
-/* Sampler: der Tag-Dienst nennt den Künstler intern 'Verschiedene'; angezeigt in der gewählten Sprache */
+/* a row with rank, image and count; kind track|album|artist|genre (image: the genre's most played album) */
+/* compilations: the tag service internally calls the artist 'Verschiedene'; displayed in the selected language */
 function histArtistName(ar) { return ar === 'Verschiedene' ? T('hist.various') : ar; }
 
 function histTopRow(kind, it, i) {
@@ -213,12 +213,12 @@ function histTop(seq) {
   }).catch(function(){ histFail(seq); });
 }
 
-/* ---------- Statistik ---------- */
+/* ---------- Statistics ---------- */
 
 function histNum(n) { return langNum(n); }
 
-/* Balken: Tippen (oder Mauszeiger) zeigt den Wert in der Überschrift; details[i] ist die ausführliche Beschriftung */
-/* opts.onSel(i oder -1): Tippen wählt einen Balken aus (Rückblick: Monat), opts.sel ist vorgewählt */
+/* bars: tap (or mouse pointer) shows the value in the heading; details[i] is the detailed label */
+/* opts.onSel(i or -1): a tap selects a bar (year in review: month), opts.sel is preselected */
 function histBars(title, values, labels, every, details, opts) {
   opts = opts || {};
   var box = histEl('div', 'hChart');
@@ -241,7 +241,7 @@ function histBars(title, values, labels, every, details, opts) {
     b.appendChild(fill);
     if (i === opts.sel) b.classList.add('sel');
     b.addEventListener('click', function(){ if (opts.onSel) opts.onSel(i === opts.sel ? -1 : i); else pick(b, i); });
-    b.addEventListener('pointerenter', function(e){ if (e.pointerType === 'mouse' && picked !== b) pick(b, i); });   /* Touch: nur Tippen */
+    b.addEventListener('pointerenter', function(e){ if (e.pointerType === 'mouse' && picked !== b) pick(b, i); });   /* touch: tap only */
     bars.appendChild(b);
     lab.appendChild(histEl('div', 'hLabel', i % every === 0 ? labels[i] : ''));
   });
@@ -253,7 +253,7 @@ function histBars(title, values, labels, every, details, opts) {
   return box;
 }
 
-/* Genres als waagrechte Balken (Wiedergaben); Tippen öffnet die Genre-Seite (genre.js) */
+/* genres as horizontal bars (plays); a tap opens the genre page (genre.js) */
 function histGenreBars(title, list) {
   var box = histEl('div', 'hChart');
   box.appendChild(browseHeading(title));
@@ -319,14 +319,14 @@ function histStats(seq) {
   }).catch(function(){ histFail(seq); });
 }
 
-/* ---------- Jahresrückblick ---------- */
+/* ---------- Year in review ---------- */
 
-var histYearSel = 0;            /* 0: neuestes Jahr */
+var histYearSel = 0;            /* 0: newest year */
 var histYearOpen = {};
-var histYearMonth = -1;         /* gewählter Monat (0-11) für die Ranglisten, -1: ganzes Jahr */          /* aufgeklappte Rubriken im Rückblick */
+var histYearMonth = -1;         /* selected month (0-11) for the rankings, -1: whole year */          /* expanded sections in the year in review */
 var HIST_MONTHS_FULL = langMonths('long');
 
-/* Veränderung zum Vorjahr in Prozent, '' ohne Vorjahr */
+/* change from the previous year in percent, '' without a previous year */
 function histDelta(now, before) {
   if (!before) return '';
   var p = Math.round((now - before) / before * 100);
@@ -336,7 +336,7 @@ function histDelta(now, before) {
 function histYear(seq) {
   tagGetJson('/plays?view=year' + (histYearSel ? '&y=' + histYearSel : '') + (histYearMonth >= 0 ? '&m=' + (histYearMonth + 1) : '') + histTz()).then(function(r){
     if (seq !== histSeq) return;
-    var keep = histBody.scrollTop;                       /* Monat gewählt: an der Stelle bleiben */
+    var keep = histBody.scrollTop;                       /* month selected: stay in place */
     histClear();
     var y = r && r.review, years = (r && r.years) || [];
     if (!y || !years.length) { histBody.appendChild(browseNote(T('hist.year.empty'))); return; }
@@ -379,7 +379,7 @@ function histYear(seq) {
     } else {
       histBody.appendChild(browseNote(T('hist.year.tapMonth')));
     }
-    /* Rubriken zum Aufklappen (anfangs zu); der Zustand bleibt beim Jahreswechsel */
+    /* expandable sections (collapsed at first); the state is kept when changing years */
     function section(key, head, fill) {
       var h = browseHeading(head);
       h.classList.add('hFold');
@@ -445,8 +445,8 @@ function histLastfm(st, seq) {
   if (!st.connected) {
     info.textContent = st.user ? T('hist.lastfm.expired') : T('hist.lastfm.notConnected');
     btns.appendChild(histLastfmBtn(T('hist.lastfm.connect'), function(b){
-      var win = window.open('about:blank', '_blank');          /* gleich öffnen, sonst blockiert der Browser das Fenster */
-      if (win) win.opener = null;                             /* Last.fm-Seite bekommt keinen Zugriff auf die App */
+      var win = window.open('about:blank', '_blank');          /* open right away, otherwise the browser blocks the window */
+      if (win) win.opener = null;                             /* Last.fm page gets no access to the app */
       histLastfmAction('connect').then(function(r){
         b.disabled = false;
         if (!r || !r.ok) { if (win) win.close(); return; }
