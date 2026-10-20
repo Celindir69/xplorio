@@ -1,21 +1,21 @@
-/* Cover online suchen: Last.fm, iTunes und Cover Art Archive (MusicBrainz).
-   Liefert Vorschläge [{source, url}]; die Bilder lädt der Tag-Dienst erst bei Bedarf. Node 8, nur ES5. */
+/* Search covers online: Last.fm, iTunes and Cover Art Archive (MusicBrainz).
+   Returns suggestions [{source, url}]; the tag service loads the images only when needed. Node 8, ES5 only. */
 var http  = require('http');
 var https = require('https');
 var url   = require('url');
 var dns   = require('dns');
 var net   = require('net');
 
-var UA = 'Xplorio/1.0 ( https://github.com/Celindir69/xplorio )';   /* MusicBrainz verlangt eine Kennung */
+var UA = 'Xplorio/1.0 ( https://github.com/Celindir69/xplorio )';   /* MusicBrainz requires an identifier */
 var BASE = {
   itunes:  process.env.ITUNES_URL  || 'https://itunes.apple.com',
   lastfm:  process.env.LASTFM_URL  || 'https://ws.audioscrobbler.com',
   mb:      process.env.MB_URL      || 'https://musicbrainz.org',
   caa:     process.env.CAA_URL     || 'https://coverartarchive.org'
 };
-var LASTFM_BLANK = '2a96cbd8b46e442fc41c2b86b821562f';      /* Platzhalter-Stern von Last.fm */
+var LASTFM_BLANK = '2a96cbd8b46e442fc41c2b86b821562f';      /* Last.fm placeholder star */
 
-/* Adressen im eigenen Netz (Router, NAS, der Player selbst) */
+/* addresses on the local network (router, NAS, the player itself) */
 function privateIp(ip) {
   ip = String(ip || '').toLowerCase().replace(/^::ffff:/, '');
   if (net.isIPv4(ip)) {
@@ -25,26 +25,26 @@ function privateIp(ip) {
   }
   return ip === '::' || ip === '::1' || /^f[cd]/.test(ip) || /^fe[89ab]/.test(ip);
 }
-/* DNS-Auflösung, die Adressen im eigenen Netz ablehnt (auch nach Weiterleitungen) */
+/* DNS lookup that rejects local network addresses (also after redirects) */
 function publicLookup(host, opts, cb) {
   if (typeof opts === 'function') { cb = opts; opts = {}; }
   dns.lookup(host, opts, function(e, addr, family){
     if (e) return cb(e);
     var list = Array.isArray(addr) ? addr : [{address: addr}];
-    if (list.some(function(a){ return privateIp(a.address); })) return cb(new Error('Adresse im eigenen Netz nicht erlaubt'));
+    if (list.some(function(a){ return privateIp(a.address); })) return cb(new Error('local network address not allowed'));
     cb(null, addr, family);
   });
 }
 
-/* einfacher GET mit Weiterleitungen, Zeit- und Größengrenze: cb(err, {type, body:Buffer})
-   o.pub: nur öffentliche Adressen (für Adressen aus fremden Daten, z. B. Senderlogos) */
+/* simple GET with redirects, time and size limit: cb(err, {type, body:Buffer})
+   o.pub: public addresses only (for URLs from third-party data, e.g. station logos) */
 function fetchUrl(u, maxBytes, cb, o) {
   o = typeof o === 'object' && o ? o : {};
   var hops = o.hops || 0;
   var p = url.parse(u);
-  if (p.protocol !== 'https:' && p.protocol !== 'http:') return cb(new Error('ungültige Adresse'));
+  if (p.protocol !== 'https:' && p.protocol !== 'http:') return cb(new Error('invalid URL'));
   if (o.pub && net.isIP(String(p.hostname || '').replace(/^\[|\]$/g, '')) && privateIp(String(p.hostname).replace(/^\[|\]$/g, '')))
-    return cb(new Error('Adresse im eigenen Netz nicht erlaubt'));
+    return cb(new Error('local network address not allowed'));
   var done = false;
   function finish(e, r) { if (!done) { done = true; cb(e, r); } }
   var opts = {
@@ -61,23 +61,23 @@ function fetchUrl(u, maxBytes, cb, o) {
     var parts = [], size = 0;
     res.on('data', function(d){
       size += d.length;
-      if (size > maxBytes) { req.abort(); return finish(new Error('Antwort zu groß')); }
+      if (size > maxBytes) { req.abort(); return finish(new Error('response too large')); }
       parts.push(d);
     });
     res.on('end', function(){ finish(null, {type: String(res.headers['content-type'] || ''), body: Buffer.concat(parts)}); });
   });
-  req.setTimeout(12000, function(){ req.abort(); finish(new Error('Zeitüberschreitung')); });
+  req.setTimeout(12000, function(){ req.abort(); finish(new Error('timeout')); });
   req.on('error', function(e){ finish(e); });
 }
 
 function getJson(u, cb) {
   fetchUrl(u, 512 * 1024, function(e, r){
     if (e) return cb(e);
-    try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(new Error('keine JSON-Antwort')); }
+    try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(new Error('no JSON response')); }
   });
 }
 
-/* Vergleichsschlüssel: ohne Akzente, Klammerzusätze ("(Remastered)"), Satzzeichen, "The " */
+/* comparison key: without accents, bracketed additions ("(Remastered)"), punctuation, "The " */
 function key(s) {
   s = String(s || '');
   if (s.normalize) s = s.normalize('NFKD');
@@ -86,7 +86,7 @@ function key(s) {
 }
 function similar(a, b) { a = key(a); b = key(b); return !!a && !!b && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0); }
 
-/* ---------- Quellen: cb(Liste von {source, url}) ---------- */
+/* ---------- sources: cb(list of {source, url}) ---------- */
 
 function itunes(artist, album, cb) {
   getJson(BASE.itunes + '/search?media=music&entity=album&limit=10&term=' + encodeURIComponent(artist + ' ' + album), function(e, j){
@@ -104,9 +104,9 @@ function lastfm(artist, album, apiKey, cb) {
     var imgs = !e && j && j.album && j.album.image;
     if (!imgs || !imgs.length) return cb([]);
     var u = '';
-    imgs.forEach(function(i){ if (i && i['#text']) u = i['#text']; });           /* größte steht zuletzt */
+    imgs.forEach(function(i){ if (i && i['#text']) u = i['#text']; });           /* largest comes last */
     if (!u || u.indexOf(LASTFM_BLANK) >= 0) return cb([]);
-    cb([{source: 'Last.fm', url: u.replace(/\/i\/u\/[0-9a-z]+x[0-9a-z]+\//, '/i/u/')}]);   /* Originalgröße statt 300 px */
+    cb([{source: 'Last.fm', url: u.replace(/\/i\/u\/[0-9a-z]+x[0-9a-z]+\//, '/i/u/')}]);   /* original size instead of 300 px */
   });
 }
 
@@ -120,7 +120,7 @@ function coverArtArchive(artist, album, cb) {
   });
 }
 
-/* alle Quellen gleichzeitig; Reihenfolge der Antwort: iTunes, Last.fm, Cover Art Archive */
+/* all sources at once; order of the answer: iTunes, Last.fm, Cover Art Archive */
 function search(opts, cb) {
   var artist = String(opts.artist || '').trim(), album = String(opts.album || '').trim();
   var jobs = [
@@ -134,12 +134,12 @@ function search(opts, cb) {
   });
 }
 
-/* Bild laden und prüfen: cb(err, {mime, body}) */
+/* load and check image: cb(err, {mime, body}) */
 function image(u, cb) {
   fetchUrl(u, 10 * 1024 * 1024, function(e, r){
     if (e) return cb(e);
     var b = r.body, jpeg = b[0] === 0xff && b[1] === 0xd8, png = b[0] === 0x89 && b[1] === 0x50;
-    if (!jpeg && !png) return cb(new Error('kein JPEG oder PNG'));
+    if (!jpeg && !png) return cb(new Error('not a JPEG or PNG'));
     cb(null, {mime: jpeg ? 'image/jpeg' : 'image/png', body: b});
   });
 }

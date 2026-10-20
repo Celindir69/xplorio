@@ -1,19 +1,19 @@
   *, *:before, *:after { box-sizing:border-box; }
 
-/* Farben: dunkel ist der Standard; html.light (web/js/theme.js) setzt die hellen Werte. --fg-rgb wird mit
-   eigener Deckkraft benutzt (rgba(var(--fg-rgb), .2)). Gilt auch für die Bühnenansicht; kioskTV.html hat eigene, immer dunkle Farben. */
+/* Colors: dark is the default; html.light (web/js/theme.js) sets the light values. --fg-rgb is used with
+   its own opacity (rgba(var(--fg-rgb), .2)). Also applies to the stage view; kioskTV.html has its own, always dark colors. */
 :root {
-  --fg:#fff; --fg-rgb:255,255,255;          /* Schrift, Symbole, Linien */
-  --ink:#111;                               /* Schrift/Symbole auf --fg- oder Akzent-Flächen */
-  --shade-rgb:0,0,0;                        /* abdunkelnde Flächen (runde Knöpfe oben, Kästchen) */
-  --page:#111; --ph:#222;                   /* Seitengrund, Platzhalter für Bilder */
+  --fg:#fff; --fg-rgb:255,255,255;          /* text, icons, lines */
+  --ink:#111;                               /* text/icons on --fg or accent surfaces */
+  --shade-rgb:0,0,0;                        /* darkening surfaces (round buttons at the top, boxes) */
+  --page:#111; --ph:#222;                   /* page background, image placeholder */
   --sheet:rgba(15,15,15,.6);                /* Overlays */
-  --bg-filter:blur(30px) brightness(.6);    /* Cover im Hintergrund */
+  --bg-filter:blur(30px) brightness(.6);    /* cover in the background */
   --scrim:linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.75));
-  --glow:0 2px 8px rgba(0,0,0,.95); --glow-soft:0 1px 4px rgba(0,0,0,.8);   /* Schatten hinter Text */
+  --glow:0 2px 8px rgba(0,0,0,.95); --glow-soft:0 1px 4px rgba(0,0,0,.8);   /* shadow behind text */
   --gold:#e6c36a; --warn:#f3c969; --err:#ff8a8a; --ok:#7ccf8e;
-  --accent:var(--accent-d); --bg-tint:var(--tint-d);    /* aus dem Cover (color.js); ohne Cover ungültig = Rückfallwert */
-  --on-accent:var(--on-accent-d, var(--ink));          /* Schrift auf Akzentflächen; ohne Cover: Akzent fällt auf --fg zurück, darauf --ink */
+  --accent:var(--accent-d); --bg-tint:var(--tint-d);    /* from the cover (color.js); without a cover invalid = fallback value */
+  --on-accent:var(--on-accent-d, var(--ink));          /* text on accent surfaces; without a cover the accent falls back to --fg, with --ink on it */
   color-scheme:dark;
 }
 html.light {
@@ -24,7 +24,7 @@ html.light {
   --sheet:rgba(250,250,248,.74);
   --bg-filter:blur(30px) brightness(1.1) saturate(1.15);
   --scrim:linear-gradient(to bottom, rgba(255,255,255,.42), rgba(255,255,255,.80));
-  --glow:none; --glow-soft:none;                       /* Schein hinter Text nur im dunklen Modus */
+  --glow:none; --glow-soft:none;                       /* glow behind text only in dark mode */
   --gold:#946b00; --warn:#946000; --err:#c62828; --ok:#2e7d32;
   --accent:var(--accent-l); --bg-tint:var(--tint-l);
   --on-accent:var(--on-accent-l, var(--ink));
@@ -54,7 +54,7 @@ html, body { margin:0; padding:0; width:100%;
     background:var(--scrim); }
 
 
-/* Maßeinheit der Oberfläche: wie 1vw, aber nach oben begrenzt, damit auf iPad und Desktop nichts
-   riesig wird. Hochformat bis ca. 440 px Breite = unverändert (1vw). */
+/* UI unit: like 1vw, but capped so that nothing gets huge on iPad and desktop.
+   Portrait up to about 440 px width = unchanged (1vw). */
 :root { --vw: min(1vw, 4.4px); }
 @media (orientation:landscape) { :root { --vw: min(1vw, 1.6vh, 7px); } }

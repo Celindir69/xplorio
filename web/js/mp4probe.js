@@ -1,20 +1,20 @@
-/* Codec einer m4a-Datei bestimmen: ALAC (verlustfrei) oder AAC (verlustbehaftet).
-   getState verrät das nicht, die Datei schon: Der Player liefert seine Dateien unter /music/... aus
-   (inklusive Teilabrufen). Wir lesen nur die Kopf-Boxen (ftyp, ggf. mdat überspringen, moov) und darin den
-   Sample-Eintrag ("alac" oder "mp4a"); bei ALAC steht dort auch die echte Bit-Tiefe.
-   Reine Teile (mp4Audio, mp4Candidates) sind mit tests/mp4probe.test.js prüfbar.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Determine the codec of an m4a file: ALAC (lossless) or AAC (lossy).
+   getState does not tell, but the file does: the player serves its files under /music/...
+   (including range requests). We only read the header boxes (ftyp, skip mdat if needed, moov) and in them the
+   sample entry ("alac" or "mp4a"); for ALAC it also holds the real bit depth.
+   Pure parts (mp4Audio, mp4Candidates) are testable with tests/mp4probe.test.js.
+   Classic script, shared global scope; load order see xplorio.html. */
 
-var MP4_BASE = '';                 /* Vorsatz für Adressen; leer = gleiche Herkunft wie die Seite */
-var MP4_WINDOW = 65536;            /* so viel wird pro Schritt vom Dateianfang bzw. nach mdat gelesen */
-var MP4_MOOV_MAX = 524288;         /* so viel von moov höchstens (stsd liegt weit vorn) */
-var mp4Cache = {};                 /* uri -> {codec, bits, rate} | false (nicht bestimmbar) */
+var MP4_BASE = '';                 /* URL prefix; empty = same origin as the page */
+var MP4_WINDOW = 65536;            /* bytes read per step from the file start or after mdat */
+var MP4_MOOV_MAX = 524288;         /* at most this much of moov (stsd is near the front) */
+var mp4Cache = {};                 /* uri -> {codec, bits, rate} | false (undeterminable) */
 var mp4Pending = {};
 
 function mp4U32(b, o) { return b[o] * 16777216 + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3]; }
 function mp4Type(b, o) { return String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]); }
 
-/* Kind-Boxen zwischen start und end; fn(type, payloadStart, boxEnd); true = abbrechen */
+/* child boxes between start and end; fn(type, payloadStart, boxEnd); true = stop */
 function mp4Boxes(b, start, end, fn) {
   var o = start;
   while (o + 8 <= end) {
@@ -30,7 +30,7 @@ function mp4Boxes(b, start, end, fn) {
   return false;
 }
 
-/* Sample-Eintrag aus "stsd": {codec:'alac'|'aac'|<fourcc>, bits, rate} */
+/* sample entry from "stsd": {codec:'alac'|'aac'|<fourcc>, bits, rate} */
 function mp4Entry(b, p, e) {
   if (p + 16 > e) return null;
   var four = mp4Type(b, p + 12), entryEnd = Math.min(p + 8 + mp4U32(b, p + 8), e);
@@ -39,7 +39,7 @@ function mp4Entry(b, p, e) {
     var res = { codec: 'alac' };
     mp4Boxes(b, p + 8 + 8 + 28, entryEnd, function(type, ps, pe){
       if (type === 'alac' && ps + 4 + 24 <= pe + 0) {
-        var c = ps + 4;                    /* nach Version/Flags: ALACSpecificConfig */
+        var c = ps + 4;                    /* after version/flags: ALACSpecificConfig */
         res.bits = b[c + 5]; res.rate = mp4U32(b, c + 20);
         return true;
       }
@@ -69,7 +69,7 @@ function mp4Trak(b, s, e) {
   return soun ? res : null;
 }
 
-/* b: Bytes ab dem Anfang der moov-Box (inkl. Kopf), start = Länge des Kopfes */
+/* b: bytes from the start of the moov box (incl. header), start = header length */
 function mp4Audio(b, start, end) {
   var res = null;
   mp4Boxes(b, start, end, function(type, ps, pe){
@@ -78,7 +78,7 @@ function mp4Audio(b, start, end) {
   return res;
 }
 
-/* uri aus getState -> mögliche Pfade unter /music (Volumio-Adressen sind nicht immer echte Dateipfade) */
+/* uri from getState -> possible paths under /music (Volumio URIs are not always real file paths) */
 function mp4Candidates(uri) {
   var u = String(uri || '').replace(/^\/+/, ''), list = [], rest;
   function add(p) { if (list.indexOf(p) < 0) list.push(p); }
@@ -92,15 +92,15 @@ function mp4Candidates(uri) {
 
 function mp4Range(url, from, len) {
   return fetch(url, { headers: { Range: 'bytes=' + from + '-' + (from + len - 1) } }).then(function(r){
-    if (r.status !== 206) {               /* Server ignoriert Teilabrufe: nicht die ganze Datei laden */
-      try { r.body.cancel(); } catch (e) { /* egal */ }
+    if (r.status !== 206) {               /* server ignores range requests: do not load the whole file */
+      try { r.body.cancel(); } catch (e) { /* ignore */ }
       throw new Error('http ' + r.status);
     }
     return r.arrayBuffer();
   }).then(function(ab){ return new Uint8Array(ab); });
 }
 
-/* Codec einer einzelnen Adresse; Promise<{codec,…}|null> */
+/* codec of a single URL; Promise<{codec,…}|null> */
 function mp4Probe(url) {
   var steps = 0;
   function at(off) {
@@ -124,7 +124,7 @@ function mp4Probe(url) {
   return at(0);
 }
 
-/* Codec zu einer getState-uri (mit Zwischenspeicher); Promise<{…}|false> */
+/* codec for a getState uri (cached); Promise<{…}|false> */
 function mp4Codec(uri) {
   if (mp4Cache.hasOwnProperty(uri)) return Promise.resolve(mp4Cache[uri]);
   var urls = mp4Candidates(uri);
@@ -135,8 +135,8 @@ function mp4Codec(uri) {
   return next(0).then(function(r){ mp4Cache[uri] = r; return r; });
 }
 
-/* Trägt das Prüfergebnis in den Titel ein (st.fileCodec: Objekt | false | undefined = läuft noch)
-   und ruft repaint(), sobald es da ist. */
+/* Stores the probe result in the track (st.fileCodec: object | false | undefined = still running)
+   and calls repaint() once it is available. */
 function mp4Attach(st, repaint) {
   var type = String((st && (st.fileFormat || st.trackType)) || '').toLowerCase();
   if ((type !== 'm4a' && type !== 'mp4') || !st.uri || /^https?:/i.test(st.uri) || (window.APP_CONFIG && window.APP_CONFIG.M4A_PROBE === false)) return;

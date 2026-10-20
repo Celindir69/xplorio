@@ -1,30 +1,30 @@
-/* Bewertungen (ratings.json im Datenordner): Künstler mit Herz, Alben mit 1–5 Sternen, Titel mit „mag ich nicht“.
-   „Mag ich“ bei Titeln sind die Volumio-Favoriten; sie liegen bei Volumio, nicht hier.
-   Schlüssel: Künstler normiert (plays.norm), lokale Alben nach Ordner (albums.albumDir), Titel nach Datei;
-   Alben und Titel von Streamingdiensten mit "uri:" + Volumio-URI. Node 8, nur ES5. */
+/* Ratings (ratings.json in the data folder): artists with a heart, albums with 1–5 stars, tracks with "don't like".
+   "Like" for tracks is the Volumio favorites; they live in Volumio, not here.
+   Keys: normalized artist (plays.norm), local albums by folder (albums.albumDir), tracks by file;
+   albums and tracks from streaming services as "uri:" + Volumio URI. Node 8, ES5 only. */
 var fs     = require('fs');
 var plays  = require('./plays.js');
 var albums = require('./albums.js');
 
 var LOCAL_RE = /^(INTERNAL|USB|NAS)\//;
 
-/* Volumio-URI -> Datei relativ zur Musikbibliothek ("USB/…"), sonst '' */
+/* Volumio URI -> file relative to the music library ("USB/…"), else '' */
 function fileOf(uri) {
   var rel = String(uri || '').replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
   return LOCAL_RE.test(rel) ? rel : '';
 }
 
 function artistKey(name) { return plays.norm(name); }
-/* uri: die eines Titels des Albums (lokal: daraus der Ordner) oder des Albums selbst (Streamingdienst) */
+/* uri: that of a track of the album (local: the folder is derived from it) or of the album itself (streaming service) */
 function albumKey(uri) { var f = fileOf(uri); return f ? albums.albumDir(f) : (uri ? 'uri:' + uri : ''); }
 function trackKey(uri) { var f = fileOf(uri); return f || (uri ? 'uri:' + uri : ''); }
 
-function Store(file) { this.file = file; this.data = null; this.rev = 0; }   /* rev: zählt Änderungen (Zwischenspeicher) */
+function Store(file) { this.file = file; this.data = null; this.rev = 0; }   /* rev: counts changes (cache) */
 
 Store.prototype.load = function() {
   if (this.data) return this.data;
   var d = null;
-  try { d = JSON.parse(fs.readFileSync(this.file, 'utf8')); } catch (e) { /* noch leer */ }
+  try { d = JSON.parse(fs.readFileSync(this.file, 'utf8')); } catch (e) { /* still empty */ }
   if (!d || typeof d !== 'object') d = {};
   ['artists', 'albums', 'tracks'].forEach(function(k){ if (!d[k] || typeof d[k] !== 'object') d[k] = {}; });
   return (this.data = d);
@@ -36,17 +36,17 @@ Store.prototype.save = function() {
   fs.renameSync(tmp, this.file);
 };
 
-/* q: {artist: Name, album: URI, tracks: [URI, …]} -> {artist: 0|1, album: 0–5, tracks: [0|-1, …]} */
+/* q: {artist: name, album: URI, tracks: [URI, …]} -> {artist: 0|1, album: 0–5, tracks: [0|-1, …]} */
 Store.prototype.get = function(q) {
   var d = this.load(), out = {};
-  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null; }   /* „constructor“ u. ä. zählen nicht */
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null; }   /* "constructor" and the like don't count */
   if (q.artist) { var a = own(d.artists, artistKey(q.artist)); out.artist = a ? 1 : 0; }
   if (q.album) { var b = own(d.albums, albumKey(q.album)); out.album = b ? b.v || 0 : 0; }
   if (Array.isArray(q.tracks)) out.tracks = q.tracks.map(function(u){ var t = own(d.tracks, trackKey(u)); return t ? t.v || 0 : 0; });
   return out;
 };
 
-/* b: {kind: 'artist'|'album'|'track', v, name | uri, ar, al, ti}; v 0 löscht. Gibt den gültigen Wert zurück oder null. */
+/* b: {kind: 'artist'|'album'|'track', v, name | uri, ar, al, ti}; v 0 deletes. Returns the valid value or null. */
 Store.prototype.set = function(b, now) {
   var kind = b.kind, v = Math.round(Number(b.v) || 0), key, list, rec;
   if (kind === 'artist') { key = artistKey(b.name); list = 'artists'; if (v < 0 || v > 1) return null; rec = {n: String(b.name)}; }
@@ -62,7 +62,7 @@ Store.prototype.set = function(b, now) {
   return v;
 };
 
-/* Schlüssel aller Titel mit „mag ich nicht“ -> true (für Würfel, Mood Mix und Entdecken) */
+/* keys of all tracks with "don't like" -> true (for dice, Mood Mix and Discover) */
 Store.prototype.disliked = function() {
   var t = this.load().tracks, out = {};
   Object.keys(t).forEach(function(k){ if (t[k].v === -1) out[k] = true; });

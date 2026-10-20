@@ -1,12 +1,12 @@
-/* Bibliotheks-Check: Problemfälle der Sammlung (Tag-Dienst GET/POST /check), je Eintrag ein Stift zum passenden Editor.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach tagedit.js geladen. */
+/* Library check: problem cases in the collection (tag service GET/POST /check), each entry with a pen to the matching editor.
+   Classic script, shared global scope; loaded after tagedit.js. */
 var overlayCheck = document.getElementById('overlayCheck');
 var checkBody    = document.getElementById('checkBody');
 var checkTimer   = null;
-var checkOpen    = {};          /* aufgeklappte Kategorien bleiben beim Neuzeichnen offen */
-var CHECK_PAGE   = 100;         /* so viele Einträge je Kategorie, dann "weitere anzeigen" */
-var checkDone    = {};          /* bearbeitete Einträge (Tag-Dienst merkt sie bis zur nächsten Prüfung) */
-var checkDoneAt  = 0;           /* zu welcher Prüfung checkDone gehört */
+var checkOpen    = {};          /* expanded categories stay open on redraw */
+var CHECK_PAGE   = 100;         /* this many entries per category, then "show more" */
+var checkDone    = {};          /* edited entries (tag service remembers them until the next check) */
+var checkDoneAt  = 0;           /* which check run checkDone belongs to */
 
 var CHECK_CATS = [
   {key: 'noCover', name: T('check.cat.noCover'), hint: T('check.cat.noCoverHint')},
@@ -27,8 +27,8 @@ function checkFmtDate(ms) {
 }
 function checkNum(n) { return langNum(n); }
 
-/* Solange der Check offen ist, hält der Tag-Dienst die MPD-Scans zurück (viele Alben hintereinander bearbeiten
-   hieße sonst viele Scans, jeder mit einer Minute Last); beim Schließen wird alles auf einmal eingelesen. */
+/* While the check is open, the tag service holds back MPD scans (editing many albums in a row would otherwise
+   mean many scans, each with a minute of load); on close everything is scanned at once. */
 var checkHeld = false;
 function checkHold() {
   checkHeld = true;
@@ -52,7 +52,7 @@ function openCheck() {
   checkLoad();
 }
 
-var checkShown = null;          /* {at, info, res}: zuletzt gezeichnetes Ergebnis; während der Prüfung nur den Fortschritt neu schreiben */
+var checkShown = null;          /* {at, info, res}: last drawn result; while checking, only rewrite the progress */
 function checkLoad() {
   clearTimeout(checkTimer);
   var have = checkShown && checkShown.info.isConnected && checkShown.at ? '?have=' + encodeURIComponent(checkShown.at) : '';
@@ -132,8 +132,8 @@ function checkRender(res) {
   checkBody.scrollTop = keepScroll;
 }
 
-/* Bibliothek aktualisieren (ganze MPD-Datenbank); bereits gesammelte Änderungen gehen darin auf.
-   Gemeinsamer Zustand für den Knopf im Check und die Zeile im Menü (menu.js): '' | running | done | failed */
+/* Update the library (whole MPD database); changes already collected are included.
+   Shared state for the button in the check and the row in the menu (menu.js): '' | running | done | failed */
 var libUpd = {state: '', timer: null, watch: {}};
 function libUpdSet(st) {
   libUpd.state = st;
@@ -171,12 +171,12 @@ function checkDbRow() {
   return head;
 }
 
-/* ---------- Stimmungs-Tags (Tag-Dienst GET /moodtags) ---------- */
+/* ---------- Mood tags (tag service GET /moodtags) ---------- */
 var checkMood = null;
-var MOOD_NAMES = {};            /* englische Kennung -> Name in der Sprache (kleingeschrieben); auch von moodmix.js benutzt */
+var MOOD_NAMES = {};            /* English id -> name in the UI language (lowercase); also used by moodmix.js */
 ['aggressive', 'atmospheric', 'calm', 'dark', 'dreamy', 'emotional', 'epic', 'happy', 'intense', 'melancholic',
  'reflective', 'relaxed', 'romantic', 'sad', 'sensual', 'uplifting'].forEach(function(id){ MOOD_NAMES[id] = T('mood.' + id); });
-/* Schlüssel sind die (deutschen) Zustands-Kennungen des Tag-Dienstes */
+/* keys are the (German) state ids of the tag service */
 var MOOD_STATES = {'läuft': T('check.mood.state.running'), wartet: T('check.mood.state.waiting'), fertig: T('check.mood.state.done'),
   leer: T('check.mood.state.empty'), fehler: T('check.mood.state.error'), aus: T('check.mood.state.off')};
 
@@ -254,7 +254,7 @@ function checkFill(box, cat, list) {
   more();
 }
 
-/* Bearbeitete Einträge bleiben ausgegraut, auch nach dem Schließen, bis neu geprüft wird */
+/* Edited entries stay greyed out, even after closing, until the next check */
 function checkMarkDone(key) {
   if (checkDone[key]) return;
   checkDone[key] = 1;
@@ -281,13 +281,13 @@ function checkAlbumRow(key, it) {
   else if (key === 'noTrack') sub = T('check.noTrackSub', {missing: checkNum(it.missing), count: checkNum(it.count), dir: it.dir});
   if (key === 'genreMissing') return checkGenreAlbumRow(key, it);
   return checkRow(key + '|' + it.dir, heading, sub, function(){
-    if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* Datum von MusicBrainz vorgeschlagen */
+    if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* date suggested by MusicBrainz */
     else if (key === 'albumArtist' || key === 'mixed') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
     else openTagEditor(it.files, it.name);
   });
 }
 
-/* Genre-Vorschlag: "Electronic (78 % laut Audio) · Trip Hop, Downtempo" */
+/* genre suggestion: "Electronic (78 % by audio) · Trip Hop, Downtempo" */
 function checkGenreText(it) {
   if (!it.genre) return T('check.genre.none');
   var why = it.how === 'audio' ? T('check.genre.byAudio', {p: Math.round(it.share * 100)})
@@ -301,7 +301,7 @@ function checkGenreAlbumRow(key, it) {
   });
 }
 
-/* gleiche Änderung "bisher -> Oberkategorie" für mehrere Alben = eine Zeile; der Stift öffnet alle Titel davon */
+/* same change "previous -> top category" for several albums = one row; the pen opens all their tracks */
 function checkGenreGroupRow(key, g) {
   var names = g.albums.slice(0, 3).map(function(a){ return a.name; }).join(', ') + (g.albums.length > 3 ? ' …' : '');
   var audio = g.albums.some(function(a){ return a.how !== 'table'; });

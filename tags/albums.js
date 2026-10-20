@@ -1,26 +1,26 @@
-/* Zufallsalbum: Albenliste der Bibliothek (aus MPD, einmal gelesen und gespeichert) und Auswahl,
-   bevorzugt Alben, die lange nicht oder nie liefen. Node 8, nur ES5. */
+/* Random album: album list of the library (from MPD, read once and saved) and the pick,
+   preferring albums that have not played for a long time or never. Node 8, ES5 only. */
 var path  = require('path');
 var plays = require('./plays.js');
 
 var DAY = 86400;
-var DISC_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*\d+\b/i;     /* Unterordner einer Mehrfach-CD */
-var RECENT_PICKS = 30;                                                     /* so viele zuletzt gezeigte nicht gleich wieder */
+var DISC_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*\d+\b/i;     /* subfolder of a multi-disc set */
+var RECENT_PICKS = 30;                                                     /* don't repeat this many recently shown ones */
 
-/* Jahr aus dem Date-Tag ("1997", "1997-05-12", "05/1997"); 0 ohne oder unplausibel */
+/* year from the Date tag ("1997", "1997-05-12", "05/1997"); 0 if missing or implausible */
 function yearOf(d) {
   var m = /(1[89]\d\d|20\d\d)/.exec(String(d || ''));
   return m ? +m[1] : 0;
 }
 
-/* Ordner eines Titels; CD1/CD2-Unterordner zählen zum Album darüber */
+/* folder of a track; CD1/CD2 subfolders belong to the album above */
 function albumDir(file) {
   var d = path.dirname(String(file || ''));
   return DISC_RE.test(path.basename(d)) ? path.dirname(d) : d;
 }
 
-/* songs wie libcheck.mpdWalk -> [{dir, al, ar, ge, y, m}]; ge: häufigstes Genre im Ordner, y: häufigstes Jahr (Date-Tag),
-   m: jüngste Änderung einer Datei (Last-Modified aus MPD, Unix-Sekunden), rd: volles Date-Tag (JJJJ-MM-TT); fehlen, wenn kein Titel des Ordners eins hat */
+/* songs as from libcheck.mpdWalk -> [{dir, al, ar, ge, y, m}]; ge: most common genre in the folder, y: most common year (Date tag),
+   m: latest change of a file (Last-Modified from MPD, Unix seconds), rd: full Date tag (YYYY-MM-DD); missing if no track in the folder has one */
 function fromSongs(songs) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
@@ -48,12 +48,12 @@ function fromSongs(songs) {
     if (y) o.y = +y;
     if (g.m) o.m = g.m;
     var rd = Object.keys(g.dates).sort(function(a, b){ return g.dates[b] - g.dates[a] || (a < b ? -1 : 1); })[0];
-    if (rd && +rd.slice(0, 4) === o.y) o.rd = rd;                /* volles Datum nur, wenn es zum Jahr des Albums passt */
+    if (rd && +rd.slice(0, 4) === o.y) o.rd = rd;                /* full date only if it matches the album's year */
     return o;
   });
 }
 
-/* Albenliste -> genreOf(Verlaufseintrag): Genre über den Ordner, sonst Album+Künstler, bei Samplern nur Albumname */
+/* album list -> genreOf(history entry): genre via the folder, else album+artist, for compilations album name only */
 function genreIndex(list) {
   var byDir = {}, byKey = {}, byAlbum = {};
   list.forEach(function(a){
@@ -73,7 +73,7 @@ function genreIndex(list) {
   };
 }
 
-/* Jahr eines Albums (Date-Tag) wie genreIndex: über den Ordner, sonst Album+Künstler -> Jahr oder 0 */
+/* year of an album (Date tag) like genreIndex: via the folder, else album+artist -> year or 0 */
 function yearIndex(list) {
   var byDir = {}, byKey = {};
   list.forEach(function(a){
@@ -89,7 +89,7 @@ function yearIndex(list) {
   };
 }
 
-/* Alben eines Jahres, nach Künstler */
+/* albums of a year, by artist */
 function yearAlbums(list, y) {
   y = parseInt(y, 10);
   function key(a) { return a.ar.toLowerCase().replace(/^the\s+/, ''); }
@@ -98,7 +98,7 @@ function yearAlbums(list, y) {
     .sort(function(a, b){ return key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
-/* Genres der Albenliste: [{g, n (Alben), dir, al, ar (Beispielalbum fürs Cover)}], die größten zuerst; q filtert (Teilwort) */
+/* genres of the album list: [{g, n (albums), dir, al, ar (sample album for the cover)}], largest first; q filters (substring) */
 function genreList(list, q) {
   var by = {}, out = [];
   q = String(q || '').toLowerCase().trim();
@@ -111,7 +111,7 @@ function genreList(list, q) {
   return out.sort(function(a, b){ return b.n - a.n || a.g.localeCompare(b.g); });
 }
 
-/* Alben eines Genres (Groß-/Kleinschreibung egal), nach Künstler und Album sortiert; Sampler ("Verschiedene") am Ende */
+/* albums of a genre (case-insensitive), sorted by artist and album; compilations ("Verschiedene") last */
 function genreAlbums(list, g) {
   g = String(g || '').toLowerCase();
   function key(a) { return (a.ar === 'Verschiedene' ? '\uffff' : '') + a.ar.toLowerCase().replace(/^the\s+/, ''); }
@@ -120,7 +120,7 @@ function genreAlbums(list, g) {
     .sort(function(a, b){ return key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
-/* Jahrzehnte der Albenliste: [{d (z. B. 1990), n (Alben), dir, al, ar (Beispielalbum fürs Cover)}], nach Jahrzehnt */
+/* decades of the album list: [{d (e.g. 1990), n (albums), dir, al, ar (sample album for the cover)}], by decade */
 function decadeList(list) {
   var by = {}, out = [];
   list.forEach(function(a){
@@ -132,7 +132,7 @@ function decadeList(list) {
   return out.sort(function(a, b){ return a.d - b.d; });
 }
 
-/* Alben eines Jahrzehnts, nach Jahr, Künstler und Album */
+/* albums of a decade, by year, artist and album */
 function decadeAlbums(list, d) {
   d = parseInt(d, 10);
   function key(a) { return a.ar.toLowerCase().replace(/^the\s+/, ''); }
@@ -141,7 +141,7 @@ function decadeAlbums(list, d) {
     .sort(function(a, b){ return a.y - b.y || key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
-/* Verlauf -> wann zuletzt gelaufen: nach Ordner (lokal gespielt) und nach Album+Künstler (auch Last.fm) */
+/* history -> when last played: by folder (played locally) and by album+artist (also Last.fm) */
 function lastIndex(list) {
   var byDir = {}, byKey = {}, byAlbum = {};
   list.forEach(function(e){
@@ -162,20 +162,20 @@ function lastIndex(list) {
   };
 }
 
-/* Gewicht: nie gehört oder über ein Jahr her 4, über drei Monate 2, sonst 1 */
+/* weight: never heard or over a year ago 4, over three months 2, else 1 */
 function weight(last, now) {
   if (!last || now - last > 365 * DAY) return 4;
   return now - last > 90 * DAY ? 2 : 1;
 }
 
-/* aus pool einen Eintrag ziehen, gewichtet nach weight(lastOf(x)); keyOf(x): Schlüssel für picks (zuletzt gezeigt, wird ergänzt) */
+/* draw one entry from pool, weighted by weight(lastOf(x)); keyOf(x): key for picks (recently shown, gets appended) */
 function draw(pool, keyOf, lastOf, now, picks, rnd) {
   if (!pool.length) return null;
   rnd = rnd || Math.random;
   var skip = {};
   (picks || []).forEach(function(d){ skip[d] = true; });
   if (pool.length > (picks || []).length) pool = pool.filter(function(a){ return !skip[keyOf(a)]; });
-  /* Stichprobe statt alle gewichten: schnell auch bei vielen Tausend Einträgen */
+  /* sample instead of weighting all: fast even with many thousands of entries */
   var cand = [], sum = 0;
   for (var i = 0; i < Math.min(40, pool.length); i++) {
     var a = pool[Math.floor(rnd() * pool.length)], l = lastOf(a), w = weight(l, now);
@@ -187,13 +187,13 @@ function draw(pool, keyOf, lastOf, now, picks, rnd) {
   return c;
 }
 
-/* ein Album auswählen; last: lastIndex(Verlauf); picks: zuletzt gezeigte Ordner (wird ergänzt); rnd: Zufallszahl 0..1 (Tests) */
+/* pick an album; last: lastIndex(history); picks: recently shown folders (gets appended); rnd: random number 0..1 (tests) */
 function pick(albums, last, now, picks, rnd) {
   var c = draw(albums, function(a){ return a.dir; }, last, now, picks, rnd);
   return c && {dir: c.a.dir, al: c.a.al, ar: c.a.ar, last: c.last};
 }
 
-/* Künstler der Bibliothek (Albumkünstler, ohne Sampler) -> [{ar, n: Alben, dir: ein Albumordner}] */
+/* artists of the library (album artists, without compilations) -> [{ar, n: albums, dir: one album folder}] */
 function artists(albums) {
   var by = {}, out = [];
   albums.forEach(function(a){
@@ -205,7 +205,7 @@ function artists(albums) {
   return out;
 }
 
-/* Verlauf -> wann ein Künstler bzw. ein Titel zuletzt lief */
+/* history -> when an artist or a track last played */
 function lastArtistIndex(list) {
   var by = {};
   list.forEach(function(e){ var k = plays.norm(e.ar); if (!(by[k] >= e.t)) by[k] = e.t; });
@@ -217,20 +217,20 @@ function lastTrackIndex(list) {
   return function(t){ return by[plays.norm(t[0]) + '|' + plays.norm(t[1])] || null; };
 }
 
-/* Zufallskünstler aus artists(); last: lastArtistIndex */
+/* random artist from artists(); last: lastArtistIndex */
 function pickArtist(list, last, now, picks, rnd) {
   var c = draw(list, function(a){ return plays.norm(a.ar); }, last, now, picks, rnd);
   return c && {ar: c.a.ar, n: c.a.n, dir: c.a.dir, last: c.last};
 }
 
-/* Zufallstitel aus library-tracks.json ([[Künstler, Titel, Datei, Sekunden, Album], …]); last: lastTrackIndex */
+/* random track from library-tracks.json ([[artist, title, file, seconds, album], …]); last: lastTrackIndex */
 function pickTrack(tracks, last, now, picks, rnd) {
   var c = draw(tracks, function(t){ return t[2]; }, last, now, picks, rnd);
   return c && {ar: c.a[0], ti: c.a[1], f: c.a[2], d: c.a[3] || 0, al: c.a[4] || '', last: c.last};
 }
 
-/* Album des Tages: für denselben Tag (day, z. B. "2026-10-09") immer dasselbe, bevorzugt lange nicht oder nie gehörte;
-   last: lastIndex(Verlauf) */
+/* album of the day: always the same one for the same day (day, e.g. "2026-10-09"), preferring ones not heard for long or never;
+   last: lastIndex(history) */
 function seeded(str) {
   var h = 2166136261;
   for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -246,7 +246,7 @@ function dayAlbum(list, day, last, now) {
   return c && {dir: c.a.dir, al: c.a.al, ar: c.a.ar, y: c.a.y, last: c.last};
 }
 
-/* Neu in der Sammlung: Alben, deren Dateien in den letzten days Tagen dazukamen oder sich änderten, die neuesten zuerst */
+/* new in the collection: albums whose files were added or changed in the last days days, newest first */
 var FRESH_DAYS = 180;
 function freshAlbums(list, now, n, days) {
   var from = now - (days || FRESH_DAYS) * DAY;

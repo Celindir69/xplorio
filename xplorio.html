@@ -11,8 +11,8 @@
 <link rel="icon" type="image/png" sizes="32x32" href="web/icons/favicon-32.png">
 <link rel="manifest" href="web/manifest.json">
 <script>
-  /* Stand der Installation (schreibt xplorio-deploy): Skripte und Styles nur nach einem Deploy neu laden.
-     Ohne web/build.js (Entwicklung) jedes Mal frisch. */
+  /* Installed build (written by xplorio-deploy): reload scripts and styles only after a deploy.
+     Without web/build.js (development) fresh every time. */
   document.write('<script src="web/build.js?t=' + Date.now() + '" onerror="void 0"><\/script>');
 </script>
 <script>
@@ -22,12 +22,12 @@
 </script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  /* Einstellungen immer frisch laden (Safari/iPad behalten sie sonst lange im Cache) */
+  /* always load the settings fresh (Safari/iPad otherwise keep them cached for a long time) */
   document.write('<script src="web/config.js?t=' + Date.now() + '"><\/script>' +
                  '<script src="web/config.local.js?t=' + Date.now() + '" onerror="void 0"><\/script>');
 </script>
 <script>
-  /* hell/dunkel (theme.js), Sprache wählen und Sprachdateien laden (i18n.js lädt web/lang/<code>.js nach) */
+  /* light/dark (theme.js), pick the language and load language files (i18n.js loads web/lang/<code>.js) */
   document.write('<script src="web/js/theme.js?v=' + XV + '"><\/script>' +
                  '<script src="web/js/i18n.js?v=' + XV + '"><\/script>');
 </script>
@@ -44,7 +44,7 @@
   <div class="topBtn na" id="btnRotelPower" title="Rotel ein/aus" data-i18n-title="html.rotelPower">
     <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
   </div>
-  <div id="lyrShiftBar">                   <!-- Bühnenansicht: Lyrics früher/später, mittig über den Lyrics -->
+  <div id="lyrShiftBar">                   <!-- stage view: lyrics earlier/later, centered above the lyrics -->
     <div class="topBtn lyrShift" id="btnLyrEarlier" data-d="-500" title="Lyrics früher" data-i18n-title="html.lyricsEarlier">
       <svg viewBox="0 0 24 24"><path d="M5 11h14v2H5z"/></svg>
     </div>
@@ -131,7 +131,7 @@
   </div>
 </div>
 
-<!-- Lyrics-Overlay -->
+<!-- Lyrics overlay -->
 <div class="overlay" id="overlayLyrics">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -148,7 +148,7 @@
   <div class="overlayBody"><div id="lyricsText" data-i18n-empty="lyrics.none"></div></div>
 </div>
 
-<!-- Info-Overlay -->
+<!-- Info overlay -->
 <div class="overlay" id="overlayInfo">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -163,7 +163,7 @@
   </div>
 </div>
 
-<!-- Queue-Overlay -->
+<!-- Queue overlay -->
 <div class="overlay" id="overlayQueue">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -177,7 +177,7 @@
   </div>
 </div>
 
-<!-- Mood Mix/Playlisten/Radio-Overlay -->
+<!-- Mood Mix/playlists/radio overlay -->
 <div class="overlay" id="overlayPlaylists">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -198,7 +198,7 @@
   </div>
 </div>
 
-<!-- Suche-Overlay -->
+<!-- Search overlay -->
 <div class="overlay" id="overlaySearch">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -233,7 +233,7 @@
   <div id="searchResults"></div>
 </div>
 
-<!-- Künstler-/Album-Overlay (Klick auf Künstler oder Album in der Wiedergabe) -->
+<!-- Artist/album overlay (click on artist or album in the player) -->
 <div class="overlay" id="overlayBrowse">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -248,7 +248,7 @@
   <div id="browseBody"></div>
 </div>
 
-<!-- Menü (Zahnrad oben rechts): Verlauf, Bibliotheks-Check, Bibliothek aktualisieren, Volumio-Oberfläche -->
+<!-- Menu (gear at the top right): history, library check, update library, Volumio UI -->
 <div class="overlay" id="overlayMenu">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -260,7 +260,7 @@
   <div class="overlayBody" id="menuBody"></div>
 </div>
 
-<!-- Volumio-Overlay: direkter Zugang zu den Seiten der originalen Volumio-Oberfläche -->
+<!-- Volumio overlay: direct access to the pages of the original Volumio UI -->
 <div class="overlay" id="overlayVolumio">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -280,7 +280,7 @@
 </div>
 
 
-<!-- Bibliotheks-Check: Problemfälle der Sammlung, Stift öffnet den Tag-Editor darüber -->
+<!-- Library check: problem cases in the collection, the pen opens the tag editor on top -->
 <div class="overlay" id="overlayCheck">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -315,7 +315,7 @@
   <div class="overlayBody" id="histBody"></div>
 </div>
 
-<!-- System (system.js): Last, Temperatur, Speicher, Laufwerke -->
+<!-- System (system.js): load, temperature, memory, drives -->
 <div class="overlay" id="overlaySystem">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -358,7 +358,7 @@
   <div class="overlayBody" id="helpBody"></div>
 </div>
 
-<!-- Begrüßung beim Öffnen (welcome.js): eigene Karte in der Mitte, nicht als Overlay-Blatt -->
+<!-- Welcome on open (welcome.js): own card in the middle, not an overlay sheet -->
 <div id="overlayWelcome">
   <div class="wCard">
   <div class="overlayHead">
@@ -374,7 +374,7 @@
   </div>
 </div>
 
-<!-- Tag-Editor (öffnet über dem Album-Overlay) -->
+<!-- Tag editor (opens above the album overlay) -->
 <div class="overlay" id="overlayTags">
   <div class="overlayHandle"></div>
   <div class="overlayHead">
@@ -392,9 +392,9 @@
 </div>
 
 <script>
-  langApply(document);                      /* data-i18n-Texte im HTML in der gewählten Sprache */
+  langApply(document);                      /* data-i18n texts in the HTML in the chosen language */
 
-  /* App-Skripte je Stand laden (?v=): nach xplorio-deploy neu, sonst aus dem Browser-Cache (Reihenfolge wichtig) */
+  /* load app scripts per build (?v=): fresh after xplorio-deploy, else from the browser cache (order matters) */
   ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'playback', 'discover', 'genre', 'moodmix', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome'].forEach(function(n){
     document.write('<script src="web/js/' + n + '.js?v=' + XV + '"><\/script>');
   });

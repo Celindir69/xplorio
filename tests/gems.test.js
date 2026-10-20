@@ -1,10 +1,10 @@
-/* Versteckte Perlen: Geschmack aus Bewertungen, Favoriten und Verlauf; Auswahl, Ausschlüsse und Gründe */
+/* hidden gems: taste from ratings, favorites and history; selection, exclusions and reasons */
 var assert = require('assert');
 var gems = require('../tags/gems.js'), discover = require('../tags/discover.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 
-/* Bibliothek: Jazz-Alben (melancholisch) von A, B, C, D; Metal (intensiv) von M, N; Jazz ohne Stimmungs-Tags von E; je 4 Titel */
+/* library: jazz albums (melancholic) by A, B, C, D; metal (intense) by M, N; jazz without mood tags by E; 4 tracks each */
 var R = {
   jazz:  {mood: ['melancholic', 'relaxed'], style: ['cool jazz'], energy: 2, src: 'track'},
   metal: {mood: ['intense', 'dark'], style: ['thrash metal'], energy: 5, src: 'track'}
@@ -32,11 +32,11 @@ function plays(ar, al, k) {
   return out;
 }
 
-t('ohne Bewertungen und Verlauf: keine Perlen', function(){
+t('no ratings and no history: no gems', function(){
   assert.deepStrictEqual(gems.pick(prep({}), 'album', 12, seq()), []);
 });
 
-t('Herz für A: ungehörte Jazz-Alben vorn, Metal nicht; A2 als „ungehört von A“', function(){
+t('heart for A: unheard jazz albums first, no metal; A2 as "unheard by A"', function(){
   var g = prep({rated: {artists: {a: {n: 'A', v: 1}}, albums: {}, tracks: {}}});
   var items = gems.pick(g, 'album', 12, seq()), names = items.map(function(x){ return x.al; });
   assert.ok(names.indexOf('B1') >= 0 && names.indexOf('C1') >= 0, names);
@@ -47,20 +47,20 @@ t('Herz für A: ungehörte Jazz-Alben vorn, Metal nicht; A2 als „ungehört von
   assert.deepStrictEqual(b.why, {why: 'like', ar: 'A'});
 });
 
-t('Künstler-Reiter: Lieblingskünstler selbst nicht, ähnliche ja', function(){
+t('artists tab: not the favorite artist itself, similar ones yes', function(){
   var g = prep({rated: {artists: {a: {n: 'A', v: 1}}, albums: {}, tracks: {}}});
   var names = gems.pick(g, 'artist', 12, seq()).map(function(x){ return x.ar; });
   assert.ok(names.indexOf('A') < 0 && names.indexOf('B') >= 0 && names.indexOf('M') < 0, names);
 });
 
-t('Sterne: 5 Sterne für Metal zieht Metal; Alben mit 1–2 Sternen und Bewertetes fallen weg', function(){
+t('stars: 5 stars for metal pulls metal; albums with 1–2 stars and rated ones are dropped', function(){
   var g = prep({rated: {artists: {}, albums: {'USB/M/M1': {v: 5}, 'USB/B/B1': {v: 1}}, tracks: {}}});
   var names = gems.pick(g, 'album', 12, seq()).map(function(x){ return x.al; });
   assert.ok(names.indexOf('N1') >= 0, names);
   assert.ok(names.indexOf('M1') < 0 && names.indexOf('B1') < 0, names);
 });
 
-t('Titel: „mag ich nicht“ und Favoriten fallen weg, Favoriten prägen den Geschmack', function(){
+t('tracks: "don\'t like" and favorites are dropped, favorites shape the taste', function(){
   var g = prep({favs: {'USB/M/M1/1.flac': true}, rated: {artists: {}, albums: {}, tracks: {'USB/N/N1/2.flac': {v: -1}}}});
   var fs = gems.pick(g, 'track', 12, seq()).map(function(x){ return x.f; });
   assert.ok(fs.indexOf('USB/M/M1/1.flac') < 0 && fs.indexOf('USB/N/N1/2.flac') < 0, fs);
@@ -68,21 +68,21 @@ t('Titel: „mag ich nicht“ und Favoriten fallen weg, Favoriten prägen den Ge
   assert.ok(fs.every(function(f){ return /\/(M|N)\//.test(f); }), fs);
 });
 
-t('nur Verlauf: oft gehörter Jazz zieht ungehörten Jazz, Oftgehörtes selbst nicht', function(){
+t('history only: often heard jazz pulls unheard jazz, not the often heard itself', function(){
   var g = prep({plays: plays('A', 'A1', 5)});
   var items = gems.pick(g, 'album', 12, seq()), names = items.map(function(x){ return x.al; });
   assert.ok(names.indexOf('A1') < 0 && names.indexOf('B1') >= 0 && names.indexOf('M1') < 0, names);
   assert.ok(items.every(function(x){ return x.why.why === 'like' || x.why.why === 'tags'; }));
 });
 
-t('Album mit überwiegend „mag ich nicht“ fällt weg', function(){
+t('album with mostly "don\'t like" is dropped', function(){
   var bad = {};
   [1, 2].forEach(function(i){ bad['USB/B/B1/' + i + '.flac'] = {v: -1}; });
   var g = prep({rated: {artists: {a: {n: 'A', v: 1}}, albums: {}, tracks: bad}});
   assert.ok(gems.pick(g, 'album', 12, seq()).every(function(x){ return x.al !== 'B1'; }));
 });
 
-t('Grund: wie ein Lieblingskünstler, sonst nach Merkmalen (nur Genre bekannt)', function(){
+t('reason: like a favorite artist, else by features (only genre known)', function(){
   var g = prep({rated: {artists: {}, albums: {'USB/M/M1': {v: 5}, 'USB/A/A1': {v: 5}}, tracks: {}}});
   var items = gems.pick(g, 'album', 12, seq());
   var it = items.filter(function(x){ return x.al === 'N1'; })[0];
@@ -94,4 +94,4 @@ t('Grund: wie ein Lieblingskünstler, sonst nach Merkmalen (nur Genre bekannt)',
   assert.ok(v['g:jazz'] === 1 && v['m:melancholic'] > 0 && v['e:2'] === 0.5);
 });
 
-console.log(n + ' Prüfungen bestanden');
+console.log(n + ' checks passed');

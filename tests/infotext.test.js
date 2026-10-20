@@ -1,4 +1,4 @@
-/* Ersatztexte für Künstler und Album (web/js/infotext.js), wenn Volumio nichts liefert */
+/* Fallback texts for artist and album (web/js/infotext.js) when Volumio returns nothing */
 var assert = require('assert');
 var it = require('../web/js/infotext.js');
 var n = 0, pending = [];
@@ -6,13 +6,13 @@ function t(name, fn) { pending.push(fn().then(function(){ n++; console.log('ok  
 function res(j, ok) { return Promise.resolve({ok: ok !== false, json: function(){ return Promise.resolve(j); }}); }
 var LONG = 'Massive Attack sind eine britische Band aus Bristol, gegründet 1988, Wegbereiter des Trip-Hop.';
 
-t('Last.fm-Text säubern: Link und Lizenzhinweis weg, kurze Stummel zählen nicht', function(){
+t('clean Last.fm text: link and license note removed, short stubs do not count', function(){
   assert.strictEqual(it.infoClean(LONG + ' <a href="https://www.last.fm/music/x">Read more on Last.fm</a>. User-contributed text is available under the Creative Commons By-SA License; additional terms may apply.'), LONG);
   assert.strictEqual(it.infoClean(' <a href="x">Read more on Last.fm</a>'), '');
   return Promise.resolve();
 });
 
-t('Künstler: Last.fm deutsch zuerst', function(){
+t('artist: Last.fm German first', function(){
   var urls = [];
   return it.infoFallback(function(u){ urls.push(u); return res({artist: {bio: {content: LONG}}}); }, 'KEY', 'storyArtist', 'Massive Attack', undefined, 'de')
     .then(function(r){
@@ -23,7 +23,7 @@ t('Künstler: Last.fm deutsch zuerst', function(){
     });
 });
 
-t('Album: Last.fm englisch, wenn es keinen deutschen Text gibt', function(){
+t('album: Last.fm English if there is no German text', function(){
   var urls = [];
   return it.infoFallback(function(u){ urls.push(u); return res(/lang=de/.test(u) ? {album: {}} : {album: {wiki: {summary: LONG}}}); },
     'KEY', 'storyAlbum', 'Massive Attack', 'Mezzanine', 'de').then(function(r){
@@ -33,7 +33,7 @@ t('Album: Last.fm englisch, wenn es keinen deutschen Text gibt', function(){
     });
 });
 
-t('Künstler ohne Last.fm-Schlüssel: Wikipedia, Begriffsklärung und Fremdes übergehen', function(){
+t('artist without Last.fm key: Wikipedia, skip disambiguation and unrelated articles', function(){
   var urls = [];
   return it.infoFallback(function(u){
     urls.push(u);
@@ -46,7 +46,7 @@ t('Künstler ohne Last.fm-Schlüssel: Wikipedia, Begriffsklärung und Fremdes ü
   }).then(function(r){ assert.strictEqual(r, null); });
 });
 
-t('Sprache en: je Quelle nur eine Abfrage, ohne lang und nur en.wikipedia', function(){
+t('language en: only one request per source, without lang and only en.wikipedia', function(){
   var urls = [];
   return it.infoFallback(function(u){ urls.push(u); return res({}); }, 'KEY', 'storyArtist', 'Nobody', undefined, 'en')
     .then(function(r){
@@ -55,11 +55,11 @@ t('Sprache en: je Quelle nur eine Abfrage, ohne lang und nur en.wikipedia', func
       assert.ok(/audioscrobbler/.test(urls[0]) && !/lang=/.test(urls[0]));
       assert.ok(/^https:\/\/en\.wikipedia\.org\//.test(urls[1]));
       urls = [];
-      return it.infoFallback(function(u){ urls.push(u); return res({}); }, 'KEY', 'storyArtist', 'Nobody');   /* ohne lang = en */
+      return it.infoFallback(function(u){ urls.push(u); return res({}); }, 'KEY', 'storyArtist', 'Nobody');   /* without lang = en */
     }).then(function(){ assert.strictEqual(urls.length, 2); });
 });
 
-t('Sprache fr: erst Last.fm und Wikipedia französisch, dann beide englisch', function(){
+t('language fr: first Last.fm and Wikipedia in French, then both in English', function(){
   var urls = [];
   return it.infoFallback(function(u){
     urls.push(u);
@@ -73,14 +73,14 @@ t('Sprache fr: erst Last.fm und Wikipedia französisch, dann beide englisch', fu
   });
 });
 
-t('Album ohne Schlüssel und Netzfehler: nichts', function(){
+t('album without key and network error: nothing', function(){
   return Promise.all([
-    it.infoFallback(function(){ throw new Error('nie'); }, '', 'storyAlbum', 'A', 'B'),
+    it.infoFallback(function(){ throw new Error('never'); }, '', 'storyAlbum', 'A', 'B'),
     it.infoFallback(function(){ return Promise.reject(new Error('offline')); }, 'KEY', 'storyArtist', 'A')
   ]).then(function(r){ assert.deepStrictEqual(r, [null, null]); });
 });
 
-/* ---------- einzelne Titel ---------- */
+/* ---------- single tracks ---------- */
 var SONG = 'Teardrop ist ein Lied der britischen Band Massive Attack aus dem Jahr 1998, gesungen von Elizabeth Fraser.';
 function wiki(pages, summaries) {
   return function(u){
@@ -90,14 +90,14 @@ function wiki(pages, summaries) {
   };
 }
 
-t('Titel: Liedname ohne Zusätze', function(){
+t('track: song name without additions', function(){
   assert.strictEqual(it.infoSongName('Paint It Black (Remastered 2019)'), 'Paint It Black');
   assert.strictEqual(it.infoSongName('Hey Jude - Remastered 2015'), 'Hey Jude');
   assert.strictEqual(it.infoSongName('Live and Let Die'), 'Live and Let Die');
   return Promise.resolve();
 });
 
-t('Titel: Last.fm-Text zum Lied', function(){
+t('track: Last.fm text for the song', function(){
   var urls = [];
   return it.infoTrack(function(u){ urls.push(u); return res({track: {wiki: {content: SONG}}}); }, 'KEY', 'Massive Attack', 'Teardrop (2019 Remaster)', 'de')
     .then(function(r){
@@ -106,7 +106,7 @@ t('Titel: Last.fm-Text zum Lied', function(){
     });
 });
 
-t('Titel: Wikipedia nur mit passendem Artikel (Lied, Interpret genannt)', function(){
+t('track: Wikipedia only with a matching article (song, artist named)', function(){
   var fetchFn = wiki([{key: 'Teardrop', title: 'Teardrop'}, {key: 'Teardrop_(Lied)', title: 'Teardrop (Lied)'}], {
     'Teardrop': {type: 'standard', description: 'Begriffsklärung', extract: 'Teardrop steht für mehrere Dinge, die lang genug beschrieben sind.'},
     'Teardrop_(Lied)': {type: 'standard', description: 'Lied von Massive Attack', extract: SONG}
@@ -114,23 +114,23 @@ t('Titel: Wikipedia nur mit passendem Artikel (Lied, Interpret genannt)', functi
   return it.infoTrack(fetchFn, '', 'Massive Attack', 'Teardrop', 'de').then(function(r){
     assert.strictEqual(r.src, 'Wikipedia');
     assert.ok(r.value.indexOf(SONG) === 0);
-    /* anderer Interpret: gleichnamiges Lied gehört nicht dazu */
+    /* different artist: the song of the same name does not belong */
     return it.infoTrack(fetchFn, '', 'Elton John', 'Teardrop', 'de');
   }).then(function(r){ assert.strictEqual(r, null); });
 });
 
-t('Titel: gleichnamiges Album (Titelstück) wird nicht genommen', function(){
+t('track: album of the same name (title track) is not used', function(){
   var fetchFn = wiki([{key: 'Mezzanine_(Album)', title: 'Mezzanine (Album)'}], {
     'Mezzanine_(Album)': {type: 'standard', description: 'Album von Massive Attack', extract: 'Mezzanine ist das dritte Album von Massive Attack mit dem Titel Teardrop als Single.'}
   });
   return it.infoTrack(fetchFn, '', 'Massive Attack', 'Mezzanine', 'en').then(function(r){ assert.strictEqual(r, null); });
 });
 
-t('Titel: offline oder leer ergibt null', function(){
+t('track: offline or empty gives null', function(){
   return Promise.all([
     it.infoTrack(function(){ return Promise.reject(new Error('offline')); }, 'KEY', 'A', 'B', 'de'),
     it.infoTrack(function(){ return res({}); }, 'KEY', 'A', '', 'de')
   ]).then(function(r){ assert.deepStrictEqual(r, [null, null]); });
 });
 
-Promise.all(pending).then(function(){ console.log(n + ' Prüfungen bestanden'); }, function(e){ console.error(e); process.exit(1); });
+Promise.all(pending).then(function(){ console.log(n + ' checks passed'); }, function(e){ console.error(e); process.exit(1); });

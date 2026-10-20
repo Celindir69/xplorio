@@ -1,9 +1,9 @@
-/* Cover-Farbstimmung: eine Akzentfarbe und eine Hintergrundtönung aus dem Cover des laufenden Titels.
-   pickMood() ist eine reine Funktion (Pixel -> Farben) und mit tests/color.test.js prüfbar;
-   updateMood() lädt das Cover klein in eine Zeichenfläche und setzt die CSS-Variablen
-   --accent-d/-l, --on-accent-d/-l und --tint-d/-l (dunkles bzw. helles Design; base.css wählt daraus --accent und --bg-tint). Nur Cover vom eigenen Player (same origin bzw. /albumart) werden gelesen:
-   fremde Server (z. B. Tidal, TuneIn) senden keine CORS-Kopfzeile, dort bleibt es bei der Standardoptik.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Cover color mood: an accent color and a background tint from the cover of the current track.
+   pickMood() is a pure function (pixels -> colors) and testable with tests/color.test.js;
+   updateMood() draws the cover small onto a canvas and sets the CSS variables
+   --accent-d/-l, --on-accent-d/-l and --tint-d/-l (dark and light theme; base.css picks --accent and --bg-tint from them). Only covers from the own player (same origin or /albumart) are read:
+   foreign servers (e.g. Tidal, TuneIn) send no CORS header, so the default look stays there.
+   Classic script, shared global scope; load order see xplorio.html. */
 
 function cmClamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
 
@@ -18,7 +18,7 @@ function cmHsl(r, g, b) {
   return [h, s, l];
 }
 
-/* Schrift auf der Akzentfläche: dunkel oder hell, je nachdem, was mehr Kontrast hat (WCAG-Leuchtdichte) */
+/* text on the accent surface: dark or light, whichever has more contrast (WCAG luminance) */
 function cmOnColor(h, s, l) {
   var a = s * Math.min(l, 1 - l);
   function ch(n) {
@@ -29,30 +29,30 @@ function cmOnColor(h, s, l) {
   return (L + 0.05) / 0.0556 >= 1.05 / (L + 0.05) ? '#111' : '#fff';
 }
 
-/* px: flache RGBA-Liste (wie ImageData.data). Ergebnis {hue, accent, tint} oder null (Cover ohne Farbe) */
+/* px: flat RGBA list (like ImageData.data). Result {hue, accent, tint} or null (cover without color) */
 function pickMood(px) {
   var BINS = 36, bins = [], i, valid = 0, colored = 0;
   for (i = 0; i < BINS; i++) bins.push({ w: 0, s: 0, l: 0 });
   for (i = 0; i + 3 < px.length; i += 4) {
     if (px[i + 3] < 200) continue;
     var c = cmHsl(px[i], px[i + 1], px[i + 2]), h = c[0], s = c[1], l = c[2];
-    if (l < 0.10 || l > 0.92) continue;           /* fast schwarz oder weiß zählt nicht */
+    if (l < 0.10 || l > 0.92) continue;           /* near black or white does not count */
     valid++;
-    if (s < 0.18) continue;                       /* Grautöne zählen nicht */
+    if (s < 0.18) continue;                       /* greys do not count */
     colored++;
-    var w = s * (1 - Math.abs(l - 0.5) * 1.4);    /* kräftige Mitteltöne zählen am meisten */
+    var w = s * (1 - Math.abs(l - 0.5) * 1.4);    /* strong midtones count most */
     if (w <= 0) continue;
     var b = bins[Math.floor(h / (360 / BINS)) % BINS];
     b.w += w; b.s += s * w; b.l += l * w;
   }
-  if (valid < 8 || colored / valid < 0.15) return null;   /* Cover (fast) ohne Farbe */
+  if (valid < 8 || colored / valid < 0.15) return null;   /* cover (almost) without color */
   var best = -1, bestW = 0;
   for (i = 0; i < BINS; i++) {
     var sum = bins[i].w + bins[(i + BINS - 1) % BINS].w + bins[(i + 1) % BINS].w;
     if (sum > bestW) { bestW = sum; best = i; }
   }
   if (best < 0) return null;
-  /* Mittelwert der drei Fächer (Farbton als Kreismittel) */
+  /* mean of the three bins (hue as circular mean) */
   var sx = 0, sy = 0, tw = 0, ts = 0, tl = 0;
   [-1, 0, 1].forEach(function(o){
     var k = (best + o + BINS) % BINS, bw = bins[k].w;
@@ -63,8 +63,8 @@ function pickMood(px) {
   var hue = Math.round(((Math.atan2(sy, sx) * 180 / Math.PI) + 360) % 360);
   var avgS = ts / tw, avgL = tl / tw;
   var s = cmClamp(avgS, 0.45, 0.85);
-  var accentL = cmClamp(avgL * 0.5 + 0.34, 0.58, 0.72);     /* hell genug für dunklen Hintergrund */
-  var lightL  = cmClamp(avgL * 0.4 + 0.18, 0.32, 0.42);     /* dunkel genug für hellen Hintergrund (Light-Mode) */
+  var accentL = cmClamp(avgL * 0.5 + 0.34, 0.58, 0.72);     /* light enough for a dark background */
+  var lightL  = cmClamp(avgL * 0.4 + 0.18, 0.32, 0.42);     /* dark enough for a light background (light mode) */
   var tintS = cmClamp(avgS * 0.9, 0.30, 0.65);
   return {
     hue: hue,
@@ -77,7 +77,7 @@ function pickMood(px) {
   };
 }
 
-/* beide Farbsätze setzen; welcher gilt, entscheidet das CSS (--accent, --bg-tint in base.css, hell/dunkel) */
+/* set both color sets; the CSS decides which applies (--accent, --bg-tint in base.css, light/dark) */
 function applyMood(m) {
   var root = document.documentElement.style;
   var props = {'--accent-d': 'accent', '--tint-d': 'tint', '--accent-l': 'accentLight', '--tint-l': 'tintLight',
@@ -85,14 +85,14 @@ function applyMood(m) {
   Object.keys(props).forEach(function(k){ if (m) root.setProperty(k, m[props[k]]); else root.removeProperty(k); });
 }
 
-var moodCache = {};      /* Cover-Adresse -> {…} oder null */
+var moodCache = {};      /* cover URL -> {…} or null */
 var moodSeq = 0;
 
 function moodReadable(url) {
   try {
     var o = new URL(url, location.href).origin;
     return o === location.origin || url.indexOf('/albumart') > -1 ||
-           (typeof TAGS !== 'undefined' && o === new URL(TAGS).origin);          /* Tag-Dienst (Webradio-Cover) erlaubt CORS */
+           (typeof TAGS !== 'undefined' && o === new URL(TAGS).origin);          /* tag service (web radio covers) allows CORS */
   }
   catch (e) { return false; }
 }
@@ -113,9 +113,9 @@ function updateMood(url) {
       m = pickMood(ctx.getImageData(0, 0, N, N).data);
     } catch (e) { m = null; }
     moodCache[url] = m;
-    if (mySeq === moodSeq) applyMood(m);       /* nur, wenn inzwischen kein anderer Titel läuft */
+    if (mySeq === moodSeq) applyMood(m);       /* only if no other track is playing by now */
   };
   img.onerror = function(){ moodCache[url] = null; if (mySeq === moodSeq) applyMood(null); };
-  /* eigener Parameter, damit eine ohne CORS zwischengespeicherte Fassung des Covers nicht wiederverwendet wird */
+  /* own parameter so that a copy of the cover cached without CORS is not reused */
   img.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'aw=mood';
 }

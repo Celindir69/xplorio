@@ -1,4 +1,4 @@
-/* Webradio: Cover zum Titel (iTunes, sonst Deezer), Senderlogos (Volumio-Adresse, sonst radio-browser), Speicher auf dem Player */
+/* web radio: cover for the track (iTunes, else Deezer), station logos (Volumio URL, else radio-browser), storage on the player */
 var assert = require('assert'), http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), url = require('url');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -24,14 +24,14 @@ var fake = http.createServer(function(req, res){
   }
   if (u.pathname === '/img/jeanny/600x600bb.jpg' || u.pathname === '/img/nena.jpg') { res.writeHead(200); return res.end(JPG); }
   if (u.pathname === '/img/bob.png' || u.pathname === '/img/swr.png') { res.writeHead(200); return res.end(PNG); }
-  if (u.pathname === '/img/text') { res.writeHead(200); return res.end('<svg></svg> kein Bild'); }
+  if (u.pathname === '/img/text') { res.writeHead(200); return res.end('<svg></svg> not an image'); }
   res.writeHead(404); res.end();
 });
 
 fake.listen(0, function(){
   var base = 'http://127.0.0.1:' + fake.address().port;
   process.env.ITUNES_URL = base; process.env.DEEZER_URL = base; process.env.RADIOBROWSER_URL = base;
-  process.env.RADIO_ALLOW_LOCAL = '1';                 /* Testserver läuft auf 127.0.0.1 */
+  process.env.RADIO_ALLOW_LOCAL = '1';                 /* test server runs on 127.0.0.1 */
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'radio-'));
   process.env.TAGS_LOG = path.join(dir, 'changes.jsonl');
   process.env.APP_CONFIG_DIR = dir;
@@ -43,41 +43,41 @@ fake.listen(0, function(){
       });
     }
     get('/radiocover?artist=Falco&title=Jeanny', function(r1, b1){
-      t('iTunes: passender Künstler und Titel (Klammerzusatz egal), 600 px', function(){
+      t('iTunes: matching artist and title (bracketed addition ignored), 600 px', function(){
         assert.strictEqual(r1.statusCode, 200); assert.ok(b1.equals(JPG)); assert.strictEqual(r1.headers['content-type'], 'image/jpeg');
       });
       get('/radiocover?artist=Nena&title=99%20Luftballons', function(r2){
-        t('ohne iTunes-Treffer: Deezer', function(){ assert.strictEqual(r2.statusCode, 200); });
+        t('no iTunes hit: Deezer', function(){ assert.strictEqual(r2.statusCode, 200); });
         get('/radiocover?artist=Niemand&title=Nichts', function(r3){
           var before = calls.length;
           get('/radiocover?artist=Niemand&title=Nichts', function(r4){
-            t('nichts gefunden: 404, wird gemerkt', function(){
+            t('nothing found: 404, remembered', function(){
               assert.strictEqual(r3.statusCode, 404); assert.strictEqual(r4.statusCode, 404); assert.strictEqual(calls.length, before);
             });
             get('/stationlogo?name=SWR1&url=' + encodeURIComponent(base + '/img/swr.png'), function(r5){
-              t('Senderlogo von der Volumio-Adresse', function(){ assert.strictEqual(r5.statusCode, 200); assert.strictEqual(r5.headers['content-type'], 'image/png'); });
+              t('station logo from the Volumio URL', function(){ assert.strictEqual(r5.statusCode, 200); assert.strictEqual(r5.headers['content-type'], 'image/png'); });
               get('/stationlogo?name=Radio%20Bob&url=' + encodeURIComponent(base + '/img/text'), function(r6, b6){
-                t('kein Bild unter der Adresse: radio-browser, genau passender Name', function(){
+                t('no image at the URL: radio-browser, exactly matching name', function(){
                   assert.strictEqual(r6.statusCode, 200); assert.ok(b6.equals(PNG));
                   assert.ok(calls.some(function(c){ return /byname\/Radio%20Bob/.test(c) || /byname\/Radio Bob/.test(c); }));
                 });
                 get('/radiocover?artist=Falco&title=Jeanny', function(r7){
-                  t('zweites Mal vom Player', function(){ assert.strictEqual(r7.statusCode, 200); });
+                  t('second time from the player', function(){ assert.strictEqual(r7.statusCode, 200); });
                   delete process.env.RADIO_ALLOW_LOCAL;
                   var swrBefore = calls.filter(function(c){ return c === '/img/swr.png'; }).length;
                   get('/stationlogo?name=' + encodeURIComponent('Heimnetz FM') + '&url=' + encodeURIComponent(base + '/img/swr.png'), function(r8){
-                    t('Senderlogo-Adresse im eigenen Netz wird nicht geladen', function(){
+                    t('station logo URL on the local network is not loaded', function(){
                       assert.strictEqual(r8.statusCode, 404);
                       assert.strictEqual(calls.filter(function(c){ return c === '/img/swr.png'; }).length, swrBefore);
                     });
                     process.env.RADIO_ALLOW_LOCAL = '1';
                     get('/stationlogo?name=' + encodeURIComponent('Heimnetz FM') + '&url=' + encodeURIComponent(base + '/img/bob.png'), function(r9){
-                      t('nach "kein Logo": eine neue Adresse aus dem Player wird doch geladen und gemerkt', function(){
+                      t('after "no logo": a new URL from the player is loaded after all and remembered', function(){
                         assert.strictEqual(r9.statusCode, 200);
                       });
                       get('/stationlogo?name=' + encodeURIComponent('Heimnetz FM'), function(r10){
-                        t('danach auch ohne Adresse vom Player', function(){ assert.strictEqual(r10.statusCode, 200); });
-                        console.log(n + ' Prüfungen');
+                        t('afterwards also without URL from the player', function(){ assert.strictEqual(r10.statusCode, 200); });
+                        console.log(n + ' checks');
                         svc.close(); fake.close();
                       });
                     });

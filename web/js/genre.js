@@ -1,12 +1,12 @@
-/* Genres: vierter Suchreiter (Kacheln aller Genres bzw. passende Genres zum Suchbegriff), Genre-Seite (alle Alben eines
-   Genres) und das Genre klein an Alben (Albumseite, Albumlisten). Quelle: Tag-Dienst (je Album das häufigste Genre-Tag,
-   GET /genrelist, /genrealbums, /albumgenre). Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich;
-   nach library.js, browse.js, history.js und discover.js geladen. */
-var genreReady = false;          /* Tag-Dienst erreichbar: Reiter zeigen, Genres an Alben nachtragen */
+/* Genres: fourth search tab (tiles of all genres or genres matching the search term), genre page (all albums of a
+   genre) and the genre in small print on albums (album page, album lists). Source: tag service (per album the most frequent genre tag,
+   GET /genrelist, /genrealbums, /albumgenre). Classic script, shared global scope;
+   loaded after library.js, browse.js, history.js and discover.js. */
+var genreReady = false;          /* tag service reachable: show the tab, add genres to albums */
 var genreSeq = 0;
 var genreTab = document.getElementById('searchTabGenres');
 
-/* Suchreiter "Genres": ohne Suchbegriff Kacheln aller Genres, sonst Zeilen der passenden */
+/* "Genres" search tab: without a search term tiles of all genres, otherwise rows of the matching ones */
 function genreSearch() {
   var seq = ++genreSeq, q = searchQuery || '';
   while (searchResults.firstChild) searchResults.removeChild(searchResults.firstChild);
@@ -35,7 +35,7 @@ function genreSearch() {
       row.addEventListener('click', function(){ openBrowse({kind: 'genre', genre: g.g}); });
       searchResults.appendChild(row);
     });
-    (r.subs || []).forEach(function(x){                  /* Unterstile (Audio-Analyse) mit ihrem Genre */
+    (r.subs || []).forEach(function(x){                  /* substyles (audio analysis) with their genre */
       var row = histEl('div', 'sRow');
       row.appendChild(histImg(histAlbumArt(x.ar, x.al, x.dir)));
       var meta = histEl('div', 'sMeta');
@@ -53,7 +53,7 @@ function genreSearch() {
   });
 }
 
-/* Reihe „Zufällige Genres“ über der Übersicht, ↻ zieht neu (nur bei mehr Genres, als in die Reihe passen) */
+/* "Random genres" row above the overview, ↻ redraws (only if there are more genres than fit in the row) */
 var GENRE_RANDOM = 12;
 function genreRandomShelf(list) {
   var sec = histEl('div', 'dSec'), head = browseHeading(T('disc.shelf.randomGenres')), row = histEl('div', 'dRow');
@@ -79,7 +79,7 @@ function genreRandomShelf(list) {
   sec.appendChild(head);
   sec.appendChild(row);
   fill();
-  setTimeout(function(){ discoverFit(row); }, 0);   /* erst im Dokument messbar */
+  setTimeout(function(){ discoverFit(row); }, 0);   /* measurable only once in the document */
   return sec;
 }
 
@@ -92,8 +92,8 @@ function genreTile(g) {
   return tile;
 }
 
-/* Genre-Seite (browseStack-Eintrag {kind:'genre', genre, sub, all}): gibt es Unterstile, zuerst deren Kacheln mit „Alle“
-   davor, sonst (und nach der Wahl) die Alben, nach Künstler sortiert; sub: nur Alben mit diesem Unterstil */
+/* Genre page (browseStack entry {kind:'genre', genre, sub, all}): if there are substyles, first their tiles preceded
+   by "All", otherwise (and after choosing) the albums, sorted by artist; sub: only albums with this substyle */
 function browseGenre(e, seq) {
   tagGetJson('/genrealbums?g=' + encodeURIComponent(e.genre)).then(function(r){
     if (seq !== browseSeq) return;
@@ -110,9 +110,9 @@ function browseGenre(e, seq) {
   });
 }
 
-/* Alben aus der Albenliste des Tag-Dienstes ({dir, al, ar, y}) mit „Alle abspielen“ und Würfel darüber, Jahr hinter
-   dem Titel; into: Ziel (sonst browseBody), noHead: ohne „Alle abspielen“ (steht dann schon über den Reitern),
-   match: Stimmungs-/Stil-Abfrage der Seite, der Würfel nimmt dann nur Titel, die selbst passen */
+/* Albums from the tag service's album list ({dir, al, ar, y}) with "Play all" and dice above, year after
+   the title; into: target (otherwise browseBody), noHead: without "Play all" (then already above the tabs),
+   match: the page's mood/style query, the dice then takes only tracks that match themselves */
 function genreAlbumPage(list, into, noHead, match) {
   var browseBody_ = into || browseBody;
   if (!noHead) browseBody_.appendChild(genrePlayAllHead(list, match));
@@ -137,13 +137,13 @@ function genreAlbumPage(list, into, noHead, match) {
   });
 }
 
-/* Jahrzehnt-Seite (browseStack-Eintrag {kind:'decade', decade: 1990}): Alben nach Jahr (Date-Tag) */
+/* decade page (browseStack entry {kind:'decade', decade: 1990}): albums by year (Date tag) */
 function browseDecade(e, seq) { browseYears(e, seq, '/decadealbums?d=' + e.decade, e.decade); }
 
-/* Jahres-Seite (browseStack-Eintrag {kind:'year', year: 1984}): Alben des Jahres */
+/* year page (browseStack entry {kind:'year', year: 1984}): albums of the year */
 function browseYear(e, seq) { browseYears(e, seq, '/yearalbums?y=' + e.year, e.year - e.year % 10); }
 
-/* Jahres- und Jahrzehnt-Seite: „Alle abspielen“ mit Würfel, darunter Reiter „Alben“ und „Entdecken“ (Jahrzehnt d) */
+/* year and decade page: "Play all" with dice, below it tabs "Albums" and "Discover" (decade d) */
 function browseYears(e, seq, url, d) {
   tagGetJson(url).then(function(r){
     if (seq !== browseSeq) return;
@@ -161,8 +161,8 @@ function browseYears(e, seq, url, d) {
   });
 }
 
-/* Entdecken zum Jahrzehnt d (Tag-Dienst GET /decadeprofile): Künstler mit Alben darin, häufige Stimmungen und Stile,
-   Nachbar-Jahrzehnte (auf der Jahres-Seite auch das eigene; self: Jahrzehnt der Seite, fällt weg) */
+/* Discover for decade d (tag service GET /decadeprofile): artists with albums in it, frequent moods and styles,
+   neighboring decades (on the year page also its own; self: the page's decade, is dropped) */
 function decadeMore(d, self, alive) {
   var box = histEl('div', 'dMore'), note = browseNote(T('browse.loading'));
   box.appendChild(note);
@@ -186,7 +186,7 @@ function decadeMore(d, self, alive) {
     if (!r || !r.ok) { box.appendChild(browseNote(T('genre.offline'))); return; }
     var dec = T('disc.decade', {d: d});
     group(T('dec.artists', {d: dec}), r.artists.map(function(a){ return [a, a]; }), function(a){ push({kind: 'artist', artist: a}); });
-    function moodset(name, q) { push({kind: 'moodset', title: name + ' · ' + dec, q: q + '&d=' + d, all: {title: name, q: q}}); }   /* nur im Jahrzehnt */
+    function moodset(name, q) { push({kind: 'moodset', title: name + ' · ' + dec, q: q + '&d=' + d, all: {title: name, q: q}}); }   /* only within the decade */
     group(T('dec.moods', {d: dec}), r.moods.map(function(m){ return [mixName(m), m]; }), function(m){
       moodset(mixName(m), 'moods=' + encodeURIComponent(m));
     });
@@ -200,8 +200,8 @@ function decadeMore(d, self, alive) {
   return box;
 }
 
-/* Alben nach Stimmung, Energie oder Stil (browseStack-Eintrag {kind:'moodset', title, q}): q geht an GET /moodalbums;
-   e.all ({title, q}): Seite ist auf ein Jahrzehnt beschränkt, der Knopf „Alle Jahrzehnte“ ersetzt sie durch die ungefilterte */
+/* Albums by mood, energy or style (browseStack entry {kind:'moodset', title, q}): q goes to GET /moodalbums;
+   e.all ({title, q}): page is limited to a decade, the "All decades" button replaces it with the unfiltered one */
 function moodSetAll(e) {
   var c = histEl('div', 'mxChip bAllDec', T('dec.allDecades'));
   c.addEventListener('click', function(){
@@ -227,7 +227,7 @@ function browseMoodSet(e, seq) {
   });
 }
 
-/* „Alle abspielen“ wie auf der Künstlerseite: Warteschlange durch alle Alben der Liste ersetzen (Reihenfolge wie angezeigt) */
+/* "Play all" as on the artist page: replace the queue with all albums of the list (order as displayed) */
 function genrePlayAllHead(list, match) {
   function folders() { return list.map(function(a){ return {uri: 'music-library/' + a.dir, service: 'mpd', type: 'folder', title: a.al, artist: a.ar}; }); }
   return playRow(T('browse.playAll'), '', function(){
@@ -241,7 +241,7 @@ function genrePlayAllHead(list, match) {
       if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
     }).catch(function(){});
     closeAllOverlays();
-  }, [randomMixButton({dirs: list.map(function(a){ return a.dir; }), match: match || ''}),     /* Würfel: 25 zufällige Titel daraus (discover.js) */
+  }, [randomMixButton({dirs: list.map(function(a){ return a.dir; }), match: match || ''}),     /* dice: 25 random tracks from it (discover.js) */
       queueAddButton(folders, 0)]);
 }
 
@@ -266,12 +266,12 @@ function genreOpen(g) {
   browseRender();
 }
 
-/* Genre und Jahr zu Alben nachschlagen: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' bzw. 0 = unbekannt) */
+/* look up genre and year for albums: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' or 0 = unknown) */
 function albumInfoLookup(items) {
   var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; })};
   if (!genreReady || !items.length) return Promise.resolve(none);
   var q = items.map(function(it){ return [it.uri || '', it.album || '', it.artist || '']; });
-  /* in Stücken: eine lange Adresse sprengt sonst die Kopfgrenze des Dienstes (rund 8 kB), und alles fehlt still */
+  /* in chunks: a long address would otherwise exceed the service's header limit (about 8 kB), and everything silently goes missing */
   var parts = [], cur = [], len = 0;
   q.forEach(function(x){
     var l = encodeURIComponent(JSON.stringify(x)).length + 3;
@@ -289,7 +289,7 @@ function albumInfoLookup(items) {
 }
 function genreLookup(items) { return albumInfoLookup(items).then(function(r){ return r.genres; }); }
 
-/* „(1984)“ hinter einem Albumtitel; ein Tipp öffnet die Alben dieses Jahres (Klick geht nicht an die Zeile) */
+/* "(1984)" after an album title; a tap opens the albums of that year (click does not reach the row) */
 function yearSpan(y) {
   var el = histEl('span', 'bYear', '\u00a0(' + y + ')');
   el.addEventListener('click', function(ev){ ev.stopPropagation(); yearFromAnywhere(y); });
@@ -300,8 +300,8 @@ function yearFromAnywhere(y) {
   else openBrowse({kind: 'year', year: y});
 }
 
-/* Wiedergabe: Jahr hinter dem Album und Genre klein unter der Qualitätsangabe (lokal; ein Tipp öffnet die Genre-Seite);
-   key verhindert, dass ein spätes Ergebnis beim nächsten Titel landet */
+/* Now playing: year after the album and genre in small print below the quality info (local; a tap opens the genre page);
+   key prevents a late result from landing on the next track */
 var playerYearKey = '', mGenre = document.getElementById('mGenre');
 function playerYear(uri, album, artist) {
   var key = playerYearKey = uri + '|' + album + '|' + artist;
@@ -318,7 +318,7 @@ function playerYear(uri, album, artist) {
   });
 }
 
-/* Genre klein rechts in Albumzeilen (vor dem Stift), Jahr hinter dem Titel; ein Tipp öffnet Genre- bzw. Jahres-Seite.
+/* Genre small on the right in album rows (before the pen), year after the title; a tap opens the genre or year page.
    rows: [{row, uri, album, artist}] */
 function genreDecorate(rows, seq) {
   rows = rows.filter(function(x){ return x.uri && !streamOf(x.uri); });
@@ -329,7 +329,7 @@ function genreDecorate(rows, seq) {
         var g = info.genres[k], y = info.years[k];
         if (!x.row.parentNode) return;
         var ti = x.row.querySelector('.sTitle');
-        if (y && ti) ti.appendChild(yearSpan(y));          /* Jahr hinter dem Albumtitel */
+        if (y && ti) ti.appendChild(yearSpan(y));          /* year after the album title */
         if (!g) return;
         var el = histEl('div', 'bGenre', g);
         el.addEventListener('click', function(ev){ ev.stopPropagation(); genreFromAnywhere(g); });
@@ -339,7 +339,7 @@ function genreDecorate(rows, seq) {
   })(rows.slice(i, i + 200));
 }
 
-/* Genre-Seite aus der Suche oder aus dem Browser heraus öffnen */
+/* open the genre page from the search or from the browser */
 function genreFromAnywhere(g) {
   if (overlayBrowse.classList.contains('on')) genreOpen(g);
   else openBrowse({kind: 'genre', genre: g});
@@ -347,6 +347,6 @@ function genreFromAnywhere(g) {
 
 whenTags(function(){
   genreReady = true;
-  if (curAlbumTitle && !mAlbum.querySelector('.bYear')) playerYear(curAlbumUri || '', curAlbumTitle, mArtist.textContent);   /* erster Titel kam vor dem Tag-Dienst */
+  if (curAlbumTitle && !mAlbum.querySelector('.bYear')) playerYear(curAlbumUri || '', curAlbumTitle, mArtist.textContent);   /* first track came before the tag service */
   if (genreTab) genreTab.style.display = '';
 });

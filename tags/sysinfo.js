@@ -1,14 +1,14 @@
-/* Systeminfo für die Seite „System“ im Zahnrad-Menü: CPU-Last (live und 24 h), Arbeitsspeicher, Temperatur,
-   Belegung der Laufwerke (interne Karte, USB, jede NAS-Verbindung), Laufzeit und Version.
-   Liest nur /proc, /sys und df; misst alle 2 s (eine kleine Datei), fasst je Minute zusammen und hält 24 h im
-   Speicher (alle 10 min in sysinfo.json gesichert, damit ein Neustart des Dienstes den Verlauf nicht löscht).
-   Node 8, nur ES5. root: Präfix für /proc usw. (Tests) */
+/* System info for the "System" page in the gear menu: CPU load (live and 24 h), memory, temperature,
+   drive usage (internal card, USB, each NAS connection), uptime and version.
+   Reads only /proc, /sys and df; samples every 2 s (one small file), aggregates per minute and keeps 24 h in
+   memory (saved to sysinfo.json every 10 min so a service restart does not erase the history).
+   Node 8, ES5 only. root: prefix for /proc etc. (tests) */
 var fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process');
 
 var SAMPLE_MS = 2000, MINUTE_MS = 60000, KEEP_MS = 24 * 3600000, LIVE_N = 90, SAVE_MS = 600000;
 var DF_TIMEOUT = 4000, DISK_CACHE_MS = 30000;
 
-/* /proc/stat -> {busy, total} gesamt und je Kern */
+/* /proc/stat -> {busy, total} overall and per core */
 function parseStat(text) {
   var out = {all: null, cores: []};
   String(text || '').split('\n').forEach(function(l){
@@ -22,7 +22,7 @@ function parseStat(text) {
   });
   return out;
 }
-/* Last in Prozent zwischen zwei Messungen */
+/* load in percent between two samples */
 function pct(a, b) {
   if (!a || !b) return null;
   var dt = b.total - a.total;
@@ -40,11 +40,11 @@ function parseMeminfo(text) {
   return {total: o.MemTotal || 0, avail: avail, swapTotal: o.SwapTotal || 0, swapFree: o.SwapFree || 0};
 }
 
-/* /proc/mounts -> Laufwerke, die auf der Seite erscheinen: jede echte Partition (/dev/…) und jede
-   Netzwerkverbindung. Volumio hängt USB je nach Version unter /media/… oder /mnt/USB/… ein, die interne Karte
-   unter /data (Volumio 2 auch unter /mnt/ext o. ä.). Ein Gerät erscheint nur einmal, unter dem
-   aussagekräftigsten Pfad; Start- und Abbildpartitionen (/boot, /imgpart, /static) bleiben weg.
-   kind: card (interne Karte/Systemlaufwerk), usb, net */
+/* /proc/mounts -> drives that appear on the page: each real partition (/dev/…) and each
+   network connection. Depending on the version, Volumio mounts USB under /media/… or /mnt/USB/…, the internal card
+   under /data (Volumio 2 also under /mnt/ext or similar). A device appears only once, under the
+   most meaningful path; boot and image partitions (/boot, /imgpart, /static) are left out.
+   kind: card (internal card/system drive), usb, net */
 var NET_FS = /^(cifs|smb3|smbfs|nfs|nfs4|fuse\.sshfs)$/;
 var SKIP_FS = /^(tmpfs|devtmpfs|proc|sysfs|devpts|cgroup2?|squashfs|overlay|autofs|debugfs|securityfs|pstore|mqueue|configfs|fusectl|binfmt_misc|rpc_pipefs|iso9660)$/;
 var SKIP_MOUNT = /^\/(boot|imgpart|static|run|proc|sys|dev)(\/|$)/;
@@ -73,16 +73,16 @@ function parseMounts(text) {
     byDev[dev] = d;
     out.push(d);
   });
-  /* Datenpartition nicht sichtbar eingehängt (nur als Overlay unter /): df auf / zeigt deren Belegung */
+  /* data partition not visibly mounted (only as overlay under /): df on / shows its usage */
   if (rootLine && !out.some(function(d){ return d.kind === 'card'; })) out.push({mount: '/', type: 'overlay', net: false, kind: 'card'});
-  /* interne Karte zuerst, dann USB, dann Netz; sonst in der Reihenfolge von /proc/mounts */
+  /* internal card first, then USB, then network; otherwise in /proc/mounts order */
   var order = {card: 0, usb: 1, net: 2};
   return out.map(function(d, i){ return [d, i]; })
     .sort(function(a, b){ return order[a[0].kind] - order[b[0].kind] || a[1] - b[1]; })
     .map(function(x){ return x[0]; });
 }
 
-/* Ausgabe von df -kP für einen Pfad -> kB */
+/* output of df -kP for one path -> kB */
 function parseDf(text) {
   var l = String(text || '').trim().split('\n')[1];
   if (!l) return null;
@@ -106,12 +106,12 @@ function Sysinfo(opts) {
   this.root = opts.root || '';
   this.file = opts.file || '';
   this.df = opts.df || dfRun;
-  this.prev = null;                  /* letzte /proc/stat-Messung */
-  this.minA = null;                  /* Messung zu Beginn der laufenden Minute */
+  this.prev = null;                  /* last /proc/stat sample */
+  this.minA = null;                  /* sample at the start of the current minute */
   this.minStart = 0;
   this.cpu = null; this.cores = [];
-  this.live = [];                    /* [Zeit, Last] der letzten 3 min */
-  this.hist = [];                    /* [Zeit, Last, Speicher %, Temperatur] je Minute */
+  this.live = [];                    /* [time, load] of the last 3 min */
+  this.hist = [];                    /* [time, load, memory %, temperature] per minute */
   this.disks = null; this.disksAt = 0; this.disksWait = null;
   this.timers = [];
   this.load();
@@ -128,7 +128,7 @@ Sysinfo.prototype.temp = function() {
 
 Sysinfo.prototype.mem = function() { return parseMeminfo(this.read('/proc/meminfo')); };
 
-/* eine Messung (alle 2 s); now für Tests */
+/* one sample (every 2 s); now for tests */
 Sysinfo.prototype.sample = function(now) {
   now = now || Date.now();
   var s = parseStat(this.read('/proc/stat'));
@@ -164,12 +164,12 @@ Sysinfo.prototype.load = function() {
     var j = JSON.parse(fs.readFileSync(this.file, 'utf8'));
     if (Array.isArray(j.hist)) this.hist = j.hist.filter(function(r){ return Array.isArray(r) && r.length >= 4; });
     this.trim();
-  } catch (e) { /* noch kein Verlauf */ }
+  } catch (e) { /* no history yet */ }
 };
 Sysinfo.prototype.save = function() {
   if (!this.file) return;
   var tmp = this.file + '.tmp';
-  try { fs.writeFileSync(tmp, JSON.stringify({hist: this.hist})); fs.renameSync(tmp, this.file); } catch (e) { /* nächstes Mal */ }
+  try { fs.writeFileSync(tmp, JSON.stringify({hist: this.hist})); fs.renameSync(tmp, this.file); } catch (e) { /* next time */ }
 };
 
 Sysinfo.prototype.start = function() {
@@ -184,12 +184,12 @@ Sysinfo.prototype.stop = function() {
   this.save();
 };
 
-/* df je Laufwerk einzeln und mit Zeitgrenze: eine hängende NAS-Verbindung blockiert so nicht die anderen */
+/* df per drive separately and with a time limit: so a hanging NAS connection does not block the others */
 function dfRun(mount, cb) {
   var done = false, out = '';
   var child;
   try { child = cp.spawn('df', ['-kP', '--', mount]); } catch (e) { return cb(null); }
-  var timer = setTimeout(function(){ if (!done) { done = true; try { child.kill('SIGKILL'); } catch (e) { /* weg */ } cb(null); } }, DF_TIMEOUT);
+  var timer = setTimeout(function(){ if (!done) { done = true; try { child.kill('SIGKILL'); } catch (e) { /* gone */ } cb(null); } }, DF_TIMEOUT);
   child.stdout.on('data', function(d){ out += d; });
   child.on('error', function(){ if (!done) { done = true; clearTimeout(timer); cb(null); } });
   child.on('close', function(){ if (!done) { done = true; clearTimeout(timer); cb(parseDf(out)); } });
@@ -215,7 +215,7 @@ Sysinfo.prototype.diskList = function(cb) {
   });
 };
 
-/* Antwort für GET /sysinfo; full: mit Verlauf, Laufwerken und festen Angaben */
+/* response for GET /sysinfo; full: with history, drives and static details */
 Sysinfo.prototype.report = function(full, cb) {
   var self = this, up = parseFloat(this.read('/proc/uptime'));
   var r = {ok: true, now: Date.now(), cpu: this.cpu, cores: this.cores, live: this.live, load: os.loadavg().map(function(x){ return Math.round(x * 100) / 100; }),

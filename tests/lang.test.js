@@ -1,5 +1,5 @@
-/* Sprachdateien (web/lang/*.js): jede Sprache hat alle Schlüssel des Englischen, dieselben Platzhalter {…},
-   Einzahl/Mehrzahl als {one, other} wie im Englischen, keine Schlüssel, die es im Englischen nicht gibt */
+/* Language files (web/lang/*.js): every language has all keys of English, the same placeholders {…},
+   singular/plural as {one, other} like English, no keys that English does not have */
 var assert = require('assert'), fs = require('fs'), path = require('path');
 var dir = path.join(__dirname, '..', 'web', 'lang');
 var all = {};
@@ -15,16 +15,16 @@ Object.keys(all).forEach(function(code){
   var t = all[code].texts, problems = [];
   assert.strictEqual(path.basename(code), code);
   Object.keys(en).forEach(function(k){
-    if (!(k in t)) return problems.push('fehlt: ' + k);
-    if ((typeof en[k] === 'object') !== (typeof t[k] === 'object')) return problems.push('Einzahl/Mehrzahl: ' + k);
+    if (!(k in t)) return problems.push('missing: ' + k);
+    if ((typeof en[k] === 'object') !== (typeof t[k] === 'object')) return problems.push('singular/plural: ' + k);
     if (typeof t[k] === 'object' && (typeof t[k].one !== 'string' || typeof t[k].other !== 'string')) return problems.push('one/other: ' + k);
-    /* {n} darf in der Einzahl fehlen ("eine Stunde") */
+    /* {n} may be missing in the singular ("one hour") */
     var a = holes(en[k]).replace(/(^|,)\{n\}/, ''), b = holes(t[k]).replace(/(^|,)\{n\}/, '');
-    if (a.replace(/^,/, '') !== b.replace(/^,/, '')) problems.push('Platzhalter ' + k + ': ' + holes(en[k]) + ' / ' + holes(t[k]));
+    if (a.replace(/^,/, '') !== b.replace(/^,/, '')) problems.push('placeholders ' + k + ': ' + holes(en[k]) + ' / ' + holes(t[k]));
   });
-  Object.keys(t).forEach(function(k){ if (!(k in en)) problems.push('nicht im Englischen: ' + k); });
+  Object.keys(t).forEach(function(k){ if (!(k in en)) problems.push('not in English: ' + k); });
   assert.deepStrictEqual(problems, [], code + ':\n' + problems.join('\n'));
-  assert.ok(all[code].locale, code + ': Locale fehlt');
-  n++; console.log('ok   ' + code + ' (' + all[code].name + ', ' + Object.keys(t).length + ' Texte)');
+  assert.ok(all[code].locale, code + ': locale missing');
+  n++; console.log('ok   ' + code + ' (' + all[code].name + ', ' + Object.keys(t).length + ' texts)');
 });
-console.log(n + ' Sprachen geprüft');
+console.log(n + ' languages checked');

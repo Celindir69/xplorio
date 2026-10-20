@@ -1,14 +1,14 @@
-/* Begrüßung: einmal beim Öffnen der Seite eine Karte in der Mitte mit Album des Tages, zuletzt gehörten und neuen Alben
-   (Tag-Dienst GET /welcome). Nicht in der Bühnenansicht, nicht öfter als alle 30 Minuten; abschaltbar unten im Overlay,
-   jederzeit über das Menü. Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach discover.js, genre.js und stage.js geladen. */
+/* Welcome: once when the page opens, a card in the middle with the album of the day, recently played and new albums
+   (tag service GET /welcome). Not in the stage view, not more often than every 30 minutes; can be switched off at the bottom of the overlay,
+   available any time from the menu. Classic script, shared global scope; loaded after discover.js, genre.js and stage.js. */
 var overlayWelcome = document.getElementById('overlayWelcome');
 var welcomeBody    = document.getElementById('welcomeBody');
-var WELCOME_KEY = 'welcome';                 /* {off: true} abgeschaltet, {at: ms} zuletzt gezeigt */
-var WELCOME_GAP_MS = 30 * 60000;             /* so lange nach dem letzten Mal nicht wieder von selbst */
+var WELCOME_KEY = 'welcome';                 /* {off: true} switched off, {at: ms} last shown */
+var WELCOME_GAP_MS = 30 * 60000;             /* not again by itself for this long after the last time */
 var welcomeSeq = 0;
 
 function welcomePref() { try { return JSON.parse(localStorage.getItem(WELCOME_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function welcomeSave(p) { try { localStorage.setItem(WELCOME_KEY, JSON.stringify(p)); } catch (e) { /* ohne Speicher */ } }
+function welcomeSave(p) { try { localStorage.setItem(WELCOME_KEY, JSON.stringify(p)); } catch (e) { /* no storage */ } }
 
 function welcomeGreeting() {
   var h = new Date().getHours();
@@ -19,8 +19,8 @@ function welcomeAlbumOpen(it, art) {
   openBrowse({kind: 'album', artist: it.ar === 'Verschiedene' ? '' : it.ar, album: it.al, uri: 'music-library/' + it.dir, albumart: art});
 }
 
-/* Album des Tages: großes Cover, Titel (Jahr), Künstler, wann zuletzt gehört, ▶ und der Albumtext; Tipp öffnet das Album.
-   Querformat: Angaben oben neben dem Cover, ▶ rechts daneben, darunter der Text bis zur Unterkante des Covers */
+/* Album of the day: large cover, title (year), artist, when last played, ▶ and the album text; a tap opens the album.
+   Landscape: details at the top next to the cover, ▶ to their right, below them the text down to the cover's bottom edge */
 function welcomeDay(it) {
   var box = histEl('div', 'dRand wDay');
   var art = histAlbumArt(it.ar, it.al, it.dir);
@@ -42,7 +42,7 @@ function welcomeDay(it) {
     browsePlay({uri: 'music-library/' + it.dir, service: 'mpd', type: 'folder', title: it.al, artist: it.ar});
   });
   box.appendChild(play);
-  if (it.ar !== 'Verschiedene') {                    /* Albumtext wie im Info-Overlay (Volumio, sonst Last.fm); scrollt bei Bedarf */
+  if (it.ar !== 'Verschiedene') {                    /* album text as in the info overlay (Volumio, else Last.fm); scrolls if needed */
     var info = histEl('div', 'wInfo');
     info.addEventListener('click', function(ev){ ev.stopPropagation(); });
     box.appendChild(info);
@@ -55,7 +55,7 @@ function welcomeDay(it) {
   return box;
 }
 
-/* Reihe mit Albenkacheln; sub(it): kleine Zeile darunter */
+/* row of album tiles; sub(it): small line below */
 function welcomeRow(title, items, tile) {
   var sec = histEl('div', 'dSec');
   sec.appendChild(browseHeading(title));
@@ -76,9 +76,9 @@ function welcomeRender(r) {
     box.appendChild(browseHeading(T('welcome.dayAlbum')));
     box.appendChild(welcomeDay(r.day));
   }
-  var bday = histEl('div', 'dSec');                 /* Geburtstage: heute und diese Woche, sonst dieser Monat */
+  var bday = histEl('div', 'dSec');                 /* birthdays: today and this week, else this month */
   if (bdayRows(bday, r.birthdays, ['today', 'week']) || bdayRows(bday, r.birthdays, ['month'])) box.appendChild(bday);
-  var tog = histEl('div', 'dSec');                  /* Passt zusammen (discover.js), lädt nach */
+  var tog = histEl('div', 'dSec');                  /* goes together (discover.js), loads later */
   box.appendChild(tog);
   togetherRow(tog, function(){ return welcomeBody.contains(tog); });
   var rows = [];
@@ -104,11 +104,11 @@ function welcomeRender(r) {
   Array.prototype.forEach.call(box.querySelectorAll('.dRow'), discoverFit);
 }
 
-/* auto: beim Laden der Seite; dann nur, wenn nichts anderes offen ist und es etwas zu zeigen gibt */
+/* auto: on page load; then only if nothing else is open and there is something to show */
 function openWelcome(auto) {
   var seq = ++welcomeSeq;
   document.getElementById('welcomeTitle').textContent = welcomeGreeting();
-  document.getElementById('welcomeBack').style.display = auto ? 'none' : '';     /* aus dem Menü geöffnet */
+  document.getElementById('welcomeBack').style.display = auto ? 'none' : '';     /* opened from the menu */
   if (!auto) { closeAllOverlays(); welcomeBody.textContent = ''; welcomeBody.appendChild(browseNote(T('browse.loading'))); overlayWelcome.classList.add('on'); }
   tagGetJson('/welcome?day=' + discoverToday() + histTz()).then(function(r){
     if (seq !== welcomeSeq) return;
@@ -116,7 +116,7 @@ function openWelcome(auto) {
       if (!auto) { welcomeBody.textContent = ''; welcomeBody.appendChild(browseNote(T(r && r.building ? 'disc.building' : 'hist.offline'))); }
       return;
     }
-    if (auto && document.querySelector('.overlay.on')) return;          /* schon woanders unterwegs */
+    if (auto && document.querySelector('.overlay.on')) return;          /* already busy elsewhere */
     welcomeRender(r);
     if (auto) { var p = welcomePref(); p.at = Date.now(); welcomeSave(p); }
     overlayWelcome.classList.add('on');
@@ -125,11 +125,11 @@ function openWelcome(auto) {
 
 document.getElementById('closeWelcome').addEventListener('click', closeAllOverlays);
 document.getElementById('welcomeBack').addEventListener('click', function(){ openMenu(); });
-overlayWelcome.addEventListener('click', function(ev){ if (ev.target === overlayWelcome) closeAllOverlays(); });   /* Tipp auf den Rand */
+overlayWelcome.addEventListener('click', function(ev){ if (ev.target === overlayWelcome) closeAllOverlays(); });   /* tap on the edge */
 
 (function(){
   var p = welcomePref();
   if (p.off || stageOn || Date.now() - (p.at || 0) < WELCOME_GAP_MS || /[?&]welcome=0\b/.test(location.search)) return;
   var loaded = Date.now();
-  whenTags(function(){ if (Date.now() - loaded < 120000 && !stageOn) openWelcome(true); });   /* später nicht mehr überraschend aufgehen */
+  whenTags(function(){ if (Date.now() - loaded < 120000 && !stageOn) openWelcome(true); });   /* do not pop up unexpectedly later */
 })();

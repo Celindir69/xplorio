@@ -1,13 +1,13 @@
-/* Genre-Vorschläge für den Bibliotheks-Check: je Album genau ein Genre aus den 15 Discogs-Oberkategorien.
-   Grundlage sind die vorhandenen Genre-Tags (Zuordnungstabelle unten) und die Discogs-Stile der Audio-Analyse
-   (tags/essentia.js, "Electronic---Trip Hop"), gemittelt über alle Titel eines Albums. Die Unterstile bleiben im
-   Tag-Dienst (Ergebnis des Checks), in die Dateien kommt nur die Oberkategorie. Node 8, nur ES5. */
+/* Genre suggestions for the library check: exactly one genre per album from the 15 Discogs top categories.
+   Based on the existing genre tags (mapping table below) and the Discogs styles of the audio analysis
+   (tags/essentia.js, "Electronic---Trip Hop"), averaged over all tracks of an album. The substyles stay in the
+   tag service (result of the check); only the top category goes into the files. Node 8, ES5 only. */
 
 var TOPS = ['Blues', 'Brass & Military', "Children's", 'Classical', 'Electronic', 'Folk, World, & Country', 'Funk / Soul',
             'Hip Hop', 'Jazz', 'Latin', 'Non-Music', 'Pop', 'Reggae', 'Rock', 'Stage & Screen'];
-var MIN_SHARE = 0.25;            /* Audio allein: so viel Anteil braucht die stärkste Oberkategorie mindestens */
+var MIN_SHARE = 0.25;            /* audio alone: the strongest top category needs at least this share */
 
-/* Schlüssel für Genre-Namen: ohne Akzente, klein, & = and, nur Buchstaben und Ziffern ("Hip-Hop" = "hiphop") */
+/* key for genre names: no accents, lower case, & = and, letters and digits only ("Hip-Hop" = "hiphop") */
 function genreKey(s) {
   s = String(s || '');
   if (s.normalize) s = s.normalize('NFKD');
@@ -15,7 +15,7 @@ function genreKey(s) {
   return s.replace(/[^a-z0-9]+/g, '');
 }
 
-/* bekannte Namen -> Oberkategorien (mehrere = mehrdeutig, dann entscheidet die Audio-Analyse, sonst die erste) */
+/* known names -> top categories (several = ambiguous, then the audio analysis decides, else the first) */
 var B = 'Blues', BM = 'Brass & Military', CH = "Children's", CL = 'Classical', EL = 'Electronic', FO = 'Folk, World, & Country',
     FS = 'Funk / Soul', HH = 'Hip Hop', JA = 'Jazz', LA = 'Latin', NM = 'Non-Music', PO = 'Pop', RE = 'Reggae', RO = 'Rock', SS = 'Stage & Screen';
 var TABLE = {};
@@ -52,7 +52,7 @@ map([SS], 'soundtrack,soundtracks,filmmusik,film,ost,score,film score,musical,mu
 map([NM], 'hörspiel,hoerspiel,hörbuch,hoerbuch,audiobook,audio book,spoken word,comedy,kabarett,speech,podcast,interview,' +
           'field recording,poetry,lesung');
 
-/* Unterstil-Name -> Oberkategorien, gelernt aus den Stilen der Audio-Analyse ("Electronic---Trip Hop") */
+/* substyle name -> top categories, learned from the audio analysis styles ("Electronic---Trip Hop") */
 function learnStyles(entries) {
   var subs = {};
   entries.forEach(function(o){
@@ -66,7 +66,7 @@ function learnStyles(entries) {
   return subs;
 }
 
-/* ein Genre-Tag -> Oberkategorien (leer = unbekannt); "Pop/Rock", "Rock; Pop" werden zerlegt */
+/* one genre tag -> top categories (empty = unknown); "Pop/Rock", "Rock; Pop" get split */
 function topsOf(value, subs) {
   var k = genreKey(value);
   if (!k) return [];
@@ -78,7 +78,7 @@ function topsOf(value, subs) {
   return out;
 }
 
-/* Audio-Analyse eines Albums: Anteile je Oberkategorie (Summe 1 je Titel, dann gemittelt) und stärkste Unterstile */
+/* audio analysis of an album: shares per top category (sum 1 per track, then averaged) and strongest substyles */
 function audioVote(entries) {
   var top = {}, sub = {}, n = 0;
   entries.forEach(function(o){
@@ -101,14 +101,14 @@ function audioVote(entries) {
   return {tracks: n, share: top, order: order, subs: subs};
 }
 
-/* Vorschlag für ein Album. values: {Genre-Tag: Anzahl Titel}; audio: audioVote(...) oder null.
-   -> {genre, how: 'table'|'audio'|'both', share} oder null (kein Anhaltspunkt) */
+/* suggestion for an album. values: {genre tag: number of tracks}; audio: audioVote(...) or null.
+   -> {genre, how: 'table'|'audio'|'both', share} or null (no clue) */
 function suggest(values, audio, subs) {
   var cand = {}, order = [];
   Object.keys(values).forEach(function(v){
     topsOf(v, subs).forEach(function(t, i){
       if (!cand.hasOwnProperty(t)) { cand[t] = 0; order.push(t); }
-      cand[t] += values[v] * (i ? 0.5 : 1);          /* erste Zuordnung eines mehrdeutigen Namens zählt mehr */
+      cand[t] += values[v] * (i ? 0.5 : 1);          /* first mapping of an ambiguous name counts more */
     });
   });
   var share = audio ? audio.share : {};
@@ -126,7 +126,7 @@ function suggest(values, audio, subs) {
 }
 function round(x) { return Math.round(x * 100) / 100; }
 
-/* Check-Auswertung. albums: [{dir, name, artist, files, songs:[{genre}], audio:[Einträge]}]
+/* check evaluation. albums: [{dir, name, artist, files, songs:[{genre}], audio:[entries]}]
    -> {missing: [...], merge: [...], styles: {dir: {genre, subs}}} */
 function check(albums) {
   var subs = learnStyles([].concat.apply([], albums.map(function(a){ return a.audio; })));
@@ -154,12 +154,12 @@ function check(albums) {
   return {missing: missing, merge: merge, styles: styles};
 }
 
-/* ---------- Unterstile je Album (Genre-Seite, Suche) ---------- */
-var SUB_SHARE = 0.15;           /* weitere Unterstile eines Albums ab diesem Anteil (der stärkste zählt immer) */
+/* ---------- substyles per album (genre page, search) ---------- */
+var SUB_SHARE = 0.15;           /* further substyles of an album from this share on (the strongest always counts) */
 var SUB_MAX = 3;
 
-/* Unterstile eines Albums innerhalb seiner Oberkategorie(n) tops: Anteile je Titel (nur Stile dieser Kategorien),
-   über die analysierten Titel gemittelt -> Namen, stärkster zuerst */
+/* substyles of an album within its top categories tops: shares per track (only styles of these categories),
+   averaged over the analyzed tracks -> names, strongest first */
 function albumSubs(entries, tops) {
   var sub = {}, n = 0;
   entries.forEach(function(o){
@@ -178,8 +178,8 @@ function albumSubs(entries, tops) {
     .filter(function(k, i){ return i === 0 || sub[k] / n >= SUB_SHARE; }).slice(0, SUB_MAX);
 }
 
-/* Unterstile aller Alben: list = Albenliste [{dir, ge}], tracks = [[Künstler, Titel, Datei, Sek., Album], …],
-   audioOf(Künstler, Titel, Album) -> Analyse oder null, dirOf(Datei) -> Albumordner. -> {Ordner: [Unterstile]} */
+/* substyles of all albums: list = album list [{dir, ge}], tracks = [[artist, title, file, sec., album], …],
+   audioOf(artist, title, album) -> analysis or null, dirOf(file) -> album folder. -> {folder: [substyles]} */
 function subsIndex(list, tracks, audioOf, dirOf) {
   var byDir = {}, out = {};
   tracks.forEach(function(t){
@@ -194,8 +194,8 @@ function subsIndex(list, tracks, audioOf, dirOf) {
   return out;
 }
 
-/* Unterstile als Kacheln: [{g, s, n (Alben), dir, al, ar}], die größten zuerst.
-   g: nur Alben dieses Genres; q: Teilwort im Namen des Unterstils (Suche über alle Genres) */
+/* substyles as tiles: [{g, s, n (albums), dir, al, ar}], largest first.
+   g: only albums of this genre; q: substring in the substyle name (search across all genres) */
 function subList(list, idx, g, q) {
   var by = {}, out = [];
   g = String(g || '').toLowerCase(); q = String(q || '').toLowerCase().trim();

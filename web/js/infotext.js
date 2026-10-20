@@ -1,8 +1,8 @@
-/* Ersatz für Volumios Künstler- und Albumtexte (metavolumio), wenn die nichts liefern: Volumio 4 gibt sie nur mit
-   bezahltem Abo heraus. Erst Last.fm (braucht LASTFM_KEY, in der gewählten Sprache, sonst englisch), für Künstler dann
-   Wikipedia (gewählte Sprache, sonst englisch, ohne Schlüssel). Klassisches Skript, ES5; im Test mit eigenem fetch. */
+/* Fallback for Volumio's artist and album texts (metavolumio) when they return nothing: Volumio 4 only provides them
+   with a paid subscription. First Last.fm (needs LASTFM_KEY, in the chosen language, else English), then for artists
+   Wikipedia (chosen language, else English, no key). Classic script, ES5; in tests with its own fetch. */
 
-/* Last.fm-Text säubern: Link "Read more on Last.fm" und HTML weg, Lizenzhinweis bleibt als Quelle unten */
+/* clean Last.fm text: remove the "Read more on Last.fm" link and HTML, license note stays as source at the bottom */
 function infoClean(s) {
   s = String(s || '')
     .replace(/<a [^>]*>[^<]*<\/a>\.?/g, '')
@@ -12,7 +12,7 @@ function infoClean(s) {
     .replace(/User-contributed text is available under the Creative Commons By-SA License[^\n]*/i, '')
     .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
     .trim();
-  return s.length >= 40 ? s : '';            /* "Read more"-Stummel und leere Einträge zählen nicht */
+  return s.length >= 40 ? s : '';            /* "Read more" stubs and empty entries do not count */
 }
 
 function infoLastfm(fetchFn, key, mode, artist, album, lang) {
@@ -29,17 +29,17 @@ function infoLastfm(fetchFn, key, mode, artist, album, lang) {
 function infoWikipedia(fetchFn, artist, lang) {
   var url = 'https://' + lang + '.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(artist.replace(/ /g, '_'));
   return fetchFn(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
-    if (!j || j.type !== 'standard' || !j.extract) return '';      /* Begriffsklärung oder nichts gefunden */
-    /* nur nehmen, wenn es um Musik geht: sonst trifft "Air" oder "Yes" leicht etwas anderes */
+    if (!j || j.type !== 'standard' || !j.extract) return '';      /* disambiguation page or nothing found */
+    /* only use it if it is about music: otherwise "Air" or "Yes" easily hit something else */
     var d = (j.description || '') + ' ' + j.extract.slice(0, 300);
     return /band|musik|sänger|rapper|komponist|duo|gruppe|music|singer|composer|songwriter|dj\b|producer|produzent|orchest|ensemble|pianist|gitarrist|guitarist/i.test(d)
       ? j.extract : '';
   }).catch(function(){ return ''; });
 }
 
-/* ---------- Texte zu einzelnen Titeln (meist Singles): Last.fm track.getInfo, dann Wikipedia-Artikel zum Lied ---------- */
+/* ---------- Texts for single tracks (mostly singles): Last.fm track.getInfo, then the Wikipedia article on the song ---------- */
 
-/* Zusätze weg, die nicht zum Liednamen gehören: "(Remastered 2011)", "- Live", "[feat. X]" */
+/* strip additions that are not part of the song name: "(Remastered 2011)", "- Live", "[feat. X]" */
 function infoSongName(title) {
   return String(title || '')
     .replace(/\s*[\(\[][^\)\]]*(remaster|live|version|edit|mix|mono|stereo|feat\.?|ft\.|bonus|demo|single|radio)[^\)\]]*[\)\]]/gi, '')
@@ -60,8 +60,8 @@ function infoLastfmTrack(fetchFn, key, artist, title, lang) {
   }).catch(function(){ return ''; });
 }
 
-/* Wikipedia-Suche nach "Titel Interpret"; genommen wird nur ein Artikel, dessen Name der Liedname ist (Zusatz in
-   Klammern egal, z. B. "Teardrop (Lied)"), der sich als Lied/Single/Song beschreibt und den Interpreten nennt */
+/* Wikipedia search for "title artist"; only an article is used whose name is the song name (suffix in
+   parentheses ignored, e.g. "Teardrop (Lied)"), that describes itself as a song/single and names the artist */
 var INFO_SONG_RE = /\b(lied|song|single|ballade|hymne|instrumental)/i;
 function infoWikipediaTrack(fetchFn, artist, title, lang) {
   var base = 'https://' + lang + '.wikipedia.org/';
@@ -77,8 +77,8 @@ function infoWikipediaTrack(fetchFn, artist, title, lang) {
           return fetchFn(base + 'api/rest_v1/page/summary/' + encodeURIComponent(String(p.key || p.title).replace(/ /g, '_')))
             .then(function(r){ return r.ok ? r.json() : null; }).then(function(s){
               if (!s || s.type !== 'standard' || !s.extract) return '';
-              /* Kurzbeschreibung ("song by …", "Lied von …") entscheidet; ohne sie der Anfang des Artikels.
-                 Gleichnamige Alben (Titelstück) nicht: die beschreiben sich als Album */
+              /* the short description ("song by …", "Lied von …") decides; without it, the start of the article.
+                 Not albums of the same name (title track): they describe themselves as an album */
               var lead = s.description || s.extract.slice(0, 200);
               if (!INFO_SONG_RE.test(lead) || /\balbum\b/i.test(lead) && !/\b(lied|song|single)\b/i.test(lead)) return '';
               return infoNorm(lead + ' ' + s.extract.slice(0, 400)).indexOf(who) >= 0 ? s.extract : '';
@@ -88,7 +88,7 @@ function infoWikipediaTrack(fetchFn, artist, title, lang) {
     }).catch(function(){ return ''; });
 }
 
-/* -> {kind:'story', value, src} oder null; Reihenfolge wie bei Künstlern: beide Quellen in der Sprache, dann englisch */
+/* -> {kind:'story', value, src} or null; order as for artists: both sources in the language, then English */
 function infoTrack(fetchFn, key, artist, title, lang) {
   lang = String(lang || 'en').toLowerCase();
   var song = infoSongName(title);
@@ -107,7 +107,7 @@ function infoTrack(fetchFn, key, artist, title, lang) {
   });
 }
 
-/* -> {kind:'story', value, src} oder null; lang: Sprachcode der Oberfläche (Standard 'en') */
+/* -> {kind:'story', value, src} or null; lang: UI language code (default 'en') */
 function infoFallback(fetchFn, key, mode, artist, album, lang) {
   lang = String(lang || 'en').toLowerCase();
   if (!artist || (mode === 'storyAlbum' && !album)) return Promise.resolve(null);
@@ -117,7 +117,7 @@ function infoFallback(fetchFn, key, mode, artist, album, lang) {
     }, Promise.resolve(null));
   }
   function tr(src, fn) { fn.src = src; return fn; }
-  /* erst beide Quellen in der gewählten Sprache, dann beide auf Englisch (Last.fm ohne lang = Englisch) */
+  /* first both sources in the chosen language, then both in English (Last.fm without lang = English) */
   var tries = [];
   (lang === 'en' ? [''] : [lang, '']).forEach(function(l){
     if (key) tries.push(tr('Last.fm', function(){ return infoLastfm(fetchFn, key, mode, artist, album, l); }));
@@ -125,7 +125,7 @@ function infoFallback(fetchFn, key, mode, artist, album, lang) {
   });
   return first(tries).then(function(hit){
     if (!hit) return null;
-    var srcText = typeof T === 'function' ? T('infotext.source', {src: hit.src}) : 'Quelle: ' + hit.src;   /* ohne T(): Test in Node */
+    var srcText = typeof T === 'function' ? T('infotext.source', {src: hit.src}) : 'Quelle: ' + hit.src;   /* without T(): test in Node */
     return {kind: 'story', value: hit.v + '\n\n' + srcText, src: hit.src};
   });
 }

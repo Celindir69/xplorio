@@ -1,11 +1,11 @@
-/* Queue (Liste, Verschieben, Entfernen)
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Queue (list, move, remove)
+   Classic script, shared global scope; load order see xplorio.html. */
 /* ---------- Queue ---------- */
 var DELETE_W = 20;
-var lastTouchAt = 0;          /* Zeitpunkt der letzten Touch-Eingabe: danach folgende "click"-Ereignisse nicht doppelt auswerten */
-var finePointer = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);   /* Maus/Trackpad */
+var lastTouchAt = 0;          /* time of the last touch input: do not handle the following "click" events twice */
+var finePointer = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);   /* mouse/trackpad */
 
-/* Breite der Maßeinheit --vw in Pixeln (begrenzt auf großen Bildschirmen, siehe base.css) */
+/* width of the unit --vw in pixels (capped on large screens, see base.css) */
 function vwPx() {
   var p = document.createElement('div');
   p.style.cssText = 'position:absolute;visibility:hidden;width:var(--vw)';
@@ -21,9 +21,9 @@ function resetSwipe() {
   swipe = null;
 }
 
-var queueSeq = 0;              /* nur die Antwort der letzten Anfrage zeichnen (ältere kämen sonst mit veralteten Positionen) */
-/* Tipp auf einen Titel: abspielen; steht der Verstärker auf einem anderen Eingang, nur das sagen (ein Start ins Leere
-   ließe Volumio durch die Titel springen) */
+var queueSeq = 0;              /* only draw the answer to the latest request (older ones would come with outdated positions) */
+/* Tap on a track: play it; if the amp is on a different input, just say so (starting into the void
+   would make Volumio skip through the tracks) */
 function queuePlayAt(i) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   if (inp) { showToast(T('audio.otherInput', {name: inp.name})); return; }
@@ -33,7 +33,7 @@ function loadQueue() {
   var seq = ++queueSeq;
   fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(j){
     if (seq !== queueSeq) return;
-    if (drag) { setTimeout(loadQueue, 500); return; }     /* nicht unter dem Finger neu aufbauen */
+    if (drag) { setTimeout(loadQueue, 500); return; }     /* do not rebuild under the finger */
     queueData = (j && j.queue) ? j.queue : [];
     while (queueList.firstChild) queueList.removeChild(queueList.firstChild);
 
@@ -55,7 +55,7 @@ function loadQueue() {
 
       var img = document.createElement('img');
       img.className = 'qCover';
-      img.loading = 'lazy';                              /* lange Listen: Bilder erst, wenn sichtbar */
+      img.loading = 'lazy';                              /* long lists: images only when visible */
       img.decoding = 'async';
       if (t.albumart) img.src = artUrl(t.albumart);
 
@@ -73,7 +73,7 @@ function loadQueue() {
         handle.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 3H7v2h2V3zm0 4H7v2h2V7zm0 4H7v2h2v-2zm0 4H7v2h2v-2zm4-12h-2v2h2V3zm0 4h-2v2h2V7zm0 4h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>';
       }
 
-      var trash = document.createElement('div');          /* Papierkorb für Maus und Trackpad (nur dort sichtbar, siehe CSS) */
+      var trash = document.createElement('div');          /* trash can for mouse and trackpad (only visible there, see CSS) */
       trash.className = 'qTrash';
       trash.title = T('queue.remove');
       trash.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
@@ -85,7 +85,7 @@ function loadQueue() {
 
       row.appendChild(num); row.appendChild(img);
       row.appendChild(meta);
-      var pen = tagTrackButton(t);                        /* lokale Datei: Tags bearbeiten */
+      var pen = tagTrackButton(t);                        /* local file: edit tags */
       if (pen) row.appendChild(pen);
       row.appendChild(trash); row.appendChild(handle);
       qRows.push(row);
@@ -121,7 +121,7 @@ function loadQueue() {
         if (touchState.mode === 'swipe') {
           e.preventDefault();
           if (dx < 0) {
-            var pct = Math.min(-dx / (vwPx() * 100) * 100, DELETE_W);   /* in Einheiten von --vw */
+            var pct = Math.min(-dx / (vwPx() * 100) * 100, DELETE_W);   /* in units of --vw */
             row.style.transition = 'none';
             row.style.transform = 'translateX(calc(-' + pct + ' * var(--vw)))';
             del.style.transition = 'none';
@@ -149,7 +149,7 @@ function loadQueue() {
         }
   if (drag) return;
 
-  /* Nur als Tap werten, wenn kaum Bewegung stattfand */
+  /* only count as a tap if there was hardly any movement */
   var dxTotal = Math.abs(e.changedTouches[0].clientX - touchState.startX);
   var dyTotal = Math.abs(e.changedTouches[0].clientY - touchState.startY);
   if (dxTotal > 10 || dyTotal > 10) return;
@@ -170,16 +170,16 @@ function loadQueue() {
         }, {passive:false});
       }
 
-      /* Maus/Trackpad: Klick auf die Zeile spielt ab, Handle per Maus ziehen */
+      /* mouse/trackpad: clicking the row plays it, drag the handle with the mouse */
       row.addEventListener('click', function(){
-        if (Date.now() - lastTouchAt < 800) return;      /* Tippen wurde schon über touchend behandelt */
+        if (Date.now() - lastTouchAt < 800) return;      /* tap was already handled via touchend */
         if (drag) return;
         queuePlayAt(i);
       });
       if (i !== curPos) {
         handle.addEventListener('click', function(e){ e.stopPropagation(); });
         handle.addEventListener('pointerdown', function(e){
-          if (e.pointerType === 'touch') return;          /* Touch läuft über die touch-Ereignisse */
+          if (e.pointerType === 'touch') return;          /* touch goes through the touch events */
           e.preventDefault(); e.stopPropagation();
           if (handle.setPointerCapture) handle.setPointerCapture(e.pointerId);
           drag = { fromIdx:i, toIdx:i, startY:e.clientY, rowH:row.getBoundingClientRect().height, row:row, mouse:true };
@@ -200,7 +200,7 @@ function loadQueue() {
         var endMouseDrag = function(){
           if (!drag || !drag.mouse || drag.row !== row) return;
           var d = drag;
-          setTimeout(function(){ if (drag === d) drag = null; }, 0);   /* damit das folgende click-Ereignis die Zeile nicht abspielt */
+          setTimeout(function(){ if (drag === d) drag = null; }, 0);   /* so the following click event does not play the row */
           row.style.transform = '';
           row.classList.remove('dragging');
           var wraps = queueList.querySelectorAll('.qRowWrap');
@@ -216,7 +216,7 @@ function loadQueue() {
 
       queueList.appendChild(wrap);
     });
-    if (typeof rateQueue === 'function') rateQueue(queueData, qRows);   /* Daumen je Titel (rating.js) */
+    if (typeof rateQueue === 'function') rateQueue(queueData, qRows);   /* thumbs per track (rating.js) */
 
     if (queueData.length) {
       var hint = document.createElement('div');
@@ -224,9 +224,9 @@ function loadQueue() {
       hint.textContent = finePointer
         ? T('queue.hintMouse')
         : T('queue.hintTouch');
-      queueList.insertBefore(hint, queueList.firstChild);   /* oben, wie bei den anderen Listen; bei langen Listen sonst nie zu sehen */
+      queueList.insertBefore(hint, queueList.firstChild);   /* at the top, as in the other lists; otherwise never visible in long lists */
     }
-    if (!queueData.length) {                           /* leer: Hinweis und Weg zur Suche statt einer leeren Fläche */
+    if (!queueData.length) {                           /* empty: a hint and a way to search instead of a blank area */
       queueList.appendChild(browseNote(T('queue.empty')));
       var go = document.createElement('button');
       go.className = 'ckBtn qEmptyBtn'; go.textContent = T('queue.emptySearch');
@@ -258,7 +258,7 @@ document.addEventListener('touchmove', function(e){
   }
 }, {passive:false});
 
-document.addEventListener('touchcancel', function(){    /* iOS bricht ab (Systemgeste): Ziehen beenden, nichts verschieben */
+document.addEventListener('touchcancel', function(){    /* iOS cancels (system gesture): end dragging, move nothing */
   if (!drag) return;
   var d = drag; drag = null;
   d.row.style.transform = '';

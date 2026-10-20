@@ -1,7 +1,7 @@
-/* Grundlagen: Elemente, Zustand, Zeitanzeige, Abfragen (Plugin, Diskografie, Last.fm)
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
-/* Bilder, die nicht laden (Cover fehlt, Server weg), bleiben leer statt des Fragezeichen-Symbols.
-   error/load steigen nicht auf, daher in der Capture-Phase am Dokument; Platz in der Zeile bleibt erhalten. */
+/* Basics: elements, state, time display, requests (plugin, discography, Last.fm)
+   Classic script, shared global scope; see xplorio.html for load order. */
+/* Images that fail to load (missing cover, server gone) stay empty instead of showing the question-mark icon.
+   error/load do not bubble, so listen in the capture phase on the document; the space in the row is kept. */
 function imgCheck(img) {
   if (img.complete && img.getAttribute('src') && !img.naturalWidth) img.classList.add('imgFail');
 }
@@ -13,7 +13,7 @@ document.addEventListener('load', function(e){
   var t = e.target;
   if (t && t.tagName === 'IMG') t.classList.remove('imgFail');
 }, true);
-/* Fehler, die schon vor dem Einhängen ins Dokument passiert sind, beim Einhängen nachholen */
+/* errors that occurred before insertion into the document are handled on insertion */
 if (window.MutationObserver) new MutationObserver(function(muts){
   muts.forEach(function(m){
     for (var i = 0; i < m.addedNodes.length; i++) {
@@ -25,25 +25,25 @@ if (window.MutationObserver) new MutationObserver(function(muts){
   });
 }).observe(document.documentElement, {childList: true, subtree: true});
 
-/* Alias für Lyrics-Funktionen */
+/* alias for lyrics functions */
 var body = document.getElementById('lyricsText');
 var area = document.getElementById('overlayLyrics').querySelector('.overlayBody');
 
 var socket = io();
-socket.on('connect', function(){ console.log('Socket verbunden'); socket.emit('getUiSettings'); });
-/* Sprache der Volumio-Oberfläche: Die App übernimmt sie (i18n.js), sofern ?lang= oder LANGUAGE nichts anderes sagen.
-   Volumio liefert Infotexte nur in dieser Sprache; weicht LANG ab, holt ask() die Texte zuerst selbst (infotext.js). */
+socket.on('connect', function(){ console.log('Socket connected'); socket.emit('getUiSettings'); });
+/* Language of the Volumio UI: the app adopts it (i18n.js) unless ?lang= or LANGUAGE say otherwise.
+   Volumio delivers info texts only in this language; if LANG differs, ask() fetches the texts itself first (infotext.js). */
 var volumioLang = langStored().slice(0, 2);
 socket.on('pushUiSettings', function(s){
   if (!s || !s.language) return;
   volumioLang = String(s.language).slice(0, 2).toLowerCase();
   if (typeof langFromVolumio === 'function') langFromVolumio(s.language);
 });
-/* Volumio meldet Fehler beim Abspielen als Hinweis (MPD: „Failed to open "alsa"…“, „No such device“ bzw. Volumios
-   Text dazu): Ausgabegerät aus oder belegt -> eigener kurzer Hinweis */
-/* Abspielen, während der Verstärker auf einem anderen Eingang steht: nur die Warteschlange füllen (items ab Titel 1).
-   Ein Start ins Leere ließe Volumios Uhr weiterlaufen und durch die Titel springen. Play am Player-Eingang startet
-   dann den ersten Titel (ui.js). true: erledigt, sonst wie gewohnt abspielen */
+/* Volumio reports playback errors as a toast (MPD: "Failed to open "alsa"…", "No such device" or Volumio's
+   text for it): output device off or busy -> own short notice */
+/* Playing while the amplifier is on another input: only fill the queue (items from track 1).
+   Starting into the void would keep Volumio's clock running and skip through the tracks. Play on the player input then
+   starts the first track (ui.js). true: done, otherwise play as usual */
 var queuedForInput = false;
 function queueForInput(items) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
@@ -61,15 +61,15 @@ function audioErrorText(m) {
   if (!m || m.type !== 'error') return '';
   if (/resource busy|device is busy/i.test(s)) return T('audio.busy');
   if (/failed to open|alsa|no such device|output device/i.test(s)) {
-    var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* Verstärker auf anderem Eingang: das sagen */
+    var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* amplifier on another input: say so */
     return inp ? T('audio.otherInput', {name: inp.name}) : T('audio.unreachable');
   }
   return '';
 }
-/* Ausgabegerät getrennt: Volumio öffnet dazu ein Fenster mit Bestätigung (openModal, Titel „Kein Audio-Gerät
-   verfügbar“ bzw. „Das Audiogerät ist nicht verfügbar“; Volumios Texte auf Deutsch, Englisch, Französisch, Spanisch
-   und Italienisch); hier nur ein kurzer Hinweis. Wieder da: Volumio meldet das nur beim USB-DAC („USB DAC verbunden“)
-   und schließt dann seine Fenster. */
+/* Output device disconnected: Volumio opens a confirmation dialog for it (openModal, title "Kein Audio-Gerät
+   verfügbar" or "Das Audiogerät ist nicht verfügbar"; Volumio's texts in German, English, French, Spanish
+   and Italian); here just a short notice. Back again: Volumio reports this only for the USB DAC ("USB DAC verbunden")
+   and then closes its dialogs. */
 var AUDIO_GONE_TITLES = new RegExp('^(' + [
   'kein audio-gerät verfügbar', 'das audiogerät ist nicht verfügbar',
   'no audio output available', 'the selected output device is not available',
@@ -101,15 +101,15 @@ socket.on('pushState', function(st){
   }
 });
 
-/* Streamingdienste (streaming.js): eingeschaltet nach APP_CONFIG.TIDAL / QOBUZ, 'auto' nach den Quellen von Volumio.
-   Bis die Antwort da ist, gilt nur TIDAL als vorhanden (so bleibt beim Laden nichts hängen). */
+/* Streaming services (streaming.js): enabled according to APP_CONFIG.TIDAL / QOBUZ, 'auto' by Volumio's sources.
+   Until the answer arrives, only TIDAL is assumed present (so nothing hangs while loading). */
 var appCfg = window.APP_CONFIG || {};
-var tidalOn = false;                                   /* Kurzform für Stellen, die nur TIDAL betreffen */
+var tidalOn = false;                                   /* shorthand for places that concern TIDAL only */
 function streamCap(s) { return s.id.charAt(0).toUpperCase() + s.id.slice(1); }
 function streamsApply() {
   var root = document.documentElement;
   STREAMS.forEach(function(s){
-    root.classList.toggle('no' + streamCap(s), !s.on);         /* blendet das Kästchen des Dienstes in der Suche aus */
+    root.classList.toggle('no' + streamCap(s), !s.on);         /* hides the service's checkbox in the search */
     var box = document.getElementById('src' + streamCap(s));
     if (box) box.checked = s.show;
   });
@@ -136,7 +136,7 @@ function fmtTime(s) {
 
 var bg       = document.getElementById('bg');
 var cover    = document.getElementById('cover');
-/* nicht quadratische Cover (z. B. ein Foto im Querformat): Klasse am Rahmen, damit das Bild ins Quadrat passt */
+/* non-square covers (e.g. a landscape photo): class on the frame so the image fits the square */
 cover.addEventListener('load', function(){
   var r = cover.naturalHeight ? cover.naturalWidth / cover.naturalHeight : 1, w = cover.parentNode;
   w.classList.toggle('arWide', r > 1.03);
@@ -181,9 +181,9 @@ var radioPanel      = document.getElementById('radioPanel');
 var searchInput     = document.getElementById('searchInput');
 var searchResults   = document.getElementById('searchResults');
 
-var radioArtist = '';          /* Künstler aus dem Stream-Titel (nur Webradio) */
-var curRadio    = false;       /* spielt gerade ein Webradio? */
-var curStream   = null;        /* Streamingdienst des laufenden Titels (streaming.js), sonst null */
+var radioArtist = '';          /* artist from the stream title (web radio only) */
+var curRadio    = false;       /* is a web radio playing? */
+var curStream   = null;        /* streaming service of the current track (streaming.js), otherwise null */
 var lastKey     = '';
 var lastLyrKey  = '';
 var lastArt     = '';
@@ -194,9 +194,9 @@ var curDur      = 0;
 var curAlbum    = '';
 var curArtist = '';
 var curPos      = -1;
-var curUri      = '';        /* Datei bzw. uri und Titel des laufenden Titels (Mehr wie dieser Titel, browse.js) */
+var curUri      = '';        /* file or uri and title of the current track (More like this track, browse.js) */
 var curTitle    = '';
-var curAlbumTitle = '', curAlbumUri = '';   /* Album in der Wiedergabe ohne „(Jahr)“ (genre.js) */
+var curAlbumTitle = '', curAlbumUri = '';   /* album in now playing without "(year)" (genre.js) */
 var queueData   = [];
 var stRandom    = false;
 var stRepeatMode= 'off';
@@ -208,11 +208,11 @@ var searchData  = streamEmptySearch();
 var searchCat   = 'artists';
 var searchQuery = '';
 
-var LASTFM_KEY = (window.APP_CONFIG && window.APP_CONFIG.LASTFM_KEY) || '';   /* nur noch Ersatz, wenn der Tag-Dienst fehlt */
+var LASTFM_KEY = (window.APP_CONFIG && window.APP_CONFIG.LASTFM_KEY) || '';   /* only a fallback when the tag service is missing */
 
-/* Last.fm-Abfragen der Oberfläche laufen über den Tag-Dienst (GET /lastfmapi): der Key bleibt auf dem Player.
-   Ohne Tag-Dienst (oder ohne Key dort) direkt mit LASTFM_KEY aus config.local.js, falls vorhanden.
-   -> Promise {key, fetch}; key leer = keine Last.fm-Abfragen */
+/* The UI's Last.fm requests go through the tag service (GET /lastfmapi): the key stays on the player.
+   Without the tag service (or without a key there) directly with LASTFM_KEY from config.local.js, if present.
+   -> Promise {key, fetch}; empty key = no Last.fm requests */
 var LFM_API = 'https://ws.audioscrobbler.com/2.0/';
 var lastfmReady = null;
 function lastfmAccess() {
@@ -225,23 +225,23 @@ function lastfmAccess() {
       if (u.indexOf(LFM_API) !== 0) return fetch(u);
       return fetch(TAGS + '/lastfmapi?' + u.slice(LFM_API.length + 1).replace(/(^|&)(api_key|format)=[^&]*/g, ''));
     }};
-  }, function(){ lastfmReady = null; return direct; });   /* Dienst (noch) nicht erreichbar: nächstes Mal neu fragen */
+  }, function(){ lastfmReady = null; return direct; });   /* service not reachable (yet): ask again next time */
   return lastfmReady;
 }
 var similarCache = {};
-var similarAllCache = {};       /* Künstlername -> alle Namen von Last.fm (auch die nicht in der Sammlung) */          /* Künstlername -> Array gefundener Namen */
+var similarAllCache = {};       /* artist name -> all names from Last.fm (including those not in the collection) */          /* artist name -> array of found names */
 
-/* ---------- Zeitanzeige (läuft zwischen den Polls selbst weiter) ---------- */
+/* ---------- Time display (keeps running by itself between polls) ---------- */
 var seekBase = 0, seekStamp = 0, playing = false;
 
-/* nur schreiben, was sich geändert hat: gleiche Texte neu zu setzen erzwingt trotzdem ein neues Layout */
+/* only write what has changed: setting the same texts again still forces a new layout */
 var shownTime = {el: null, rem: null, fill: null};
 function paintTime() {
   if (document.hidden) return;
   var pos = seekBase + (playing ? Date.now() - seekStamp : 0);
   if (curDur) pos = Math.min(pos, curDur * 1000);
-  window.currentSeekMs = pos;          /* Lyrics laufen so flüssig mit */
-  var el = '', rem = '', fill = 0;     /* Webradio: keine Dauer */
+  window.currentSeekMs = pos;          /* keeps lyrics flowing smoothly */
+  var el = '', rem = '', fill = 0;     /* web radio: no duration */
   if (curDur) {
     el = fmtTime(pos / 1000);
     rem = '-' + fmtTime(Math.max(0, curDur - pos / 1000));
@@ -253,7 +253,7 @@ function paintTime() {
 }
 setInterval(paintTime, 250);
 
-/* an eine Stelle im Song springen (ms) */
+/* seek to a position in the song (ms) */
 function seekToMs(ms) {
   if (!curDur) return;
   var sec = Math.max(0, Math.min(curDur, Math.ceil(ms / 1000)));
@@ -263,7 +263,7 @@ function seekToMs(ms) {
 }
 
 
-/* Antwort höchstens ms Millisekunden abwarten (Volumio/TIDAL hängt manchmal, Session-Timeout) */
+/* wait at most ms milliseconds for an answer (Volumio/TIDAL sometimes hangs, session timeout) */
 function withTimeout(p, ms) {
   return new Promise(function(resolve, reject){
     var t = setTimeout(function(){ reject(new Error('timeout')); }, ms);
@@ -271,16 +271,16 @@ function withTimeout(p, ms) {
   });
 }
 
-/* Würfel (Zufallsreihe beim Entdecken, Zufallsmix neben „Alle abspielen“) */
+/* dice (random row in Discover, random mix next to "Play all") */
 var DICE_SVG = '<svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2.5 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.5 15a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>';
 
 function artUrl(a) {
   if (!a) return '';
-  return (a.indexOf('http') === 0 || a.indexOf('data:') === 0) ? a : (location.origin + a);   /* data: großes Eingangs-Icon (poll.js) */
+  return (a.indexOf('http') === 0 || a.indexOf('data:') === 0) ? a : (location.origin + a);   /* data: large input icon (poll.js) */
 }
 
 function askVolumio(payload) {
-  return withTimeout(fetch('/api/v1/pluginEndpoint', {          /* Volumio 4 ohne Abo antwortet teils gar nicht */
+  return withTimeout(fetch('/api/v1/pluginEndpoint', {          /* Volumio 4 without subscription sometimes does not answer at all */
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({endpoint:'metavolumio', data:payload})
   }), 6000).then(function(r){ return r.json(); })
@@ -293,12 +293,12 @@ function askVolumio(payload) {
     }).catch(function(){ return null; });
 }
 
-function askOwn(payload) {                     /* Texte selbst holen (infotext.js), in der Sprache LANG */
+function askOwn(payload) {                     /* fetch texts ourselves (infotext.js), in language LANG */
   return withTimeout(lastfmAccess().then(function(lf){ return infoFallback(lf.fetch, lf.key, payload.mode, payload.artist, payload.album, LANG); }), 10000)
     .catch(function(){ return null; });
 }
 
-/* Text zum einzelnen Titel (infotext.js); Ergebnis je Titel gemerkt, auch "nichts gefunden" (localStorage) */
+/* text for the single track (infotext.js); result cached per track, including "nothing found" (localStorage) */
 var TRACKINFO_MAX = 400;
 function trackInfoCache() {
   try { return JSON.parse(localStorage.getItem('trackInfo') || '{}'); } catch (e) { return {}; }
@@ -310,22 +310,22 @@ function askTrack(artist, title) {
   return withTimeout(lastfmAccess().then(function(lf){ return infoTrack(lf.fetch, lf.key, artist, title, LANG); }), 15000).then(function(res){
     c = trackInfoCache();
     c[k] = res ? res.value : 0;
-    var keys = Object.keys(c);                                 /* älteste zuerst weg (Einfügereihenfolge) */
+    var keys = Object.keys(c);                                 /* drop oldest first (insertion order) */
     keys.slice(0, Math.max(0, keys.length - TRACKINFO_MAX)).forEach(function(x){ delete c[x]; });
-    /* Speicher voll: mit weniger Einträgen erneut, sonst bliebe der Stand für immer eingefroren */
+    /* storage full: retry with fewer entries, otherwise the state would stay frozen forever */
     for (var keep = keys.length; keep > 0; keep = Math.floor(keep / 2)) {
       try { localStorage.setItem('trackInfo', JSON.stringify(c)); break; }
       catch (e) { Object.keys(c).slice(0, Math.ceil(keep / 2)).forEach(function(x){ delete c[x]; }); }
     }
     return res;
-  }, function(){ return null; });                              /* Zeitüberschreitung: nicht merken, nächstes Mal neu */
+  }, function(){ return null; });                              /* timeout: do not cache, retry next time */
 }
 
 function ask(payload) {
   var own = /^story/.test(payload.mode) && typeof infoFallback === 'function';
-  if (own && volumioLang && volumioLang !== LANG)      /* Volumio liefert eine andere Sprache: zuerst selbst holen */
+  if (own && volumioLang && volumioLang !== LANG)      /* Volumio delivers another language: fetch ourselves first */
     return askOwn(payload).then(function(res){ return res || askVolumio(payload); });
-  return askVolumio(payload).then(function(res){       /* nichts von Volumio (Volumio 4 ohne Abo): selbst holen */
+  return askVolumio(payload).then(function(res){       /* nothing from Volumio (Volumio 4 without subscription): fetch ourselves */
     return (res || !own) ? res : askOwn(payload);
   });
 }
@@ -350,7 +350,7 @@ function askDiscography(artist) {
 function loadSimilarArtists(artist) {
   if (similarCache[artist]) return Promise.resolve(similarCache[artist]);
   return lastfmAccess().then(function(lf){
-    if (!lf.key) return null;                    /* ohne Schlüssel keine ähnlichen Künstler */
+    if (!lf.key) return null;                    /* no similar artists without a key */
     return lf.fetch(LFM_API + '?method=artist.getsimilar&artist=' + encodeURIComponent(artist) +
                     '&api_key=' + encodeURIComponent(lf.key) + '&format=json&limit=15').then(function(r){ return r.json(); });
   })

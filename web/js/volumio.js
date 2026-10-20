@@ -1,14 +1,14 @@
-/* Zugang zur originalen Volumio-Oberfläche (Menü oben rechts, Eintrag "Volumio-Oberfläche")
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html.
-   Die Seiten öffnen im Overlay in einem Rahmen (iframe), die App bleibt darunter erhalten.
-   Seiten die xplorio.html selbst übernommen hat, können hier einfach aus der Liste entfernt werden. */
+/* Access to the original Volumio UI (menu at the top right, entry "Volumio UI")
+   Classic script, shared global scope; load order see xplorio.html.
+   The pages open in the overlay in a frame (iframe), the app stays intact underneath.
+   Pages that xplorio.html has taken over itself can simply be removed from the list here. */
 
 var VOLUMIO_PAGES = [
   { label: T('volumio.page.browse'),   path: '/browse' },
   { label: T('volumio.page.queue'),    path: '/queue' },
   { label: T('volumio.page.settings'), path: '/settings' },
   { label: T('volumio.page.plugins'),  path: '/plugin-manager' },
-  { label: T('volumio.page.system'),   path: '/dev' }              /* Entwicklerseite: SSH, Protokolle, Neustart */
+  { label: T('volumio.page.system'),   path: '/dev' }              /* developer page: SSH, logs, restart */
 
 ];
 
@@ -49,7 +49,7 @@ function showVolumioPage(i) {
   openVolumioTab.style.display = '';
 }
 
-/* beim Schließen den Rahmen entfernen (spart Arbeit auf dem Player und im Browser) */
+/* remove the frame on close (saves work on the player and in the browser) */
 function closeVolumioFrame() {
   var f = document.getElementById('volumioFrame');
   if (f) f.parentNode.removeChild(f);
@@ -59,7 +59,7 @@ function closeVolumioFrame() {
   Array.prototype.forEach.call(volumioTabBar.children, function(el){ el.className = 'qTab'; });
 }
 
-function openVolumio() {                       /* aus dem Menü (menu.js) */
+function openVolumio() {                       /* from the menu (menu.js) */
   closeAllOverlays();
   overlayVolumio.classList.add('on');
 }

@@ -1,4 +1,4 @@
-/* Alben nach Stimmung, Energie und Stil (tags/moodalbums.js) */
+/* albums by mood, energy and style (tags/moodalbums.js) */
 var assert = require('assert');
 var ma = require('../tags/moodalbums.js');
 var n = 0;
@@ -13,43 +13,43 @@ var albumList = [{dir: 'USB/A/Ruhig', al: 'Ruhig', ar: 'Alpha', y: 1999}, {dir: 
 var sums = ma.summarize(idx);
 function names(q) { return ma.list(sums, albumList, q).map(function(a){ return a.al; }); }
 
-t('Stimmung: überwiegend (mindestens die Hälfte der eingeordneten Titel), Einzeltitel-Alben nicht', function(){
+t('mood: mostly (at least half of the classified tracks), single-track albums not', function(){
   assert.deepStrictEqual(names({moods: ['relaxed']}), ['Ruhig']);
   assert.deepStrictEqual(names({moods: ['dark']}), []);
   assert.deepStrictEqual(names({moods: ['intense', 'epic']}), ['Laut']);
 });
 
-t('Stil: ein Knopf mit mehreren verwandten Stilen zählt jeden Titel einmal', function(){
+t('style: one button with several related styles counts each track once', function(){
   assert.deepStrictEqual(names({styles: ['house', 'techno']}), ['Laut']);
   assert.deepStrictEqual(names({styles: ['house']}), []);
   assert.deepStrictEqual(names({styles: ['ambient', 'downtempo']}), ['Ruhig']);
 });
 
-t('Energie: gerundeter Mittelwert der Titel mit Energie', function(){
+t('energy: rounded mean of the tracks with energy', function(){
   assert.deepStrictEqual(names({emin: 1, emax: 2}), ['Ruhig']);
   assert.deepStrictEqual(names({emin: 4, emax: 5}), ['Laut']);
   assert.deepStrictEqual(names({emin: 3, emax: 3}), []);
   assert.deepStrictEqual(ma.list(sums, albumList, {emin: 1, emax: 2})[0], {dir: 'USB/A/Ruhig', al: 'Ruhig', ar: 'Alpha', y: 1999});
 });
 
-t('Profil eines Künstlers: häufige Stimmungen und Stile, mittlere Energie, Jahrzehnte seiner Alben', function(){
+t('artist profile: common moods and styles, mean energy, decades of their albums', function(){
   function a(ar, mood, energy, style) { return {it: {ar: ar, f: 'x'}, r: {mood: mood, energy: energy, style: style}}; }
   var ix = [a('Alpha', ['relaxed', 'dreamy'], 2, ['ambient']), a('Alpha', ['relaxed'], 1, ['ambient', 'downtempo']),
             a('Alpha', ['relaxed'], 2, ['ambient']), a('Alpha', ['dark'], 3, []), a('alpha', ['relaxed'], null, ['ambient']),
             a('Beta', ['intense'], 5, ['house'])];
-  for (var i = 0; i < 6; i++) ix.push(a('Alpha', [], null, []));          /* Titel ohne Stimmung zählen mit */
+  for (var i = 0; i < 6; i++) ix.push(a('Alpha', [], null, []));          /* tracks without mood count too */
   var al = albumList.concat([{dir: 'USB/A/Neu', al: 'Neu', ar: 'Alpha', y: 2004}, {dir: 'USB/A/Alt', al: 'Alt', ar: 'alpha', y: 1971}]);
   var norm = function(s){ return String(s).toLowerCase(); };
   var p = ma.artistProfile(ix, al, 'alpha', norm);
   assert.strictEqual(p.n, 11);
-  assert.deepStrictEqual(p.moods, ['relaxed']);                          /* dreamy, dark: zu selten (unter 20 %) */
+  assert.deepStrictEqual(p.moods, ['relaxed']);                          /* dreamy, dark: too rare (below 20 %) */
   assert.deepStrictEqual(p.styles, ['ambient']);
   assert.strictEqual(p.energy, 2);
   assert.deepStrictEqual(p.decades, [1970, 1990, 2000]);
   assert.deepStrictEqual(ma.artistProfile(ix, al, 'gamma', norm), {n: 0, moods: [], styles: [], energy: 0, decades: []});
 });
 
-t('Entdecken zum Jahrzehnt: Künstler mit Alben darin, häufige Stimmungen und Stile, Nachbar-Jahrzehnte', function(){
+t('discover for a decade: artists with albums in it, common moods and styles, neighboring decades', function(){
   var al = [{dir: 'USB/A/Ruhig', al: 'Ruhig', ar: 'Alpha', y: 1999}, {dir: 'USB/B/Laut', al: 'Laut', ar: 'Beta', y: 1991},
             {dir: 'USB/C/Single', al: 'Single', ar: 'Gamma', y: 2003}, {dir: 'USB/A/Zwei', al: 'Zwei', ar: 'Alpha', y: 1995}];
   var p = ma.decadeProfile(idx, al, 1990, require('../tags/albums.js').albumDir);
@@ -61,7 +61,7 @@ t('Entdecken zum Jahrzehnt: Künstler mit Alben darin, häufige Stimmungen und S
   assert.deepStrictEqual(ma.decadeProfile(idx, al, 2000, function(f){ return f.replace(/\/[^\/]*$/, ''); }).decades, [1990, 2000]);
 });
 
-t('Albumprofil: über Ordner oder Titel, ähnliche Alben je Künstler eins, weitere Alben des Künstlers', function(){
+t('album profile: via folder or title, one similar album per artist, more albums by the artist', function(){
   function a(ar, dir, i, mood, energy, style) { return {it: {ar: ar, f: 'mnt/' + dir + '/' + i + '.flac'}, r: {mood: mood, energy: energy, style: style}}; }
   var norm = function(s){ return String(s || '').toLowerCase().trim(); };
   var ix = [a('Alpha', 'M/A1', 1, ['relaxed'], 2, ['ambient']), a('Alpha', 'M/A1', 2, ['relaxed', 'dreamy'], 2, ['ambient']),
@@ -76,10 +76,10 @@ t('Albumprofil: über Ordner oder Titel, ähnliche Alben je Künstler eins, weit
   assert.deepStrictEqual(p.moods, ['relaxed', 'dreamy']);
   assert.deepStrictEqual(p.styles, ['ambient']);
   assert.strictEqual(p.energy, 2); assert.strictEqual(p.year, 1994); assert.strictEqual(p.genre, 'Ambient');
-  assert.deepStrictEqual(p.similar.map(function(x){ return x.al; }), ['Dunst']);          /* Beta nur einmal (Dunst passt besser), Gamma passt nicht, Alpha nie */
+  assert.deepStrictEqual(p.similar.map(function(x){ return x.al; }), ['Dunst']);          /* Beta only once (Dunst fits better), Gamma doesn't fit, Alpha never */
   assert.deepStrictEqual(p.others.map(function(x){ return x.al; }), ['Laut']);
-  var bySearch = ma.albumProfile(ix, al, {artist: 'alpha', album: 'Stille'}, norm);                   /* Titel ohne Zusatz, vom Dienst oder aus der Suche */
-  assert.strictEqual(bySearch.source, 'album'); assert.strictEqual(bySearch.dir, 'M/A1');          /* Ordner für den Würfel der ähnlichen Alben */
+  var bySearch = ma.albumProfile(ix, al, {artist: 'alpha', album: 'Stille'}, norm);                   /* title without addition, from the streaming service or the search */
+  assert.strictEqual(bySearch.source, 'album'); assert.strictEqual(bySearch.dir, 'M/A1');          /* folder for the dice of the similar albums */
   var q = ma.albumProfile(ix, al, {artist: 'Gamma', album: 'Nur beim Dienst'}, norm);
   assert.strictEqual(q.source, 'artist'); assert.strictEqual(q.found, false); assert.strictEqual(q.dir, undefined);
   assert.deepStrictEqual(q.similar.map(function(x){ return x.al; }), ['Laut']);
@@ -88,11 +88,11 @@ t('Albumprofil: über Ordner oder Titel, ähnliche Alben je Künstler eins, weit
   assert.strictEqual(none.source, null); assert.deepStrictEqual(none.similar, []); assert.deepStrictEqual(none.others, []);
 });
 
-t('Würfel auf Stimmungs-/Stil-Seiten: nur Titel, die selbst passen', function(){
+t('dice on mood/style pages: only tracks that match themselves', function(){
   assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {moods: ['relaxed']})).sort(),
     ['USB/A/Ruhig/1.flac', 'USB/A/Ruhig/2.flac', 'USB/B/Laut/3.flac', 'USB/C/Single/1.flac']);
   assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {styles: ['ambient'], emin: 2, emax: 2})).sort(), ['USB/A/Ruhig/1.flac', 'USB/C/Single/1.flac']);
-  assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {emin: 4, emax: 5})).sort(), ['USB/B/Laut/1.flac', 'USB/B/Laut/2.flac']);   /* ohne Energie nicht dabei */
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {emin: 4, emax: 5})).sort(), ['USB/B/Laut/1.flac', 'USB/B/Laut/2.flac']);   /* without energy not included */
 });
 
-console.log(n + ' Prüfungen');
+console.log(n + ' checks');

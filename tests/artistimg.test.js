@@ -1,4 +1,4 @@
-/* Künstlerfotos: Deezer (nachgebaut), passender Name, Platzhalter, Speicher auf dem Player, Route /artistimage */
+/* artist photos: Deezer (faked), matching name, placeholder, storage on the player, route /artistimage */
 var assert = require('assert'), http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), url = require('url');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -34,16 +34,16 @@ fake.listen(0, function(){
     }
     var both = 0, bodies = [];
     function after() {
-      t('gleicher Name (ohne "The", Groß-/Kleinschreibung), meiste Fans; zwei gleichzeitige Anfragen = eine Suche', function(){
+      t('same name (ignoring "The", case), most fans; two concurrent requests = one search', function(){
         assert.ok(bodies.every(function(b){ return b.equals(JPG); }));
         assert.strictEqual(searches.length, 1);
         assert.ok(fs.readdirSync(path.join(dir, 'artists')).some(function(f){ return /\.jpg$/.test(f); }));
       });
       get('the jam', function(r3){
-        t('beim zweiten Mal vom Player, ohne Deezer', function(){ assert.strictEqual(r3.statusCode, 200); assert.strictEqual(searches.length, 1); });
+        t('second time from the player, without Deezer', function(){ assert.strictEqual(r3.statusCode, 200); assert.strictEqual(searches.length, 1); });
         get('Niemand', function(r4){
           get('Niemand', function(r5){
-            t('Platzhalterbild von Deezer = kein Foto (404), wird gemerkt', function(){
+            t('Deezer placeholder image = no photo (404), remembered', function(){
               assert.strictEqual(r4.statusCode, 404); assert.strictEqual(r5.statusCode, 404);
               assert.strictEqual(searches.filter(function(q){ return q === 'Niemand'; }).length, 1);
             });
@@ -51,11 +51,11 @@ fake.listen(0, function(){
             get('Spliff', function(r6){
               down = false;
               get('Spliff', function(r7){
-                t('Deezer-Fehler wird nicht gemerkt: nächster Versuch fragt erneut', function(){
+                t('Deezer error is not remembered: next attempt asks again', function(){
                   assert.strictEqual(r6.statusCode, 404); assert.strictEqual(r7.statusCode, 404);
                   assert.strictEqual(searches.filter(function(q){ return q === 'Spliff'; }).length, 2);
                 });
-                console.log(n + ' Prüfungen');
+                console.log(n + ' checks');
                 svc.close(); fake.close();
               });
             });

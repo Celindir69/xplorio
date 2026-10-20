@@ -1,28 +1,28 @@
-/* Passt zusammen: Mixe aus 2–3 Künstlern der eigenen Sammlung, die musikalisch gut zusammenpassen.
-   Anker ist ein Künstler, den man oft hört oder mit Herz markiert hat; dazu 1–2 Künstler mit ähnlichem Klangprofil
-   (Genre, Stimmungen, Stile, Energie aus den Stimmungs-Tags, wie bei den Perlen in gems.js), Last.fm-„ähnliche Künstler“
-   zählen extra, seltener Gehörte bekommen einen kleinen Vorsprung. Ein Mix: etwa 25 Titel, rund 40 % Lieblingstitel
-   (oft gehört, Favorit, Album mit 4–5 Sternen) und 60 % selten oder nie gehörte; „mag ich nicht“ und Alben mit
-   1–2 Sternen bleiben draußen. Die Künstler wechseln sich ab, Energie und Tempo gehen sanft ineinander über.
-   Arbeitet auf dem vorbereiteten Stand von gems.prepare. Node 8, nur ES5. */
+/* Goes together: mixes of 2–3 artists from one's own collection that fit well together musically.
+   The anchor is an artist one listens to often or has marked with a heart; plus 1–2 artists with a similar sound profile
+   (genre, moods, styles, energy from the mood tags, as for the gems in gems.js); Last.fm "similar artists"
+   count extra, less often heard ones get a small head start. One mix: about 25 tracks, around 40 % favorite tracks
+   (often heard, favorite, album with 4–5 stars) and 60 % rarely or never heard; "don't like" and albums with
+   1–2 stars stay out. The artists alternate, energy and tempo blend smoothly.
+   Works on the prepared state from gems.prepare. Node 8, ES5 only. */
 var plays = require('./plays.js');
 
-var MIXES = 6;                   /* Mixe je Tag */
-var MIN_TRACKS = 6;              /* so viele brauchbare Titel braucht ein Künstler */
-var MIN_SIM = 0.3;               /* Klangähnlichkeit (Kosinus) für ein Paar mindestens … */
-var TOP_SHARE = 0.15;            /* … und unter den ähnlichsten 15 % aller Paare der Sammlung */
-var SAMPLE = 4000;               /* so viele Paare reichen, um diese Schwelle zu schätzen */
-var LFM_BONUS = 0.15;            /* Last.fm nennt den Künstler als ähnlich */
-var RARE_BONUS = 0.1;            /* Partner wird deutlich seltener gehört als der Anker */
-var THIRD_CHANCE = 0.6;          /* so oft kommt ein dritter Künstler dazu, wenn einer passt */
-var SIZE = 25;                   /* Titel je Mix */
-var FAV_SHARE = 0.4;             /* Anteil Lieblingstitel */
+var MIXES = 6;                   /* mixes per day */
+var MIN_TRACKS = 6;              /* an artist needs this many usable tracks */
+var MIN_SIM = 0.3;               /* minimum sound similarity (cosine) for a pair … */
+var TOP_SHARE = 0.15;            /* … and among the most similar 15 % of all pairs in the collection */
+var SAMPLE = 4000;               /* this many pairs are enough to estimate that threshold */
+var LFM_BONUS = 0.15;            /* Last.fm lists the artist as similar */
+var RARE_BONUS = 0.1;            /* partner is heard much less often than the anchor */
+var THIRD_CHANCE = 0.6;          /* how often a third artist is added if one fits */
+var SIZE = 25;                   /* tracks per mix */
+var FAV_SHARE = 0.4;             /* share of favorite tracks */
 var VARIOUS = plays.norm('Verschiedene');
 
 function nk(s) { return plays.norm(s); }
 function cos(a, b) { var s = 0; for (var k in a) if (b[k]) s += a[k] * b[k]; return s; }
 
-/* Zufall aus einem Text (gleicher Tag, gleiche Auswahl) */
+/* randomness from a string (same day, same selection) */
 function seeded(str) {
   var h = 2166136261;
   for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 16777619) >>> 0; }
@@ -35,14 +35,14 @@ function seeded(str) {
   };
 }
 
-/* Künstler mit genug brauchbaren Titeln: {ak: {ak, ar, v, tracks, plays, liked}} (je Stand von g nur einmal) */
+/* artists with enough usable tracks: {ak: {ak, ar, v, tracks, plays, liked}} (only once per state of g) */
 function pool(g) {
   if (g._together) return g._together;
   var by = {}, rated = (g.rated && g.rated.albums) || {};
   g.tracks.forEach(function(t){
     if (t.bad || !t.ak || t.ak === VARIOUS) return;
     var st = rated[t.dir] && rated[t.dir].v;
-    if (st && st > 0 && st <= 2) return;                          /* Alben mit 1–2 Sternen */
+    if (st && st > 0 && st <= 2) return;                          /* albums with 1–2 stars */
     var a = by[t.ak] || (by[t.ak] = {ak: t.ak, ar: t.p[0], tracks: [], plays: 0});
     a.tracks.push(t);
     a.plays += t.n;
@@ -60,8 +60,8 @@ function pool(g) {
   return out;
 }
 
-/* Schwelle für „passt“: Genres sind je Sammlung verschieden fein, darum relativ zur eigenen Sammlung
-   (die ähnlichsten TOP_SHARE aller Paare), nie unter MIN_SIM. Bei großen Sammlungen aus einer Stichprobe. */
+/* threshold for "fits": genres differ in granularity per collection, so relative to the own collection
+   (the most similar TOP_SHARE of all pairs), never below MIN_SIM. For large collections from a sample. */
 function threshold(p) {
   var list = Object.keys(p).map(function(ak){ return p[ak]; }), n = list.length, sims = [];
   if (n < 2) return MIN_SIM;
@@ -79,10 +79,10 @@ function threshold(p) {
   return Math.max(MIN_SIM, sims[Math.min(sims.length - 1, Math.floor(sims.length * TOP_SHARE))]);
 }
 
-/* Gewicht als Anker: Herz bzw. gute Bewertung und wie oft gehört; 0 = nie gehört und nicht gemocht */
+/* weight as anchor: heart or good rating and how often heard; 0 = never heard and not liked */
 function anchorWeight(a) { return (a.liked ? 3 : 0) + Math.log(1 + a.plays); }
 
-/* mögliche Anker, beste zuerst (für die Last.fm-Abfrage vorab) */
+/* possible anchors, best first (for the Last.fm query beforehand) */
 function anchors(g, k) {
   var p = pool(g);
   return Object.keys(p).map(function(ak){ return p[ak]; }).filter(function(a){ return anchorWeight(a) > 0; })
@@ -90,13 +90,13 @@ function anchors(g, k) {
     .map(function(a){ return {ak: a.ak, ar: a.ar}; });
 }
 
-/* gewichtete Reihenfolge ohne Zurücklegen */
+/* weighted order without replacement */
 function weightedOrder(list, w, rnd) {
   return list.map(function(x){ return {x: x, k: Math.pow(rnd() || 1e-9, 1 / Math.max(w(x), 1e-6))}; })
     .sort(function(a, b){ return b.k - a.k; }).map(function(o){ return o.x; });
 }
 
-/* Grund: was die Künstler gemeinsam haben (Stimmung, Stil, Genre; jeweils das schwächste Gewicht zählt) */
+/* reason: what the artists have in common (mood, style, genre; the weakest weight counts) */
 function why(g, members, lfm) {
   var best = {m: ['', 0], s: ['', 0], g: ['', 0]};
   Object.keys(members[0].v).forEach(function(k){
@@ -108,14 +108,14 @@ function why(g, members, lfm) {
   return {mood: best.m[0], style: best.s[0], ge: (g.geName && g.geName[ge]) || ge, lfm: !!lfm};
 }
 
-/* Mixe des Tages. opts: {rnd, similar: {ak: {ak: true}} (Last.fm), avoid: {Schlüssel: true} (kürzlich gezeigt), n} */
+/* mixes of the day. opts: {rnd, similar: {ak: {ak: true}} (Last.fm), avoid: {key: true} (recently shown), n} */
 function build(g, opts) {
   opts = opts || {};
   var rnd = opts.rnd || Math.random, sim = opts.similar || {}, avoid = opts.avoid || {}, n = opts.n || MIXES;
   var p = pool(g), keys = Object.keys(p), min = g._togetherMin;
   var cand = keys.map(function(ak){ return p[ak]; });
   var anc = cand.filter(function(a){ return anchorWeight(a) > 0; });
-  if (!anc.length) anc = cand;                                    /* noch kein Verlauf: jeder kann Anker sein */
+  if (!anc.length) anc = cand;                                    /* no history yet: anyone can be the anchor */
   anc = weightedOrder(anc, function(a){ return anchorWeight(a) || 1; }, rnd);
   var used = {}, out = [];
   function lf(a, b) { return !!((sim[a.ak] && sim[a.ak][b.ak]) || (sim[b.ak] && sim[b.ak][a.ak])); }
@@ -150,19 +150,19 @@ function build(g, opts) {
   return out;
 }
 
-/* Lieblingstitel: oft gehört, Volumio-Favorit oder Album mit 4–5 Sternen */
+/* favorite track: often heard, Volumio favorite or album with 4–5 stars */
 function favScore(g, t) {
   var st = g.rated && g.rated.albums && g.rated.albums[t.dir] && g.rated.albums[t.dir].v;
   return t.n + (g.favs && g.favs[t.f] ? 3 : 0) + (st >= 4 ? st - 2 : 0);
 }
 
-/* Reihenfolge: Künstler wechseln sich ab, Energie und Tempo ändern sich sanft; ruhiger Anfang */
+/* order: artists alternate, energy and tempo change smoothly; calm start */
 function order(list, rnd) {
   function e(t) { return t.r && typeof t.r.energy === 'number' ? t.r.energy : 3; }
   function bpm(t) { return t.r && t.r.bpm ? t.r.bpm : null; }
   function dist(a, b) {
     var d = Math.abs(e(a) - e(b)), x = bpm(a), y = bpm(b);
-    if (x && y) d += Math.min(Math.abs(x - y), Math.abs(x - 2 * y), Math.abs(2 * x - y)) / 15;   /* halbes/doppeltes Tempo passt auch */
+    if (x && y) d += Math.min(Math.abs(x - y), Math.abs(x - 2 * y), Math.abs(2 * x - y)) / 15;   /* half/double tempo fits too */
     return d;
   }
   var rest = list.slice(), out = [];
@@ -179,7 +179,7 @@ function order(list, rnd) {
   return out;
 }
 
-/* Titel eines Mixes. names: Künstlernamen; opts: {rnd, size, bad: {Datei: true} („mag ich nicht“, zusätzlich)} */
+/* tracks of a mix. names: artist names; opts: {rnd, size, bad: {file: true} ("don't like", additionally)} */
 function mix(g, names, opts) {
   opts = opts || {};
   var rnd = opts.rnd || Math.random, size = opts.size || SIZE, bad = opts.bad || {}, p = pool(g);
@@ -189,7 +189,7 @@ function mix(g, names, opts) {
   var picked = [], seen = {};
   function take(t) {
     var k = t.ak + '|' + nk(t.p[1]);
-    if (seen[k] || bad[t.f]) return false;                      /* jeder Titel nur einmal (auch in anderer Fassung) */
+    if (seen[k] || bad[t.f]) return false;                      /* each track only once (also in another version) */
     seen[k] = true; picked.push(t); return true;
   }
   members.forEach(function(a, i){
@@ -199,13 +199,13 @@ function mix(g, names, opts) {
       .sort(function(x, y){ return favScore(g, y) - favScore(g, x); });
     var rare = a.tracks.filter(function(t){ return favScore(g, t) < 2; });
     var favPool = weightedOrder(favs.slice(0, Math.max(favQ * 2, 4)), function(t){ return favScore(g, t); }, rnd);
-    rare = weightedOrder(rare, function(t){ return t.n ? 0.6 : 1; }, rnd);             /* nie Gehörtes etwas eher */
+    rare = weightedOrder(rare, function(t){ return t.n ? 0.6 : 1; }, rnd);             /* never heard slightly preferred */
     var got = 0, fav = 0;
     favPool.forEach(function(t){ if (fav < favQ && take(t)) { fav++; got++; t._fav = true; } });
     rare.forEach(function(t){ if (got < quota && take(t)) { got++; t._fav = false; } });
-    favs.forEach(function(t){ if (got < quota && take(t)) { got++; t._fav = true; } });   /* zu wenig Seltenes: mehr Lieblinge */
+    favs.forEach(function(t){ if (got < quota && take(t)) { got++; t._fav = true; } });   /* too few rare ones: more favorites */
   });
-  /* hat ein Künstler zu wenige Titel, füllen die anderen auf */
+  /* if an artist has too few tracks, the others fill up */
   members.forEach(function(a){
     a.tracks.forEach(function(t){ if (picked.length < size && take(t)) t._fav = favScore(g, t) >= 2; });
   });

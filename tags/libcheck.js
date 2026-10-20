@@ -1,6 +1,6 @@
-/* Bibliotheks-Check: Problemfälle der Sammlung finden (nur lesen, schreibt nichts in die Musikdateien).
-   Quelle ist die MPD-Datenbank (Ordner für Ordner per "lsinfo", damit keine Antwort zu groß wird),
-   dazu ein Blick in die Ordner nach Cover-Bildern. Node 8, nur ES5. */
+/* Library check: find problem cases in the collection (read only, writes nothing to the music files).
+   The source is the MPD database (folder by folder via "lsinfo", so no response gets too large),
+   plus a look into the folders for cover images. Node 8, ES5 only. */
 var net  = require('net');
 var fs   = require('fs');
 var path = require('path');
@@ -8,12 +8,12 @@ var genres = require('./genres.js');
 
 var IMG_RE = /\.(jpe?g|png)$/i;
 
-/* ---------- MPD lesen ---------- */
+/* ---------- read MPD ---------- */
 
 function mpdQuote(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
 
-/* Alle Titel unterhalb von roots: cb(err, songs, dirCount); songs: [{file, artist, albumartist, album, title, track, date, genre}].
-   onProgress(erledigte Ordner, bekannte Ordner) */
+/* all tracks below roots: cb(err, songs, dirCount); songs: [{file, artist, albumartist, album, title, track, date, genre}].
+   onProgress(folders done, folders known) */
 function mpdWalk(opts, cb, onProgress) {
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
   var buf = '', greeted = false, cur = null, queue = (opts.roots || ['']).slice(), done = 0, songs = [], finished = false;
@@ -22,10 +22,10 @@ function mpdWalk(opts, cb, onProgress) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
-    try { sock.end('close\n'); } catch (e) { /* schon zu */ }
+    try { sock.end('close\n'); } catch (e) { /* already closed */ }
     cb(err, songs, done);
   }
-  var timer = setTimeout(function(){ finish(new Error('MPD antwortet nicht')); sock.destroy(); }, opts.timeout || 600000);
+  var timer = setTimeout(function(){ finish(new Error('MPD not responding')); sock.destroy(); }, opts.timeout || 600000);
   function next() {
     if (!queue.length) return finish(null);
     cur = queue.shift();
@@ -34,7 +34,7 @@ function mpdWalk(opts, cb, onProgress) {
   }
   function line(l) {
     if (!greeted) {
-      if (l.indexOf('OK MPD') !== 0) return finish(new Error('kein MPD: ' + l));
+      if (l.indexOf('OK MPD') !== 0) return finish(new Error('not MPD: ' + l));
       greeted = true;
       return next();
     }
@@ -43,7 +43,7 @@ function mpdWalk(opts, cb, onProgress) {
       if (onProgress) onProgress(done, done + queue.length);
       return next();
     }
-    if (l.indexOf('ACK') === 0) {                        /* Ordner nicht lesbar: überspringen */
+    if (l.indexOf('ACK') === 0) {                        /* folder not readable: skip */
       done++;
       return next();
     }
@@ -53,7 +53,7 @@ function mpdWalk(opts, cb, onProgress) {
     if (k === 'directory') { queue.push(v); song = null; return; }
     if (k === 'file') { song = {file: v, artist: '', albumartist: '', album: '', title: '', track: '', date: '', genre: '', time: '', 'last-modified': ''}; songs.push(song); return; }
     if (k === 'playlist') { song = null; return; }
-    if (song && song.hasOwnProperty(k) && !song[k]) song[k] = v;          /* bei Mehrfachwerten zählt der erste */
+    if (song && song.hasOwnProperty(k) && !song[k]) song[k] = v;          /* with multiple values the first counts */
   }
   sock.setEncoding('utf8');
   sock.on('data', function(d){
@@ -62,10 +62,10 @@ function mpdWalk(opts, cb, onProgress) {
     while ((n = buf.indexOf('\n')) >= 0) { var l = buf.slice(0, n); buf = buf.slice(n + 1); if (!finished) line(l); }
   });
   sock.on('error', function(e){ finish(e); });
-  sock.on('close', function(){ if (!finished) finish(queue.length || !greeted ? new Error('MPD-Verbindung getrennt') : null); });
+  sock.on('close', function(){ if (!finished) finish(queue.length || !greeted ? new Error('MPD connection closed') : null); });
 }
 
-/* ein einzelner MPD-Befehl (z. B. "stats") -> cb(err, {schlüssel: wert}) */
+/* a single MPD command (e.g. "stats") -> cb(err, {key: value}) */
 function mpdCommand(opts, cmd, cb) {
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
   var buf = '', greeted = false, out = {}, finished = false;
@@ -73,17 +73,17 @@ function mpdCommand(opts, cmd, cb) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
-    try { sock.end('close\n'); } catch (e) { /* schon zu */ }
+    try { sock.end('close\n'); } catch (e) { /* already closed */ }
     cb(err, out);
   }
-  var timer = setTimeout(function(){ finish(new Error('MPD antwortet nicht')); sock.destroy(); }, opts.timeout || 10000);
+  var timer = setTimeout(function(){ finish(new Error('MPD not responding')); sock.destroy(); }, opts.timeout || 10000);
   sock.setEncoding('utf8');
   sock.on('data', function(d){
     buf += d;
     var n;
     while ((n = buf.indexOf('\n')) >= 0) {
       var l = buf.slice(0, n); buf = buf.slice(n + 1);
-      if (!greeted) { greeted = true; if (l.indexOf('OK MPD') !== 0) return finish(new Error('kein MPD: ' + l)); sock.write(cmd + '\n'); continue; }
+      if (!greeted) { greeted = true; if (l.indexOf('OK MPD') !== 0) return finish(new Error('not MPD: ' + l)); sock.write(cmd + '\n'); continue; }
       if (l === 'OK') return finish(null);
       if (l.indexOf('ACK') === 0) return finish(new Error(l));
       var i = l.indexOf(': ');
@@ -91,12 +91,12 @@ function mpdCommand(opts, cmd, cb) {
     }
   });
   sock.on('error', function(e){ finish(e); });
-  sock.on('close', function(){ finish(new Error('MPD-Verbindung getrennt')); });
+  sock.on('close', function(){ finish(new Error('MPD connection closed')); });
 }
 
-/* ---------- Auswerten ---------- */
+/* ---------- evaluate ---------- */
 
-/* Schlüssel für Schreibweisen: ohne Akzente, Groß-/Kleinschreibung, "The " am Anfang, Satzzeichen; & = and */
+/* key for spellings: ignoring accents, case, leading "The ", punctuation; & = and */
 function artistKey(name) {
   var s = String(name || '').normalize ? String(name || '').normalize('NFKD') : String(name || '');
   s = s.replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -109,8 +109,8 @@ function uniq(list) { var o = {}, out = []; list.forEach(function(x){ if (!o.has
 function filesOf(list) { return list.map(function(s){ return {uri: s.file, title: s.title || path.basename(s.file)}; }); }
 function byName(a, b) { return a.name.localeCompare(b.name); }
 
-/* songs: wie mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> Eintrag der Audio-Analyse oder null (optional).
-   Ergebnis: Listen je Kategorie */
+/* songs: as from mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> audio analysis entry or null (optional).
+   Result: lists per category */
 function analyze(songs, hasCover, audioOf) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
@@ -137,7 +137,7 @@ function analyze(songs, hasCover, audioOf) {
     }
     var years = uniq(list.map(function(s){ return year(s.date); }));
     if (albums.length > 1 || years.length > 1 || (albums.length === 1 && list.some(function(s){ return !s.album; }))) {
-      res.mixed.push(item({albums: albums, years: years.map(function(y){ return y || '(ohne)'; })}));
+      res.mixed.push(item({albums: albums, years: years.map(function(y){ return y || '(none)'; })}));
     }
     var noTrack = list.filter(function(s){ return !/\d/.test(s.track); });
     if (noTrack.length) res.noTrack.push(item({missing: noTrack.length}));
@@ -147,7 +147,7 @@ function analyze(songs, hasCover, audioOf) {
   var gc = genres.check(forGenres);
   res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreStyles = gc.styles;
 
-  /* Schreibweisen: Interpret und Album-Interpret, gruppiert nach artistKey */
+  /* spellings: artist and album artist, grouped by artistKey */
   var groups = {};
   songs.forEach(function(s){
     uniq([s.artist, s.albumartist].filter(Boolean)).forEach(function(n){
@@ -167,8 +167,8 @@ function analyze(songs, hasCover, audioOf) {
   return res;
 }
 
-/* Ordner ohne Bilddatei (folder.jpg, cover.jpg, …); eingebettete Cover prüft der Aufrufer danach.
-   Liest asynchron, wenige Ordner gleichzeitig: Der Dienst bleibt währenddessen ansprechbar. cb(Liste in Song-Reihenfolge) */
+/* folders without an image file (folder.jpg, cover.jpg, …); the caller checks embedded covers afterwards.
+   Reads asynchronously, a few folders at a time: the service stays responsive meanwhile. cb(list in song order) */
 function dirsWithoutImage(songs, musicRoot, cb) {
   var seen = Object.create(null), dirs = [];
   songs.forEach(function(s){
@@ -180,7 +180,7 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   function next() {
     while (running < 4 && i < dirs.length) (function(k){
       running++; i++;
-      fs.readdir(path.join(musicRoot, dirs[k].dir), function(e, names){   /* Ordner fehlt: als ohne Bild zählen */
+      fs.readdir(path.join(musicRoot, dirs[k].dir), function(e, names){   /* folder missing: count as without image */
         if (!(names || []).some(function(n){ return IMG_RE.test(n); })) missing[k] = true;
         running--; left--;
         if (!left) return cb(dirs.filter(function(d, j){ return missing[j]; }));

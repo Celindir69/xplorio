@@ -1,5 +1,5 @@
-/* Overlays öffnen/schließen und Wiedergabe-Tasten
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Opening/closing overlays and playback buttons
+   Classic script, shared global scope; load order see xplorio.html. */
 /* ---------- Overlays ---------- */
 function closeAllOverlays() {
   overlayLyrics.classList.remove('on');
@@ -15,7 +15,7 @@ function closeAllOverlays() {
   if (ov) ov.classList.remove('on');
   var oc = document.getElementById('overlayCheck');
   if (oc) oc.classList.remove('on');
-  if (typeof checkRelease === 'function') checkRelease();      /* zurückgehaltene MPD-Scans jetzt (check.js) */
+  if (typeof checkRelease === 'function') checkRelease();      /* held-back MPD scans now (check.js) */
   var oh = document.getElementById('overlayHistory');
   if (oh) oh.classList.remove('on');
   var osy = document.getElementById('overlaySystem');
@@ -36,8 +36,8 @@ function toggleOverlay(overlay) {
   if (!isOpen) overlay.classList.add('on');
 }
 
-/* Tippen auf eine freie Stelle neben dem Overlay schließt es. Nicht bei Bedienelementen (die wechseln wie bisher
-   das Overlay), nicht im Tag-Editor (ungesicherte Änderungen) und nicht für die festen Felder der Bühnenansicht. */
+/* Tapping a free spot next to the overlay closes it. Not on controls (they switch the overlay as before),
+   not in the tag editor (unsaved changes) and not for the fixed panels of the stage view. */
 function overlayFreeTap(t) {
   var open = [].filter.call(document.querySelectorAll('.overlay.on'), function(o){
     return !(document.documentElement.classList.contains('stage') && (o.id === 'overlayInfo' || o.id === 'overlayLyrics'));
@@ -45,7 +45,7 @@ function overlayFreeTap(t) {
   if (!open.length || open.some(function(o){ return o.id === 'overlayTags'; })) return false;
   return !(t && t.closest && t.closest('.overlay, .topBtn, #meta, #seekWrap, #ctrl, #volWrap, #actions, #toast, button, a, input, iframe'));
 }
-var overlayDownFree = false;                       /* Druck und Loslassen beide frei: Ziehen aus dem Overlay heraus zählt nicht */
+var overlayDownFree = false;                       /* press and release both free: dragging out of the overlay does not count */
 document.addEventListener('pointerdown', function(e){ overlayDownFree = overlayFreeTap(e.target); }, true);
 document.addEventListener('click', function(e){
   if (overlayDownFree && document.documentElement.contains(e.target) && overlayFreeTap(e.target)) closeAllOverlays();
@@ -116,17 +116,17 @@ document.addEventListener('touchend', function(e){
   if (!swipeFromTop) return;
   var dy = e.changedTouches[0].clientY - swipeStartY;
   var dx = e.changedTouches[0].clientX - swipeStartX;
-  var land = window.matchMedia('(orientation:landscape)').matches;   /* Querformat: Seitenleiste, nach rechts wischen */
+  var land = window.matchMedia('(orientation:landscape)').matches;   /* landscape: sidebar, swipe right */
   if (!(land ? dx > 80 && dx > Math.abs(dy) * 1.5 : dy > 80)) return;
-  if (overlayTags.classList.contains('on')) return overlayTags.classList.remove('on');   /* wie das X: nur der Editor, die Seite darunter bleibt */
+  if (overlayTags.classList.contains('on')) return overlayTags.classList.remove('on');   /* like the X: only the editor, the page below stays */
   closeAllOverlays();
 }, {passive:true});
 
-/* ---------- Wiedergabe ---------- */
+/* ---------- Playback ---------- */
 function cmd(c) { fetch('/api/v1/commands/?cmd=' + c).catch(function(){}); }
 document.getElementById('cPrev').addEventListener('click', function(){ cmd('prev'); });
 document.getElementById('cPlay').addEventListener('click', function(){
-  if (queuedForInput) { queuedForInput = false; socket.emit('play', {value: 0}); return; }   /* am anderen Eingang gewählt (core.js) */
+  if (queuedForInput) { queuedForInput = false; socket.emit('play', {value: 0}); return; }   /* chosen while on another input (core.js) */
   cmd('toggle');
 });
 document.getElementById('cNext').addEventListener('click', function(){ cmd('next'); });
@@ -145,7 +145,7 @@ document.addEventListener('visibilitychange', function(){
   if (!document.hidden) { lastKey = ''; lastLyrKey = ''; poll(); }
 });
 
-/* kurze Meldung unten */
+/* short message at the bottom */
 var toastTimer = null;
 function showToast(text) {
   var el = document.getElementById('toast');
@@ -155,8 +155,8 @@ function showToast(text) {
   toastTimer = setTimeout(function(){ el.classList.remove('on'); }, 3500);
 }
 
-/* body.ovOn: ein Overlay ist offen; body.ovMain: eines außer Lyrics und Info (für die CSS-Regeln am Zahnrad;
-   ersetzt :has(), das Safari vor 15.4 nicht kennt) */
+/* body.ovOn: an overlay is open; body.ovMain: one other than lyrics and info (for the CSS rules on the gear;
+   replaces :has(), which Safari before 15.4 does not support) */
 (function(){
   var list = document.querySelectorAll('.overlay');
   function sync() {
@@ -176,7 +176,7 @@ function showToast(text) {
   sync();
 })();
 
-/* Esc (Desktop, iPad mit Tastatur): Tag-Editor schließen, in der Album-/Künstleransicht eine Stufe zurück, sonst alles zu */
+/* Esc (desktop, iPad with keyboard): close the tag editor, one level back in the album/artist view, else close all */
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape' && e.key !== 'Esc') return;
   if (overlayTags && overlayTags.classList.contains('on')) { overlayTags.classList.remove('on'); return; }

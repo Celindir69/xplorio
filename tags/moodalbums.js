@@ -1,14 +1,14 @@
-/* Alben nach Stimmung, Energie und Stil (Suchen & Entdecken): die eingeordneten Titel je Album zusammengefasst.
-   Ein Album gehört zu einer Stimmung bzw. einem Stil, wenn mindestens die Hälfte seiner eingeordneten Titel sie trägt
-   (bei mehreren Stilen eines Knopfs: einer davon); seine Energie ist der gerundete Mittelwert. Node 8, nur ES5. */
+/* Albums by mood, energy and style (Search & Discover): the classified tracks summarized per album.
+   An album belongs to a mood or style if at least half of its classified tracks carry it
+   (for several styles on one button: one of them); its energy is the rounded mean. Node 8, ES5 only. */
 var albums = require('./albums.js');
 
-var SHARE = 0.5;                 /* „überwiegend“ */
-var MIN_TRACKS = 2;              /* so viele eingeordnete Titel braucht ein Album mindestens */
+var SHARE = 0.5;                 /* "mostly" */
+var MIN_TRACKS = 2;              /* an album needs at least this many classified tracks */
 
 function rel(f) { return String(f || '').replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, ''); }
 
-/* idx: [{it: {f}, r: {mood, energy, style}}] (moodmix.index) -> {Ordner: {n, moods: [[…] je Titel], styles: [[…] je Titel], eSum, eN}} */
+/* idx: [{it: {f}, r: {mood, energy, style}}] (moodmix.index) -> {folder: {n, moods: [[…] per track], styles: [[…] per track], eSum, eN}} */
 function summarize(idx) {
   var by = {};
   idx.forEach(function(x){
@@ -22,14 +22,14 @@ function summarize(idx) {
   return by;
 }
 
-/* Anteil der Titel mit mindestens einer der Stimmungen bzw. einem der Stile */
+/* share of tracks with at least one of the moods or styles */
 function share(perTrack, keys, n) {
   var hit = 0;
   perTrack.forEach(function(list){ if (list.some(function(k){ return keys.indexOf(k) >= 0; })) hit++; });
   return hit / n;
 }
 
-/* Titel, die selbst zu q passen ({moods, styles, emin, emax} wie fit), als {Datei: true} (Würfel auf den Stimmungs-/Stil-Seiten) */
+/* tracks that themselves match q ({moods, styles, emin, emax} as in fit), as {file: true} (dice on the mood/style pages) */
 function tracksMatching(idx, q) {
   var out = {};
   idx.forEach(function(x){
@@ -43,7 +43,7 @@ function tracksMatching(idx, q) {
   return out;
 }
 
-/* q: {moods: [], styles: [], emin, emax} -> passt das Album? Gibt den Anteil (0..1) zurück, 0 = passt nicht */
+/* q: {moods: [], styles: [], emin, emax} -> does the album match? Returns the share (0..1), 0 = no match */
 function fit(s, q) {
   if (!s || s.n < MIN_TRACKS) return 0;
   var sh = 1;
@@ -57,7 +57,7 @@ function fit(s, q) {
   return sh;
 }
 
-/* passende Alben der Albenliste, nach Künstler und Album sortiert (wie die Genre-Seite) */
+/* matching albums of the album list, sorted by artist and album (like the genre page) */
 function list(sums, albumList, q) {
   function key(a) { return (a.ar === 'Verschiedene' ? '￿' : '') + a.ar.toLowerCase().replace(/^the\s+/, ''); }
   return albumList.filter(function(a){ return fit(sums[a.dir], q) > 0; })
@@ -65,9 +65,9 @@ function list(sums, albumList, q) {
     .sort(function(a, b){ return key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
-/* „Mehr entdecken“ auf der Künstlerseite: Stimmungen und Stile, die mindestens PROFILE_SHARE seiner eingeordneten Titel
-   tragen (die häufigsten zuerst, je höchstens PROFILE_MAX), mittlere Energie und die Jahrzehnte seiner Alben.
-   idx: moodmix.index; albumList: albums.json; key: Künstler normiert (plays.norm) -> {n, moods, styles, energy, decades} */
+/* "Discover more" on the artist page: moods and styles carried by at least PROFILE_SHARE of the artist's classified tracks
+   (most common first, at most PROFILE_MAX each), mean energy and the decades of their albums.
+   idx: moodmix.index; albumList: albums.json; key: normalized artist (plays.norm) -> {n, moods, styles, energy, decades} */
 var PROFILE_SHARE = 0.2, PROFILE_MAX = 5;
 function artistProfile(idx, albumList, key, norm) {
   var n = 0, moods = {}, styles = {}, eSum = 0, eN = 0, dec = {};
@@ -87,9 +87,9 @@ function artistProfile(idx, albumList, key, norm) {
           decades: Object.keys(dec).map(Number).sort(function(a, b){ return a - b; })};
 }
 
-/* Entdecken zu einem Jahrzehnt (Jahres- und Jahrzehnt-Seite): Künstler mit Alben darin (die mit den meisten zuerst),
-   häufige Stimmungen und Stile der Titel darin (Anteil mindestens PROFILE_SHARE), Nachbar-Jahrzehnte mit Alben.
-   idx: moodmix.index; albumList: albums.json; albumDir: Ordner eines Titels -> {n, artists, moods, styles, decades} */
+/* Discover for a decade (year and decade page): artists with albums in it (those with the most first),
+   common moods and styles of its tracks (share at least PROFILE_SHARE), neighboring decades with albums.
+   idx: moodmix.index; albumList: albums.json; albumDir: folder of a track -> {n, artists, moods, styles, decades} */
 var DECADE_ARTISTS = 24;
 function decadeProfile(idx, albumList, d, albumDir) {
   var inDec = {}, artists = {}, names = {}, has = {};
@@ -120,10 +120,10 @@ function decadeProfile(idx, albumList, d, albumDir) {
           decades: [d - 10, d, d + 10].filter(function(x){ return has[x]; })};
 }
 
-/* Entdecken auf der Albumseite. Das Album wird über seinen Ordner gesucht, sonst über Künstler und Titel (Zusätze in
-   Klammern zählen nicht; so passt auch ein Album vom Streamingdienst, das lokal liegt). Ohne lokales Album gilt das Profil
-   des Künstlers. Ähnliche Alben: gewichtete Überdeckung der Stimmungs- und Stil-Anteile und Nähe der Energie, je Künstler
-   höchstens eins, keins vom selben Künstler.
+/* Discover on the album page. The album is looked up by its folder, else by artist and title (bracketed additions
+   don't count; so a streaming album that also exists locally matches too). Without a local album the artist's profile
+   applies. Similar albums: weighted overlap of the mood and style shares and closeness of energy, at most one per
+   artist, none by the same artist.
    idx: moodmix.index; albumList: albums.json; q: {dir, artist, album}; norm: plays.norm
    -> {source: 'album'|'artist'|null, n, moods, styles, energy, year, genre, similar: [{dir, al, ar, y}], others: [...]} */
 var SIMILAR_MAX = 12, SIMILAR_MIN = 0.35;
@@ -137,7 +137,7 @@ function vectorOf(tracks) {
   });
   return {n: n, moods: moods, styles: styles, energy: eN ? eSum / eN : 0};
 }
-function overlap(a, b) {                       /* Summe der Minima / Summe der Maxima, 0..1 */
+function overlap(a, b) {                       /* sum of minima / sum of maxima, 0..1 */
   var lo = 0, hi = 0, k;
   for (k in a) { lo += Math.min(a[k], b[k] || 0); hi += Math.max(a[k], b[k] || 0); }
   for (k in b) if (!(k in a)) hi += b[k];
@@ -171,7 +171,7 @@ function albumProfile(idx, albumList, q, norm) {
   }
   var out = {source: source, found: !!target, n: own ? own.length : 0, moods: [], styles: [], energy: 0, year: target && target.y || 0,
              genre: target && target.ge || '', similar: [], others: []};
-  if (target) out.dir = target.dir;                     /* Ordner des Albums: kommt die Seite über die Suche (albums://…), kennt sie ihn nicht */
+  if (target) out.dir = target.dir;                     /* album folder: if the page comes from the search (albums://…), it doesn't know it */
   if (own) {
     var v = vectorOf(own);
     out.moods = topShare(v.moods); out.styles = topShare(v.styles); out.energy = Math.round(v.energy);

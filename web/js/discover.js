@@ -1,22 +1,22 @@
-/* Suchen & Entdecken ohne Eingabe, passend zum Reiter (Künstler, Alben, Titel): Reihen „Zufällige Entdeckungen“ (mit Würfel),
-   „Vor einem Jahr gehört“, „Lange nicht gehört“, „Noch nie gehört“, „Früher oft gehört“
-   (Tag-Dienst GET /discover?kind=…, /plays?view=ago&kind=…). Leere Reihen fallen weg.
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; nach library.js und history.js geladen. */
-var discoverReady = false;       /* Tag-Dienst erreichbar */
+/* Search & Discover without input, matching the tab (artists, albums, tracks): rows "Random discoveries" (with dice),
+   "Played a year ago", "Not played in a long time", "Never played", "Often played in the past"
+   (tag service GET /discover?kind=…, /plays?view=ago&kind=…). Empty rows are dropped.
+   Classic script, shared global scope; loaded after library.js and history.js. */
+var discoverReady = false;       /* tag service reachable */
 var discoverSeq   = 0;
 var discoverTimer = null;
-/* Suchreiter -> Art beim Tag-Dienst */
+/* search tab -> kind at the tag service */
 var DISCOVER_KIND = {
   artists: {kind: 'artist', ago: 'disc.ago.artist'},
   albums:  {kind: 'album',  ago: 'disc.ago.album'},
   songs:   {kind: 'track',  ago: 'disc.ago.track'}
 };
-var DISCOVER_SHELVES = ['random', 'together', 'bday', 'recent', 'fresh', 'gems', 'ago', 'forgotten', 'never', 'oldfav'];   /* Reihenfolge auf der Seite; bday, recent, fresh nur bei Alben, together nur bei Künstlern */
+var DISCOVER_SHELVES = ['random', 'together', 'bday', 'recent', 'fresh', 'gems', 'ago', 'forgotten', 'never', 'oldfav'];   /* order on the page; bday, recent, fresh only for albums, together only for artists */
 
 function discoverDate(t) { return langDate(t * 1000); }
 function discoverCat() { return DISCOVER_KIND[searchCat] || DISCOVER_KIND.albums; }
 
-/* von renderSearchResults aufgerufen, solange nichts gesucht wurde; false: nicht verfügbar */
+/* called by renderSearchResults while nothing has been searched; false: not available */
 function discoverShow() {
   if (!discoverReady) return false;
   var seq = ++discoverSeq, cat = discoverCat();
@@ -44,13 +44,13 @@ function discoverShow() {
   return true;
 }
 
-/* Datum beim Hörer, 'JJJJ-MM-TT' (Album des Tages, Geburtstage) */
+/* listener's local date, 'YYYY-MM-DD' (album of the day, birthdays) */
 function discoverToday() {
   var d = new Date();
   return d.getFullYear() + '-' + histTwo(d.getMonth() + 1) + '-' + histTwo(d.getDate());
 }
 
-/* Alben-Reiter: Geburtstage, zuletzt gehört, neu in der Sammlung (Tag-Dienst GET /welcome, wie die Begrüßung) */
+/* albums tab: birthdays, recently played, new in the collection (tag service GET /welcome, like the welcome page) */
 function discoverAlbumRows(seq, secs) {
   tagGetJson('/welcome?day=' + discoverToday()).then(function(r){
     if (seq !== discoverSeq || !r || !r.ok) return;
@@ -68,9 +68,9 @@ function discoverRow(sec, title, tiles) {
   discoverFit(row);
 }
 
-/* ---------- Geburtstage der Alben ---------- */
-/* b: {today, week, month} vom Tag-Dienst; which: welche Reihen; dates: Stand der Erscheinungsdaten (Hinweis, solange gesammelt wird).
-   Runde Geburtstage (10, 20 … Jahre) und Jubiläen (25, 50, 75) tragen ein Abzeichen, Jubiläen dazu einen goldenen Rand. */
+/* ---------- Album birthdays ---------- */
+/* b: {today, week, month} from the tag service; which: which rows; dates: status of the release dates (note while collecting).
+   Round birthdays (10, 20 … years) and anniversaries (25, 50, 75) get a badge, anniversaries also a golden border. */
 function bdayRows(sec, b, which, dates) {
   discoverClear(sec);
   var any = false;
@@ -92,7 +92,7 @@ function bdayRows(sec, b, which, dates) {
 function bdayTile(it) {
   var tile = discoverShelfTile('album', 'never', it);
   var p = it.date.split('-');
-  var date = langDate(new Date(+p[0], +p[1] - 1, +p[2]), {day: 'numeric', month: 'numeric'});   /* Jahr steckt in den Jahren */
+  var date = langDate(new Date(+p[0], +p[1] - 1, +p[2]), {day: 'numeric', month: 'numeric'});   /* the year is implied by the age */
   tile.appendChild(histEl('div', 'dSub', it.mark ? date : date + ' · ' + T('bday.years', {n: it.years})));
   if (it.mark) {
     tile.classList.add(it.mark === 'jubilee' ? 'dJubilee' : 'dRound');
@@ -101,7 +101,7 @@ function bdayTile(it) {
   return tile;
 }
 
-/* Versteckte Perlen (Tag-Dienst GET /gems): eigene Reihe mit Würfel; ohne Geschmack (keine Bewertungen, kein Verlauf) leer */
+/* hidden gems (tag service GET /gems): own row with dice; empty without taste data (no ratings, no history) */
 function discoverGems(seq, cat, sec) {
   tagGetJson('/gems?kind=' + cat.kind).then(function(r){
     if (seq !== discoverSeq || !r || !r.ok) return;
@@ -116,18 +116,18 @@ function discoverGems(seq, cat, sec) {
   }).catch(function(){});
 }
 
-/* Grund einer Perle: ungehört von einem Lieblingskünstler, wie ein Lieblingskünstler, sonst Stimmung · Genre */
+/* reason for a gem: unplayed by a favorite artist, like a favorite artist, otherwise mood · genre */
 function discoverWhy(it) {
   var w = it.why || {};
-  if (w.why === 'artist') return T(it.plays ? 'gems.why.artistRare' : 'gems.why.artist');   /* Künstler steht schon darüber */
+  if (w.why === 'artist') return T(it.plays ? 'gems.why.artistRare' : 'gems.why.artist');   /* artist is already shown above */
   if (w.why === 'like') return T('gems.why.like', {ar: histArtistName(w.ar)});
   var m = w.mood ? T('mood.' + w.mood) : '';
   return [m ? m.charAt(0).toUpperCase() + m.slice(1) : '', w.ge || ''].filter(Boolean).join(' · ');
 }
 
-/* Überschrift einer Reihe: rechts der Würfel (25 Titel aus der ganzen Reihe, Tag-Dienst POST /randommix {shelf, kind};
-   im Reiter Künstler bzw. Alben Titel der Künstler bzw. Alben dieser Reihe; ohne shelf keiner),
-   bei Zufallsreihe, Perlen und „Passt zusammen“ davor ↻ (neue Kacheln ziehen) */
+/* Row heading: dice on the right (25 tracks from the whole row, tag service POST /randommix {shelf, kind};
+   in the artists or albums tab, tracks of that row's artists or albums; none without shelf),
+   for the random row, gems and "Go together" preceded by ↻ (draw new tiles) */
 var REROLL_SVG = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
 function discoverHead(title, shelf, roll) {
   var head = browseHeading(title);
@@ -154,7 +154,7 @@ function discoverHead(title, shelf, roll) {
   return head;
 }
 
-/* Reihen vom Tag-Dienst; onlyRandom: nur die Zufallsreihe neu (Würfel) */
+/* rows from the tag service; onlyRandom: renew only the random row (dice) */
 function discoverLoad(seq, cat, secs, onlyRandom) {
   tagGetJson('/discover?kind=' + cat.kind).then(function(r){
     if (seq !== discoverSeq) return;
@@ -173,8 +173,8 @@ function discoverLoad(seq, cat, secs, onlyRandom) {
   }).catch(function(){});
 }
 
-/* Auswahlknöpfe unter den Reihen: Stimmung, Energie, Stil und Jahrzehnt; jeder öffnet die passenden Alben (genre.js) */
-var DISCOVER_MOODS = [['relaxed'], ['dreamy'], ['melancholic'], ['dark'], ['happy'], ['intense'], ['epic']];   /* Namen wie im Mood Mix */
+/* picker buttons below the rows: mood, energy, style and decade; each opens the matching albums (genre.js) */
+var DISCOVER_MOODS = [['relaxed'], ['dreamy'], ['melancholic'], ['dark'], ['happy'], ['intense'], ['epic']];   /* names as in Mood Mix */
 var DISCOVER_ENERGY = [[1, 2, 'disc.energy.low'], [3, 3, 'disc.energy.mid'], [4, 5, 'disc.energy.high']];
 var DISCOVER_STYLES = [
   ['Acoustic', ['acoustic', 'folk', 'singer-songwriter']],
@@ -241,7 +241,7 @@ function discoverShelf(sec, sh, cat, secs) {
   discoverFit(row);
 }
 
-/* Kachel einer Reihe: Künstler öffnen, Album öffnen, Titel abspielen; darunter, wann bzw. wie oft gehört */
+/* tile of a row: open artist, open album, play track; below it, when or how often played */
 function discoverShelfTile(kind, shelf, it) {
   var tile = histEl('div', 'dTile' + (kind === 'artist' ? ' dArtist' : ''));
   var dir = kind === 'track' ? it.f.replace(/\/[^\/]*$/, '') : it.dir;
@@ -263,7 +263,7 @@ function discoverShelfTile(kind, shelf, it) {
   return tile;
 }
 
-/* Kachel für "vor einem Jahr": Künstler öffnen, Album öffnen, Titel abspielen */
+/* tile for "a year ago": open artist, open album, play track */
 function discoverTile(kind, it) {
   var tile = histEl('div', 'dTile' + (kind === 'artist' ? ' dArtist' : ''));
   var art = kind === 'artist' ? histArtistArt(it.ar) : kind === 'album' ? histAlbumArt(it.ar, it.ti, it.u || '') : histTrackArt(it);
@@ -281,7 +281,7 @@ function discoverTile(kind, it) {
   return tile;
 }
 
-/* Kacheln gleichmäßig über die Breite verteilen, wenn sie hineinpassen; sonst links beginnend zum Wischen */
+/* spread tiles evenly across the width if they fit; otherwise start on the left for swiping */
 function discoverFit(row) {
   if (!row || !row.parentNode) return;
   row.classList.remove('fit');
@@ -289,17 +289,17 @@ function discoverFit(row) {
 }
 window.addEventListener('resize', function(){ Array.prototype.forEach.call(document.querySelectorAll('.dRow'), discoverFit); });
 
-/* beim Öffnen der Suche neu füllen, wenn nichts gesucht wurde */
+/* refill when opening the search if nothing was searched */
 if (window.MutationObserver) new MutationObserver(function(){
-  if (overlaySearch.classList.contains('on') && !searchQuery && discoverReady && searchCat !== 'genres') discoverShow();   /* Genres: Kacheln bleiben */
+  if (overlaySearch.classList.contains('on') && !searchQuery && discoverReady && searchCat !== 'genres') discoverShow();   /* genres: tiles stay */
   if (!overlaySearch.classList.contains('on')) clearTimeout(discoverTimer);
 }).observe(overlaySearch, {attributes: true, attributeFilter: ['class']});
 
 whenTags(function(){ discoverReady = true; if (!searchQuery) renderSearchResults(); });
 
-/* ---------- Zufallsmix: Würfel neben „Alle abspielen“ ---------- */
-/* q: {artist} oder {dirs: [...]}; der Tag-Dienst zieht 25 Titel (nie derselbe Künstler direkt hintereinander),
-   die ersetzen die Warteschlange */
+/* ---------- Random mix: dice next to "Play all" ---------- */
+/* q: {artist} or {dirs: [...]}; the tag service draws 25 tracks (never the same artist twice in a row),
+   which replace the queue */
 function randomMixPlay(q) {
   tagPostJson('/randommix', q).then(function(r){
     if (!(r && r.items && r.items.length)) return showToast(T(r && r.building ? 'disc.building' : 'mix.empty'));
@@ -308,7 +308,7 @@ function randomMixPlay(q) {
   }).catch(function(){ showToast(T('hist.offline')); });
 }
 
-/* Titel vom Tag-Dienst ([{f, ti, ar, al}]) werden die Warteschlange, der erste läuft */
+/* tracks from the tag service ([{f, ti, ar, al}]) become the queue, the first one plays */
 function tracksItems(list) {
   return list.map(function(t){
     return {uri: 'music-library/' + t.f, service: 'mpd', type: 'song', title: t.ti, artist: t.ar, album: t.al};
@@ -327,8 +327,8 @@ function tracksPlay(list) {
   closeAllOverlays();
 }
 
-/* Titel nach dem laufenden: der laufende spielt weiter, was danach in der Warteschlange stand, weicht dem Mix.
-   Läuft nichts, wie tracksPlay. */
+/* Tracks after the current one: the current one keeps playing, whatever followed in the queue gives way to the mix.
+   If nothing is playing, like tracksPlay. */
 function tracksAfterCurrent(list) {
   var items = tracksItems(list);
   Promise.all([
@@ -337,15 +337,15 @@ function tracksAfterCurrent(list) {
   ]).then(function(res){
     var st = res[0] || {}, q = (res[1] && res[1].queue) || [], pos = typeof st.position === 'number' ? st.position : -1;
     if (st.status !== 'play' || pos < 0 || pos >= q.length) return tracksPlay(list);
-    for (var i = q.length - 1; i > pos; i--) socket.emit('removeFromQueue', {value: i});   /* von hinten: Nummern bleiben gültig */
+    for (var i = q.length - 1; i > pos; i--) socket.emit('removeFromQueue', {value: i});   /* from the end: indices stay valid */
     socket.emit('addToQueue', items);
     closeAllOverlays();
   }).catch(function(){ tracksPlay(list); });
 }
 
-/* ---------- Mehr wie dieser Titel (Tipp auf den Titel in der Wiedergabe) ---------- */
-/* Tag-Dienst GET /similar: Titel mit ähnlicher Stimmung, Energie und ähnlichem Tempo, je Künstler höchstens zwei.
-   „Alle abspielen“ spielt die Liste, der Würfel 25 andere ähnliche Titel; Tipp auf einen Titel spielt ihn. */
+/* ---------- More like this track (tap on the title in now playing) ---------- */
+/* Tag service GET /similar: tracks with similar mood, energy and tempo, at most two per artist.
+   "Play all" plays the list, the dice 25 other similar tracks; a tap on a track plays it. */
 function similarQuery(e) {
   return '/similar?file=' + encodeURIComponent(e.file || '') + '&artist=' + encodeURIComponent(e.artist || '') +
     '&title=' + encodeURIComponent(e.title || '') + '&album=' + encodeURIComponent(e.album || '');
@@ -365,7 +365,7 @@ function browseSimilar(e, seq) {
       dice.classList.remove('roll'); void dice.offsetWidth; dice.classList.add('roll');
       tagGetJson(similarQuery(e) + '&shuffle=1').then(function(m){
         if (!m || !m.ok || !m.items.length) return showToast(T('similar.none'));
-        tracksAfterCurrent(m.items);                                  /* der laufende Titel spielt zu Ende */
+        tracksAfterCurrent(m.items);                                  /* the current track plays to the end */
         showToast(T('similar.mixQueued', {n: m.items.length}));
       }).catch(function(){ showToast(T('hist.offline')); });
     });
@@ -394,10 +394,10 @@ function browseSimilar(e, seq) {
   });
 }
 
-/* ---------- Passt zusammen ---------- */
-/* Mixe aus 2–3 Künstlern der Sammlung, die musikalisch zusammenpassen (Tag-Dienst GET /together, je Tag fest, ↻ würfelt neu).
-   Kachel: die Künstlerfotos überlappend, darunter die Namen und was sie verbindet; Tipp öffnet die Vorschau des Mixes.
-   Im Reiter „Künstler“ der Suche ohne Eingabe und auf der Begrüßung. alive(): Seite noch dieselbe. */
+/* ---------- Go together ---------- */
+/* Mixes of 2–3 artists from the collection that go together musically (tag service GET /together, fixed per day, ↻ redraws).
+   Tile: the artist photos overlapping, below them the names and what connects them; a tap opens the mix preview.
+   In the "Artists" tab of the search without input and on the welcome page. alive(): page still the same. */
 function togetherName(artists) { return (artists || []).map(histArtistName).join(' + '); }
 function togetherWhy(w) {
   w = w || {};
@@ -436,7 +436,7 @@ function togetherRow(sec, alive, reroll) {
 function togetherQuery(e) {
   return '/togethermix?day=' + discoverToday() + e.artists.map(function(a){ return '&ar=' + encodeURIComponent(a); }).join('');
 }
-/* Vorschau: ▶ spielt den Mix, der Würfel einen neu gezogenen, + hängt ihn an; nie Gehörtes ist als „neu“ markiert */
+/* preview: ▶ plays the mix, the dice a newly drawn one, + appends it; never-played items are marked "new" */
 function browseTogether(e, seq) {
   tagGetJson(togetherQuery(e)).then(function(r){
     if (seq !== browseSeq) return;
@@ -476,10 +476,10 @@ function browseTogether(e, seq) {
   });
 }
 
-/* ---------- Entdecken (Reiter auf der Künstlerseite) ---------- */
-/* Ähnliche Künstler aus der Sammlung (mit Würfel: 25 Titel daraus, jeder Künstler etwa gleich oft) und
-   Stimmungen, Energie, Stile und Jahrzehnte des Künstlers (Tag-Dienst GET /artistprofile); jeder Knopf öffnet
-   wie beim Entdecken die passenden Alben. alive(): Seite noch dieselbe; onContent(): erster Inhalt da; onDone(): alles geladen. */
+/* ---------- Discover (tab on the artist page) ---------- */
+/* Similar artists from the collection (with dice: 25 tracks from them, each artist about equally often) and
+   the artist's moods, energy, styles and decades (tag service GET /artistprofile); each button opens the
+   matching albums as in Discover. alive(): page still the same; onContent(): first content there; onDone(): all loaded. */
 function discoverMore(artist, alive, onContent, onDone) {
   var box = histEl('div', 'dMore'), pending = 2;
   function done() { if (--pending === 0 && onDone) onDone(); }
@@ -498,14 +498,14 @@ function discoverMore(artist, alive, onContent, onDone) {
     return c;
   }
   function moodset(title, q) { openBrowse({kind: 'moodset', title: title, q: q}); }
-  var simSec = histEl('div'), tagSec = histEl('div');            /* feste Reihenfolge, egal was zuerst ankommt */
+  var simSec = histEl('div'), tagSec = histEl('div');            /* fixed order, regardless of what arrives first */
   box.appendChild(simSec); box.appendChild(tagSec);
   loadSimilarArtists(artist).then(function(names){
     if (!alive() || !names || !names.length) return;
     var g = group(T('more.similar'));
     var dice = chip(g.chips, '', function(c){
       c.classList.remove('roll'); void c.offsetWidth; c.classList.add('roll');
-      randomMixPlay({artists: [artist].concat(names)});            /* der Künstler selbst gehört dazu */
+      randomMixPlay({artists: [artist].concat(names)});            /* the artist themself is included */
     }, 'dMixChip');
     dice.innerHTML = DICE_SVG;
     dice.title = T('disc.mix');
@@ -543,10 +543,10 @@ function discoverMore(artist, alive, onContent, onDone) {
   return box;
 }
 
-/* ---------- Entdecken (Reiter auf der Albumseite) ---------- */
-/* Tag-Dienst GET /albumprofile: ähnliche Alben aus der Sammlung (mit Würfel: 25 Titel daraus und aus dem Album selbst), Stimmung, Energie und
-   Stile des Albums (ohne lokales Album: des Künstlers), Jahr, Jahrzehnt und Genre, weitere Alben des Künstlers.
-   q: {artist, album, uri}; uri leer bei Alben vom Dienst. alive(): Seite noch dieselbe. */
+/* ---------- Discover (tab on the album page) ---------- */
+/* Tag service GET /albumprofile: similar albums from the collection (with dice: 25 tracks from them and from the album itself), mood, energy and
+   styles of the album (without a local album: of the artist), year, decade and genre, more albums by the artist.
+   q: {artist, album, uri}; uri empty for albums from a service. alive(): page still the same. */
 function discoverAlbum(box, q, alive) {
   var wait = browseNote(T('browse.loading'));
   box.appendChild(wait);
@@ -559,13 +559,13 @@ function discoverAlbum(box, q, alive) {
     return chips;
   }
   function chip(chips, label, onClick) {
-    if (Array.prototype.some.call(chips.children, function(x){ return x.textContent === label; })) return;   /* „Ruhig“ als Stimmung und Energie */
+    if (Array.prototype.some.call(chips.children, function(x){ return x.textContent === label; })) return;   /* "Calm" as both mood and energy */
     var c = histEl('div', 'mxChip', label);
     c.addEventListener('click', function(ev){ ev.stopPropagation(); onClick(); });
     chips.appendChild(c);
   }
   function moodset(title, mq) { openBrowse({kind: 'moodset', title: title, q: mq}); }
-  function tiles(title, items, dice, self) {        /* self: Ordner des Albums selbst, kommt mit in den Würfel-Mix */
+  function tiles(title, items, dice, self) {        /* self: folder of the album itself, included in the dice mix */
     var sec = histEl('div', 'dMoreSec');
     var head = histEl('div', 'mxLabel', title);
     if (dice) {
@@ -599,7 +599,7 @@ function discoverAlbum(box, q, alive) {
     var any = false, chips;
     if (r.source === 'artist' && !r.found && (r.similar.length || r.moods.length || r.styles.length))
       box.appendChild(browseNote(T('more.byArtist', {ar: q.artist}), 'sHint'));
-    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true, dir && !/^[a-z]+:\/\//i.test(dir) ? dir : r.dir || ''); any = true; }   /* aus der Suche (albums://…): Ordner vom Tag-Dienst */
+    if (r.similar.length) { tiles(T('more.similarAlbums'), r.similar, true, dir && !/^[a-z]+:\/\//i.test(dir) ? dir : r.dir || ''); any = true; }   /* from the search (albums://…): folder from the tag service */
     if (r.moods.length || r.energy) {
       chips = group(T('more.mood'));
       r.moods.forEach(function(m){ var name = mixName(m); chip(chips, name, function(){ moodset(name, 'moods=' + encodeURIComponent(m)); }); });
@@ -637,7 +637,7 @@ function discoverAlbum(box, q, alive) {
   });
 }
 
-/* Würfel-Knopf für die Zeile „Alle abspielen“ (Klick geht nicht an die Zeile weiter) */
+/* dice button for the "Play all" row (click does not reach the row) */
 function randomMixButton(q) {
   var b = histEl('div', 'mixDice');
   b.title = T('disc.mix');

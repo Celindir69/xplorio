@@ -1,5 +1,5 @@
-/* Tag-Editor: Tags lokaler Dateien (m4a, flac, mp3, dsf) bearbeiten, über den Tag-Dienst auf dem Player (tags/tag-service.js).
-   Klassisches Skript, gemeinsamer globaler Gültigkeitsbereich; Reihenfolge siehe xplorio.html. */
+/* Tag editor: edit tags of local files (m4a, flac, mp3, dsf) via the tag service on the player (tags/tag-service.js).
+   Classic script, shared global scope; see xplorio.html for load order. */
 var TAGS = 'http://' + location.hostname + ':' + ((window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766);
 var TAG_LOCAL_RE = /^(music-library\/|\/?mnt\/)?(USB|INTERNAL|NAS)\//;
 var TAG_COMMON = [['artist', T('tag.field.artist')], ['albumartist', T('tag.field.albumartist')], ['album', T('tag.field.album')],
@@ -12,19 +12,19 @@ var tagSave     = document.getElementById('tagSave');
 var tagUndo     = document.getElementById('tagUndo');
 var tagStatus   = document.getElementById('tagStatus');
 var tagFiles    = [];     /* [{uri, ok, error, tags, titleIn, trackIn}] */
-var tagCommon   = {};     /* Feldname -> {input, mixed} */
+var tagCommon   = {};     /* field name -> {input, mixed} */
 var tagBatch    = null;
-var tagMode     = 'album';  /* 'album': Editor für ausgewählte Dateien; 'artist': Mehrfachbearbeitung je Künstler */
+var tagMode     = 'album';  /* 'album': editor for selected files; 'artist': bulk editing per artist */
 
-/* nur lokale Dateien auf dem Player lassen sich bearbeiten (nicht TIDAL, Qobuz, Radio) */
+/* only local files on the player can be edited (not TIDAL, Qobuz, radio) */
 function isLocalTrack(t) {
   return !!t && (t.service || 'mpd') === 'mpd' && TAG_LOCAL_RE.test(t.uri || '');
 }
 
 var TAG_PEN_SVG = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
 
-/* Stift-Knopf. Tippen ruft onClick auf und löst nichts in der umgebenden Zeile aus
-   (kein Abspielen, kein Wischen in der Queue). */
+/* Pen button. A tap calls onClick and triggers nothing in the surrounding row
+   (no playing, no swiping in the queue). */
 function tagPenButton(cls, title, onClick) {
   var b = document.createElement('div');
   b.className = cls || 'tagEditMini';
@@ -37,26 +37,26 @@ function tagPenButton(cls, title, onClick) {
   return b;
 }
 
-/* Stift für bestimmte Dateien; files: [{uri, title}] oder eine Funktion, die sie liefert */
+/* pen for specific files; files: [{uri, title}] or a function returning them */
 function tagEditButton(files, heading, cls) {
   return tagPenButton(cls, T('tag.edit'), function(){
     openTagEditor(typeof files === 'function' ? files() : files, heading);
   });
 }
 
-/* Stift in der Künstleransicht: alle Titel des Künstlers gemeinsam bearbeiten */
+/* pen in the artist view: edit all of the artist's tracks together */
 function tagArtistButton(name) {
   return tagPenButton('browseEditBtn', T('tag.editArtist'), function(){ openArtistEditor(name); });
 }
 
-/* Stift für einen einzelnen Titel, nur bei lokalen Dateien; sonst null */
+/* pen for a single track, only for local files; otherwise null */
 function tagTrackButton(t) {
   if (!isLocalTrack(t)) return null;
   var title = t.title || t.name || '';
   return tagEditButton([{uri:t.uri, title:title}], title);
 }
 
-/* Stift für ein Album in einer Liste (Suche, Künstlerseite): liest die Titel erst beim Tippen; nur lokal, sonst null */
+/* pen for an album in a list (search, artist page): reads the tracks only on tap; local only, otherwise null */
 function tagAlbumButton(al) {
   if (!al || !al.uri || (al.service || 'mpd') !== 'mpd' || streamOf(al.uri)) return null;
   return tagPenButton('tagEditMini', T('tag.edit'), function(){
@@ -69,7 +69,7 @@ function tagAlbumButton(al) {
   });
 }
 
-/* Stift im Player neben der Qualitätsanzeige: nur, wenn gerade eine lokale Datei läuft */
+/* pen in the player next to the quality display: only while a local file is playing */
 var mEdit = null, mEditUri = '', mInput = null;
 function tagPaintPlayer(st) {
   if (!mEdit) {
@@ -79,15 +79,15 @@ function tagPaintPlayer(st) {
     mEdit.id = 'mEdit';
     row.appendChild(mEdit);
   }
-  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* anderer Eingang am Verstärker: Icon statt Stift */
-  if (st && st.trackType === 'input') inp = null;                         /* großes Icon steht schon an Stelle des Covers */
+  var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: icon instead of pen */
+  if (st && st.trackType === 'input') inp = null;                         /* large icon already sits in place of the cover */
   var local = !inp && !!st && st.trackType !== 'input' && st.trackType !== 'webradio' && isLocalTrack(st);
   mEditUri = local ? st.uri : '';
   mEdit.style.display = local ? '' : 'none';
   if (inp && !mInput) {
     mInput = document.createElement('span');
     mInput.id = 'mInput'; mInput.className = 'inputIcon';
-    mInput.addEventListener('click', function(){ if (typeof openPlayback === 'function') openPlayback(); });   /* Fernbedienung */
+    mInput.addEventListener('click', function(){ if (typeof openPlayback === 'function') openPlayback(); });   /* remote control */
     mEdit.parentNode.appendChild(mInput);
   }
   if (!mInput) return;
@@ -111,7 +111,7 @@ function tagField(label, input, extra) {
   var s = document.createElement('span');
   s.textContent = label;
   l.appendChild(s);
-  if (extra) {                                     /* z. B. "Aa"-Menü rechts neben dem Eingabefeld */
+  if (extra) {                                     /* e.g. "Aa" menu to the right of the input field */
     var line = document.createElement('div');
     line.className = 'tagLine';
     line.appendChild(input); line.appendChild(extra);
@@ -120,7 +120,7 @@ function tagField(label, input, extra) {
   return l;
 }
 
-/* "Aa"-Menü mit den Textfunktionen (textfn.js); onPick(fn) wendet die gewählte Funktion an */
+/* "Aa" menu with the text functions (textfn.js); onPick(fn) applies the chosen function */
 function tagAaMenu(onPick, title) {
   var sel = document.createElement('select');
   sel.className = 'tagAa';
@@ -142,7 +142,7 @@ function tagAaMenu(onPick, title) {
   return sel;
 }
 
-/* Discogs-Hauptgenres (wie TOPS in tags/genres.js): Auswahl neben jedem Genre-Feld, eigene Werte bleiben möglich */
+/* Discogs main genres (like TOPS in tags/genres.js): picker next to each genre field, custom values remain possible */
 var GENRE_TOPS = ['Blues', 'Brass & Military', "Children's", 'Classical', 'Electronic', 'Folk, World, & Country', 'Funk / Soul',
                   'Hip Hop', 'Jazz', 'Latin', 'Non-Music', 'Pop', 'Reggae', 'Rock', 'Stage & Screen'];
 function tagGenreMenu(input) {
@@ -166,7 +166,7 @@ function tagGenreMenu(input) {
   return sel;
 }
 
-/* Textfunktion auf ein Eingabefeld anwenden und es als geändert markieren */
+/* apply a text function to an input field and mark it as changed */
 function tagApplyFn(input, fn) {
   var v = fn(input.value);
   if (v === input.value) return;
@@ -175,7 +175,7 @@ function tagApplyFn(input, fn) {
 }
 
 function tagInput(value, cls) {
-  var i = document.createElement(cls === 'tagMulti' ? 'textarea' : 'input');   /* Kommentar: mehrzeilig */
+  var i = document.createElement(cls === 'tagMulti' ? 'textarea' : 'input');   /* comment field: multi-line */
   if (cls === 'tagMulti') i.rows = 2; else i.type = 'text';
   i.className = 'tagIn' + (cls ? ' ' + cls : '');
   i.value = value || '';
@@ -192,7 +192,7 @@ function tagMsg(text) {
 /* files: [{uri, title}] */
 function openTagEditor(files, heading) {
   tagMode = 'album';
-  var seq = ++artSeq;                                     /* späte Antwort eines vorher geöffneten Albums verwerfen */
+  var seq = ++artSeq;                                     /* discard a late answer for a previously opened album */
   tagSave.textContent = T('tag.save');
   if (!heading && files.length === 1) heading = files[0].title;
   document.getElementById('tagTitle').textContent = heading || T('tag.edit');
@@ -231,7 +231,7 @@ function tagRender(files, items) {
     tagBody.appendChild(tagField(fd[1], inp, aa));
   });
 
-  if (good.length > 1) {                                /* Muster, Ersetzen usw. für das ganze Album */
+  if (good.length > 1) {                                /* pattern, replace etc. for the whole album */
     var bulk = document.createElement('button');
     bulk.className = 'tagBtn'; bulk.textContent = T('tag.bulkButton');
     bulk.addEventListener('click', function(){
@@ -245,7 +245,7 @@ function tagRender(files, items) {
   var hl = document.createElement('span');
   hl.textContent = good.length > 1 ? T('tag.tracks') : T('tag.titleAndNumber');
   h.appendChild(hl);
-  h.appendChild(tagAaMenu(function(fn){                  /* auf alle Titel des Albums */
+  h.appendChild(tagAaMenu(function(fn){                  /* to all tracks of the album */
     tagFiles.forEach(function(f){ if (f.titleIn) tagApplyFn(f.titleIn, fn); });
   }, T('tag.textFnAll')));
   tagBody.appendChild(h);
@@ -270,7 +270,7 @@ function tagCollect() {
   Object.keys(tagCommon).forEach(function(k){
     var c = tagCommon[k], v = c.input.value;
     if (c.input.getAttribute('data-dirty') !== '1') return;
-    if (c.mixed && v === '') return;            /* "(verschieden)" nicht versehentlich leeren */
+    if (c.mixed && v === '') return;            /* do not accidentally clear "(various)" */
     common[k] = v;
   });
   return tagFiles.filter(function(f){ return f.ok; }).map(function(f){
@@ -281,7 +281,7 @@ function tagCollect() {
 }
 
 /* ---------- Cover ---------- */
-var TAG_COVER_MAX = 1000;          /* längere Seite eines gewählten Bildes in Pixeln (größere werden verkleinert) */
+var TAG_COVER_MAX = 1000;          /* longer side of a chosen image in pixels (larger ones are scaled down) */
 
 function tagImageUrl(uri, src) {
   return TAGS + '/image?src=' + src + '&uri=' + encodeURIComponent(uri) + '&t=' + Date.now();
@@ -294,7 +294,7 @@ function bufToB64(buf) {
 }
 function isJpeg(buf) { var b = new Uint8Array(buf, 0, 2); return b[0] === 0xff && b[1] === 0xd8; }
 
-/* Bild (Blob) -> base64-JPEG; JPEGs bis TAG_COVER_MAX bleiben unverändert, alles andere wird neu kodiert */
+/* image (Blob) -> base64 JPEG; JPEGs up to TAG_COVER_MAX stay unchanged, everything else is re-encoded */
 function tagPrepareImage(blob) {
   return new Promise(function(resolve, reject){
     var url = URL.createObjectURL(blob), img = new Image();
@@ -306,7 +306,7 @@ function tagPrepareImage(blob) {
         var c = document.createElement('canvas');
         c.width = Math.round(w * f); c.height = Math.round(h * f);
         var g = c.getContext('2d');
-        g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);            /* PNG mit Transparenz: weißer Grund */
+        g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);            /* PNG with transparency: white background */
         g.drawImage(img, 0, 0, c.width, c.height);
         resolve({b64: c.toDataURL('image/jpeg', 0.9).split(',')[1], w: c.width, h: c.height});
       }, reject);
@@ -334,7 +334,7 @@ function tagThumb(caption) {
   return box;
 }
 
-/* Bereich oben im Editor: eingebettetes Cover und folder.jpg anzeigen, neues Bild wählen, folder.jpg erzeugen */
+/* area at the top of the editor: show embedded cover and folder.jpg, choose a new image, create folder.jpg */
 function tagCoverSection(good) {
   var uris = good.map(function(f){ return f.uri; }), first = uris[0], n = uris.length;
   var wrap = document.createElement('div');
@@ -354,11 +354,11 @@ function tagCoverSection(good) {
   var online = document.createElement('button'); online.textContent = T('tag.cover.online');
   btns.appendChild(pick); btns.appendChild(online); btns.appendChild(toFolder); btns.appendChild(file);
   wrap.appendChild(btns);
-  var found = document.createElement('div');               /* Vorschläge der Online-Suche */
+  var found = document.createElement('div');               /* suggestions from the online search */
   found.className = 'tagOnline'; found.style.display = 'none';
   wrap.appendChild(found);
 
-  var opts = document.createElement('div');                 /* erscheint nach der Bildwahl */
+  var opts = document.createElement('div');                 /* appears after choosing an image */
   opts.className = 'tagCoverOpts'; opts.style.display = 'none';
   function check(label, on) {
     var l = document.createElement('label'), c = document.createElement('input');
@@ -389,16 +389,16 @@ function tagCoverSection(good) {
     file.value = '';
   });
 
-  function useImage(r, label) {                            /* Vorschau im Feld "Eingebettet", Optionen einblenden */
+  function useImage(r, label) {                            /* preview in the "Embedded" field, show options */
     chosen = r;
     emb.show('data:image/jpeg;base64,' + r.b64, label + ' · ' + r.w + '×' + r.h + ' · ' + Math.round(r.b64.length * 0.75 / 1024) + ' KB');
     opts.style.display = '';
     tagStatus.textContent = '';
   }
 
-  /* Cover online suchen (iTunes, Last.fm, Cover Art Archive über den Tag-Dienst): Album-Interpret (sonst Interpret)
-     und Album, wie sie gerade in den Feldern stehen (zum Suchen kurz ändern, ohne zu speichern); leere Felder
-     ("verschieden") nehmen den Wert des ersten Titels. Vorschläge nebeneinander, Tippen übernimmt das Bild in die Vorschau. */
+  /* Search covers online (iTunes, Last.fm, Cover Art Archive via the tag service): album artist (otherwise artist)
+     and album as they currently are in the fields (change them briefly for searching, without saving); empty fields
+     ("various") take the first track's value. Suggestions side by side, a tap puts the image into the preview. */
   online.addEventListener('click', function(){
     var t = good[0].tags || {};
     function cur(k) { var c = tagCommon[k]; var v = c && c.input.value.trim(); return v || t[k] || ''; }
@@ -411,7 +411,7 @@ function tagCoverSection(good) {
     tagGetJson('/coversearch?artist=' + encodeURIComponent(artist) + '&album=' + encodeURIComponent(album)).then(function(res){
       online.disabled = false;
       if (!res.ok) { tagStatus.textContent = res.error || T('tag.errorShort'); return; }
-      var left = res.results.length, countText = null;     /* countText: zuletzt von count() gesetzter Status */
+      var left = res.results.length, countText = null;     /* countText: status last set by count() */
       function count() {
         var k = found.children.length;
         if (!k) { found.style.display = 'none'; tagStatus.textContent = T('tag.cover.noneOnline'); }
@@ -486,7 +486,7 @@ function tagCoverSection(good) {
       if (!r.ok) throw new Error(T('tag.cover.noEmbedded'));
       return r.blob();
     }).then(function(blob){
-      return blob.arrayBuffer().then(function(buf){            /* JPEG unverändert übernehmen, sonst umwandeln */
+      return blob.arrayBuffer().then(function(buf){            /* take JPEG unchanged, otherwise convert */
         return isJpeg(buf) ? {b64: bufToB64(buf)} : tagPrepareImage(blob);
       });
     }).then(function(r){
@@ -497,19 +497,19 @@ function tagCoverSection(good) {
   return wrap;
 }
 
-/* ---------- Mehrfachbearbeitung (alle Titel eines Künstlers oder eines Albums) ---------- */
+/* ---------- Bulk editing (all tracks of an artist or an album) ---------- */
 var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag.field.albumartist')], ['album', T('tag.field.album')],
                        ['title', T('tag.field.title')], ['genre', T('tag.field.genre')], ['composer', T('tag.field.composer')]];
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
-var TAG_CHUNK = 100;                                 /* Dateien je Anfrage an den Tag-Dienst */
+var TAG_CHUNK = 100;                                 /* files per request to the tag service */
 
 var artName = '', artFiles = [], artErrors = 0;      /* artFiles: [{uri, tags}] */
-var artSeq = 0;                                       /* verwirft Antworten eines früher geöffneten Editors */
-var artUi = null;                                     /* Eingabeelemente der Ansicht */
-var artChanges = [];                                  /* Vorschau: [{from, to, tags:{feld:wert}, files:[f], check}] */
-var artReload = null;                                 /* lädt den Editor nach Rückgängig neu */
-var artPreset = null;                                 /* Vorbelegung {field, value} (Genre-Vorschlag aus dem Check) */
+var artSeq = 0;                                       /* discards answers for a previously opened editor */
+var artUi = null;                                     /* input elements of the view */
+var artChanges = [];                                  /* preview: [{from, to, tags:{field:value}, files:[f], check}] */
+var artReload = null;                                 /* reloads the editor after undo */
+var artPreset = null;                                 /* preset {field, value} (genre suggestion from the check) */
 var TAG_LABELS = {title: T('tag.field.title'), track: T('tag.field.track')};
 TAG_COMMON.forEach(function(fd){ TAG_LABELS[fd[0]] = fd[1]; });
 
@@ -529,9 +529,9 @@ function tagGetJson(route) {
   return fetch(TAGS + route).then(function(r){ return r.json(); });
 }
 
-/* whenTags(fn): fn(health), sobald der Tag-Dienst antwortet. Eine gemeinsame Abfrage für alle Teile; ohne Antwort
-   später erneut (5 s, 10 s, … bis 1 min) und beim Zurückkehren zur Seite, z. B. wenn das iPad nach einem Stromausfall
-   schneller lädt als der Player */
+/* whenTags(fn): fn(health) as soon as the tag service answers. One shared request for all parts; without an answer
+   retry later (5 s, 10 s, … up to 1 min) and when returning to the page, e.g. when the iPad loads faster than the
+   player after a power cut */
 var tagsHealth = null, tagsWaiters = [], tagsChecking = false, tagsRetry = null, tagsTries = 0;
 function whenTags(fn) {
   if (tagsHealth) return fn(tagsHealth);
@@ -553,13 +553,13 @@ function tagsCheck() {
   });
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && !tagsHealth && tagsWaiters.length) { tagsTries = 0; tagsCheck(); } });
-/* JSON an den Tag-Dienst (als text/plain: kein Vorab-Request des Browsers nötig) */
+/* JSON to the tag service (as text/plain: no browser preflight request needed) */
 function tagPostJson(route, body) {
   return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
     .then(function(r){ return r.json(); });
 }
 
-/* Liste in Teilen nacheinander verarbeiten; fn(teil) -> Promise */
+/* process a list in chunks one after another; fn(chunk) -> Promise */
 function tagInChunks(list, size, fn) {
   var i = 0;
   function step() {
@@ -588,7 +588,7 @@ function tagBulkFail(seq, e) {
                                 : T('tag.error', {error: e.message}));
 }
 
-/* Tags der Dateien in Teilen lesen, dann die Mehrfachbearbeitung anzeigen */
+/* read the files' tags in chunks, then show bulk editing */
 function tagBulkLoad(seq, uris) {
   return tagInChunks(uris, TAG_CHUNK * 2, function(part, done){
     if (seq !== artSeq) return Promise.reject(new Error('abgebrochen'));
@@ -602,7 +602,7 @@ function tagBulkLoad(seq, uris) {
   }).then(function(){ if (seq === artSeq) artistRender(); });
 }
 
-/* alle lokalen Titel eines Künstlers (Stift in der Künstleransicht) */
+/* all local tracks of an artist (pen in the artist view) */
 function openArtistEditor(name) {
   var seq = tagBulkStart(name);
   artName = name;
@@ -615,8 +615,8 @@ function openArtistEditor(name) {
   }).catch(function(e){ tagBulkFail(seq, e); });
 }
 
-/* bestimmte Dateien, z. B. ein Album (Knopf "Mehrfachbearbeitung" im Album-Editor);
-   preset {field, value}: Feld auf "Festlegen" mit diesem Wert vorbelegen und die Vorschau gleich zeigen */
+/* specific files, e.g. an album ("Bulk edit" button in the album editor);
+   preset {field, value}: preset the field to "Set" with this value and show the preview right away */
 function openBulkEditor(uris, heading, preset) {
   var seq = tagBulkStart(heading);
   artPreset = preset || null;
@@ -684,7 +684,7 @@ function artistRender() {
   }
 }
 
-/* neuer Wert eines Feldes nach der gewählten Aktion */
+/* new value of a field after the chosen action */
 function artistNewValue(old) {
   var a = artUi.action.value;
   if (a === 'set') return artUi.value.value.trim();
@@ -692,7 +692,7 @@ function artistNewValue(old) {
   return textFunc(a)(old);
 }
 
-/* geänderte Felder aus split-Werten -> {tags, label} oder null */
+/* changed fields from split values -> {tags, label} or null */
 function artistSplitTags(f, values) {
   var tags = {}, parts = [];
   Object.keys(values).forEach(function(k){
@@ -703,8 +703,8 @@ function artistSplitTags(f, values) {
   return parts.length ? {tags: tags, label: parts.join(' · ')} : null;
 }
 
-/* Änderungen einer Datei nach der gewählten Aktion -> [{from, to, tags}] (leer: keine Änderung);
-   beim Aufteilen null, wenn das Muster nicht passt; mehrdeutig: zwei Varianten, die sich gegenseitig ausschließen */
+/* changes to one file after the chosen action -> [{from, to, tags}] (empty: no change);
+   when splitting, null if the pattern does not match; ambiguous: two mutually exclusive variants */
 function artistChanges(f, field, pat) {
   var from = f.tags[field] || '';
   if (pat) {
@@ -723,7 +723,7 @@ function artistChanges(f, field, pat) {
   return [{from: from, to: to, tags: t}];
 }
 
-/* Änderungen berechnen und gruppiert anzeigen (gleiche Änderung "alt -> neu" = eine Zeile) */
+/* compute changes and show them grouped (same change "old -> new" = one row) */
 function artistPreview() {
   var field = artUi.field.value, action = artUi.action.value, groups = {}, order = [], pat = null, skipped = 0;
   if (action === 'replace' && !artUi.find.value) { tagStatus.textContent = T('tag.bulk.findMissing'); return; }
@@ -735,7 +735,7 @@ function artistPreview() {
     var cs = artistChanges(f, field, pat);
     if (!cs) { skipped++; return; }
     cs.forEach(function(c){
-      var key = c.ambiguous ? n + '\u0000' + c.ambiguous : c.from + '\u0000' + c.to;    /* Varianten nicht zusammenfassen */
+      var key = c.ambiguous ? n + '\u0000' + c.ambiguous : c.from + '\u0000' + c.to;    /* do not merge variants */
       if (!groups[key]) { c.files = []; groups[key] = c; order.push(key); }
       groups[key].files.push(f);
     });
@@ -751,9 +751,9 @@ function artistPreview() {
     var row = document.createElement('label');
     row.className = 'tagChange' + (g.ambiguous ? ' unsure' : '');
     g.check = document.createElement('input');
-    g.check.type = 'checkbox'; g.check.checked = !g.ambiguous;      /* mehrdeutig: erst nach Prüfung anhaken */
+    g.check.type = 'checkbox'; g.check.checked = !g.ambiguous;      /* ambiguous: check only after review */
     g.check.addEventListener('change', function(){
-      if (g.ambiguous && g.check.checked) {                      /* nur eine der beiden Varianten */
+      if (g.ambiguous && g.check.checked) {                      /* only one of the two variants */
         var other = artChanges[g.ambiguous === 1 ? k + 1 : k - 1];
         if (other && other.files[0] === g.files[0] && other.ambiguous) other.check.checked = false;
       }
@@ -790,7 +790,7 @@ function artistCount() {
   tagStatus.textContent = n ? T('tag.bulk.willChange', {n: n}) : T('tag.bulk.noneSelected');
 }
 
-/* in Teilen schreiben (gemeinsame Kennung für Rückgängig), MPD erst am Ende einmal neu einlesen lassen */
+/* write in chunks (shared ID for undo), have MPD rescan only once at the end */
 function artistSave() {
   var items = artistSelected();
   if (!items.length) return;
@@ -818,7 +818,7 @@ function artistSave() {
       (changed.length && !(scan && scan.ok && scan.scan !== false) ? T('tag.rescanHint') : '');
     if (changed.length) tagRefreshView();
   }).catch(function(e){
-    tagBatch = changed.length ? batch : null;            /* schon Geschriebenes bleibt rückgängig machbar */
+    tagBatch = changed.length ? batch : null;            /* what was already written stays undoable */
     tagUndo.style.display = tagBatch ? '' : 'none';
     artUi.preview.disabled = false;
     tagStatus.textContent = (e instanceof TypeError ? T('tag.serviceDown') : T('tag.error', {error: e.message})) +
@@ -827,13 +827,13 @@ function artistSave() {
   });
 }
 
-/* nach Änderungen die Ansicht neu laden, sobald MPD die Dateien neu eingelesen hat */
+/* after changes, reload the view as soon as MPD has rescanned the files */
 function tagRefreshView() {
   setTimeout(function(){
     if (overlayBrowse.classList.contains('on') && browseStack.length) browseRender();
     if (overlayQueue.classList.contains('on')) loadQueue();
     if (overlaySearch.classList.contains('on') && searchQuery) doSearch(searchQuery);
-    lastKey = null; lastLyrKey = null;               /* Player: Info und Lyrics mit den neuen Tags neu holen */
+    lastKey = null; lastLyrKey = null;               /* player: fetch info and lyrics again with the new tags */
   }, 4000);
 }
 
@@ -862,7 +862,7 @@ tagUndo.addEventListener('click', function(){
   tagPost('/undo', {batch: tagBatch}).then(function(res){
     showToast(res.ok ? T('tag.undone') : T('tag.undoFailed', {error: res.error || ''}));
     tagBatch = null;
-    if (tagMode === 'artist' && artReload) artReload();    /* Mehrfachbearbeitung mit den alten Werten neu laden */
+    if (tagMode === 'artist' && artReload) artReload();    /* reload bulk editing with the old values */
     else overlayTags.classList.remove('on');
     tagRefreshView();
   }).catch(function(){ tagStatus.textContent = T('tag.serviceDown'); });

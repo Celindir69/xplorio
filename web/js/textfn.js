@@ -1,19 +1,19 @@
-/* Textfunktionen für den Tag-Editor (Wortanfänge groß, Title Case, klein, GROSS, Leerzeichen, Ersetzen).
-   Klassisches Skript im globalen Gültigkeitsbereich; für die Tests auch per require() ladbar. */
+/* Text functions for the tag editor (capitalize words, title case, lower, UPPER, spaces, replace).
+   Classic script in the global scope; also loadable via require() for the tests. */
 
-/* Englische Kleinwörter, die im Title Case klein bleiben (außer am Anfang, am Ende und nach : ( - usw.) */
+/* English small words that stay lowercase in title case (except at the start, the end and after : ( - etc.) */
 var TEXT_SMALL_WORDS = ['a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'of', 'on', 'in', 'at', 'to', 'by',
                         'as', 'vs', 'vs.', 'via'];
 
 function textIsLetter(ch) { return ch.toLowerCase() !== ch.toUpperCase(); }
 function textHasLower(s)  { for (var i = 0; i < s.length; i++) if (textIsLetter(s[i]) && s[i] === s[i].toLowerCase()) return true; return false; }
 
-/* Nach diesen Zeichen beginnt ein neues Wort (Apostroph nicht: "don't" bleibt "Don't") */
+/* a new word starts after these characters (not apostrophe: "don't" stays "Don't") */
 var TEXT_WORD_START = ' \t(["{-/.&+_';
 
-/* "tears for fears" -> "Tears For Fears". Der Rest eines Wortes bleibt, wie er ist ("AC/DC", "McCartney"),
-   außer der ganze Text aus mehreren Wörtern ist in GROSSBUCHSTABEN ("TEARS FOR FEARS"): dann zuerst alles klein.
-   Ein einzelnes Wort in Großbuchstaben bleibt ("ABBA", "AC/DC"). */
+/* "tears for fears" -> "Tears For Fears". The rest of a word stays as it is ("AC/DC", "McCartney"),
+   unless the whole multi-word text is in CAPITALS ("TEARS FOR FEARS"): then lowercase everything first.
+   A single word in capitals stays ("ABBA", "AC/DC"). */
 function textWords(s) {
   s = String(s || '');
   if (!textHasLower(s) && /\S\s+\S/.test(s)) s = s.toLowerCase();
@@ -30,8 +30,8 @@ function textWords(s) {
   return out;
 }
 
-/* Wie textWords, aber englische Kleinwörter (of, the, and …) bleiben klein, außer am Anfang und am Ende
-   und am Anfang eines Abschnitts (nach ":", "(", " - ", "/"): "Back In Black" -> "Back in Black" */
+/* Like textWords, but English small words (of, the, and …) stay lowercase, except at the start and the end
+   and at the start of a section (after ":", "(", " - ", "/"): "Back In Black" -> "Back in Black" */
 function textTitle(s) {
   var w = textWords(s);
   var parts = w.split(/(\s+)/), words = [];
@@ -41,7 +41,7 @@ function textTitle(s) {
     var prev = parts[words[n - 1]];
     if (/[:(\[\/–-]$/.test(prev) || /^[-–\/]$/.test(prev)) return;
     var p = parts[idx], m = /^([("'\[]*)(.*?)([)"'\],;!?]*)$/.exec(p);
-    if (m[1]) return;                                         /* "(The …" beginnt einen Abschnitt */
+    if (m[1]) return;                                         /* "(The …" starts a section */
     if (TEXT_SMALL_WORDS.indexOf(m[2].toLowerCase()) >= 0 && m[2] === textWords(m[2].toLowerCase())) {
       parts[idx] = m[1] + m[2].toLowerCase() + m[3];
     }
@@ -51,7 +51,7 @@ function textTitle(s) {
 
 function textLower(s)  { return String(s || '').toLowerCase(); }
 function textUpper(s)  { return String(s || '').toUpperCase(); }
-/* Text zum Sprachschlüssel (i18n.js); im Test unter Node gibt es kein T(), dann der deutsche Text */
+/* text for the language key (i18n.js); in Node tests there is no T(), then the German text */
 function textT(key, de, vars) {
   if (typeof T === 'function') return T(key, vars);
   return !vars ? de : de.replace(/\{(\w+)\}/g, function(all, k){ return vars[k] === undefined ? all : vars[k]; });
@@ -60,21 +60,21 @@ function textT(key, de, vars) {
 function textSpaces(s) {
  return String(s || '').replace(/\s+/g, ' ').trim(); }
 
-/* einfacher Text, alle Vorkommen; Groß-/Kleinschreibung wird beachtet */
+/* plain text, all occurrences; case-sensitive */
 function textReplace(s, find, repl) {
   s = String(s || '');
   if (!find) return s;
   return s.split(find).join(repl || '');
 }
 
-/* ---------- Aufteilen nach Muster ---------- */
-/* Platzhalter im Muster -> Tag-Feld; %DUMMY% nimmt Text auf, der verworfen wird */
+/* ---------- Split by pattern ---------- */
+/* placeholder in the pattern -> tag field; %DUMMY% captures text that is discarded */
 var TEXT_PLACEHOLDERS = {title: 'title', artist: 'artist', album: 'album', albumartist: 'albumartist', genre: 'genre',
                          composer: 'composer', date: 'date', year: 'date', track: 'track', disc: 'disc', dummy: null};
 
 function textEscRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'); }
 
-/* "%TITLE% - %ARTIST%" -> {names:['title','artist'], lazy:RegExp, greedy:RegExp}; bei Fehler {error} */
+/* "%TITLE% - %ARTIST%" -> {names:['title','artist'], lazy:RegExp, greedy:RegExp}; on error {error} */
 function textPattern(pattern) {
   var parts = String(pattern || '').split(/%([a-zA-Z]+)%/), names = [], lazy = '', greedy = '';
   for (var i = 0; i < parts.length; i++) {
@@ -89,9 +89,9 @@ function textPattern(pattern) {
   return {names: names, lazy: new RegExp('^\\s*' + lazy + '\\s*$'), greedy: new RegExp('^\\s*' + greedy + '\\s*$')};
 }
 
-/* Text nach Muster zerlegen -> {tags:{feld:wert}, ambiguous:bool, alt:{…}} oder null, wenn er nicht passt.
-   ambiguous: das Trennzeichen kommt öfter vor, als das Muster braucht ("A - B - C"). tags teilt an der ersten,
-   alt an der letzten Stelle. */
+/* Split text by pattern -> {tags:{field:value}, ambiguous:bool, alt:{…}} or null if it does not match.
+   ambiguous: the separator occurs more often than the pattern needs ("A - B - C"). tags splits at the first,
+   alt at the last occurrence. */
 function textSplit(value, pat) {
   var m = pat.lazy.exec(String(value || ''));
   if (!m) return null;
@@ -103,7 +103,7 @@ function textSplit(value, pat) {
   return ambiguous ? {tags: tags, ambiguous: true, alt: alt} : {tags: tags, ambiguous: false};
 }
 
-/* Liste für Menüs: [Kennung, Beschriftung, Funktion] */
+/* list for menus: [id, label, function] */
 var TEXT_FUNCS = [
   ['words', textT('textfn.func.words', 'Wortanfänge groß'), textWords],
   ['title', textT('textfn.func.title', 'Title Case (englisch)'), textTitle],

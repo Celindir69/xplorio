@@ -1,8 +1,8 @@
-/* Passwort für die Dienste auf der Seite „System“ (Neustart, Start, Stopp). Node 8, nur ES5.
-   In admin.json im Datenordner steht nur ein Hash (PBKDF2-SHA256 mit Salt), dazu die Anmeldungen der Geräte als
-   SHA-256 ihres Schlüssels mit Ablaufdatum (30 Tage). Ohne Passwort bleiben die Knöpfe gesperrt.
-   Festlegen: sudo xplorio-deploy --password (ruft diese Datei auf); ein neues Passwort meldet alle Geräte ab.
-   Nach 5 falschen Versuchen wartet der Dienst, bei jedem weiteren doppelt so lange (höchstens 15 min). */
+/* Password for the services on the "System" page (restart, start, stop). Node 8, ES5 only.
+   admin.json in the data folder holds only a hash (PBKDF2-SHA256 with salt), plus the device logins as
+   SHA-256 of their token with an expiry date (30 days). Without a password the buttons stay locked.
+   Set it with: sudo xplorio-deploy --password (calls this file); a new password logs out all devices.
+   After 5 wrong attempts the service waits, twice as long for each further one (at most 15 min). */
 var fs = require('fs'), path = require('path'), crypto = require('crypto');
 
 var FILE = 'admin.json', ITER = 20000, TOKEN_DAYS = 30, MAX_TOKENS = 20;
@@ -27,15 +27,15 @@ Auth.prototype.write = function(j) {
 };
 Auth.prototype.isSet = function() { return !!this.read(); };
 
-/* neues Passwort (synchron, für die Kommandozeile); alle Anmeldungen verfallen */
+/* new password (synchronous, for the command line); all logins expire */
 Auth.prototype.setPassword = function(pw) {
-  if (String(pw).length < MIN_LEN) throw new Error('zu kurz');
+  if (String(pw).length < MIN_LEN) throw new Error('too short');
   var salt = crypto.randomBytes(16).toString('hex');
   var hash = crypto.pbkdf2Sync(String(pw), salt, ITER, 32, 'sha256').toString('hex');
   this.write({v: 1, salt: salt, iter: ITER, hash: hash, tokens: []});
 };
 
-/* Anmeldung: cb({ok, token} | {ok:false, error:'unset'|'wrong'|'locked', wait (s)}) */
+/* login: cb({ok, token} | {ok:false, error:'unset'|'wrong'|'locked', wait (s)}) */
 Auth.prototype.login = function(pw, now, cb) {
   var self = this, j = this.read();
   now = now || Date.now();
@@ -57,7 +57,7 @@ Auth.prototype.login = function(pw, now, cb) {
   });
 };
 
-/* ist das Gerät angemeldet? */
+/* is the device logged in? */
 Auth.prototype.check = function(token, now) {
   var j = this.read();
   if (!j || !token || !/^[0-9a-f]{64}$/.test(String(token))) return false;
@@ -80,7 +80,7 @@ if (require.main === module) {
       rl.close();
       if (a !== b) { console.error('The entries differ, nothing changed.'); process.exit(1); }
       try { auth.setPassword(a); }
-      catch (e) { console.error(e.message === 'zu kurz' ? 'Too short, nothing changed.' : 'Not saved: ' + e.message); process.exit(1); }
+      catch (e) { console.error(e.message === 'too short' ? 'Too short, nothing changed.' : 'Not saved: ' + e.message); process.exit(1); }
       console.log('Saved to ' + auth.file + '. All devices have to log in again.');
     });
   });
