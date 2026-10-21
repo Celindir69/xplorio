@@ -908,6 +908,17 @@ function doWelcome(query, cb) {
   });
 }
 
+/* ---------- "Did you mean …?" (suggest.js) ---------- */
+/* GET /suggest?q=motorhed -> {ok, items: [{kind: artist|album, name, ar}]}; only asked when the local search found nothing */
+var suggest = require('./suggest.js'), suggestIdx = null;
+function doSuggest(query, cb) {
+  albumsEnsure(function(list){
+    if (!list || !list.length) return cb(200, {ok: false, building: albumBuilding});
+    if (!suggestIdx || suggestIdx.list !== list) suggestIdx = {list: list, idx: suggest.index(list)};
+    cb(200, {ok: true, items: suggest.suggest(suggestIdx.idx, String(query.q || '').slice(0, 100))});
+  });
+}
+
 /* ---------- Hidden gems (gems.js) ---------- */
 /* GET /gems?kind=artist|album|track -> {ok, items: [{…, why: {why: artist|like|tags, ar, mood, ge}}]} */
 var gems = require('./gems.js'), gemState = null, favState = {at: 0, map: {}, rev: 0, loading: false};
@@ -1476,6 +1487,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/together') return doTogether(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/togethermix') return doTogetherMix(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/similar') return doSimilar(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/suggest') return doSuggest(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/welcome') return doWelcome(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/discover') return doDiscover(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/random')  return doRandom(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });

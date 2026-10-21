@@ -332,6 +332,12 @@ Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** ge
 (ein Jahr: Summen mit Vergleich zum Vorjahr, Monate und zum Aufklappen Top-Titel, -Alben, -Künstler, -Genres (antippbar) und neu entdeckte Künstler; Tipp auf einen Monatsbalken zeigt die Ranglisten für diesen Monat; Genres aus der Albenliste unten). Antippen spielt
 den Titel ab bzw. öffnet Album oder Künstler.
 
+**Meintest du …?** Findet die Suche in der eigenen Sammlung nichts (Volumio sucht dort nur exakte Teilstücke), schlägt
+der Tag-Dienst bis zu drei ähnliche Künstler- oder Albumnamen vor, z. B. „Motörhead“ für „Motorhead“ oder „Metallica“
+für „Metalica“. Akzente, Groß- und Kleinschreibung, ein „The“ am Anfang, „&“/„and“ und Satzzeichen spielen dabei keine
+Rolle, kleine Tippfehler werden verziehen. Ein Tipp auf den Vorschlag sucht danach. Titelnamen werden nicht verglichen;
+die Streamingdienste haben ihre eigene, fehlertolerante Suche.
+
 **Entdecken:** Solange in „Suchen & Entdecken“ nichts eingegeben ist, zeigt die Seite passend zum Reiter Künstler, Alben
 oder Titel mehrere Reihen zum Wischen: **Zufällige Entdeckungen** (bevorzugt, was lange nicht oder nie lief; ↻ zieht
 neu), **Vor einem Jahr gehört** (um dieses Datum vor einem Jahr, sonst vor 2, 3 … Jahren), **Lange nicht gehört**

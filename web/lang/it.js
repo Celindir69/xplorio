@@ -633,6 +633,7 @@ langRegister('it', 'Italiano', {
   'search.minChars': 'Inserisci almeno 2 caratteri e tocca Vai',
   'search.noAnswer': 'Nessuna risposta da Volumio. Riprova.',
   'search.noAnswerStreams': 'Nessuna risposta da Volumio ({services}?). Riprova.',
+  'search.didYouMean': 'Forse cercavi:',
   'search.noResults': 'Nessun risultato',
   'search.or': ' o ',
   'search.pickSource': 'Seleziona Locale o {services}',
