@@ -2,9 +2,29 @@
 
 All commands are run on the player (via SSH), as a user with `sudo` privileges. Written for Volumio 2; everything that differs under Volumio 4 is collected under [Volumio 4](#volumio-4).
 
+## First-time setup
+
+The easiest way is `xplorio-deploy`; no files need to be copied by hand. First fetch the script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null
+sudo chmod +x /usr/local/bin/xplorio-deploy
+```
+
+Then:
+
+```bash
+sudo xplorio-deploy                  # install the interface (shows the new files, asks first)
+sudo xplorio-deploy --tag-service    # Tag Service for the Tag Editor, Check library, history
+sudo xplorio-deploy --password       # optional: password for the "System" page
+sudo xplorio-deploy --rotel <IP>     # optional: network-connected Rotel amplifier
+```
+
+Then open `http://<player>/xplorio.html`. The script installs the interface into every existing `/volumio/http/www*/` folder that Volumio ships with; more under [Updating with xplorio-deploy](#updating-with-xplorio-deploy). Custom settings then go into `web/config.local.js` (see [Interface](#interface)).
+
 ## Interface
 
-Copy `xplorio.html`, `app.html` and `web/` to `/volumio/http/www3/`, then open `http://<player>/xplorio.html` (`app.html` is the former name and only redirects, so old bookmarks and home-screen shortcuts keep working).
+By hand instead of `xplorio-deploy`: copy `xplorio.html`, `app.html` and `web/` to `/volumio/http/www3/`, then open `http://<player>/xplorio.html` (`app.html` is the former name and only redirects, so old bookmarks and home-screen shortcuts keep working).
 
 Xplorio is served entirely by the player: when it can't be reached (for example away from the home network), the browser shows its error page and the home-screen web app simply stays black. From outside, it only works through a VPN into the home network.
 
@@ -46,14 +66,7 @@ appears when Volumio reports the device coming back (USB DAC). Volumio's message
 
 ## Updating with xplorio-deploy
 
-Set it up once:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null
-sudo chmod +x /usr/local/bin/xplorio-deploy
-```
-
-Then on the player:
+The script is set up as described under [First-time setup](#first-time-setup). Then on the player:
 
 | Command | Effect |
 |---|---|
