@@ -9,7 +9,7 @@ function pack(name) { cp.execSync('tar czf ' + name + ' --transform "s|^app|xplo
 fs.mkdirSync(app);
 cp.execSync('git ls-files | tar cf - -T - | tar xf - -C ' + app, {cwd: repo});     /* the repo itself as archive content */
 fs.mkdirSync(path.join(R, 'volumio/http/www3/web'), {recursive: true});
-fs.mkdirSync(path.join(R, 'volumio/http/www'), {recursive: true});              /* classic interface (as on the mxstream) */
+fs.mkdirSync(path.join(R, 'volumio/http/www'), {recursive: true});              /* classic interface (as on Volumio 2) */
 fs.writeFileSync(path.join(R, 'volumio/http/www3/web/config.local.js'), 'lokal');
 fs.mkdirSync(path.join(R, 'etc/systemd/system'), {recursive: true});            /* service from an earlier installation */
 var UNIT = '[Service]\nExecStart=/usr/bin/env node /data/INTERNAL/tags/tag-service.js\nWorkingDirectory=/data/INTERNAL/tags\n';

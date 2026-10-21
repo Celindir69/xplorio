@@ -45,7 +45,7 @@ t('large log: only the end is read, no cut-off first line', function(){
 
 t('journal: fixed command, host name removed, header lines gone', function(){
   var calls = [];
-  var out = '-- Logs begin at Sat 2026-10-10 08:00:00 CEST. --\nOct 11 10:56:07 mxstream volumio[812]: info: Play\nOct  1 09:00:00 mxstream volumio[812]: info: Stop\n';
+  var out = '-- Logs begin at Sat 2026-10-10 08:00:00 CEST. --\nOct 11 10:56:07 volumio volumio[812]: info: Play\nOct  1 09:00:00 volumio volumio[812]: info: Stop\n';
   new lg.Logs({files: files, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(null, out, ''); }}).read('volumio', 300, function(c, o){
     assert.strictEqual(calls[0], '/bin/journalctl -u volumio -n 300 --no-pager -o short');
     assert.deepStrictEqual(o.lines, ['Oct 11 10:56:07 volumio[812]: info: Play', 'Oct  1 09:00:00 volumio[812]: info: Stop']);
