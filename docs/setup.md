@@ -180,7 +180,7 @@ The check reads the MPD database (`MPD_HOST`, `MPD_PORT`, default `localhost:660
 **Genres:** Two further categories suggest exactly one genre per album from the 15 Discogs top categories (Electronic,
 Rock, Jazz, Classical, Pop, Hip Hop, Funk / Soul, Folk, World, & Country, Latin, Reggae, Blues, Stage & Screen,
 Non-Music, Children's, Brass & Military).
-- *Albums without genre:* suggestion from the audio analysis ([Essentia](#audio-analysis-with-essentia-optional-on-the-mac)), averaged over all
+- *Albums without genre:* suggestion from the audio analysis ([Essentia](#audio-analysis-with-essentia-optional-on-a-mac-or-windows-pc)), averaged over all
   tracks of the album. Without audio analysis there is no suggestion.
 - *Merge genres:* a table in `tags/genres.js` maps existing genre tags (e.g. "Trip-Hop", "TripHop", "Klassik", "Hörspiel")
   to a top category, as well as the Discogs sub-styles from the audio analysis. For ambiguous names ("Indie": Rock or Pop)
@@ -302,7 +302,7 @@ For artists and albums from a streaming service the tab is called "Discover loca
 
 The Tag Service reads the album list from MPD and stores it in `/data/xplorio/data/albums.json`; it is re-read when the MPD database changes (checked at most once a minute; after tag changes automatically about a minute after the scan).
 
-**Genres:** The fourth search tab (only with the Tag Service) shows tiles of all genres when nothing is entered, and the matching genres otherwise. With more than twelve genres, a "Random genres" row sits above them; ↻ draws it again. Tapping one opens the genre page: if there are [audio analyses](#audio-analysis-with-essentia-optional-on-the-mac), it first shows tiles of the styles (Discogs sub-styles, e.g. "Trip Hop" under Electronic) with "All" in front, otherwise all albums of the genre right away, sorted by artist. Each album counts up to three sub-styles of its genre, averaged over the analysed tracks; albums without an analysis appear only under "All". Search also finds sub-styles. An album's genre is its most frequent genre tag (from the album list). The album page shows artist, album and genre one below the other; artist and genre open their pages. In album lists the genre is shown small before the pencil, in the player view small below the quality line (tapping it opens the genre page). [Check library](#check-library) helps to unify and fill in genre tags.
+**Genres:** The fourth search tab (only with the Tag Service) shows tiles of all genres when nothing is entered, and the matching genres otherwise. With more than twelve genres, a "Random genres" row sits above them; ↻ draws it again. Tapping one opens the genre page: if there are [audio analyses](#audio-analysis-with-essentia-optional-on-a-mac-or-windows-pc), it first shows tiles of the styles (Discogs sub-styles, e.g. "Trip Hop" under Electronic) with "All" in front, otherwise all albums of the genre right away, sorted by artist. Each album counts up to three sub-styles of its genre, averaged over the analysed tracks; albums without an analysis appear only under "All". Search also finds sub-styles. An album's genre is its most frequent genre tag (from the album list). The album page shows artist, album and genre one below the other; artist and genre open their pages. In album lists the genre is shown small before the pencil, in the player view small below the quality line (tapping it opens the genre page). [Check library](#check-library) helps to unify and fill in genre tags.
 
 The Tag Service fetches artist images once from Deezer and stores them under `/data/xplorio/data/artists/` (Last.fm no longer provides them); if no image is available, Volumio's artist icon is shown.
 
@@ -331,11 +331,11 @@ To disable it: set `MOODTAGS: false` in `web/config.local.js`, then restart the 
 
 "Create mix" only shows a preview; only "Play mix" replaces the queue (the list icon next to it appends the mix instead). If there are fewer than 20 exact matches, the mix also includes similar tracks (energy ±1, then without style) and indicates this. The same artist is never played twice in a row.
 
-### Audio Analysis with Essentia (Optional, on the Mac)
+### Audio Analysis with Essentia (Optional, on a Mac or Windows PC)
 
 [Essentia](https://essentia.upf.edu) analyzes each track's audio directly and provides tempo (BPM), key, mood (happy, sad, relaxed, aggressive, party), danceability, vocal/instrumental classification, valence and arousal, as well as Discogs styles.
 
-This requires too much processing power for the player, so `tools/essentia/analyse.py` runs on the Mac and uploads a results file. The Tag Service then uses the audio-derived energy, tempo, and mood values for those tracks, while Last.fm adds additional moods and styles; the Mood Mix then gets a tempo control under "Fine-tuning".
+This requires too much processing power for the player, so `tools/essentia/analyse.py` runs on the Mac (or a Windows PC, see below) and uploads a results file. The Tag Service then uses the audio-derived energy, tempo, and mood values for those tracks, while Last.fm adds additional moods and styles; the Mood Mix then gets a tempo control under "Fine-tuning".
 
 One-time setup (macOS 15 or later; Python 3.14 from python.org or `brew install python@3.14`):
 
@@ -352,6 +352,22 @@ python -m pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
 ```
 
 The pretrained models (around 100 MB, licensed under CC BY-NC-SA 4.0, non-commercial use only) are not included in the pip package; the script downloads them to `~/.cache/mx-essentia` on the first run.
+
+**On Windows:** There is no Essentia package for Windows, but there is one for Linux, and it runs on Windows 10 and 11 in the Windows Subsystem for Linux (WSL). Once, in a Command Prompt opened as administrator, run `wsl --install` (this sets up Ubuntu; then restart and choose a user name and password for Ubuntu). Then, in the "Ubuntu" window:
+
+```bash
+sudo apt update && sudo apt install -y python3-venv ffmpeg
+python3 -m venv ~/mx-essentia && source ~/mx-essentia/bin/activate
+python -m pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
+curl -fsSLO https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/essentia/analyse.py
+```
+
+If pip reports "from versions: none", Ubuntu has a newer Python; then install without `==…`. After that, proceed as below, only with different paths and without `caffeinate`:
+
+- Windows drives are under `/mnt/c/`, `/mnt/d/` and so on, e.g. `python3 analyse.py /mnt/d/Music`.
+- If the music is on the player, map its share as a network drive in Explorer (e.g. `Z:` for `\\<player IP>\<share>`) and mount it in Ubuntu: `sudo mkdir -p /mnt/z && sudo mount -t drvfs Z: /mnt/z` (again after every Windows restart). Then `python3 analyse.py --player http://<player IP> /mnt/z/<music folder>`.
+- Use the player's IP address: Ubuntu under WSL often cannot resolve names ending in `.local`.
+- Keep the Ubuntu window open, and do not let Windows go to sleep (Settings > System > Power, set to "Never" while the analysis runs).
 
 Run the analysis (first a short test run, then everything; `caffeinate -i` keeps the Mac awake):
 
