@@ -93,6 +93,11 @@
     flex:0 0 auto; }
   #scrollArea { flex:1 1 auto; overflow:hidden; }
   #storyText { font-size:1.6vw; line-height:1.7; white-space:pre-wrap; }
+  /* track list of the queued album while the player is stopped */
+  .trk { display:flex; gap:1vw; white-space:normal; }
+  .trk-n { flex:0 0 2.2em; text-align:right; opacity:.5; }
+  .trk-t { flex:1 1 auto; min-width:0; }
+  .trk-d { flex:0 0 auto; opacity:.55; font-variant-numeric:tabular-nums; }
 
   /* progress bar */
   #bar { position:fixed; left:0; bottom:0; width:100%; height:10px; z-index:10;
@@ -210,7 +215,7 @@ var lyricLines = [];
 var lyrEls = [];               /* the line elements, same order as lyricLines */
 var lastActive = -2;           /* last highlighted line (-1 = none yet, -2 = unknown) */
 var lyrTimer = null;
-var plainTimer = null, plainOffsets = null, plainP = -1, plainStart = 0;   /* page-wise scrolling of long lyrics without timestamps */
+var plainTimer = null, plainOffsets = null, plainP = -1, plainStart = 0, plainTimed = false;   /* page-wise scrolling of long lyrics without timestamps */
 var lyrSeq = 0, infoSeq = 0;   /* ids: only the answer to the newest request is shown */
 var seekBase = 0, seekStamp = 0, playing = false, lastDur = 0;
 var pollTimer = null, polling = false;
@@ -473,6 +478,7 @@ function showLyrics(data) {
   body.className = '';
   body.style.transform = 'translateY(0)';
   while (body.firstChild) body.removeChild(body.firstChild);
+  plainTimed = false;
   if (!data) { box.className = 'empty'; return; }
   box.className = '';
   head.textContent = EXTRA_TITLE;
@@ -488,6 +494,34 @@ function showLyrics(data) {
    if that is not enough, it pages, evenly over the first 90 %
    of the track (without known duration, e.g. radio, every PAGE_MS). Pages instead of gliding: whole pixels (sharp text),
    no script per tick, just one timer until the next page change. */
+/* Stopped with an album in the queue: its track list instead of the lyrics (pages every PAGE_MS if too long) */
+function fmtDur(s) {
+  s = Math.round(Number(s) || 0);
+  return s > 0 ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : '';
+}
+function showTracks(tracks) {
+  showLyrics(null);
+  if (!tracks || !tracks.length) return;
+  box.className = '';
+  head.textContent = /^de/i.test(navigator.language || '') ? 'Titelliste' : 'Tracks';   /* only text on the page: by device language */
+  tracks.forEach(function(t, i){
+    var row = document.createElement('div'), n = document.createElement('span'), ti = document.createElement('span'), d = document.createElement('span');
+    row.className = 'trk'; n.className = 'trk-n'; ti.className = 'trk-t'; d.className = 'trk-d';
+    n.textContent = (i + 1) + '.';
+    ti.textContent = t.title || t.name || '';
+    d.textContent = fmtDur(t.duration);
+    row.appendChild(n); row.appendChild(ti); row.appendChild(d);
+    body.appendChild(row);
+  });
+  plainTimed = true;
+  setupPlainLyrics();
+}
+/* the queued tracks of this album (all of the queue if none match, e.g. a playlist) */
+function albumTracks(queue, album, artist) {
+  var same = (queue || []).filter(function(t){ return album && t.album === album && (!artist || !t.artist || t.artist === artist || t.albumartist === artist); });
+  return same.length ? same : (queue || []);
+}
+
 function setupPlainLyrics() {
   clearTimeout(plainTimer);
   plainTimer = null;
@@ -521,7 +555,7 @@ function updatePlainLyrics() {
   plainTimer = null;
   if (!plainOffsets) return;
   var n = plainOffsets.length, span, pos, p, wait = 0;
-  if (lastDur > 0) {
+  if (lastDur > 0 && !plainTimed) {
     span = lastDur * 1000 * 0.9 / n;
     pos = nowPos();
     p = Math.min(n - 1, Math.floor(pos / span));
@@ -743,8 +777,10 @@ function handleState(st) {
     var title  = st.title  || '';
     var radio  = (st.trackType === 'webradio');
 
-    setText(mAlbum, 'album', radio ? '' : album);
-    setText(mTitle, 'title', title);
+    /* stopped with an album in the queue: only album and artist beside the cover, the track list on the right */
+    var idle = st.status === 'stop' && !radio && !!album;
+    setText(mAlbum, 'album', radio || idle ? '' : album);
+    setText(mTitle, 'title', idle ? album : title);
     setText(mArtist, 'artist', artist);
     var tech = [];
     if (st.samplerate) tech.push(st.samplerate);
@@ -752,7 +788,7 @@ function handleState(st) {
     if (!st.samplerate && st.bitrate) tech.push(st.bitrate);
     if (st.fileFormat) tech.push(String(st.fileFormat).toUpperCase());
     if (st.trackType) tech.push(String(st.trackType).toUpperCase());
-    setText(mTech, 'tech', tech.join('  \xb7  '));
+    setText(mTech, 'tech', idle ? '' : tech.join('  \xb7  '));
 
     if (radio) {
       var p = title.indexOf(' - ');
@@ -762,14 +798,20 @@ function handleState(st) {
     }
 
     var key    = artist + '|' + album + '|' + (radio ? title : '');
-    var lyrKey = artist + '|' + title;
+    var lyrKey = idle ? 'tracks|' + artist + '|' + album : artist + '|' + title;
 
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
       var lySeq = ++lyrSeq;
-      withTimeout(askExtra(artist, title, radio), FETCH_TIMEOUT_MS, null).then(function(res){
-        if (lySeq === lyrSeq) showLyrics(res);   /* a later request is already on its way: discard this answer */
-      });
+      if (idle) {
+        withTimeout(fetch('/api/v1/getQueue').then(function(r){ return r.json(); }), FETCH_TIMEOUT_MS, null).then(function(q){
+          if (lySeq === lyrSeq) showTracks(albumTracks(q && q.queue, album, artist));
+        });
+      } else {
+        withTimeout(askExtra(artist, title, radio), FETCH_TIMEOUT_MS, null).then(function(res){
+          if (lySeq === lyrSeq) showLyrics(res);   /* a later request is already on its way: discard this answer */
+        });
+      }
     }
 
     if (key === lastKey) return;
