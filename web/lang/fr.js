@@ -634,6 +634,7 @@ langRegister('fr', 'Français', {
   'search.minChars': 'Saisis au moins 2 caractères et touche OK',
   'search.noAnswer': 'Pas de réponse de Volumio. Réessaie.',
   'search.noAnswerStreams': 'Pas de réponse de Volumio ({services} ?). Réessaie.',
+  'search.didYouMean': 'Vouliez-vous dire :',
   'search.noResults': 'Aucun résultat',
   'search.or': ' ou ',
   'search.pickSource': 'Coche Local ou {services}',

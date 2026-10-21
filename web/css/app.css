@@ -472,6 +472,8 @@
   .sHint { font-size:calc(2.8 * var(--vw)); opacity:.4; text-align:center; padding:calc(4 * var(--vw)) 0; }
   .sHint.listHint { padding:calc(2 * var(--vw)) 0 calc(1 * var(--vw)); }
   .sHint.listLink { cursor:pointer; display:table; margin:calc(1 * var(--vw)) auto 0; padding:calc(1.2 * var(--vw)) calc(3 * var(--vw)); border-radius:calc(2 * var(--vw)); }
+  .sSuggest { font-size:calc(3 * var(--vw)); opacity:.85; padding:calc(2 * var(--vw)) 0 calc(3 * var(--vw)); }
+  .sSuggest .mxChips { padding-top:calc(1.5 * var(--vw)); }
   .sHint.simSeed { text-align:left; opacity:.55; padding:0 0 calc(3 * var(--vw)); }
 
 

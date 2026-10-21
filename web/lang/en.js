@@ -635,6 +635,7 @@ langRegister('en', 'English', {
   'search.minChars': 'Enter at least 2 characters and tap Go',
   'search.noAnswer': 'No response from Volumio. Please try again.',
   'search.noAnswerStreams': 'No response from Volumio ({services}?). Please try again.',
+  'search.didYouMean': 'Did you mean:',
   'search.noResults': 'No results',
   'search.or': ' or ',
   'search.pickSource': 'Tick Local or {services}',

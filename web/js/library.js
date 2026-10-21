@@ -234,6 +234,7 @@ function triggerSearch() {
   var q = searchInput.value.trim();
   if (q.length < 2) {
     searchData = streamEmptySearch();
+    searchSuggest = null;
     searchSeq++;
     renderSearchResults();
     return;
@@ -245,6 +246,7 @@ var searchShowLocal = true;     /* "Local" checkbox next to the heading; those o
 var searchSeq = 0;          /* discards answers to outdated searches */
 var SEARCH_SLOW_MS = 5000;  /* then the note "Waiting for TIDAL/Qobuz" */
 var SEARCH_TIMEOUT_MS = 20000;
+var searchSuggest = null;   /* {q, items: [{kind, name, ar}]} "Did you mean …?" from the tag service, only without local hits */
 
 function searchMessage(text) {
   while (searchResults.firstChild) searchResults.removeChild(searchResults.firstChild);
@@ -253,8 +255,42 @@ function searchMessage(text) {
   searchResults.appendChild(hint);
 }
 
+/* nothing found locally: ask the tag service for similar artist and album names (typos, accents, "The") */
+function searchSuggestAsk(q, seq) {
+  if (searchData.artists.length || searchData.albums.length || searchData.songs.length || typeof tagGetJson !== 'function') return;
+  tagGetJson('/suggest?q=' + encodeURIComponent(q)).then(function(r){
+    if (seq !== searchSeq || !r || !r.ok || !r.items || !r.items.length) return;
+    searchSuggest = {q: q, items: r.items};
+    renderSearchResults();
+  }).catch(function(){ /* without tag service: no suggestions */ });
+}
+
+function searchSuggestRow() {
+  if (!searchShowLocal || !searchSuggest || searchSuggest.q !== searchQuery) return;
+  var box = document.createElement('div');
+  box.className = 'sSuggest';
+  box.appendChild(document.createTextNode(T('search.didYouMean')));
+  var chips = document.createElement('div');
+  chips.className = 'mxChips';
+  searchSuggest.items.forEach(function(it){
+    var c = document.createElement('span');
+    c.className = 'mxChip mxSmall';
+    c.textContent = it.kind === 'album' && it.ar ? it.name + ' · ' + it.ar : it.name;
+    c.addEventListener('click', function(){
+      var tab = document.querySelector('#searchTabBar .qTab[data-cat="' + (it.kind === 'album' ? 'albums' : 'artists') + '"]');
+      if (tab && searchCat !== tab.dataset.cat) tab.click();
+      searchInput.value = it.name;
+      triggerSearch();
+    });
+    chips.appendChild(c);
+  });
+  box.appendChild(chips);
+  searchResults.appendChild(box);
+}
+
 function doSearch(q) {
   searchQuery = q;
+  searchSuggest = null;
   var seq = ++searchSeq;
   searchMessage(T('search.searching'));
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
@@ -265,6 +301,7 @@ function doSearch(q) {
       searchData = streamSplitSearch((j && j.navigation && j.navigation.lists) || [], q);
 
       renderSearchResults();
+      searchSuggestAsk(q, seq);
     }).catch(function(){
       clearTimeout(slow);
       if (seq !== searchSeq) return;
@@ -313,6 +350,7 @@ function streamNames() { return streamsOn().map(function(s){ return s.name; }).j
 function renderSearchResults() {
   if (searchCat === 'genres' && typeof genreSearch === 'function') return genreSearch();     /* genre.js */
   while (searchResults.firstChild) searchResults.removeChild(searchResults.firstChild);
+  searchSuggestRow();
   var list = searchShowLocal ? (searchData[searchCat] || []) : [];
   var parts = streamsOn().filter(function(s){ return s.show; }).map(function(s){
     return {s: s, list: (searchData.stream && searchData.stream[s.id] && searchData.stream[s.id][searchCat]) || []};

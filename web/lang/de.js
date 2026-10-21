@@ -633,6 +633,7 @@ langRegister('de', 'Deutsch', {
   'search.minChars': 'Mind. 2 Zeichen eingeben und Los tippen',
   'search.noAnswer': 'Keine Antwort von Volumio. Bitte erneut versuchen.',
   'search.noAnswerStreams': 'Keine Antwort von Volumio ({services}?). Bitte erneut versuchen.',
+  'search.didYouMean': 'Meintest du:',
   'search.noResults': 'Keine Ergebnisse',
   'search.or': ' oder ',
   'search.pickSource': 'Lokal oder {services} ankreuzen',
