@@ -729,5 +729,11 @@ Die Oberfläche läuft auch unter Volumio 4 (auf einer Testinstanz erprobt). Unt
 - **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Last.fm und Wikipedia
   (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit `LASTFM_KEY` in `/data/xplorio/data/keys.json` gibt es
   auch Albumtexte.
+- **Bildschirm am Player (Kiosk):** Läuft auf dem angeschlossenen Display Volumios eigene Oberfläche, kann dort auch
+  Xplorio laufen (erprobt auf einem MacBook mit Volumio 4). Der Kiosk-Browser bekommt seine Dateien aus `/volumio/http/www/`;
+  `xplorio-deploy` spielt dort mit ein (prüfen: `ls /volumio/http/www*/xplorio.html`). In der letzten Zeile von
+  `/opt/volumiokiosk.sh` `http://localhost:3000` durch `http://localhost:3000/xplorio.html` ersetzen (oder
+  `…/kioskTV.html` für Cover, Titel und Lyrics ohne Bedienung), dann `sudo systemctl restart volumio-kiosk`. Ein
+  Volumio-Update kann das Script zurücksetzen; dann die Zeile erneut ändern.
 - **Nicht erprobt unter Volumio 4:** `kioskTV.html` (Kiosk-Ordner), Rotel-Bridge und TIDAL-Wächter (der Wächter liegt dort
   unter `/volumio/http/www4/tools/`; den Pfad im Cron-Eintrag entsprechend anpassen).
