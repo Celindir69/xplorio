@@ -311,6 +311,21 @@ ob dessen Automatik für Crossfade und Angleichen an ist: Wer beides hier einste
 stellt AutoDJ die Werte beim nächsten neuen Mix um. Ob Volumio Crossfade und ReplayGain-Modus nach einem Neustart
 zurücksetzt, ist noch nicht geprüft.
 
+**ReplayGain-Tags mit rsgain (optional):** Fehlen die Tags, schreibt sie [rsgain](https://github.com/complexlogic/rsgain)
+nachträglich in die Dateien; der Ton selbst bleibt unverändert. Wie die Audio-Analyse läuft es auf dem Mac oder PC, nicht
+auf dem Player. Liegt die Musik auf dem Player, die Freigabe mit Schreibrechten verbinden.
+```bash
+brew install rsgain                                        # Mac; Ubuntu/WSL: sudo apt install rsgain
+rsgain easy -m MAX /Volumes/<Freigabe>/<Musikordner>      # alles, mit allen Prozessorkernen
+rsgain easy -S -m MAX /Volumes/<Freigabe>/<Musikordner>   # später: nur Alben ohne Tags (z. B. neu dazugekommene)
+```
+Unter Windows die ZIP-Datei von der [Release-Seite](https://github.com/complexlogic/rsgain/releases) entpacken und z. B.
+`rsgain.exe easy -m MAX "Z:\Musik"` aufrufen.
+- `easy` geht davon aus, dass jedes Album in einem eigenen Ordner liegt, und berechnet daraus die Album-Werte. Ist die
+  Sammlung anders sortiert, mit `-p no_album` nur Titel-Werte schreiben und unter „Wiedergabe“ „Titel“ wählen.
+- rsgain ändert die Dateien. Wer auch die [Audio-Analyse](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc)
+  nutzt, lässt rsgain am besten vorher laufen; sonst analysiert `analyse.py` die geänderten Dateien beim nächsten Lauf neu.
+
 ### Verlauf und Statistik
 Im Menü (Zahnrad oben rechts) unter „Verlauf und Statistik“: **Zuletzt** gespielt (nach Tagen), **Meistgespielt** (Titel, Alben, Künstler oder Genres;
 30 Tage, 12 Monate oder gesamt), **Statistik** (Wiedergaben, Hörzeit, Verlauf, Tageszeit, Wochentag, Top-8-Genres; ein Genre antippen öffnet seine Alben) und **Rückblick**

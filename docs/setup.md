@@ -270,6 +270,24 @@ Settings → Playback options. If the AutoDJ plugin is installed, the page shows
 levelling is on: if you set both here, switch it off in the plugin, otherwise AutoDJ changes the values at the next fresh
 mix. Whether Volumio resets crossfade and the ReplayGain mode after a restart has not been checked yet.
 
+**ReplayGain tags with rsgain (optional):** If the tags are missing, [rsgain](https://github.com/complexlogic/rsgain)
+adds them to the files afterwards; the audio itself stays unchanged. Like the audio analysis, it runs on a Mac or PC, not
+on the player. If the music is on the player, connect its share with write access.
+
+```bash
+brew install rsgain                                        # Mac; Ubuntu/WSL: sudo apt install rsgain
+rsgain easy -m MAX /Volumes/<share>/<music folder>        # everything, using all CPU cores
+rsgain easy -S -m MAX /Volumes/<share>/<music folder>     # later: only albums without tags (e.g. newly added ones)
+```
+
+On Windows, unpack the ZIP file from the [release page](https://github.com/complexlogic/rsgain/releases) and run e.g.
+`rsgain.exe easy -m MAX "Z:\Music"`.
+
+- `easy` assumes that every album is in its own folder and calculates the album values from that. If the collection is
+  organised differently, write only track values with `-p no_album` and choose "Track" under "Playback".
+- rsgain changes the files. If you also use the [audio analysis](#audio-analysis-with-essentia-optional-on-a-mac-or-windows-pc),
+  run rsgain first; otherwise `analyse.py` analyses the changed files again on its next run.
+
 ### History and Statistics
 
 In the menu (gear at the top right) under "History and stats": **Recent** (by day), **Most played** (tracks, albums, artists, or genres; 30 days, 12 months, or all time), **Stats** (plays, listening time, history, time of day, weekday, top 8 genres; tapping a genre opens its albums), and **Year in review** (one year: totals compared with the previous year, months, plus expandable top tracks, albums, artists, genres, and newly discovered artists; tapping a monthly bar displays the rankings for that month; genres are taken from the album list below).
