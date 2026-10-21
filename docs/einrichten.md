@@ -26,6 +26,8 @@ Von Hand statt mit `xplorio-deploy`: `xplorio.html`, `app.html` und `web/` nach 
 Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser seine
 Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN ins Heimnetz.
 `kioskTV.html` neben `xplorio.html` (der Kiosk lädt `http://localhost:3000/kioskTV.html`, also aus dem Ordner, den Volumio ausliefert).
+`kioskTV.html` zeigt Cover, Titel, Lyrics und wechselnde Infos zu Album und Künstler. Ist gestoppt und ein Album in der
+Warteschlange, stehen neben dem Cover nur Album und Künstler, und statt der Lyrics erscheint die Titelliste des Albums.
 Nach einem Update mit `xplorio-deploy` lädt der Browser die neuen Dateien von selbst (das Skript schreibt dazu `web/build.js`); bei Kopieren von Hand einmal hart neu laden. Eine vorhandene `web/config.local.js` bleibt erhalten.
 Eigene Einstellungen (Rotel, Dienste ein/aus, Sprache) kommen in `web/config.local.js`, Vorlage
 `web/config.local.js.example`. Der Last.fm-Zugang gehört nicht dorthin, sondern nach `/data/xplorio/data/keys.json`
