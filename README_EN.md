@@ -123,7 +123,7 @@ progress of the mood tags.
 - Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`; an input other than the player is shown with an icon in the player view.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)
-- `xplorio-deploy`: updates the player directly from this repository, with backups and `--rollback`; the same on
+- `xplorio-deploy`: installs and updates Xplorio directly on the player from this repository, with backups and `--rollback`; the same on
   Volumio 3 and 4. It can also set up the Tag Service (`--tag-service`) and the Rotel bridge (`--rotel <IP>`).
 
 ## Structure
@@ -135,12 +135,11 @@ progress of the mood tags.
 | `tags/` | Tag Service (port 8766): Tag Editor, Check library, history, mood tags, cover art; accepts commands only from the interface; Python 2.7 or 3 with bundled mutagen library (GPLv2, see `tags/vendor/mutagen/COPYING`) | `/data/xplorio/tags/` (data: `/data/xplorio/data/`) |
 | `rotel/rotel-bridge.js` | optional: HTTP service (port 8765) for a network-connected Rotel amplifier (volume, power, input), interface only | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | restarts Volumio or reconnects TIDAL if the TIDAL plugin becomes unresponsive (tested only on Volumio 2) | `/volumio/http/www3/tools/` |
-| `tools/xplorio-deploy.sh` | updates the player from this repository (`xplorio-deploy`) | `/usr/local/bin/` |
+| `tools/xplorio-deploy.sh` | installs and updates Xplorio on the player from this repository (`xplorio-deploy`) | `/usr/local/bin/` |
 | `tools/essentia/` | optional audio analysis on the Mac; results are uploaded to the Tag Service | not on the player |
 
-Requirements: Volumio 2 (Node 8, Python 2.7, `mpc`) or Volumio 4 (Node and Python 3 are included). Setup:
-[docs/setup.md](docs/setup.md). Update directly on the player: `sudo xplorio-deploy`
-(`tools/xplorio-deploy.sh`, see there).
+Requirements: Volumio 2 (Node 8, Python 2.7, `mpc`) or Volumio 4 (Node and Python 3 are included). Setup and updates directly on the player with `sudo xplorio-deploy`
+(`tools/xplorio-deploy.sh`), see [docs/setup.md](docs/setup.md#first-time-setup).
 
 The Rotel amplifier integration and the TIDAL watchdog are optional (see setup). Custom settings (language, Rotel, services on/off) belong in `web/config.local.js`
 (template `web/config.local.js.example`); this file is not included in the repository. The Last.fm credentials (for similar artists,

@@ -3,8 +3,25 @@
 Alle Befehle auf dem Player (ssh), als Benutzer mit `sudo`. Geschrieben für Volumio 2; was unter Volumio 4 anders ist,
 steht gesammelt unter [Volumio 4](#volumio-4).
 
+## Ersteinrichtung
+Am einfachsten mit `xplorio-deploy`; Dateien muss man dafür nicht von Hand kopieren. Erst das Skript holen:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null
+sudo chmod +x /usr/local/bin/xplorio-deploy
+```
+Dann:
+```bash
+sudo xplorio-deploy                  # Oberfläche einspielen (zeigt die neuen Dateien, nach Rückfrage)
+sudo xplorio-deploy --tag-service    # Tag-Dienst für Tag-Editor, Bibliothek prüfen, Verlauf
+sudo xplorio-deploy --password       # optional: Passwort für die Seite „System“
+sudo xplorio-deploy --rotel <IP>     # optional: Rotel-Verstärker im Netz
+```
+Danach `http://<player>/xplorio.html` aufrufen. Das Skript spielt die Oberfläche in jeden vorhandenen Ordner
+`/volumio/http/www*/` ein, den Volumio mitbringt; mehr dazu unter [Aktualisieren mit xplorio-deploy](#aktualisieren-mit-xplorio-deploy).
+Eigene Einstellungen kommen anschließend nach `web/config.local.js` (siehe [Oberfläche](#oberfläche)).
+
 ## Oberfläche
-`xplorio.html`, `app.html` und `web/` nach `/volumio/http/www3/` kopieren, Aufruf `http://<player>/xplorio.html`
+Von Hand statt mit `xplorio-deploy`: `xplorio.html`, `app.html` und `web/` nach `/volumio/http/www3/` kopieren, Aufruf `http://<player>/xplorio.html`
 (`app.html` ist der frühere Name und leitet nur weiter; alte Lesezeichen und Home-Bildschirm-Verknüpfungen gehen also weiter).
 Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser seine
 Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN ins Heimnetz.
@@ -42,12 +59,7 @@ Gerät, erscheint „Audioziel getrennt“ statt Volumios Fenster mit Bestätigu
 Volumio die Rückkehr meldet (USB-DAC). Erkannt werden Volumios Meldungen auf Deutsch, Englisch, Französisch, Spanisch und Italienisch.
 
 ## Aktualisieren mit xplorio-deploy
-Einmal einrichten:
-```bash
-curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null
-sudo chmod +x /usr/local/bin/xplorio-deploy
-```
-Danach auf dem Player:
+Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Danach auf dem Player:
 | Aufruf | Wirkung |
 |---|---|
 | `sudo xplorio-deploy` | `main` aus xplorio laden, geänderte und neue Dateien zeigen, nach Rückfrage einspielen |
