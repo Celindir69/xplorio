@@ -66,7 +66,7 @@
     flex:0 0 auto; opacity:.8; }
   #sideArea { flex:1 1 auto; overflow:hidden; }
   #sideText { font-size:1.4vw; line-height:1.65; white-space:pre-wrap; }
-  .credit-row { display:flex; padding:.8vh 0;
+  .credit-row { display:flex; padding:.32em 0;
     border-bottom:1px solid rgba(255,255,255,.2); }
   .credit-row:last-child { border-bottom:none; }
   .credit-key { flex:0 0 38%; padding-right:1vw; opacity:.65;
@@ -177,6 +177,7 @@
 
 <script>
 var PAGE_MS = 25000;
+var CREDITS_MIN_VW = 0.95;     /* smallest font for long credits (in vw), below that it pages */
 var PLAIN_MIN_VW = 0.95;       /* smallest font for long lyrics without timestamps (in vw; 1080p: about 18 px), below that it pages */
 var POLL_MS = 3000;            /* sync with the player; the position keeps running locally in between */
 var FETCH_TIMEOUT_MS = 15000;  /* timeout for lyrics and plugin requests */
@@ -609,6 +610,7 @@ function markDots() {
 
 function paint(it) {
   sHead.textContent = it.title;
+  sBody.style.fontSize = '';
   while (sBody.firstChild) sBody.removeChild(sBody.firstChild);
   if (it.data.kind === 'story') { sBody.textContent = it.data.value; return; }
   it.data.value.forEach(function(row){
@@ -676,8 +678,19 @@ function next(my) {
   }, 600);
 }
 
+/* long credits: reduce the font in whole pixels until they fit (down to CREDITS_MIN_VW); only then page */
+function fitCredits(avail) {
+  if (!avail || !sBody.querySelector('.credit-row') || sBody.scrollHeight <= avail) return;
+  var minPx = Math.round(window.innerWidth * CREDITS_MIN_VW / 100);
+  for (var px = Math.floor(parseFloat(getComputedStyle(sBody).fontSize)) - 1; px >= minPx; px--) {
+    sBody.style.fontSize = px + 'px';
+    if (sBody.scrollHeight <= avail) break;
+  }
+}
+
 function run(my) {
   if (my !== token) return;
+  fitCredits(sArea.clientHeight);
   var offsets = pageOffsets(sArea.clientHeight);
   var pages = offsets.length;
   function goTo(p) {
