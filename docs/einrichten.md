@@ -199,7 +199,7 @@ ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.
 **Genres:** Zwei weitere Kategorien schlagen je Album genau ein Genre aus den 15 Discogs-Oberkategorien vor (Electronic,
 Rock, Jazz, Classical, Pop, Hip Hop, Funk / Soul, Folk, World, & Country, Latin, Reggae, Blues, Stage & Screen,
 Non-Music, Children's, Brass & Military).
-- *Alben ohne Genre:* Vorschlag aus der Audio-Analyse ([Essentia](#audio-analyse-mit-essentia-optional-auf-dem-mac)), gemittelt über alle Titel
+- *Alben ohne Genre:* Vorschlag aus der Audio-Analyse ([Essentia](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc)), gemittelt über alle Titel
   des Albums. Ohne Audio-Analyse gibt es keinen Vorschlag.
 - *Genres zusammenfassen:* Vorhandene Genre-Tags (z. B. „Trip-Hop“, „TripHop“, „Klassik“, „Hörspiel“) ordnet eine Tabelle
   in `tags/genres.js` einer Oberkategorie zu, ebenso die Discogs-Unterstile aus der Audio-Analyse. Bei mehrdeutigen Namen
@@ -411,7 +411,7 @@ Grenzen hinaus aufgefüllt. Nie derselbe Künstler direkt hintereinander; „mag
 
 **Genres:** Der vierte Suchreiter (nur mit Tag-Dienst) zeigt ohne Eingabe Kacheln aller Genres, mit Eingabe die passenden.
 Bei mehr als zwölf Genres steht darüber die Reihe „Zufällige Genres“; ↻ zieht sie neu.
-Ein Tipp öffnet die Genre-Seite: Gibt es [Audio-Analysen](#audio-analyse-mit-essentia-optional-auf-dem-mac), zuerst Kacheln
+Ein Tipp öffnet die Genre-Seite: Gibt es [Audio-Analysen](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc), zuerst Kacheln
 der Stilrichtungen (Discogs-Unterstile, z. B. „Trip Hop“ unter Electronic) mit „Alle“ davor, sonst gleich alle Alben des
 Genres, nach Künstler sortiert. Je Album zählen bis zu drei Unterstile seines Genres, gemittelt über die analysierten Titel;
 Alben ohne Analyse stehen nur unter „Alle“. Die Suche findet auch Unterstile. Als Genre eines Albums gilt sein
@@ -453,10 +453,10 @@ Favoriten, ausgewogen, versteckte Perlen) wählen. „Mix erstellen“ zeigt nur
 die Warteschlange (das Listensymbol daneben hängt den Mix an). Gibt es weniger als 20 genaue Treffer, nimmt der Mix
 Ähnliches dazu (Energie ±1, dann ohne Stil) und sagt das. Derselbe Künstler kommt nie direkt hintereinander.
 
-### Audio-Analyse mit Essentia (optional, auf dem Mac)
+### Audio-Analyse mit Essentia (optional, auf Mac oder Windows-PC)
 [Essentia](https://essentia.upf.edu) hört jeden Titel selbst an und liefert je Titel Tempo (BPM), Tonart, Stimmung
 (fröhlich, traurig, entspannt, aggressiv, Party), Tanzbarkeit, Gesang/instrumental, Valenz und Erregung sowie
-Discogs-Stile. Für den Player ist das zu viel Rechenarbeit, deshalb läuft `tools/essentia/analyse.py` auf dem Mac und
+Discogs-Stile. Für den Player ist das zu viel Rechenarbeit, deshalb läuft `tools/essentia/analyse.py` auf dem Mac (oder einem Windows-PC, siehe unten) und
 lädt eine Ergebnisdatei hoch. Der Tag-Dienst nimmt dann Energie, Tempo und Stimmung dieser Titel aus dem Audio,
 Last.fm ergänzt weitere Stimmungen und Stile; der Mood Mix bekommt unter „Feinabstimmung“ einen Tempo-Regler.
 
@@ -473,6 +473,24 @@ python -m pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
 ```
 Die vortrainierten Modelle (rund 100 MB, Lizenz CC BY-NC-SA 4.0, nur nicht-kommerziell) gehören nicht zum pip-Paket;
 das Skript lädt sie beim ersten Lauf nach `~/.cache/mx-essentia`.
+
+**Unter Windows:** Für Windows gibt es kein Essentia-Paket, wohl aber für Linux, und das läuft unter Windows 10 und 11
+im Linux-Teilsystem WSL. Einmalig in der Eingabeaufforderung als Administrator `wsl --install` (richtet Ubuntu ein; danach
+neu starten und Benutzername und Passwort für Ubuntu festlegen). Dann im Fenster „Ubuntu“:
+```bash
+sudo apt update && sudo apt install -y python3-venv ffmpeg
+python3 -m venv ~/mx-essentia && source ~/mx-essentia/bin/activate
+python -m pip install "essentia-tensorflow==2.1b6.dev1389" mutagen
+curl -fsSLO https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/essentia/analyse.py
+```
+Meldet pip „from versions: none“, hat Ubuntu ein neueres Python; dann ohne `==…` installieren. Danach wie unten, nur mit anderen Pfaden und ohne `caffeinate`:
+- Windows-Laufwerke liegen unter `/mnt/c/`, `/mnt/d/` usw., also z. B. `python3 analyse.py /mnt/d/Musik`.
+- Liegt die Musik auf dem Player, die Freigabe im Explorer als Netzlaufwerk verbinden (z. B. `Z:` für
+  `\\<IP des Players>\<Freigabe>`) und in Ubuntu einhängen: `sudo mkdir -p /mnt/z && sudo mount -t drvfs Z: /mnt/z`
+  (nach jedem Neustart von Windows wieder). Dann `python3 analyse.py --player http://<IP des Players> /mnt/z/<Musikordner>`.
+- Für den Player die IP-Adresse nehmen: Namen mit `.local` findet Ubuntu unter WSL oft nicht.
+- Das Ubuntu-Fenster muss offen bleiben, und Windows darf nicht in den Ruhezustand gehen (Einstellungen > System >
+  Energie, für die Dauer der Analyse auf „Nie“).
 
 Analysieren (erst ein kurzer Probelauf, dann alles; `caffeinate -i` hält den Mac wach):
 ```bash

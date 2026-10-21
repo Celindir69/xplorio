@@ -69,7 +69,7 @@ Eigener erster Reiter neben Playlisten und Radio (Playlisten-Taste). Stimmung w�
 und Entdeckungsgrad festlegen: Favoriten, ausgewogen oder versteckte Perlen, je nach eigenem Verlauf. „Mix erstellen“
 zeigt erst eine Vorschau mit der Begründung je Titel; einzelne Titel lassen sich herausnehmen oder neu mischen. Erst
 „Mix abspielen“ ersetzt die Warteschlange. Grundlage sind Last.fm-Tags je Titel, die der Tag-Dienst sammelt, solange
-nichts spielt; die Musikdateien bleiben dabei unverändert. Optional hört Essentia auf dem Mac jeden Titel an
+nichts spielt; die Musikdateien bleiben dabei unverändert. Optional hört Essentia auf Mac oder PC jeden Titel an
 (`tools/essentia/`): Dann kommen Energie und Stimmung aus dem Audio, und ein Tempo-Regler (BPM) kommt dazu.
 
 <p>
@@ -129,7 +129,7 @@ Fortschritt der Stimmungs-Tags.
 | `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/volumio/http/www3/tools/` |
 | `tools/xplorio-deploy.sh` | installiert und aktualisiert Xplorio auf dem Player aus diesem Repository (`xplorio-deploy`) | `/usr/local/bin/` |
-| `tools/essentia/` | optionale Audio-Analyse auf dem Mac, Ergebnis wird zum Tag-Dienst hochgeladen | nicht auf dem Player |
+| `tools/essentia/` | optionale Audio-Analyse auf Mac oder Windows-PC, Ergebnis wird zum Tag-Dienst hochgeladen | nicht auf dem Player |
 
 Voraussetzungen: Volumio 2 (Node 8, Python 2.7, `mpc`) oder Volumio 4 (Node und Python 3 sind dabei). Einrichtung und Aktualisieren direkt auf dem Player mit `sudo xplorio-deploy`
 (`tools/xplorio-deploy.sh`), siehe [docs/einrichten.md](docs/einrichten.md#ersteinrichtung).

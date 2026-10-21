@@ -73,7 +73,7 @@ hidden gems, based on your listening history. "Create mix" first displays a prev
 individual tracks can be removed or the mix can be reshuffled. Only "Play mix" replaces the queue.
 
 The mix is based on Last.fm tags for each track, which the Tag Service collects while nothing is playing; the music files
-remain unchanged. Optionally, Essentia on the Mac can analyze each track directly (`tools/essentia/`): in that case,
+remain unchanged. Optionally, Essentia on a Mac or PC can analyze each track directly (`tools/essentia/`): in that case,
 energy and mood are derived from the audio, and a tempo control (BPM) is added.
 
 <p>
@@ -136,7 +136,7 @@ progress of the mood tags.
 | `rotel/rotel-bridge.js` | optional: HTTP service (port 8765) for a network-connected Rotel amplifier (volume, power, input), interface only | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | restarts Volumio or reconnects TIDAL if the TIDAL plugin becomes unresponsive (tested only on Volumio 2) | `/volumio/http/www3/tools/` |
 | `tools/xplorio-deploy.sh` | installs and updates Xplorio on the player from this repository (`xplorio-deploy`) | `/usr/local/bin/` |
-| `tools/essentia/` | optional audio analysis on the Mac; results are uploaded to the Tag Service | not on the player |
+| `tools/essentia/` | optional audio analysis on a Mac or Windows PC; results are uploaded to the Tag Service | not on the player |
 
 Requirements: Volumio 2 (Node 8, Python 2.7, `mpc`) or Volumio 4 (Node and Python 3 are included). Setup and updates directly on the player with `sudo xplorio-deploy`
 (`tools/xplorio-deploy.sh`), see [docs/setup.md](docs/setup.md#first-time-setup).
