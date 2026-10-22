@@ -754,8 +754,8 @@ langRegister('it', 'Italiano', {
   'textfn.func.words': 'Iniziali Maiuscole',
 
   'volumio.page.browse': 'Sfoglia',
+  'volumio.page.home': 'Pagina principale',
   'volumio.page.plugins': 'Plugin',
   'volumio.page.queue': 'Coda',
-  'volumio.page.settings': 'Impostazioni',
   'volumio.page.system': 'Sistema'
 }, 'it-IT');

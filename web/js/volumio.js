@@ -4,9 +4,9 @@
    Pages that xplorio.html has taken over itself can simply be removed from the list here. */
 
 var VOLUMIO_PAGES = [
+  { label: T('volumio.page.home'),     path: '/' },              /* start page of every UI (Classic, Contemporary, Manifest), menu to all other pages */
   { label: T('volumio.page.browse'),   path: '/browse' },
   { label: T('volumio.page.queue'),    path: '/queue' },
-  { label: T('volumio.page.settings'), path: '/settings' },
   { label: T('volumio.page.plugins'),  path: '/plugin-manager' },
   { label: T('volumio.page.system'),   path: '/dev' }              /* developer page: SSH, logs, restart */
 

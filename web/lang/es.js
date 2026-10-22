@@ -754,8 +754,8 @@ langRegister('es', 'Español', {
   'textfn.func.words': 'Primera Letra En Mayúscula',
 
   'volumio.page.browse': 'Explorar',
+  'volumio.page.home': 'Inicio',
   'volumio.page.plugins': 'Plugins',
   'volumio.page.queue': 'Cola',
-  'volumio.page.settings': 'Ajustes',
   'volumio.page.system': 'Sistema'
 }, 'es-ES');

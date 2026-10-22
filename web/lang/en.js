@@ -756,8 +756,8 @@ langRegister('en', 'English', {
   'textfn.func.words': 'Capitalize Words',
 
   'volumio.page.browse': 'Browse',
+  'volumio.page.home': 'Home',
   'volumio.page.plugins': 'Plugins',
   'volumio.page.queue': 'Queue',
-  'volumio.page.settings': 'Settings',
   'volumio.page.system': 'System'
 }, 'en');
