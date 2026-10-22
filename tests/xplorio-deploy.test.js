@@ -297,8 +297,8 @@ t('--rotel with branch: the branch is not an address', function(){
 });
 /* Volumio's integrity check before a system update: md5 over /volumio (md5deep replaced by a small stand-in) */
 var RU = path.join(T, 'rootu'), FAKE = path.join(T, 'md5deep');
-fs.writeFileSync(FAKE, '#!/bin/bash\n# md5deep -r -l -s [-q] DIR\nq=0; for a in "$@"; do [ "$a" = -q ] && q=1; d=$a; done\n' +
-  'find "$d" -type f | while IFS= read -r f; do h=$(md5sum "$f" | cut -d" " -f1); if [ $q = 1 ]; then echo "$h"; else echo "$h  $f"; fi; done\n');
+fs.writeFileSync(FAKE, '#!/bin/bash\n# md5deep -r -l -s [-q] DIR (-q keeps two spaces after the hash, like the real one)\nq=0; for a in "$@"; do [ "$a" = -q ] && q=1; d=$a; done\n' +
+  'find "$d" -type f | while IFS= read -r f; do h=$(md5sum "$f" | cut -d" " -f1); if [ $q = 1 ]; then echo "$h  "; else echo "$h  $f"; fi; done\n');
 fs.chmodSync(FAKE, 0o755);
 fs.mkdirSync(path.join(RU, 'volumio/http/www4'), {recursive: true}); fs.mkdirSync(path.join(RU, 'volumio/app'), {recursive: true});
 fs.mkdirSync(path.join(RU, 'etc'), {recursive: true});

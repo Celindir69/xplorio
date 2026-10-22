@@ -141,7 +141,8 @@ OURS='/volumio/http/www[^/]*/(xplorio\.html|app\.html|kioskTV\.html|web/|tools/)
 MD5DEEP=${DEPLOY_MD5DEEP:-md5deep}
 vol_hash() { grep -s '^VOLUMIO_HASH=' "$ROOT/etc/os-release" | cut -d= -f2 | tr -d '"'; }
 sum_all()  { "$MD5DEEP" -r -l -s -q "$ROOT/volumio" | sort | md5sum | cut -d' ' -f1; }
-sum_base() { "$MD5DEEP" -r -l -s "$ROOT/volumio" | grep -Ev "$OURS" | cut -d' ' -f1 | sort | md5sum | cut -d' ' -f1; }
+# keep the two spaces md5deep -q writes after each hash, Volumio hashes those lines as they are
+sum_base() { "$MD5DEEP" -r -l -s "$ROOT/volumio" | grep -Ev "$OURS" | sed 's/  .*/  /' | sort | md5sum | cut -d' ' -f1; }
 our_files() { for w in $WWWS; do d="$ROOT/volumio/http/$w"
   for f in xplorio.html app.html kioskTV.html; do [ -e "$d/$f" ] && rel "$d/$f"; done
   for f in web tools; do [ -d "$d/$f" ] && rel "$d/$f"; done; done; true; }
