@@ -295,4 +295,51 @@ t('--rotel with branch: the branch is not an address', function(){
   assert.ok(/APP_CONFIG_DIR=\/volumio\/http\/www4\/web/.test(fs.readFileSync(path.join(RB, 'etc/systemd/system/rotel-bridge.service'), 'utf8')));
   assert.ok(fs.existsSync(path.join(RB, 'etc/systemd/system/tag-service.service')));
 });
+/* Volumio's integrity check before a system update: md5 over /volumio (md5deep replaced by a small stand-in) */
+var RU = path.join(T, 'rootu'), FAKE = path.join(T, 'md5deep');
+fs.writeFileSync(FAKE, '#!/bin/bash\n# md5deep -r -l -s [-q] DIR\nq=0; for a in "$@"; do [ "$a" = -q ] && q=1; d=$a; done\n' +
+  'find "$d" -type f | while IFS= read -r f; do h=$(md5sum "$f" | cut -d" " -f1); if [ $q = 1 ]; then echo "$h"; else echo "$h  $f"; fi; done\n');
+fs.chmodSync(FAKE, 0o755);
+fs.mkdirSync(path.join(RU, 'volumio/http/www4'), {recursive: true}); fs.mkdirSync(path.join(RU, 'volumio/app'), {recursive: true});
+fs.mkdirSync(path.join(RU, 'etc'), {recursive: true});
+fs.writeFileSync(path.join(RU, 'volumio/http/www4/index.html'), 'volumio ui');
+fs.writeFileSync(path.join(RU, 'volumio/app/index.js'), 'backend');
+var clean = cp.execSync(FAKE + ' -r -l -s -q ' + path.join(RU, 'volumio') + ' | sort | md5sum | cut -d" " -f1', {encoding: 'utf8'}).trim();
+fs.writeFileSync(path.join(RU, 'etc/os-release'), 'PRETTY_NAME="Volumio"\nVOLUMIO_HASH="' + clean + '"\n');
+function shu(args) { return shs(args, '', {MX_ROOT: RU, DEPLOY_MD5DEEP: FAKE}); }
+function ru(f) { return path.join(RU, 'volumio/http/www4', f); }
+t('update check: passes without Xplorio, names the interface as the only obstacle after install', function(){
+  assert.ok(/check passes/.test(shu(['--check-update']).stdout));
+  assert.strictEqual(shu(['-y']).status, 0);
+  fs.writeFileSync(ru('web/config.local.js'), 'eigene');
+  var r = shu(['--check-update']);
+  assert.ok(/Only the Xplorio interface blocks the update/.test(r.stdout), r.stdout + r.stderr);
+});
+t('--remove backs up and removes the interface, Volumio files stay; the check passes', function(){
+  var r = shu(['--remove']);
+  assert.strictEqual(r.status, 0, r.stderr);
+  assert.ok(/Interface removed/.test(r.stdout) && /check passes now/.test(r.stdout), r.stdout);
+  ['xplorio.html', 'app.html', 'kioskTV.html', 'web', 'tools'].forEach(function(f){ assert.ok(!fs.existsSync(ru(f)), f); });
+  assert.ok(fs.existsSync(ru('index.html')));
+  assert.ok(fs.existsSync(path.join(RU, 'data/xplorio/tags/tag-service.js')));          /* services stay */
+  assert.ok(/check passes/.test(shu(['--check-update']).stdout));
+  assert.ok(fs.readdirSync(path.join(RU, 'data/xplorio/backup')).some(function(f){ return /^interface-.*\.tar\.gz$/.test(f); }));
+});
+t('--restore puts the interface back with config.local.js', function(){
+  var r = shu(['--restore']);
+  assert.strictEqual(r.status, 0, r.stderr);
+  assert.ok(fs.existsSync(ru('xplorio.html')) && fs.existsSync(ru('web/js/core.js')));
+  assert.strictEqual(fs.readFileSync(ru('web/config.local.js'), 'utf8'), 'eigene');
+  assert.ok(/Only the Xplorio interface/.test(shu(['--check-update']).stdout));
+});
+t('other changes below /volumio: --remove refuses (unless --force)', function(){
+  fs.writeFileSync(path.join(RU, 'volumio/app/index.js'), 'changed by hand');
+  assert.ok(/Other files below \/volumio/.test(shu(['--check-update']).stdout));
+  var r = shu(['--remove']);
+  assert.notStrictEqual(r.status, 0); assert.ok(/not removed/.test(r.stderr), r.stderr);
+  assert.ok(fs.existsSync(ru('xplorio.html')));
+  assert.strictEqual(shu(['--remove', '--force']).status, 0);
+  assert.ok(!fs.existsSync(ru('xplorio.html')));
+  assert.strictEqual(shu(['--restore']).status, 0);
+});
 console.log(n + ' checks');

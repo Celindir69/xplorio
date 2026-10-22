@@ -9,6 +9,9 @@
 #   sudo xplorio-deploy --password         set or change the password for the services on the "System" page
 #   sudo xplorio-deploy --tag-service      set up the tag service (systemd unit, data folder, start, health check)
 #   sudo xplorio-deploy --rotel [IP]       set up the Rotel bridge (amplifier address in config.local.js, unit, start)
+#   sudo xplorio-deploy --check-update     does Xplorio block Volumio's system update? (Volumio's integrity check)
+#   sudo xplorio-deploy --remove           before a Volumio update: back up the interface and remove it from /volumio
+#   sudo xplorio-deploy --restore          after the update: put the interface back exactly as it was (with config.local.js)
 #   --force                                with --tag-service/--rotel: rewrite an existing unit (the old one is backed up);
 #                                          with --rotel also replace the amplifier address (asks for it without IP)
 #
@@ -128,6 +131,62 @@ if [ "$1" = "--rollback" ] || [ "$1" = "--zurueck" ] || [ "$1" = "--zurück" ]; 
 fi
 
 [ -n "$WWWS" ] || die "no folder /volumio/http/www* found (is Volumio installed?); pick one with DEPLOY_WWW=<folder>"
+
+# ---------- Volumio system update ----------
+# Before an update Volumio compares an md5 over all files below /volumio with VOLUMIO_HASH in /etc/os-release
+# ("md5deep -r -l -s -q /volumio | sort | md5sum", updater_comm/index.js). The interface in /volumio/http/www*/ changes
+# that sum, so the update is refused ("manually edited files"). --remove takes the interface out (backup under
+# backup/interface-*.tar.gz), --restore puts it back. The services in /data/xplorio are not part of the check and stay.
+OURS='/volumio/http/www[^/]*/(xplorio\.html|app\.html|kioskTV\.html|web/|tools/)'
+MD5DEEP=${DEPLOY_MD5DEEP:-md5deep}
+vol_hash() { grep -s '^VOLUMIO_HASH=' "$ROOT/etc/os-release" | cut -d= -f2 | tr -d '"'; }
+sum_all()  { "$MD5DEEP" -r -l -s -q "$ROOT/volumio" | sort | md5sum | cut -d' ' -f1; }
+sum_base() { "$MD5DEEP" -r -l -s "$ROOT/volumio" | grep -Ev "$OURS" | cut -d' ' -f1 | sort | md5sum | cut -d' ' -f1; }
+our_files() { for w in $WWWS; do d="$ROOT/volumio/http/$w"
+  for f in xplorio.html app.html kioskTV.html; do [ -e "$d/$f" ] && rel "$d/$f"; done
+  for f in web tools; do [ -d "$d/$f" ] && rel "$d/$f"; done; done; true; }
+# prints the state, returns 0 if the update can run now, 1 if only the interface is in the way, 2 otherwise
+update_check() {
+  local want all base
+  want=$(vol_hash)
+  [ -n "$want" ] || { echo "No VOLUMIO_HASH in /etc/os-release: this Volumio does not check its files."; return 0; }
+  command -v "$MD5DEEP" >/dev/null || die "md5deep is missing (Volumio's update check uses it as well)"
+  [ -e "$ROOT/data/ignoresystemcheck" ] && echo "Note: /data/ignoresystemcheck exists, Volumio skips the check entirely."
+  all=$(sum_all)
+  if [ "$all" = "$want" ]; then echo "Volumio's integrity check passes: the system update can run."; return 0; fi
+  base=$(sum_base)
+  if [ "$base" = "$want" ]; then
+    echo "Only the Xplorio interface blocks the update. Before updating: sudo $PROG --remove, afterwards: sudo $PROG --restore"
+    return 1
+  fi
+  echo "Other files below /volumio were changed as well (not by Xplorio), so removing Xplorio is not enough for the update."
+  return 2
+}
+if [ "$1" = "--check-update" ]; then
+  update_check || true
+  exit 0
+fi
+if [ "$1" = "--remove" ]; then
+  files=$(our_files)
+  [ -n "$files" ] || die "no Xplorio interface found below /volumio/http/www*"
+  rc=0; update_check || rc=$?
+  [ $rc != 2 ] || [ "$2" = "--force" ] || die "not removed (it would not help); --remove --force removes it anyway"
+  prepare_dirs
+  base="$STATE/interface-$(date +%Y%m%d-%H%M%S)"
+  echo "$files" | tar czf "$base.tar.gz" -C "${ROOT:-/}" -T -
+  echo "$files" | while IFS= read -r f; do rm -rf "${ROOT:-}/$f"; done
+  echo "Interface removed from /volumio/http/$(echo $WWWS | sed 's/ /, /g'), backup: $(basename "$base").tar.gz"
+  update_check >/dev/null && echo "Volumio's integrity check passes now: run the system update, then: sudo $PROG --restore" || true
+  exit 0
+fi
+if [ "$1" = "--restore" ]; then
+  last=$(ls -1 "$STATE"/interface-*.tar.gz 2>/dev/null | sort | tail -n 1)
+  [ -n "$last" ] || die "no interface backup found (made by $PROG --remove)"
+  tar xzf "$last" -C "${ROOT:-/}"
+  ls -1 "$STATE"/interface-*.tar.gz | sort | head -n -$KEEP | while IFS= read -r old; do rm -f "$old"; done
+  echo "Interface restored from $(basename "$last") (with web/config.local.js). Newest version: sudo $PROG"
+  exit 0
+fi
 
 DRY=0; YES=0; FORCE=0; SETUP=""; ROTEL_IP=""
 while [ $# -gt 0 ]; do
