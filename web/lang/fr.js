@@ -272,7 +272,7 @@ langRegister('fr', 'Français', {
   'menu.check': 'Vérifier la bibliothèque',
   'menu.checkSub': 'Pochettes manquantes, graphies, genres et tags d\'ambiance',
   'menu.volumio': 'Interface Volumio',
-  'menu.volumioSub': 'Parcourir, file d\'attente, réglages, plugins et système',
+  'menu.volumioSub': 'Accueil, parcourir, file d\'attente, plugins et système',
   'html.playback': 'Lecture',
   'menu.playback': 'Lecture',
   'menu.playbackSub': 'Fondu enchaîné, égalisation du volume et ampli',
