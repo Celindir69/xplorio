@@ -72,6 +72,8 @@ Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Dana
 | `sudo xplorio-deploy --password` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
 | `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
 | `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung; mit `--force` auch eine andere Adresse (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
+| `sudo xplorio-deploy --check-update` | prüfen, ob Xplorio Volumios System-Update blockiert (siehe [Volumio-Update](#volumio-update)) |
+| `sudo xplorio-deploy --remove` / `--restore` | Oberfläche vor einem Volumio-Update sichern und entfernen bzw. danach genau so wiederherstellen |
 
 Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
@@ -93,6 +95,30 @@ sichern. Frühere Installationen hatten die Dienste unter `/data/INTERNAL/`: Das
 `rotel-bridge.service` dann einmal auf die neuen Pfade um (mit Sicherung) und startet die Dienste neu; der Tag-Dienst zieht
 seine Daten selbst um. Die alten Ordner `/data/INTERNAL/tags` und `/data/INTERNAL/rotel` bleiben liegen und können nach
 einem Test gelöscht werden.
+
+### Volumio-Update
+Vor einem System-Update prüft Volumio, ob Dateien unter `/volumio` verändert wurden: Es bildet eine Prüfsumme über alle
+Dateien dort und vergleicht sie mit `VOLUMIO_HASH` in `/etc/os-release`. Xplorio ändert keine Datei von Volumio, legt aber
+seine Oberfläche in `/volumio/http/www*/` ab. Das ändert die Prüfsumme, und Volumio lehnt das Update ab („Integritätsüberprüfung
+der Systemsoftware fehlgeschlagen, manuell editierte Dateien wurden entdeckt“). Die Dienste unter `/data/xplorio` stören nicht.
+
+**Empfohlen: Oberfläche vorübergehend entfernen.**
+```bash
+sudo xplorio-deploy --check-update   # zeigt, ob nur Xplorio im Weg ist
+sudo xplorio-deploy --remove         # Oberfläche sichern (mit config.local.js) und aus /volumio entfernen
+# jetzt das Update in Volumio ausführen, nach dem Neustart:
+sudo xplorio-deploy --restore        # Oberfläche genau wie vorher zurück
+sudo xplorio-deploy                  # optional: neuesten Stand einspielen
+```
+`--remove` prüft vorher, ob die Prüfsumme ohne Xplorio wieder stimmt. Ist unter `/volumio` noch etwas anderes verändert
+(z. B. von Hand oder durch ein anderes Werkzeug), entfernt es nichts, weil das Update dann trotzdem scheitern würde;
+`--remove --force` entfernt die Oberfläche trotzdem. Die Sicherung liegt unter `/data/xplorio/backup/interface-*.tar.gz`
+(die letzten 5).
+
+**Alternative auf eigenes Risiko: Prüfung abschalten.** Gibt es die Datei `/data/ignoresystemcheck`, überspringt Volumio
+die Prüfung ganz (`sudo touch /data/ignoresystemcheck`, rückgängig mit `sudo rm /data/ignoresystemcheck`). Das sollte gut
+überlegt sein: Die Prüfung schützt davor, ein Update über ein verändertes System zu spielen, und sie ist dann auch für alle
+anderen Änderungen aus. Nur sinnvoll, wenn `--check-update` meldet, dass allein Xplorio im Weg ist.
 
 **Umstieg von web-app-deploy (bis Oktober 2026 hießen Repo und Befehl `volumio-web-app` bzw. `web-app-deploy`):**
 `xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „move: /data/web-app to

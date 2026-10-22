@@ -80,6 +80,8 @@ The script is set up as described under [First-time setup](#first-time-setup). T
 | `sudo xplorio-deploy --password` | set or change the password for the services on the "System" page |
 | `sudo xplorio-deploy --tag-service` | set up the Tag Service: unit file, data folder, start and check (see [Tag Service](#tag-service-for-the-tag-editor)) |
 | `sudo xplorio-deploy --rotel <IP>` | set up the Rotel bridge: amplifier address in `config.local.js`, unit file, start and check; with `--force` also a different address (see [Rotel Bridge](#rotel-bridge-optional)) |
+| `sudo xplorio-deploy --check-update` | check whether Xplorio blocks Volumio's system update (see [Volumio update](#volumio-update)) |
+| `sudo xplorio-deploy --remove` / `--restore` | back up and remove the interface before a Volumio update, put it back exactly as it was afterwards |
 
 Targets: `xplorio.html`, `app.html` (redirect), `kioskTV.html`, `web/`, and `tools/` go to every existing `/volumio/http/www*/` folder, and `tags/` plus `rotel/rotel-bridge.js` go to `/data/xplorio/`; the script also updates itself. Which of the folders Volumio serves depends on the version and the selected interface (e.g. classic `www`, Volumio 3 `www3`, Volumio 4 `www4`), so every existing one gets the interface. The script does not create new folders and stops if there is none; `DEPLOY_WWW=<folder>` selects a specific one. `web/config.local.js` is per folder: if you switch interfaces, copy it as well. The script also writes `web/version.json` (branch, commit and its date); the menu shows this version at the bottom below the logo and name, and "Development version" without the file.
 
@@ -88,6 +90,24 @@ Targets: `xplorio.html`, `app.html` (redirect), `kioskTV.html`, `web/`, and `too
 The German option names of earlier versions (`--passwort`, `--zurueck`) keep working, and the confirmation also accepts `j`.
 
 Everything except the interface lives in `/data/xplorio/`: `tags/` (Tag Service), `rotel/` (Rotel bridge), `data/` (Tag Service data), and `backup/` (backups). The folder survives Volumio updates; before a fresh installation, backing it up is enough. Earlier installations had the services under `/data/INTERNAL/`: the script then switches `tag-service.service` and `rotel-bridge.service` to the new paths once (with a backup) and restarts the services; the Tag Service moves its data itself. The old folders `/data/INTERNAL/tags` and `/data/INTERNAL/rotel` stay in place and can be deleted after a test.
+
+### Volumio update
+
+Before a system update, Volumio checks whether files below `/volumio` were changed: it computes a checksum over all files there and compares it with `VOLUMIO_HASH` in `/etc/os-release`. Xplorio does not change any of Volumio's files, but it puts its interface into `/volumio/http/www*/`. That changes the checksum, and Volumio refuses the update ("System integrity check failed, manually edited files were detected"). The services in `/data/xplorio` do not matter.
+
+**Recommended: remove the interface temporarily.**
+
+```bash
+sudo xplorio-deploy --check-update   # shows whether only Xplorio is in the way
+sudo xplorio-deploy --remove         # back up the interface (with config.local.js) and remove it from /volumio
+# now run the update in Volumio; after the restart:
+sudo xplorio-deploy --restore        # the interface back exactly as before
+sudo xplorio-deploy                  # optional: install the newest version
+```
+
+`--remove` first checks whether the checksum matches again without Xplorio. If something else below `/volumio` was changed as well (e.g. by hand or by another tool), it removes nothing, because the update would fail anyway; `--remove --force` removes the interface regardless. The backup is kept in `/data/xplorio/backup/interface-*.tar.gz` (the latest 5).
+
+**Alternative at your own risk: switch the check off.** If the file `/data/ignoresystemcheck` exists, Volumio skips the check entirely (`sudo touch /data/ignoresystemcheck`, undo with `sudo rm /data/ignoresystemcheck`). Think this through: the check protects against installing an update over a modified system, and it is then off for all other changes as well. Only sensible if `--check-update` reports that Xplorio alone is in the way.
 
 **Switching from web-app-deploy (until October 2026 the repository and command were called `volumio-web-app` and `web-app-deploy`):** set up `xplorio-deploy` as above, then run `sudo xplorio-deploy -n` (among other things it shows "move: /data/web-app to /data/xplorio") and `sudo xplorio-deploy`. The script moves `/data/web-app` with its data, Last.fm credentials and backups to `/data/xplorio`, leaves `/data/web-app` behind as a symlink, updates the systemd files and restarts the services. `web-app-deploy` and the even older names `mx-deploy` and `volumio4-deploy` keep working and call `xplorio-deploy` (on first use they set it up themselves).
 
