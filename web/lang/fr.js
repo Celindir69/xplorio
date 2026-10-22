@@ -755,8 +755,8 @@ langRegister('fr', 'Français', {
   'textfn.func.words': 'Majuscule À Chaque Mot',
 
   'volumio.page.browse': 'Parcourir',
+  'volumio.page.home': 'Accueil',
   'volumio.page.plugins': 'Plugins',
   'volumio.page.queue': 'File d\'attente',
-  'volumio.page.settings': 'Réglages',
   'volumio.page.system': 'Système'
 }, 'fr-FR');

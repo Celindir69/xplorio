@@ -754,8 +754,8 @@ langRegister('de', 'Deutsch', {
   'textfn.func.words': 'Wortanfänge groß',
 
   'volumio.page.browse': 'Durchsuchen',
+  'volumio.page.home': 'Hauptseite',
   'volumio.page.plugins': 'Plugins',
   'volumio.page.queue': 'Warteschlange',
-  'volumio.page.settings': 'Einstellungen',
   'volumio.page.system': 'System'
 }, 'de-DE');
