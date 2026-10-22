@@ -271,7 +271,7 @@ langRegister('de', 'Deutsch', {
   'menu.check': 'Bibliothek prüfen',
   'menu.checkSub': 'Fehlende Cover, Schreibweisen, Genres und Stimmungs-Tags',
   'menu.volumio': 'Volumio-Oberfläche',
-  'menu.volumioSub': 'Durchsuchen, Warteschlange, Einstellungen, Plugins und System',
+  'menu.volumioSub': 'Hauptseite, Durchsuchen, Warteschlange, Plugins und System',
   'html.playback': 'Wiedergabe',
   'menu.playback': 'Wiedergabe',
   'menu.playbackSub': 'Crossfade, Lautstärke angleichen und Verstärker',

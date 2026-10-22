@@ -271,7 +271,7 @@ langRegister('it', 'Italiano', {
   'menu.check': 'Controlla libreria',
   'menu.checkSub': 'Copertine mancanti, grafie, generi e tag mood',
   'menu.volumio': 'Interfaccia Volumio',
-  'menu.volumioSub': 'Sfoglia, coda, impostazioni, plugin e sistema',
+  'menu.volumioSub': 'Pagina principale, sfoglia, coda, plugin e sistema',
   'html.playback': 'Riproduzione',
   'menu.playback': 'Riproduzione',
   'menu.playbackSub': 'Crossfade, livellamento del volume e amplificatore',

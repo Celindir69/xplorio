@@ -273,7 +273,7 @@ langRegister('en', 'English', {
   'menu.check': 'Check library',
   'menu.checkSub': 'Missing cover art, spellings, genres and mood tags',
   'menu.volumio': 'Volumio interface',
-  'menu.volumioSub': 'Browse, queue, settings, plugins and system',
+  'menu.volumioSub': 'Home, browse, queue, plugins and system',
   'html.playback': 'Playback',
   'menu.playback': 'Playback',
   'menu.playbackSub': 'Crossfade, volume levelling and amplifier',

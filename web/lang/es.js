@@ -271,7 +271,7 @@ langRegister('es', 'Español', {
   'menu.check': 'Revisar biblioteca',
   'menu.checkSub': 'Portadas que faltan, grafías, géneros y etiquetas de ánimo',
   'menu.volumio': 'Interfaz de Volumio',
-  'menu.volumioSub': 'Explorar, cola, ajustes, plugins y sistema',
+  'menu.volumioSub': 'Inicio, explorar, cola, plugins y sistema',
   'html.playback': 'Reproducción',
   'menu.playback': 'Reproducción',
   'menu.playbackSub': 'Crossfade, nivelación de volumen y amplificador',
