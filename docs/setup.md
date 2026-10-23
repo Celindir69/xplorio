@@ -133,7 +133,7 @@ Description=Tag-Dienst fuer Xplorio
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/env node /data/xplorio/tags/tag-service.js
+ExecStart=/usr/bin/env node --max-old-space-size=384 /data/xplorio/tags/tag-service.js
 WorkingDirectory=/data/xplorio/tags
 Restart=always
 User=volumio
@@ -151,6 +151,14 @@ The service writes to music files as the `volumio` user. To check whether this w
 `sudo -u volumio touch /mnt/USB/<MusicFolder>/.test && sudo rm /mnt/USB/<MusicFolder>/.test && echo writable`.
 
 If it does not work, uncomment `Environment=USE_SUDO=1` (then only `tags.py` runs as root).
+
+`--max-old-space-size=384` gives the Tag Service more memory than Node's default (about 256 MB on 32-bit ARM). Large
+collections with audio analysis need this, otherwise it aborts with `JavaScript heap out of memory` (`status=6/ABRT` in the log)
+and is unreachable for half a minute until it restarts. To add it to an older service file:
+```bash
+grep -q max-old-space /etc/systemd/system/tag-service.service || sudo sed -i 's|^ExecStart=/usr/bin/env node /|ExecStart=/usr/bin/env node --max-old-space-size=384 /|' /etc/systemd/system/tag-service.service; sudo systemctl daemon-reload && sudo systemctl restart tag-service
+```
+
 
 After an update: `sudo systemctl restart tag-service`. Log: `journalctl -u tag-service -e`.
 

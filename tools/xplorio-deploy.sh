@@ -231,7 +231,7 @@ if [ -n "$SETUP" ]; then
   CFG_ADD=""                      # www folders whose config.local.js gets the Rotel lines
   CFG_SET=""                      # www folders whose ROTEL_HOST is replaced (--force with an address)
 
-  # unit name dir script description [environment line]: prepared in $WORK, written after the backup
+  # unit name dir script description [environment line] [node options]: prepared in $WORK, written after the backup
   unit() {
     local f="$UNIT_DIR/$1.service"
     if [ -e "$f" ] && [ $FORCE = 0 ]; then
@@ -246,7 +246,7 @@ if [ -n "$SETUP" ]; then
       echo "After=network-online.target"
       echo
       echo "[Service]"
-      echo "ExecStart=/usr/bin/env node /data/xplorio/$2/$3"
+      echo "ExecStart=/usr/bin/env node ${6:+$6 }/data/xplorio/$2/$3"
       echo "WorkingDirectory=/data/xplorio/$2"
       echo "Restart=always"
       echo "User=volumio"
@@ -257,7 +257,8 @@ if [ -n "$SETUP" ]; then
     } > "$WORK/$1.service"
   }
 
-  has tag && unit tag-service tags tag-service.js "Xplorio tag service"
+  # Node's default heap (about 256 MB on 32-bit ARM) is too small for large collections with audio analysis
+  has tag && unit tag-service tags tag-service.js "Xplorio tag service" "" "--max-old-space-size=384"
 
   if has rotel; then
     cfg_of() { echo "$ROOT/volumio/http/$1/web/config.local.js"; }
@@ -464,6 +465,13 @@ for u in $UNITS; do
   case $u in tag-service) d=tags ;; *) d=rotel ;; esac
   echo "Service $u now runs from /data/xplorio/$d"
 done
+# older tag-service files: more heap for Node (the default of about 256 MB on 32-bit ARM is too small for large collections)
+f="$UNIT_DIR/tag-service.service"
+if [ -e "$f" ] && ! grep -q 'max-old-space-size' "$f" && grep -q '^ExecStart=/usr/bin/env node /' "$f"; then
+  sed -i 's|^ExecStart=/usr/bin/env node /|ExecStart=/usr/bin/env node --max-old-space-size=384 /|' "$f"
+  echo "tag-service: more memory for Node (--max-old-space-size=384)"
+  RESTART="${RESTART}tags/tag-service.service"$'\n'
+fi
 echo "Installed to /volumio/http/$(echo $WWWS | sed 's/ /, /g'). Backup: $(basename "$base") (undo with: sudo $PROG --rollback)"
 restart_services "$RESTART"
 echo "Hard-reload the browser."
