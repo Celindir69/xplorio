@@ -115,6 +115,8 @@ langRegister('de', 'Deutsch', {
   'check.db.running': 'Bibliothek wird eingelesen …',
   'check.db.done': 'Bibliothek eingelesen. Die Albenliste wird gleich neu aufgebaut.',
   'check.db.failed': 'Einlesen ließ sich nicht starten.',
+  'scan.updating': 'Bibliothek wird eingelesen. Der Player kann so lange langsamer reagieren.',
+  'scan.building': 'Albenliste wird neu aufgebaut. Der Player kann so lange langsamer reagieren.',
   'check.runCovers': 'Prüfe eingebettete Cover… {done} von {total}',
   'check.runFolders': 'Prüfe… Ordner {done} von {total}',
   'check.runFoldersNoTotal': 'Prüfe… Ordner {done}',

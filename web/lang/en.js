@@ -117,6 +117,8 @@ langRegister('en', 'English', {
   'check.db.running': 'Reading library …',
   'check.db.done': 'Library read. The album list will be rebuilt shortly.',
   'check.db.failed': 'Could not start reading the library.',
+  'scan.updating': 'Reading the library. The player may respond more slowly until it is done.',
+  'scan.building': 'Rebuilding the album list. The player may respond more slowly until it is done.',
   'check.runCovers': 'Checking embedded covers… {done} of {total}',
   'check.runFolders': 'Checking… folder {done} of {total}',
   'check.runFoldersNoTotal': 'Checking… folder {done}',

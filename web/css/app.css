@@ -115,7 +115,12 @@
   #btnStage.on { opacity:1; }
   #btnMenu { opacity:.75; }
   /* while an overlay is open, the gear does not show through the sidebar (it would otherwise sit above the close cross) */
-  body.ovOn #btnMenu { visibility:hidden; }   /* ovOn/ovMain is set by ui.js (instead of :has, missing in Safari < 15.4) */
+  body.ovOn #btnMenu { visibility:hidden; }
+  /* library is being read in (check.js): turns slowly, a tap says what is going on */
+  #scanBusy { opacity:.75; }
+  #scanBusy svg { animation:mxSpin 2.4s linear infinite; }
+  @media (prefers-reduced-motion:reduce) { #scanBusy svg { animation:none; } }
+  body.ovOn #scanBusy { visibility:hidden; }   /* ovOn/ovMain is set by ui.js (instead of :has, missing in Safari < 15.4) */
 
   #toast { position:fixed; z-index:20; left:50%; bottom:max(env(safe-area-inset-bottom,0px), 24px);
     transform:translate(-50%, 20px); opacity:0; pointer-events:none; max-width:86%; text-align:center;

@@ -115,6 +115,8 @@ langRegister('it', 'Italiano', {
   'check.db.running': 'Lettura della libreria …',
   'check.db.done': 'Libreria letta. L\'elenco degli album verrà ricostruito a breve.',
   'check.db.failed': 'Impossibile avviare la lettura della libreria.',
+  'scan.updating': 'Lettura della libreria in corso. Nel frattempo il lettore può rispondere più lentamente.',
+  'scan.building': "Ricostruzione dell'elenco degli album in corso. Nel frattempo il lettore può rispondere più lentamente.",
   'check.runCovers': 'Controllo copertine incorporate… {done} di {total}',
   'check.runFolders': 'Controllo… cartella {done} di {total}',
   'check.runFoldersNoTotal': 'Controllo… cartella {done}',

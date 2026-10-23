@@ -150,6 +150,7 @@ function libUpdStart() {
   tagPost('/scan', {all: true}).then(function(r){
     if (!r || !r.ok) throw new Error();
     libUpdPoll();
+    scanBusyShow('updating'); scanBusyPoll(5000);
   }).catch(function(){ libUpdSet('failed'); });
 }
 function libUpdPoll() {
@@ -161,6 +162,35 @@ function libUpdPoll() {
     }).catch(libUpdPoll);
   }, 3000);
 }
+/* Symbol in the top bar while the library is read in or the album list rebuilt (GET /scan): explains a slow player.
+   Asks every 15 s while the page is visible, every 5 s while the symbol shows; a tap shows what is going on */
+var scanBusy = {el: document.getElementById('scanBusy'), timer: null, asking: false, state: ''};
+function scanBusyShow(st) {
+  scanBusy.state = st;
+  if (!scanBusy.el) return;
+  scanBusy.el.style.display = st ? '' : 'none';
+  scanBusy.el.title = st ? T('scan.' + st) : '';
+}
+function scanBusyPoll(ms) {
+  clearTimeout(scanBusy.timer);
+  if (document.hidden || !scanBusy.el) return;
+  scanBusy.timer = setTimeout(function(){
+    if (scanBusy.asking) return;
+    scanBusy.asking = true;
+    tagGetJson('/scan').then(function(r){
+      scanBusyShow(r && r.ok && r.updating ? 'updating' : r && r.ok && r.building ? 'building' : '');
+    }).catch(function(){ scanBusyShow(''); }).then(function(){
+      scanBusy.asking = false;
+      scanBusyPoll(scanBusy.state ? 5000 : 15000);
+    });
+  }, ms);
+}
+if (scanBusy.el) {
+  scanBusy.el.addEventListener('click', function(){ if (scanBusy.state) showToast(T('scan.' + scanBusy.state)); });
+  whenTags(function(){ scanBusyPoll(0); });
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && tagsHealth) scanBusyPoll(0); });
+}
+
 function checkDbRow() {
   var head = document.createElement('div'); head.className = 'ckHead';
   var info = document.createElement('div'); info.className = 'ckInfo';
