@@ -5,6 +5,7 @@ var net  = require('net');
 var fs   = require('fs');
 var path = require('path');
 var genres = require('./genres.js');
+var duplicates = require('./duplicates.js');
 
 var IMG_RE = /\.(jpe?g|png)$/i;
 
@@ -12,7 +13,7 @@ var IMG_RE = /\.(jpe?g|png)$/i;
 
 function mpdQuote(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
 
-/* all tracks below roots: cb(err, songs, dirCount); songs: [{file, artist, albumartist, album, title, track, date, genre}].
+/* all tracks below roots: cb(err, songs, dirCount); songs: [{file, artist, albumartist, album, title, track, date, genre, time, disc, format}].
    onProgress(folders done, folders known) */
 function mpdWalk(opts, cb, onProgress) {
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
@@ -51,7 +52,7 @@ function mpdWalk(opts, cb, onProgress) {
     if (i < 0) return;
     var k = l.slice(0, i).toLowerCase(), v = l.slice(i + 2);
     if (k === 'directory') { queue.push(v); song = null; return; }
-    if (k === 'file') { song = {file: v, artist: '', albumartist: '', album: '', title: '', track: '', date: '', genre: '', time: '', 'last-modified': ''}; songs.push(song); return; }
+    if (k === 'file') { song = {file: v, artist: '', albumartist: '', album: '', title: '', track: '', date: '', genre: '', time: '', 'last-modified': '', disc: '', format: ''}; songs.push(song); return; }
     if (k === 'playlist') { song = null; return; }
     if (song && song.hasOwnProperty(k) && !song[k]) song[k] = v;          /* with multiple values the first counts */
   }
@@ -146,6 +147,7 @@ function analyze(songs, hasCover, audioOf) {
   });
   var gc = genres.check(forGenres);
   res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreStyles = gc.styles;
+  res.duplicates = duplicates.find(songs, artistKey);
 
   /* spellings: artist and album artist, grouped by artistKey */
   var groups = {};

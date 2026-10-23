@@ -706,6 +706,16 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .ckList .sRow { cursor:default; }
 .ckList .sRow.done { opacity:.4; }
 .ckMore { font-size:calc(3 * var(--vw)); opacity:.5; text-align:center; padding:calc(3 * var(--vw)) 0; cursor:pointer; }
+.ckDupHead { font-size:calc(3.6 * var(--vw)); font-weight:600; padding:calc(3 * var(--vw)) 0 calc(.5 * var(--vw)); border-top:1px solid rgba(var(--fg-rgb),.1); }
+.ckDupRow { gap:calc(2 * var(--vw)); }
+.ckDupRow .sTitle, .ckDupRow .sSub { white-space:normal; overflow-wrap:anywhere; }
+.ckDupRow .ckBtn { font-size:calc(3 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(3 * var(--vw)); }
+.ckDupPlay { display:flex; align-items:center; padding:calc(1.2 * var(--vw)) calc(2.4 * var(--vw)) !important; }
+.ckDupPlay svg { width:calc(4.4 * var(--vw)); height:calc(4.4 * var(--vw)); fill:var(--fg); }
+.ckDupMsg { font-size:calc(3 * var(--vw)); opacity:.7; padding-bottom:calc(1 * var(--vw)); overflow-wrap:anywhere; }
+.ckCmdRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1 * var(--vw)) 0; }
+.ckCmd { flex:1 1 auto; min-width:0; font-family:ui-monospace, Menlo, monospace; font-size:calc(2.9 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(2 * var(--vw));
+  background:rgba(var(--fg-rgb),.08); border-radius:calc(1.5 * var(--vw)); overflow-wrap:anywhere; user-select:all; -webkit-user-select:all; }
 .ckMoodCat { margin-top:calc(4 * var(--vw)); }
 .ckMoodLine { font-size:calc(3.2 * var(--vw)); opacity:.8; line-height:1.4; padding:calc(1 * var(--vw)) 0; }
 .ckMoodBar { height:calc(1.2 * var(--vw)); background:rgba(var(--fg-rgb),.12); border-radius:999px; overflow:hidden; margin:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); }

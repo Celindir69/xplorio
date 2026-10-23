@@ -101,7 +101,7 @@ Tapping a month displays the rankings for that month.
 Edit tags for individual tracks, entire albums, or all tracks by an artist (including the comment), with text functions such as upper/lowercase
 conversion, Undo, and cover art options (choose a file, search online, save embedded cover art as `folder.jpg`). “Check library” in the menu finds
 albums without cover art, missing or inconsistent album artists, artists with multiple spellings, inconsistent
-album names or years, tracks without track numbers and release dates that differ from MusicBrainz, and suggests one genre per album (Discogs top categories, from
+album names or years, duplicate albums (with quality and path, to move into a hidden folder), tracks without track numbers and release dates that differ from MusicBrainz, and suggests one genre per album (Discogs top categories, from
 existing genre tags and the audio analysis); each entry opens the appropriate editor directly and then stays greyed out until the next check. It also shows the
 progress of the mood tags.
 

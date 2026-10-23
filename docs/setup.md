@@ -197,7 +197,7 @@ The Tag Service performs the queries; the player therefore needs internet access
 
 In the menu (gear at the top right, only available while the Tag Service is running): finds albums without cover art, compilations without a consistent album artist, artists with multiple spellings, inconsistent album names/years, albums whose Date tag differs from the first release according to MusicBrainz (from the birthday lookup; the pencil suggests the MusicBrainz date), and tracks without track numbers; the pencil icon opens the appropriate editor.
 
-The check reads the MPD database (`MPD_HOST`, `MPD_PORT`, default `localhost:6600`) and the folders, does not modify any files, and only runs when triggered manually. Result: `/data/xplorio/data/check.json`, retained until the next check. Entries whose pencil was used are recorded there and stay greyed out, also after closing, until the next check.
+The check reads the MPD database (`MPD_HOST`, `MPD_PORT`, default `localhost:6600`) and the folders, does not modify any files, and only runs when triggered manually (exception: “Move” for duplicate albums, see below). Result: `/data/xplorio/data/check.json`, retained until the next check. Entries whose pencil was used are recorded there and stay greyed out, also after closing, until the next check.
 
 **Genres:** Two further categories suggest exactly one genre per album from the 15 Discogs top categories (Electronic,
 Rock, Jazz, Classical, Pop, Hip Hop, Funk / Soul, Folk, World, & Country, Latin, Reggae, Blues, Stage & Screen,
@@ -212,6 +212,22 @@ The pencil opens the batch editor with the suggestion; nothing is written until 
 sub-styles ("Trip Hop", "Downtempo") are not written to the files but stay in the Tag Service: `GET /genres?dir=<folder>`
 returns the top category and sub-styles of an album (as of the last check), without `dir` all albums.
 The model is weaker at recognising classical music, soundtracks and radio plays.
+
+**Duplicate albums:** folders with the same album artist and album name. Case, accents, “The” and punctuation do not
+count, nor do additions such as “(Remastered)”, “[Deluxe Edition]” or “- 2009 Remaster”; compilations are compared by
+album name only. Folders of one album split by disc next to each other (CD1, CD2 or different disc numbers) count as one
+version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
+(lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
+
+“Move” puts the folders of a version into the hidden folder `.duplicates` on the same drive, keeping the rest of the
+path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). This is instant even for large
+albums, and MPD does not read folders starting with a dot, so the album disappears from the library with the next scan.
+Moving it back with `mv` restores it. If a password for the services is set, the device must be logged in once under
+System at the services. Xplorio deletes nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
+```bash
+sudo rm -rf '/mnt/INTERNAL/.duplicates'
+```
+The Tag Service needs write access to the music folders for this, as for the Tag Editor.
 
 ### Web Radio: Cover Art and Station Logos
 
