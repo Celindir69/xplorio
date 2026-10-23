@@ -46,6 +46,17 @@ t('energy relative to the collection, moods from 0.6, quadrants from valence and
   assert.deepStrictEqual(wild.mood, ['aggressive', 'intense', 'dark']);
 });
 
+t('in memory: only evaluated fields, at most 5 styles from 5 %, same texts shared', function(){
+  var f2 = path.join(dir, 'alt.jsonl'), st = [];
+  for (var k = 0; k < 8; k++) st.push(['Rock---Style ' + k, [0.02, 0.5, 0.1, 0.3, 0.04, 0.2, 0.6, 0.07][k]]);
+  fs.writeFileSync(f2, line('Alt', 'Eins', {aro: 4, val: 4, styles: st}) + '\n' + line('Alt', 'Zwei', {aro: 5, val: 5, styles: [['Rock---Style 1', 0.9]]}) + '\n');
+  var s2 = new essentia.Store(f2), a = s2.get('Alt', 'Eins'), b = s2.get('Alt', 'Zwei');
+  assert.deepStrictEqual(a.styles.map(function(x){ return x[0].slice(-1); }), ['6', '1', '3', '5', '2']);
+  assert.strictEqual(b.styles[0][0], 'Rock---Style 1');
+  assert.ok(!('p' in a) && !('ar' in a) && !('ti' in a) && !('kstr' in a));
+  assert.strictEqual(a.al, 'Album'); assert.strictEqual(a.key, 'A'); assert.strictEqual(a.mood.happy, null);
+});
+
 t('merge: energy and tempo from the audio, moods and styles from both', function(){
   var lf = {mood: ['dreamy', 'sad'], energy: 3, style: ['ambient'], src: 'artist'};
   var r = essentia.merge(lf, store.classify(store.get('Lena', 'Traurig')));
