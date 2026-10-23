@@ -12,6 +12,7 @@ var CHECK_CATS = [
   {key: 'noCover', name: T('check.cat.noCover'), hint: T('check.cat.noCoverHint')},
   {key: 'albumArtist', name: T('check.cat.albumArtist'), hint: T('check.cat.albumArtistHint')},
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
+  {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
   {key: 'mixed', name: T('check.cat.mixed'), hint: T('check.cat.mixedHint')},
   {key: 'releaseDate', name: T('check.cat.releaseDate'), hint: T('check.cat.releaseDateHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
@@ -243,11 +244,13 @@ function checkFill(box, cat, list) {
     for (; shown < end; shown++) {
       if (cat.key === 'genreMerge') box.insertBefore(checkGenreGroupRow(cat.key, list[shown]), moreRow);
       else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
+      else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
     }
     moreRow.style.display = shown < list.length ? '' : 'none';
     moreRow.textContent = T('check.more', {k: checkNum(Math.min(CHECK_PAGE, list.length - shown)), left: checkNum(list.length - shown)});
   }
+  if (cat.key === 'duplicates' && list.length) checkDupTrash(box, list);
   var moreRow = document.createElement('div'); moreRow.className = 'ckMore';
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
@@ -315,6 +318,81 @@ function checkGenreGroupRow(key, g) {
 function checkSpellingRow(v, i, group) {
   var others = group.variants.filter(function(o){ return o !== v; }).map(function(o){ return o.name; }).join(', ');
   return checkRow('spelling|' + v.name, v.name, T('check.spellingSub', {n: v.count, others: others}), function(){ openArtistEditor(v.name); });
+}
+
+/* ---------- Duplicate albums: move a version into .duplicates on the same drive (tag service POST /dupmove) ---------- */
+function checkShellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
+function checkDupTrashPath(dir) {                       /* same rule as duplicates.trashPath in the tag service */
+  var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
+  return drive + '/.duplicates/' + dir.slice(drive.length + 1);
+}
+/* copy text: the clipboard API only exists on https, on http the old way via a selected text field */
+function checkCopy(text) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select(); ta.setSelectionRange(0, text.length);
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { /* not allowed */ }
+  document.body.removeChild(ta);
+  return ok ? Promise.resolve() : Promise.reject(new Error('copy'));
+}
+function checkCmdRow(cmd) {
+  var row = document.createElement('div'); row.className = 'ckCmdRow';
+  var code = document.createElement('div'); code.className = 'ckCmd'; code.textContent = cmd;
+  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.copy');
+  btn.addEventListener('click', function(){
+    checkCopy(cmd).then(function(){ btn.textContent = T('check.dup.copied'); }, function(){ btn.textContent = T('check.dup.copyFailed'); });
+    setTimeout(function(){ btn.textContent = T('check.dup.copy'); }, 2500);
+  });
+  row.appendChild(code); row.appendChild(btn);
+  return row;
+}
+/* delete what was moved aside for good: one command per drive, only via ssh */
+function checkDupTrash(box, list) {
+  var drives = {};
+  list.forEach(function(g){ g.versions.forEach(function(v){ drives[v.drive] = 1; }); });
+  var note = document.createElement('div'); note.className = 'ckCatHint'; note.textContent = T('check.dup.trash');
+  box.appendChild(note);
+  Object.keys(drives).sort().forEach(function(d){ box.appendChild(checkCmdRow('sudo rm -rf ' + checkShellQuote('/mnt/' + d + '/.duplicates'))); });
+}
+function checkDupRows(g) {
+  var head = document.createElement('div'); head.className = 'ckDupHead';
+  head.textContent = g.name + (g.artist ? ' · ' + g.artist : '');
+  var rows = [head];
+  g.versions.forEach(function(v){
+    var key = 'duplicates|' + v.dirs[0];
+    var row = document.createElement('div'); row.className = 'sRow ckDupRow' + (checkDone[key] ? ' done' : '');
+    var meta = document.createElement('div'); meta.className = 'sMeta';
+    var ti = document.createElement('div'); ti.className = 'sTitle';
+    ti.textContent = T('check.dup.sub', {format: v.format, n: checkNum(v.tracks), m: checkNum(Math.round(v.seconds / 60))}) + (v.keep ? ' · ' + T('check.dup.keep') : '');
+    var su = document.createElement('div'); su.className = 'sSub'; su.textContent = v.dirs.map(function(d){ return '/mnt/' + d; }).join(' + ');
+    var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';
+    meta.appendChild(ti); meta.appendChild(su); meta.appendChild(msg);
+    row.appendChild(meta);
+    var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.move');
+    btn.disabled = !!checkDone[key];
+    btn.addEventListener('click', function(){
+      var to = v.dirs.map(function(d){ return '/mnt/' + checkDupTrashPath(d); }).join(' + ');
+      if (!confirm(T(v.keep ? 'check.dup.confirmKeep' : 'check.dup.confirm', {dir: su.textContent, to: to}))) return;
+      btn.disabled = true;
+      var token = (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : '');
+      tagPostJson('/dupmove', {dirs: v.dirs, token: token}).then(function(r){
+        msg.style.display = '';
+        if (r && r.ok) {
+          checkDone[key] = 1; row.classList.add('done');
+          msg.textContent = T('check.dup.moved', {to: r.moved.map(function(m){ return '/mnt/' + m.to; }).join(' + ')});
+          return;
+        }
+        btn.disabled = false;
+        msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+      }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
+    });
+    row.appendChild(btn);
+    rows.push(row);
+  });
+  return rows;
 }
 
 document.getElementById('closeCheck').addEventListener('click', function(){ clearTimeout(checkTimer); closeAllOverlays(); });

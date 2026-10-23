@@ -220,7 +220,7 @@ Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohn
 einheitlichen Album-Künstler, Künstler in mehreren Schreibweisen, uneinheitliche Albumnamen/Jahre, Alben, deren
 Date-Tag vom ersten Erscheinen laut MusicBrainz abweicht (aus dem Nachschlagen für die Geburtstage; der Stift schlägt
 das MusicBrainz-Datum vor), und Titel ohne Tracknummer; der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
-`localhost:6600`) und die Ordner, ändert nichts an den Dateien und läuft nur auf Knopfdruck. Ergebnis:
+`localhost:6600`) und die Ordner, ändert nichts an den Dateien und läuft nur auf Knopfdruck (Ausnahme: „Verschieben“ bei den doppelten Alben, siehe unten). Ergebnis:
 `/data/xplorio/data/check.json`, bis neu geprüft wird. Einträge, deren Stift benutzt wurde, bleiben dort vermerkt und
 ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.
 
@@ -238,6 +238,24 @@ gewohnt. Neben jedem Genre-Feld im Tag-Editor steht eine Auswahl „Hauptgenre�
 lassen sich weiter eintippen. Die Unterstile („Trip Hop“, „Downtempo“) kommen nicht in die Dateien, sondern bleiben im Tag-Dienst:
 `GET /genres?dir=<Ordner>` liefert Oberkategorie und Unterstile eines Albums (Stand des letzten Checks), ohne `dir` alle.
 Klassik, Soundtracks und Hörspiele erkennt das Modell schwächer.
+
+**Doppelte Alben:** Ordner mit gleichem Album-Künstler und gleichem Albumnamen. Groß-/Kleinschreibung, Akzente, „The“
+und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Edition]“ oder „- 2009 Remaster“ auch nicht;
+Zusammenstellungen werden nur nach dem Albumnamen verglichen. Ordner eines Albums, die nach CDs getrennt nebeneinander
+liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je Fassung stehen Format, Auflösung, Zahl der
+Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
+Abtastrate, mehr Titel).
+
+„Verschieben“ legt die Ordner einer Fassung in den versteckten Ordner `.duplicates` auf demselben Laufwerk, mit dem
+übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). Das geht auch bei
+großen Alben sofort, und MPD liest Ordner mit Punkt am Anfang nicht ein, das Album verschwindet also beim nächsten
+Einlesen aus der Bibliothek. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
+das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig löschen geht per ssh mit
+dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
+```bash
+sudo rm -rf '/mnt/INTERNAL/.duplicates'
+```
+Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der

@@ -95,7 +95,7 @@ die Ranglisten für diesen Monat.
 Tags einzelner Titel, ganzer Alben oder aller Titel eines Künstlers bearbeiten (auch den Kommentar), mit Textfunktionen wie Groß-/Kleinschreibung,
 Rückgängig und Cover (Datei wählen, online suchen, eingebettetes Cover als `folder.jpg`). „Bibliothek prüfen“ im Menü findet
 Alben ohne Cover, fehlende oder uneinheitliche Album-Künstler, Künstler in mehreren Schreibweisen, uneinheitliche
-Albumnamen oder Jahre, Titel ohne Tracknummer und Erscheinungsdaten, die von MusicBrainz abweichen, und schlägt je Album ein Genre vor (Discogs-Oberkategorien, aus
+Albumnamen oder Jahre, doppelte Alben (mit Qualität und Pfad, zum Verschieben in einen versteckten Ordner), Titel ohne Tracknummer und Erscheinungsdaten, die von MusicBrainz abweichen, und schlägt je Album ein Genre vor (Discogs-Oberkategorien, aus
 vorhandenen Genre-Tags und der Audio-Analyse); jeder Eintrag öffnet direkt den passenden Editor und bleibt danach bis zur nächsten Prüfung ausgegraut. Dort steht auch der
 Fortschritt der Stimmungs-Tags.
 

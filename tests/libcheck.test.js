@@ -57,7 +57,10 @@ lc.dirsWithoutImage(songs.slice(0, 4), root, function(list){
 /* fake MPD: lsinfo per folder */
 var tree = {
   '': 'directory: USB\nplaylist: x.m3u\n',
-  'USB': 'directory: USB/A\ndirectory: USB/kaputt\n',
+  'USB': 'directory: USB/A\ndirectory: USB/kaputt\ndirectory: USB/S\n',
+  'USB/S': 'directory: USB/S/Abbey Road\ndirectory: USB/S/Abbey Road (Remastered)\n',
+  'USB/S/Abbey Road': 'file: USB/S/Abbey Road/1.mp3\nArtist: The Beatles\nAlbum: Abbey Road\nFormat: 44100:24:2\nTime: 259\n',
+  'USB/S/Abbey Road (Remastered)': 'file: USB/S/Abbey Road (Remastered)/1.flac\nArtist: Beatles\nAlbum: Abbey Road (2019 Remaster)\nFormat: 96000:24:2\nTime: 260\n',
   'USB/A': 'file: USB/A/1.flac\nArtist: Spliff\nArtist: Zweiter\nAlbum: 85555\nTrack: 1\nTitle: Carbonara\nGenre: Rock\nTime: 245\nfile: USB/A/2.flac\nTitle: Ohne Tags\n'
 };
 var srv = net.createServer(function(c){
@@ -80,9 +83,10 @@ srv.listen(0, function(){
   lc.mpdWalk({port: srv.address().port}, function(err, list, dirs){
     t('read MPD: all folders, tracks with tags, broken folder skipped', function(){
       assert.ifError(err);
-      assert.strictEqual(dirs, 4);
-      assert.strictEqual(list.length, 2);
-      assert.deepStrictEqual(list[0], {file: 'USB/A/1.flac', artist: 'Spliff', albumartist: '', album: '85555', title: 'Carbonara', track: '1', date: '', genre: 'Rock', time: '245', 'last-modified': ''});
+      assert.strictEqual(dirs, 7);
+      assert.strictEqual(list.length, 4);
+      assert.deepStrictEqual(list[0], {file: 'USB/A/1.flac', artist: 'Spliff', albumartist: '', album: '85555', title: 'Carbonara', track: '1', date: '', genre: 'Rock', time: '245', 'last-modified': '', disc: '', format: ''});
+      assert.strictEqual(list[3].format, '96000:24:2');
       assert.strictEqual(list[1].title, 'Ohne Tags');
       assert.ok(prog.length >= 3);
     });
@@ -100,12 +104,13 @@ function service(mpdPort) {
   process.env.TAGS_LOG = path.join(root, 'log', 'changes.jsonl'); process.env.PYTHON = 'false';
   fs.mkdirSync(path.join(root, 'log'));
   var s2 = require('../tags/tag-service.js').server;
-  function call(method, route, cb) {
+  function call(method, route, cb, body) {
     var req = http.request({port: s2.address().port, path: route, method: method, headers: {'X-Xplorio': '1'}}, function(res){
       var d = ''; res.on('data', function(c){ d += c; }); res.on('end', function(){ cb(JSON.parse(d)); });
     });
-    req.end(method === 'POST' ? '{}' : undefined);
+    req.end(method === 'POST' ? JSON.stringify(body || {}) : undefined);
   }
+  ['USB/S/Abbey Road', 'USB/S/Abbey Road (Remastered)'].forEach(function(d){ fs.mkdirSync(path.join(root, d), {recursive: true}); });
   s2.listen(0, function(){
     call('GET', '/check', function(r0){
       t('service: no result before the first check', function(){ assert.ok(r0.ok); assert.strictEqual(r0.result, null); });
@@ -116,12 +121,36 @@ function service(mpdPort) {
             if (r.running && k < 50) return setTimeout(function(){ poll(k + 1); }, 100);
             t('service: result saved', function(){
               assert.ok(!r.running && !r.error && r.result);
-              assert.strictEqual(r.result.songs, 2);
-              assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A']);     /* Python missing: counts as without cover */
+              assert.strictEqual(r.result.songs, 4);
+              assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A', 'USB/S/Abbey Road', 'USB/S/Abbey Road (Remastered)']);     /* Python missing: counts as without cover */
               assert.ok(fs.existsSync(path.join(root, 'log', 'check.json')));
+              var d = r.result.duplicates;
+              assert.strictEqual(d.length, 1);
+              assert.deepStrictEqual(d[0].versions.map(function(v){ return [v.dirs[0], v.format, v.keep]; }),
+                [['USB/S/Abbey Road (Remastered)', 'FLAC 24/96', true], ['USB/S/Abbey Road', 'MP3', false]]);
             });
-            s2.close(); srv.close();
-            console.log(n + ' checks');
+            call('POST', '/dupmove', function(m1){
+              t('service: /dupmove refuses folders that are not listed as duplicates', function(){
+                assert.ok(!m1.ok && /not a duplicate/.test(m1.error));
+                assert.ok(fs.existsSync(path.join(root, 'USB/A')));
+              });
+              call('POST', '/dupmove', function(m2){
+                t('service: /dupmove moves into .duplicates on the same drive and marks it done', function(){
+                  assert.ok(m2.ok, m2.error);
+                  assert.deepStrictEqual(m2.moved, [{from: 'USB/S/Abbey Road', to: 'USB/S/.duplicates/Abbey Road'}]);
+                  assert.ok(!fs.existsSync(path.join(root, 'USB/S/Abbey Road')));
+                  assert.ok(fs.statSync(path.join(root, 'USB/S/.duplicates/Abbey Road')).isDirectory());
+                  var saved = JSON.parse(fs.readFileSync(path.join(root, 'log', 'check.json'), 'utf8'));
+                  assert.strictEqual(saved.done['duplicates|USB/S/Abbey Road'], 1);
+                });
+                call('POST', '/dupmove', function(m3){
+                  t('service: /dupmove of a folder that is already gone fails', function(){ assert.ok(!m3.ok); });
+                  s2.close(); srv.close();
+                  console.log(n + ' checks');
+                  process.exit(0);
+                }, {dirs: ['USB/S/Abbey Road']});
+              }, {dirs: ['USB/S/Abbey Road']});
+            }, {dirs: ['USB/A']});
           });
         })(0);
       });
