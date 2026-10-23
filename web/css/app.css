@@ -710,6 +710,8 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .ckDupRow { gap:calc(2 * var(--vw)); }
 .ckDupRow .sTitle, .ckDupRow .sSub { white-space:normal; overflow-wrap:anywhere; }
 .ckDupRow .ckBtn { font-size:calc(3 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(3 * var(--vw)); }
+.ckDupPlay { display:flex; align-items:center; padding:calc(1.2 * var(--vw)) calc(2.4 * var(--vw)) !important; }
+.ckDupPlay svg { width:calc(4.4 * var(--vw)); height:calc(4.4 * var(--vw)); fill:var(--fg); }
 .ckDupMsg { font-size:calc(3 * var(--vw)); opacity:.7; padding-bottom:calc(1 * var(--vw)); overflow-wrap:anywhere; }
 .ckCmdRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1 * var(--vw)) 0; }
 .ckCmd { flex:1 1 auto; min-width:0; font-family:ui-monospace, Menlo, monospace; font-size:calc(2.9 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(2 * var(--vw));

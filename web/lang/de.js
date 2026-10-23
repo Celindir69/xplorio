@@ -71,6 +71,7 @@ langRegister('de', 'Deutsch', {
   'check.dup.keep': 'beste Fassung',
   'check.dup.move': 'Verschieben',
   'check.dup.moved': 'Verschoben nach {to}',
+  'check.dup.play': 'Abspielen',
   'check.dup.sub': '{format} · {n} Titel · {m} Min.',
   'check.dup.trash': 'Verschobene Alben endgültig löschen: per ssh auf dem Player eingeben.',
   'check.edit': 'Bearbeiten',

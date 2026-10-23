@@ -71,6 +71,7 @@ langRegister('es', 'Español', {
   'check.dup.keep': 'mejor versión',
   'check.dup.move': 'Mover',
   'check.dup.moved': 'Movido a {to}',
+  'check.dup.play': 'Reproducir',
   'check.dup.sub': '{format} · {n} pistas · {m} min',
   'check.dup.trash': 'Borrar definitivamente los álbumes movidos: introdúcelo por ssh en el reproductor.',
   'check.edit': 'Editar',

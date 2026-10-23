@@ -217,7 +217,7 @@ The model is weaker at recognising classical music, soundtracks and radio plays.
 count, nor do additions such as “(Remastered)”, “[Deluxe Edition]” or “- 2009 Remaster”; compilations are compared by
 album name only. Folders of one album split by disc next to each other (CD1, CD2 or different disc numbers) count as one
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
-(lossless before lossy, then more bits, higher sample rate, more tracks).
+(lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
 
 “Move” puts the folders of a version into the hidden folder `.duplicates` on the same drive, keeping the rest of the
 path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). This is instant even for large

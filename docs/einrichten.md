@@ -244,7 +244,7 @@ und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Editi
 Zusammenstellungen werden nur nach dem Albumnamen verglichen. Ordner eines Albums, die nach CDs getrennt nebeneinander
 liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je Fassung stehen Format, Auflösung, Zahl der
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
-Abtastrate, mehr Titel).
+Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen.
 
 „Verschieben“ legt die Ordner einer Fassung in den versteckten Ordner `.duplicates` auf demselben Laufwerk, mit dem
 übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). Das geht auch bei

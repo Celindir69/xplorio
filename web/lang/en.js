@@ -73,6 +73,7 @@ langRegister('en', 'English', {
   'check.dup.keep': 'best version',
   'check.dup.move': 'Move',
   'check.dup.moved': 'Moved to {to}',
+  'check.dup.play': 'Play',
   'check.dup.sub': '{format} · {n} tracks · {m} min',
   'check.dup.trash': 'Delete moved albums for good: enter this via ssh on the player.',
   'check.edit': 'Edit',

@@ -71,6 +71,7 @@ langRegister('it', 'Italiano', {
   'check.dup.keep': 'versione migliore',
   'check.dup.move': 'Sposta',
   'check.dup.moved': 'Spostato in {to}',
+  'check.dup.play': 'Riproduci',
   'check.dup.sub': '{format} · {n} brani · {m} min',
   'check.dup.trash': 'Eliminare definitivamente gli album spostati: da inserire via ssh sul player.',
   'check.edit': 'Modifica',

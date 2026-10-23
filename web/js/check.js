@@ -357,6 +357,17 @@ function checkDupTrash(box, list) {
   box.appendChild(note);
   Object.keys(drives).sort().forEach(function(d){ box.appendChild(checkCmdRow('sudo rm -rf ' + checkShellQuote('/mnt/' + d + '/.duplicates'))); });
 }
+/* play one version (all its folders) in place of the queue; the check stays open to compare */
+function checkDupPlay(g, v) {
+  var items = v.dirs.map(function(d){ return {uri: 'music-library/' + d, service: 'mpd', type: 'folder', title: g.name, artist: g.artist}; });
+  if (queueForInput(items)) return;
+  fetch('/api/v1/replaceAndPlay', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({item: items[0]})
+  }).then(function(){
+    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
+  }).catch(function(){});
+}
 function checkDupRows(g) {
   var head = document.createElement('div'); head.className = 'ckDupHead';
   head.textContent = g.name + (g.artist ? ' · ' + g.artist : '');
@@ -371,6 +382,11 @@ function checkDupRows(g) {
     var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';
     meta.appendChild(ti); meta.appendChild(su); meta.appendChild(msg);
     row.appendChild(meta);
+    var play = document.createElement('button'); play.className = 'ckBtn ckDupPlay'; play.title = T('check.dup.play');
+    play.setAttribute('aria-label', T('check.dup.play'));
+    play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    play.addEventListener('click', function(){ checkDupPlay(g, v); });
+    if (!checkDone[key]) row.appendChild(play);
     var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.move');
     btn.disabled = !!checkDone[key];
     btn.addEventListener('click', function(){
@@ -382,6 +398,7 @@ function checkDupRows(g) {
         msg.style.display = '';
         if (r && r.ok) {
           checkDone[key] = 1; row.classList.add('done');
+          if (play.parentNode) play.parentNode.removeChild(play);
           msg.textContent = T('check.dup.moved', {to: r.moved.map(function(m){ return '/mnt/' + m.to; }).join(' + ')});
           return;
         }

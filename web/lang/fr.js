@@ -72,6 +72,7 @@ langRegister('fr', 'Français', {
   'check.dup.keep': 'meilleure version',
   'check.dup.move': 'Déplacer',
   'check.dup.moved': 'Déplacé vers {to}',
+  'check.dup.play': 'Lire',
   'check.dup.sub': '{format} · {n} titres · {m} min',
   'check.dup.trash': 'Supprimer définitivement les albums déplacés : à saisir via ssh sur le lecteur.',
   'check.edit': 'Modifier',
