@@ -117,6 +117,7 @@ progress of the mood tags.
   played and new albums, random mix; birthdays, recently played and new also in Discover.
 - Menu behind the gear at the top right: welcome screen, history and stats, check library, playback (crossfade, volume levelling, Rotel remote), system (CPU load, temperature, memory, drives, services with restart, restart or shut down the player, logs), update library, and the original Volumio
   interface (home page, browse, queue, plugins, system = Volumio's /dev page) and a help page on how to use the app; at the bottom the logo, the installed version and the license.
+- While the library is being read in or the album list rebuilt, a small symbol turns to the left of the gear; tapping it says what is going on (the player often responds more slowly then).
 - Light and dark, following the device setting or set explicitly.
 - German, English, French, Spanish and Italian, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).

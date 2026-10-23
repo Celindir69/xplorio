@@ -116,6 +116,8 @@ langRegister('fr', 'Français', {
   'check.db.running': 'Lecture de la bibliothèque …',
   'check.db.done': 'Bibliothèque lue. La liste des albums sera bientôt reconstruite.',
   'check.db.failed': 'Impossible de lancer la lecture de la bibliothèque.',
+  'scan.updating': 'Lecture de la bibliothèque. Le lecteur peut réagir plus lentement en attendant.',
+  'scan.building': 'Reconstruction de la liste des albums. Le lecteur peut réagir plus lentement en attendant.',
   'check.runCovers': 'Vérification des pochettes intégrées… {done} sur {total}',
   'check.runFolders': 'Vérification… dossier {done} sur {total}',
   'check.runFoldersNoTotal': 'Vérification… dossier {done}',

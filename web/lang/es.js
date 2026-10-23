@@ -115,6 +115,8 @@ langRegister('es', 'Español', {
   'check.db.running': 'Leyendo la biblioteca …',
   'check.db.done': 'Biblioteca leída. La lista de álbumes se reconstruirá en breve.',
   'check.db.failed': 'No se pudo iniciar la lectura de la biblioteca.',
+  'scan.updating': 'Leyendo la biblioteca. Mientras tanto, el reproductor puede responder más despacio.',
+  'scan.building': 'Reconstruyendo la lista de álbumes. Mientras tanto, el reproductor puede responder más despacio.',
   'check.runCovers': 'Comprobando portadas incrustadas… {done} de {total}',
   'check.runFolders': 'Comprobando… carpeta {done} de {total}',
   'check.runFoldersNoTotal': 'Comprobando… carpeta {done}',

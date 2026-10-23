@@ -234,6 +234,7 @@ function scanRun() {
     (function step() {
       if (!list.length) {
         scanRunning = false;
+        albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS;   /* meanwhile Volumio rebuilds its own album list */
         var t = setTimeout(function(){ albumChecked = 0; albumsEnsure(); }, ALBUMS_AFTER_SCAN_MS);
         if (t.unref) t.unref();   /* keep genres and random album current */
         if (scanWaiting() && !scanTimer) scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
@@ -322,11 +323,13 @@ function doScan(body, cb) {
   mpdUpdate(rel, function(scanned){ cb(200, {ok: true, scan: scanned}); });
 }
 
-/* GET /scan: is MPD scanning right now? {ok, updating, pending} (progress for the button in the library check) */
+/* GET /scan: is MPD scanning right now? {ok, updating, pending, building} (progress for the button in the library check,
+   symbol in the top bar); building: the album lists are being rebuilt after a scan (Volumio's and ours) */
 function doScanGet(cb) {
   libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'status', function(err, st){
     if (err) return cb(200, {ok: false, error: 'MPD: ' + err.message});
-    cb(200, {ok: true, updating: !!st.updating_db || scanRunning || scanAll, pending: scanWaiting()});
+    cb(200, {ok: true, updating: !!st.updating_db || scanRunning || scanAll, pending: scanWaiting(),
+             building: albumBuilding || Date.now() < albumSoonUntil});
   });
 }
 
@@ -638,7 +641,7 @@ function doPlays(query, cb) {
 var albums = require('./albums.js');
 var genres = require('./genres.js');
 var ALBUMS_FILE = path.join(DATA_DIR, 'albums.json');
-var albumIdx = null, albumBuilding = false, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
+var albumIdx = null, albumBuilding = false, albumSoonUntil = 0, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
 var ALBUMS_CHECK_MS = 60000;                             /* ask MPD at most this often whether the database has changed */
 var ALBUMS_AFTER_SCAN_MS = 90000;                        /* after our own scan: update the album list once MPD and Volumio are done */
 var ALBUMS_VERSION = 8;                                  /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date */
