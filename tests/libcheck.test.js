@@ -71,6 +71,7 @@ var srv = net.createServer(function(c){
     var i;
     while ((i = b.indexOf('\n')) >= 0) {
       var l = b.slice(0, i); b = b.slice(i + 1);
+      if (l === 'status') { c.write('state: stop\nOK\n'); continue; }
       var m = /^lsinfo "(.*)"$/.exec(l);
       if (!m) continue;
       if (tree.hasOwnProperty(m[1])) c.write(tree[m[1]] + 'OK\n');
@@ -102,6 +103,9 @@ function service(mpdPort) {
   var http = require('http');
   process.env.MUSIC_ROOT = root; process.env.MPD_PORT = String(mpdPort);
   process.env.TAGS_LOG = path.join(root, 'log', 'changes.jsonl'); process.env.PYTHON = 'false';
+  var mpcLog = path.join(root, 'mpc.log');                 /* fake mpc: notes its arguments */
+  fs.writeFileSync(path.join(root, 'mpc'), '#!/bin/sh\necho "$@" >> "' + mpcLog + '"\n', {mode: 493});
+  process.env.MPC = path.join(root, 'mpc');
   fs.mkdirSync(path.join(root, 'log'));
   var s2 = require('../tags/tag-service.js').server;
   function call(method, route, cb, body) {
@@ -145,9 +149,16 @@ function service(mpdPort) {
                 });
                 call('POST', '/dupmove', function(m3){
                   t('service: /dupmove of a folder that is already gone fails', function(){ assert.ok(!m3.ok); });
-                  s2.close(); srv.close();
-                  console.log(n + ' checks');
-                  process.exit(0);
+                  call('POST', '/scan', function(){                 /* check closed: collected scans run now */
+                    setTimeout(function(){
+                      t('service: after moving, MPD rescans exactly the moved folder, not its parent or the drive', function(){
+                        assert.strictEqual(fs.readFileSync(mpcLog, 'utf8'), 'update USB/S/Abbey Road\n');
+                      });
+                      s2.close(); srv.close();
+                      console.log(n + ' checks');
+                      process.exit(0);
+                    }, 500);
+                  }, {hold: false});
                 }, {dirs: ['USB/S/Abbey Road']});
               }, {dirs: ['USB/S/Abbey Road']});
             }, {dirs: ['USB/A']});

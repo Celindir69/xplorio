@@ -196,35 +196,47 @@ function scanDirs(relFiles) {
    release ({hold:false}); if that never comes (page closed), at the latest SCAN_HOLD_MAX after the last change. */
 var SCAN_HOLD_MAX = 10 * 60000;
 var scanPending = [], scanTimer = null, scanRunning = false, scanOk = true, scanHold = false;
+var scanExact = [];              /* folders scanned exactly as they are, never merged into a parent (moved duplicates) */
 var scanAll = false;             /* scan the whole library (button in the library check), even while holding */
 function mpdUpdate(relFiles, cb) {
   scanPending = scanPending.concat(relFiles);
   scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
   cb(scanOk);
 }
+/* folders that are gone (moved into .duplicates): MPD forgets them when exactly their path is updated. Never merged
+   into a parent folder: on a large NTFS drive a scan of the whole drive overloads the player */
+function mpdForget(relDirs, cb) {
+  scanExact = scanExact.concat(relDirs);
+  scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
+  cb(scanOk);
+}
+function scanWaiting() { return scanPending.length + scanExact.length; }
 function scanSchedule(ms, release) {               /* release: hold ends (maximum duration reached) */
   clearTimeout(scanTimer);
   scanTimer = setTimeout(function(){ if (release) scanHold = false; scanRun(); }, ms);
 }
 function scanSetHold(on) {
   scanHold = !!on;
-  if (scanHold) { if (scanPending.length) scanSchedule(SCAN_HOLD_MAX, true); else { clearTimeout(scanTimer); scanTimer = null; } }
-  else if (scanPending.length) scanSchedule(0);
+  if (scanHold) { if (scanWaiting()) scanSchedule(SCAN_HOLD_MAX, true); else { clearTimeout(scanTimer); scanTimer = null; } }
+  else if (scanWaiting()) scanSchedule(0);
 }
 function scanRun() {
   scanTimer = null;
-  if (scanRunning || (scanHold && !scanAll) || (!scanPending.length && !scanAll)) return;
+  if (scanRunning || (scanHold && !scanAll) || (!scanWaiting() && !scanAll)) return;
   scanRunning = true;
   libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'status', function(err, st){
     if (!err && st.updating_db) { scanRunning = false; scanSchedule(SCAN_QUIET); return; }
     var list = scanAll ? [''] : scanDirs(scanPending);
-    scanPending = []; scanAll = false;
+    if (!scanAll) list = list.concat(scanExact.filter(function(d, i, all){           /* unless a scan above already covers it */
+      return all.indexOf(d) === i && !list.some(function(l){ return l === '' || d === l || d.indexOf(l + '/') === 0; });
+    }));
+    scanPending = []; scanExact = []; scanAll = false;
     (function step() {
       if (!list.length) {
         scanRunning = false;
         var t = setTimeout(function(){ albumChecked = 0; albumsEnsure(); }, ALBUMS_AFTER_SCAN_MS);
         if (t.unref) t.unref();   /* keep genres and random album current */
-        if (scanPending.length && !scanTimer) scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
+        if (scanWaiting() && !scanTimer) scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
         return;
       }
       var d = list.shift();
@@ -303,7 +315,7 @@ function doScan(body, cb) {
     scanRun();
     return cb(200, {ok: true, scan: true});
   }
-  if (typeof body.hold === 'boolean') { scanSetHold(body.hold); return cb(200, {ok: true, hold: scanHold, pending: scanPending.length}); }
+  if (typeof body.hold === 'boolean') { scanSetHold(body.hold); return cb(200, {ok: true, hold: scanHold, pending: scanWaiting()}); }
   var rel = [];
   (Array.isArray(body.uris) ? body.uris : []).forEach(function(u){ var p = resolveUri(u); if (p && !p.missing) rel.push(p.rel); });
   if (!rel.length) return cb(400, {ok: false, error: 'uris missing'});
@@ -314,7 +326,7 @@ function doScan(body, cb) {
 function doScanGet(cb) {
   libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'status', function(err, st){
     if (err) return cb(200, {ok: false, error: 'MPD: ' + err.message});
-    cb(200, {ok: true, updating: !!st.updating_db || scanRunning || scanAll, pending: scanPending.length});
+    cb(200, {ok: true, updating: !!st.updating_db || scanRunning || scanAll, pending: scanWaiting()});
   });
 }
 
@@ -472,7 +484,7 @@ function doDupMove(body, cb) {
       mkdirs(path.dirname(path.join(MUSIC_ROOT, to)));
       fs.renameSync(path.join(MUSIC_ROOT, dirs[i]), path.join(MUSIC_ROOT, to));
     } catch (e) {
-      if (moved.length) mpdUpdate(moved.map(function(m){ return m.from; }), function(){});
+      if (moved.length) mpdForget(moved.map(function(m){ return m.from; }), function(){});
       return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + dirs[i] : e.message, moved: moved});
     }
     moved.push({from: dirs[i], to: to});
@@ -480,7 +492,7 @@ function doDupMove(body, cb) {
     last.done['duplicates|' + dirs[i]] = 1;
   }
   try { writeCheck(last); } catch (e) { /* the marks are only for display */ }
-  mpdUpdate(dirs, function(){});                          /* rescans the parent folders */
+  mpdForget(dirs, function(){});                          /* only these folders: MPD drops them */
   cb(200, {ok: true, moved: moved});
 }
 
