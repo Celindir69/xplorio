@@ -12,13 +12,32 @@ var jsonl = require('./jsonl.js');
 
 var PROB = 0.6;                  /* from this probability on a mood counts */
 var RELOAD_CHECK_MS = 10000;     /* check at most this often whether the file is new */
-var DROP = ['p', 'sz', 'mt', 'v', 'kstr'];   /* needed only by the analysis script on the Mac: don't keep in memory */
+var STYLES_MAX = 5, STYLES_MIN = 0.05;   /* strongest styles per track (like analyse.py writes them; older or other files) */
 
 /* value at position q (0..1) of a sorted list */
 function quantile(sorted, q) {
   if (!sorted.length) return null;
   var i = Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))));
   return sorted[i];
+}
+
+/* one track in memory: always the same fields in the same order (compact objects in V8). Only what is evaluated:
+   artist and title are in the key, path, size and the like are needed only by the analysis script on the Mac.
+   intern: same text -> same string, e.g. the style names that thousands of tracks share */
+function num(x) { return typeof x === 'number' ? x : null; }
+function Mood(m) {
+  this.happy = num(m.happy); this.sad = num(m.sad); this.relaxed = num(m.relaxed);
+  this.aggressive = num(m.aggressive); this.party = num(m.party);
+}
+function Entry(o, intern) {
+  this.al = o.al ? intern(String(o.al)) : '';
+  this.bpm = num(o.bpm); this.key = o.key ? intern(String(o.key)) : ''; this.scale = o.scale ? intern(String(o.scale)) : '';
+  this.mood = o.mood && typeof o.mood === 'object' ? new Mood(o.mood) : null;
+  this.dance = num(o.dance); this.voice = num(o.voice); this.val = num(o.val); this.aro = num(o.aro);
+  var st = (Array.isArray(o.styles) ? o.styles : []).filter(function(x){ return x && x[0] && +x[1] >= STYLES_MIN; });
+  if (st.length > STYLES_MAX) st = st.sort(function(a, b){ return b[1] - a[1]; }).slice(0, STYLES_MAX);
+  this.styles = st.map(function(x){ return [intern(String(x[0])), +x[1]]; });
+  this._c = null;                                           /* classify cache */
 }
 
 function Store(file) {
@@ -36,14 +55,14 @@ Store.prototype.reload = function(force) {
     this.byKey = {}; this.n = 0; this.mtime = 0; this.stats = null; return true;
   }
   if (!force && st.mtime.getTime() === this.mtime) return false;
-  var by = {}, n = 0, aro = [], val = [];
+  var by = {}, n = 0, aro = [], val = [], strings = {};
+  function intern(x) { return strings.hasOwnProperty(x) ? strings[x] : (strings[x] = x); }
   var ok = jsonl.eachLine(this.file, function(l){            /* line by line: never the whole file in memory at once */
     var o = jsonl.parse(l);
     if (!o || !o.ar || !o.ti || o.err) return;
-    DROP.forEach(function(f){ delete o[f]; });
     var k = moodtags.trackKey(o.ar, o.ti);
     var list = by[k] || (by[k] = []);
-    list.push(o);
+    list.push(o = new Entry(o, intern));
     n++;
     if (typeof o.aro === 'number') aro.push(o.aro);
     if (typeof o.val === 'number') val.push(o.val);
