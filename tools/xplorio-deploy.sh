@@ -423,21 +423,54 @@ build=$(cd "$TMP/src" && find xplorio.html web -type f ! -name build.js ! -name 
 printf "window.XPLORIO_BUILD = '%s';\n" "$build" > "$TMP/src/web/build.js"
 
 # ---------- Volumio plugin (--plugin) ----------
-# tools/make-plugin.sh puts it together, Volumio's own "volumio plugin install/update" installs it into
-# /data/plugins/user_interface/xplorio; the data in /data/xplorio stays as it is
+# tools/make-plugin.sh puts it together; installed through Volumio's own websocket (tools/plugin-install.js, the same
+# way as Volumio's plugin page), not with "volumio plugin install", which hangs forever on some Volumio 2 devices.
+# Everything as user volumio (Volumio itself runs as volumio); the data in /data/xplorio stays as it is
 if [ $PLUGIN = 1 ]; then
   [ -f "$TMP/src/tools/make-plugin.sh" ] || die "branch $BRANCH has no plugin yet"
   if [ $DRY = 1 ]; then echo "Branch $BRANCH would be installed as Volumio plugin (nothing done with -n)"; exit 0; fi
   bash "$TMP/src/tools/make-plugin.sh" "$TMP/src" "$TMP/plugin" >/dev/null || die "the plugin could not be put together"
   PLUGIN_DIR=$ROOT/data/plugins/user_interface/xplorio
   if [ -d "$PLUGIN_DIR" ]; then how=update; else how=install; fi
-  if [ -n "$ROOT" ]; then
-    rm -rf "$ROOT/plugin-build"; cp -R "$TMP/plugin/xplorio" "$ROOT/plugin-build"; echo "(test) volumio plugin $how"; exit 0
+  # dependencies (kew, v-conf) from the installed plugin: then install.sh needs no npm install (and no internet)
+  [ -d "$PLUGIN_DIR/node_modules" ] && cp -R "$PLUGIN_DIR/node_modules" "$TMP/plugin/xplorio/"
+  ZIP=$TMP/plugin/xplorio.zip
+  if command -v zip >/dev/null 2>&1; then
+    (cd "$TMP/plugin/xplorio" && zip -qr "$ZIP" .) || die "the plugin could not be packed"
+  else
+    PY=$(command -v python3 || command -v python) || die "neither zip nor python found to pack the plugin"
+    "$PY" -c 'import os, sys, zipfile
+src, out = sys.argv[1], sys.argv[2]
+z = zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED)
+for d, dirs, files in os.walk(src):
+    for f in files:
+        full = os.path.join(d, f)
+        z.write(full, os.path.relpath(full, src))
+z.close()' "$TMP/plugin/xplorio" "$ZIP" || die "the plugin could not be packed"
   fi
-  command -v volumio >/dev/null || die "the volumio command is missing: install the folder by hand ($TMP/plugin/xplorio)"
-  chmod 755 "$TMP"; chown -R volumio:volumio "$TMP/plugin"
-  echo "Xplorio as Volumio plugin ($BRANCH): volumio plugin $how …"
-  (cd "$TMP/plugin/xplorio" && sudo -u volumio volumio plugin $how) || die "volumio plugin $how failed"
+  if [ -n "$ROOT" ]; then
+    rm -rf "$ROOT/plugin-build"; cp -R "$TMP/plugin/xplorio" "$ROOT/plugin-build"; cp "$ZIP" "$ROOT/plugin-build.zip"
+    echo "(test) plugin $how through Volumio"; exit 0
+  fi
+  id volumio >/dev/null 2>&1 || die "user volumio is missing: is this a Volumio player?"
+  NODE=${DEPLOY_NODE:-$(command -v node || echo /usr/bin/node)}
+  # earlier installations may have left root-owned files there; the plugin runs as volumio
+  mkdir -p /data/xplorio/data && chown volumio:volumio /data/xplorio && chown -R volumio:volumio /data/xplorio/data
+  [ -f /data/xplorio/config.local.js ] && chown volumio:volumio /data/xplorio/config.local.js
+  mkdir -p /tmp/plugins && chown volumio:volumio /tmp/plugins
+  install -o volumio -g volumio -m 644 "$ZIP" /tmp/plugins/xplorio.zip
+  install -o volumio -g volumio -m 644 "$TMP/src/tools/plugin-install.js" /tmp/plugins/xplorio-install.js
+  echo "Xplorio as Volumio plugin ($BRANCH): $how through Volumio …"
+  if ! sudo -u volumio "$NODE" /tmp/plugins/xplorio-install.js $how xplorio.zip; then
+    rm -f /tmp/plugins/xplorio-install.js
+    [ $how = update ] || die "installing failed (log: sudo journalctl -u volumio -n 100)"
+    # fallback: copy the new files into the plugin folder (settings and node_modules stay) and restart Volumio
+    echo "Updating through Volumio failed: copying the files into $PLUGIN_DIR and restarting Volumio"
+    cp -R "$TMP/plugin/xplorio/." "$PLUGIN_DIR/" && chown -R volumio:volumio "$PLUGIN_DIR" || die "copying failed"
+    (cd "$PLUGIN_DIR" && sh install.sh >/dev/null) || echo "install.sh reported an error"
+    systemctl restart volumio
+  fi
+  rm -f /tmp/plugins/xplorio-install.js /tmp/plugins/xplorio.zip
   [ $how = install ] && echo "Now switch the plugin on in Volumio: Plugins > Installed plugins > Xplorio."
   echo "Xplorio then runs at http://$(hostname -I 2>/dev/null | cut -d' ' -f1):4040/ (port in the plugin settings)."
   exit 0

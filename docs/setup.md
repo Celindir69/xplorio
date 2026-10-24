@@ -33,7 +33,7 @@ As a plugin, Xplorio puts nothing below `/volumio`. Volumio's check before a sys
 sudo xplorio-deploy --plugin            # main as plugin; with a branch: sudo xplorio-deploy --plugin <branch>
 ```
 
-The first time, switch the plugin on in Volumio afterwards: Plugins > Installed plugins > Xplorio. Xplorio is then available at `http://<player>:4040/`. Once the plugin is installed, a plain `sudo xplorio-deploy` also updates the plugin instead of the interface below `/volumio`. The plugin itself is put together by `tools/make-plugin.sh` (plugin files from `plugin/`, interface and services in `app/`).
+`xplorio-deploy` installs the plugin through Volumio's own interface, like Volumio's plugin page, not with `volumio plugin install`, which hangs on some Volumio 2 devices (e.g. MX-Stream). The first time, switch the plugin on in Volumio afterwards: Plugins > Installed plugins > Xplorio. Xplorio is then available at `http://<player>:4040/`. Once the plugin is installed, a plain `sudo xplorio-deploy` also updates the plugin instead of the interface below `/volumio`. The plugin itself is put together by `tools/make-plugin.sh` (plugin files from `plugin/`, interface and services in `app/`).
 
 **Settings:** Everything needed is on the plugin's settings page, no ssh or console required:
 

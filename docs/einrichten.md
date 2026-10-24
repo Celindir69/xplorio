@@ -31,7 +31,8 @@ läuft in Volumios eigenem Prozess, es kommt also kein weiterer Dienst hinzu.
 ```bash
 sudo xplorio-deploy --plugin            # main als Plugin; mit Branch: sudo xplorio-deploy --plugin <branch>
 ```
-Beim ersten Mal das Plugin danach in
+`xplorio-deploy` installiert das Plugin über Volumios eigene Schnittstelle, wie die Plugin-Seite in Volumio, und nicht mit
+`volumio plugin install`, das auf manchen Volumio-2-Geräten (z. B. MX-Stream) hängen bleibt. Beim ersten Mal das Plugin danach in
 Volumio einschalten: Plugins > Installierte Plugins > Xplorio. Xplorio ist dann unter `http://<player>:4040/` erreichbar. Ist
 das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` das Plugin statt der Oberfläche unter
 `/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus `plugin/`, Oberfläche und Dienste in

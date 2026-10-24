@@ -1,7 +1,7 @@
 #!/bin/bash
 # make-plugin: put the Volumio plugin together from the repo (plugin/ plus the interface and the services in app/).
 #   bash tools/make-plugin.sh [repo folder] [target folder]     -> <target folder>/xplorio (default: ./build/xplorio)
-# Install on the player from that folder with "volumio plugin install" (xplorio-deploy --plugin does all of it),
+# xplorio-deploy --plugin packs that folder and installs it through Volumio's websocket (tools/plugin-install.js),
 # or copy the folder into the Volumio plugin sources for the plugin store (Volumio builds the ZIP there itself).
 set -e
 SRC=$(cd "${1:-$(dirname "$0")/..}" && pwd -P)

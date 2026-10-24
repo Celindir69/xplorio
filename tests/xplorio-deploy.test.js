@@ -240,21 +240,26 @@ t('--server: unit for the own web server, without config folder; a second time s
   var r2 = shs(['--server']);
   assert.ok(/xplorio-server is already set up/.test(r2.stdout), r2.stdout);
 });
-t('--plugin: puts the Volumio plugin together, nothing below /volumio or /data/xplorio changes', function(){
+t('--plugin: puts the Volumio plugin together and packs it for Volumio, nothing below /volumio or /data/xplorio changes', function(){
   var before = cp.execSync('find ' + RS + ' -type f | sort', {encoding: 'utf8'});
   var r = shs(['--plugin']);
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);
-  assert.ok(/\(test\) volumio plugin install/.test(r.stdout), r.stdout);
+  assert.ok(/\(test\) plugin install through Volumio/.test(r.stdout), r.stdout);
   var b = path.join(RS, 'plugin-build');
   assert.ok(fs.existsSync(path.join(b, 'index.js')) && fs.existsSync(path.join(b, 'app/web/js/core.js')));
   assert.ok(/"branch":"main"/.test(fs.readFileSync(path.join(b, 'app/web/version.json'), 'utf8')));
-  cp.execSync('rm -rf ' + b);
+  var names = cp.execFileSync('python3', ['-c', 'import sys, zipfile; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))', b + '.zip'],
+                              {encoding: 'utf8'}).split('\n');
+  assert.ok(names.indexOf('package.json') >= 0 && names.indexOf('app/tags/tags.py') >= 0, names.slice(0, 5));   /* as Volumio expects it */
+  cp.execSync('rm -rf ' + b + ' ' + b + '.zip');
   assert.strictEqual(cp.execSync('find ' + RS + ' -type f | sort', {encoding: 'utf8'}), before);
-  fs.mkdirSync(path.join(RS, 'data/plugins/user_interface/xplorio'), {recursive: true});
-  assert.ok(/\(test\) volumio plugin update/.test(shs(['--plugin']).stdout));
+  fs.mkdirSync(path.join(RS, 'data/plugins/user_interface/xplorio/node_modules/kew'), {recursive: true});
+  fs.writeFileSync(path.join(RS, 'data/plugins/user_interface/xplorio/node_modules/kew/index.js'), '');
+  assert.ok(/\(test\) plugin update through Volumio/.test(shs(['--plugin']).stdout));
+  assert.ok(fs.existsSync(path.join(b, 'node_modules/kew/index.js')));          /* update: dependencies of the installed plugin */
   var u = shs([]);                                                   /* plain call: the plugin is updated, /volumio stays */
-  assert.ok(/installed as Volumio plugin: updating the plugin/.test(u.stdout) && /\(test\) volumio plugin update/.test(u.stdout), u.stdout);
-  cp.execSync('rm -rf ' + path.join(RS, 'plugin-build') + ' ' + path.join(RS, 'data/plugins'));
+  assert.ok(/installed as Volumio plugin: updating the plugin/.test(u.stdout) && /\(test\) plugin update through Volumio/.test(u.stdout), u.stdout);
+  cp.execSync('rm -rf ' + b + ' ' + b + '.zip ' + path.join(RS, 'data/plugins'));
   assert.ok(/would be installed as Volumio plugin/.test(shs(['-n', '--plugin']).stdout));
 });
 t('--rotel IP: writes the amplifier into config.local.js (appends to an existing one, else creates it) and sets up the bridge', function(){
