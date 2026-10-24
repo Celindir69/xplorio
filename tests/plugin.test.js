@@ -39,16 +39,13 @@ function evalConfig() {
   return JSON.parse(JSON.stringify(ctx.window.APP_CONFIG));     /* objects of the other context: compare as plain data */
 }
 
-t('make-plugin: plugin files at the top, interface and services in app/, no own settings, ZIP for the plugin page', function(){
+t('make-plugin: plugin files at the top, interface and services in app/, no own settings', function(){
   ['package.json', 'index.js', 'install.sh', 'UIConfig.json', 'i18n/strings_de.json', 'app/xplorio.html', 'app/web/js/core.js',
    'app/web/build.js', 'app/web/version.json', 'app/server/xplorio-server.js', 'app/tags/tag-service.js', 'app/rotel/rotel-bridge.js']
     .forEach(function(f){ assert.ok(fs.existsSync(path.join(P, f)), f); });
   assert.ok(!fs.existsSync(path.join(P, 'app/web/config.local.js')) && !fs.existsSync(path.join(P, 'app/tests')));
   var pk = JSON.parse(fs.readFileSync(path.join(P, 'package.json'), 'utf8'));
   assert.strictEqual(pk.name, 'xplorio'); assert.strictEqual(pk.volumio_info.plugin_type, 'user_interface');
-  var list = cp.execFileSync('python3', ['-c', 'import sys, zipfile; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))',
-                                         path.join(T, 'build/xplorio.zip')]).toString().split('\n');
-  assert.ok(list.indexOf('package.json') >= 0 && list.indexOf('install.sh') >= 0 && list.indexOf('app/tags/tags.py') >= 0, list.slice(0, 5));
 });
 
 t('settings page: every text has a German and an English string', function(){
@@ -166,7 +163,7 @@ plug.onStart().then(function(){
           assert.strictEqual(el(ui, 'rotelInputs').value, 'aux=Plattenspieler/phono');
           assert.ok(/Gespeichert/.test(el(ui, 'lastfmKey').doc) && /Noch nicht/.test(el(ui, 'lastfmSecret').doc) && el(ui, 'lastfmKey').value === '');
           assert.ok(JSON.stringify(ui).indexOf('oldkey1') < 0);
-          assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc));
+          assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc) && !el(ui, 'passwordOld'));
           assert.ok(/music\/USB\/Stick/.test(el(ui, 'tagsRoot').doc) === (process.getuid() !== 0) && /Freigabe dafür fehlt/.test(el(ui, 'tagsRoot').doc), el(ui, 'tagsRoot').doc);
           ui.sections.slice(1).forEach(function(s){
             assert.deepStrictEqual(s.saveButton.data, s.content.map(function(c){ return c.id; }));
@@ -199,11 +196,22 @@ plug.onStart().then(function(){
             assert.strictEqual(env.USE_SUDO, '1'); assert.strictEqual(env.TAGS_SCRIPT, '/usr/local/lib/xplorio/tags/tags.py');
             assert.ok(/^\/usr\/bin\/python3?$/.test(env.PYTHON));
           });
-          spawned = [];
-          plug.saveSettings({theme: {value: 'light', label: 'Immer hell'}, tidal: {value: 'on', label: 'Immer'}, history: false,
+          plug.saveSettings({password: 'anders', passwordOld: 'falsch', tagsRoot: true}).then(function(){
+            t('password: once set, changed only with the current one (the plugin page is open to everyone)', function(){
+              assert.deepStrictEqual(toasts.pop(), ['error', 'Das bisherige Passwort stimmt nicht, nichts geändert.']);
+            });
+            return plug.saveSettings({password: 'anders', passwordOld: 'geheim', tagsRoot: true});
+          }).then(function(){
+            var d = kew.defer();
+            new (require(path.join(P, 'app/tags/adminpass.js')).Auth)(path.join(DATA, 'data')).verify('anders', 0, d.resolve);
+            return d.promise;
+          }).then(function(r){
+            t('password: changed with the right current one', function(){ assert.ok(r.ok); assert.strictEqual(toasts.pop()[0], 'success'); });
+            spawned = [];
+            return plug.saveSettings({theme: {value: 'light', label: 'Immer hell'}, tidal: {value: 'on', label: 'Immer'}, history: false,
                              allowedHosts: ' player.example.net ,x.lan', releaseDates: true, moodTags: true, colorMood: true,
-                             m4aProbe: true, m4aLossless: false, qobuz: {value: 'auto'}, hra: {value: 'off'}, spotify: {value: 'auto'}})
-          .then(function(){ return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}}); })
+                             m4aProbe: true, m4aLossless: false, qobuz: {value: 'auto'}, hra: {value: 'off'}, spotify: {value: 'auto'}});
+          }).then(function(){ return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}}); })
           .then(function(){ spawned = []; return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV'}); })
           .then(function(){
           t('saving: values into config.local.js, tag service off, no new child process', function(){
@@ -223,8 +231,9 @@ plug.onStart().then(function(){
           });
           plug.getUIConfig().then(function(ui2){
           t('settings page shows "saved" for Last.fm and the password, never the values; delete removes both', function(){
+            assert.ok(el(ui2, 'passwordOld') && /Neues Passwort/.test(el(ui2, 'password').label));
             assert.ok(/Gespeichert/.test(el(ui2, 'lastfmKey').doc) && /Gespeichert/.test(el(ui2, 'lastfmSecret').doc));
-            assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('geheim') < 0);
+            assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('anders') < 0);
             assert.ok(/Passwort ist gesetzt/.test(el(ui2, 'password').doc));
             plug.saveSettings({lastfmKey: '', lastfmSecret: '', lastfmClear: true});
             assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});

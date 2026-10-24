@@ -115,10 +115,12 @@ prune_backups() {
 
 # ---------- password for the services ("System" page): only a hash in data/admin.json ----------
 if [ "$1" = "--password" ] || [ "$1" = "--passwort" ]; then
-  [ -f "$APP/tags/adminpass.js" ] || die "$APP/tags/adminpass.js is missing: install the tag service first (sudo $PROG)"
+  PASSJS=$APP/tags/adminpass.js                     # without the tag service of xplorio-deploy: the plugin's copy
+  [ -f "$PASSJS" ] || PASSJS=$ROOT/data/plugins/user_interface/xplorio/app/tags/adminpass.js
+  [ -f "$PASSJS" ] || die "$APP/tags/adminpass.js is missing: install the tag service first (sudo $PROG)"
   prepare_dirs
   NODE=${DEPLOY_NODE:-$(command -v node || echo /usr/bin/node)}
-  "$NODE" "$APP/tags/adminpass.js" "$APP/data" || exit 1
+  "$NODE" "$PASSJS" "$APP/data" || exit 1
   [ -n "$ROOT" ] || chown volumio:volumio "$APP/data/admin.json" 2>/dev/null || true
   exit 0
 fi

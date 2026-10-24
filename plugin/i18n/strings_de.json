@@ -69,7 +69,7 @@
 		"SECTION_SYSTEM": "System und Rechte",
 		"SECTION_SYSTEM_DOC": "Schutz der Seite „System“ und Schreibrechte des Tag-Editors.",
 		"PASSWORD": "Passwort für die Seite „System“",
-		"PASSWORD_DOC": "Schützt Neustart und Ausschalten der Dienste in Xplorio. Mindestens 4 Zeichen; ein neues Passwort meldet alle Geräte ab. Leer lassen behält das bisherige.",
+		"PASSWORD_DOC": "Schützt Neustart und Ausschalten der Dienste in Xplorio (Volumio selbst bleibt offen). Mindestens 4 Zeichen; ein neues Passwort meldet alle Geräte ab. Leer lassen behält das bisherige. Vergessen: sudo xplorio-deploy --password auf dem Player.",
 		"PASSWORD_SET": "Ein Passwort ist gesetzt.",
 		"PASSWORD_NONE": "Noch kein Passwort gesetzt, die Knöpfe bleiben gesperrt.",
 		"PASSWORD_SHORT": "Das Passwort braucht mindestens 4 Zeichen.",
@@ -90,6 +90,11 @@
 		"BAD_TRI": "Ungültige Auswahl.",
 		"SYSTEMD": "{name} läuft als Systemdienst (systemd), das Plugin lässt ihn so.",
 		"PORT_BUSY": "Port {port} ist belegt: Der Xplorio-Webserver konnte nicht starten.",
-		"OWN_BROKEN": "/data/xplorio/config.local.js enthält einen Fehler und bleibt außen vor."
+		"OWN_BROKEN": "/data/xplorio/config.local.js enthält einen Fehler und bleibt außen vor.",
+		"PASSWORD_NEW": "Neues Passwort für die Seite „System“",
+		"PASSWORD_OLD": "Bisheriges Passwort",
+		"PASSWORD_OLD_DOC": "Zum Ändern nötig.",
+		"PASSWORD_WRONG": "Das bisherige Passwort stimmt nicht, nichts geändert.",
+		"PASSWORD_LOCKED": "Zu viele falsche Versuche, bitte {wait} s warten."
 	}
 }

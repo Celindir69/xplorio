@@ -69,7 +69,7 @@
 		"SECTION_SYSTEM": "System and permissions",
 		"SECTION_SYSTEM_DOC": "Protection of the \"System\" page and write permissions of the tag editor.",
 		"PASSWORD": "Password for the \"System\" page",
-		"PASSWORD_DOC": "Protects restarting and stopping services in Xplorio. At least 4 characters; a new password logs out all devices. Leave empty to keep the current one.",
+		"PASSWORD_DOC": "Protects restarting and stopping services in Xplorio (Volumio itself stays open). At least 4 characters; a new password logs out all devices. Leave empty to keep the current one. Forgotten: sudo xplorio-deploy --password on the player.",
 		"PASSWORD_SET": "A password is set.",
 		"PASSWORD_NONE": "No password set yet, the buttons stay locked.",
 		"PASSWORD_SHORT": "The password needs at least 4 characters.",
@@ -90,6 +90,11 @@
 		"BAD_TRI": "Invalid choice.",
 		"SYSTEMD": "{name} runs as a system service (systemd), the plugin leaves it as it is.",
 		"PORT_BUSY": "Port {port} is in use: the Xplorio web server could not start.",
-		"OWN_BROKEN": "/data/xplorio/config.local.js contains an error and is left out."
+		"OWN_BROKEN": "/data/xplorio/config.local.js contains an error and is left out.",
+		"PASSWORD_NEW": "New password for the \"System\" page",
+		"PASSWORD_OLD": "Current password",
+		"PASSWORD_OLD_DOC": "Needed to change it.",
+		"PASSWORD_WRONG": "The current password is wrong, nothing changed.",
+		"PASSWORD_LOCKED": "Too many wrong attempts, please wait {wait} s."
 	}
 }

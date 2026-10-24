@@ -293,7 +293,13 @@ ControllerXplorio.prototype.getUIConfig = function() {
     var k = self.keys().read();                         /* only whether it is set, never the value */
     el('lastfmKey').doc = self.str('LASTFM_KEY_DOC') + ' ' + self.str(k.LASTFM_KEY ? 'LASTFM_SAVED' : 'LASTFM_NONE');
     el('lastfmSecret').doc = self.str('LASTFM_SECRET_DOC') + ' ' + self.str(k.LASTFM_SECRET ? 'LASTFM_SAVED' : 'LASTFM_NONE');
-    el('password').doc = self.str('PASSWORD_DOC') + ' ' + self.str(self.auth().isSet() ? 'PASSWORD_SET' : 'PASSWORD_NONE');
+    var pwSet = self.auth().isSet();
+    el('password').doc = self.str('PASSWORD_DOC') + ' ' + self.str(pwSet ? 'PASSWORD_SET' : 'PASSWORD_NONE');
+    if (pwSet) el('password').label = self.str('PASSWORD_NEW');
+    else ui.sections.forEach(function(sec){                 /* nothing to confirm yet: no field for the current one */
+      sec.content = (sec.content || []).filter(function(c){ return c.id !== 'passwordOld'; });
+      if (sec.saveButton) sec.saveButton.data = sec.saveButton.data.filter(function(d){ return d !== 'passwordOld'; });
+    });
     self.rootCheck(function(ro, sudo){
       el('tagsRoot').doc = [self.str('TAGS_ROOT_DOC'),
         ro.length ? self.str('TAGS_RO').replace('{dirs}', ro.join(', ')) : self.str('TAGS_RW'),
@@ -339,6 +345,21 @@ ControllerXplorio.prototype.saveSettings = function(data) {
   var pw = String(data.password || '');
   if (!err && pw && pw.length < 4) err = 'PASSWORD_SHORT';
   if (err) { self.toast('error', self.str(err)); return libQ.resolve({}); }
+  /* Volumio's pages are open to everyone on the network: a password once set is only changed with the current one */
+  if (pw && self.auth().isSet()) {
+    var defer = libQ.defer();
+    self.auth().verify(String(data.passwordOld || ''), 0, function(r){
+      if (r.ok) return self.applySettings(data, set, key, secret, pw).then(function(v){ defer.resolve(v); });
+      self.toast('error', r.error === 'locked' ? self.str('PASSWORD_LOCKED').replace('{wait}', r.wait) : self.str('PASSWORD_WRONG'));
+      defer.resolve({});
+    });
+    return defer.promise;
+  }
+  return self.applySettings(data, set, key, secret, pw);
+};
+
+ControllerXplorio.prototype.applySettings = function(data, set, key, secret, pw) {
+  var self = this;
   if (data.lastfmClear || key || secret) {
     try { self.saveKeys(data.lastfmClear ? null : {LASTFM_KEY: key, LASTFM_SECRET: secret}); }
     catch (e) { self.toast('error', self.str('LASTFM_FAIL').replace('{error}', e.message)); return libQ.resolve({}); }
@@ -352,10 +373,11 @@ ControllerXplorio.prototype.saveSettings = function(data) {
   return self.onStop().then(function(){ return self.onStart(); }).then(function(){ self.toast('success', self.str('SAVED')); return {}; });
 };
 
-/* password for the System page (tags/adminpass.js, data folder of the tag service) */
+/* password for the System page (tags/adminpass.js, data folder of the tag service); one instance keeps the lock
+   after wrong attempts */
 ControllerXplorio.prototype.auth = function() {
-  var adminpass = require(path.join(APP, 'tags', 'adminpass.js'));
-  return new adminpass.Auth(path.join(DATA, 'data'));
+  if (!this.authObj) this.authObj = new (require(path.join(APP, 'tags', 'adminpass.js')).Auth)(path.join(DATA, 'data'));
+  return this.authObj;
 };
 
 /* Last.fm access in /data/xplorio/data/keys.json (the tag service rereads it when it changes); other entries stay */

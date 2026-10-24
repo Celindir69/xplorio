@@ -319,6 +319,7 @@
 				"label": "TRANSLATE.XPLORIO.SAVE",
 				"data": [
 					"password",
+					"passwordOld",
 					"tagsRoot"
 				]
 			},
@@ -329,6 +330,14 @@
 					"type": "password",
 					"label": "TRANSLATE.XPLORIO.PASSWORD",
 					"doc": "TRANSLATE.XPLORIO.PASSWORD_DOC",
+					"value": ""
+				},
+				{
+					"id": "passwordOld",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.PASSWORD_OLD",
+					"doc": "TRANSLATE.XPLORIO.PASSWORD_OLD_DOC",
 					"value": ""
 				},
 				{

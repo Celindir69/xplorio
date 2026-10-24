@@ -31,8 +31,7 @@ läuft in Volumios eigenem Prozess, es kommt also kein weiterer Dienst hinzu.
 ```bash
 sudo xplorio-deploy --plugin            # main als Plugin; mit Branch: sudo xplorio-deploy --plugin <branch>
 ```
-Ohne Konsole: `bash tools/make-plugin.sh` legt neben dem Plugin-Ordner auch `build/xplorio.zip` an; diese Datei lässt sich
-über Volumios Plugin-Seite hochladen, sofern die Volumio-Version das Hochladen anbietet. Beim ersten Mal das Plugin danach in
+Beim ersten Mal das Plugin danach in
 Volumio einschalten: Plugins > Installierte Plugins > Xplorio. Xplorio ist dann unter `http://<player>:4040/` erreichbar. Ist
 das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` das Plugin statt der Oberfläche unter
 `/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus `plugin/`, Oberfläche und Dienste in
@@ -47,7 +46,8 @@ das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` da
 - **Last.fm:** [Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret). Das Plugin schreibt beides nach
   `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten Wert,
   „Last.fm-Zugang löschen“ entfernt beide.
-- **System und Rechte:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es) und der Schalter
+- **System und Rechte:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es; ist eines gesetzt,
+  geht Ändern nur mit dem bisherigen, vergessen: `sudo xplorio-deploy --password`) und der Schalter
   „Tags mit Root-Rechten schreiben“. Die Seite nennt Musikordner, in die Volumio nicht schreiben darf; nur dann ist der
   Schalter nötig. Tags und eingebettete Cover schreibt dann eine geschützte Kopie von `tags.py` mit Root-Rechten, und nur
   unter `/mnt` und `/media`. `folder.jpg` und das Verschieben von Dubletten brauchen weiterhin Schreibrecht für Volumio.
