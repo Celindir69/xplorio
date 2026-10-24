@@ -30,7 +30,7 @@ var body = document.getElementById('lyricsText');
 var area = document.getElementById('overlayLyrics').querySelector('.overlayBody');
 
 var socket = io();
-socket.on('connect', function(){ console.log('Socket connected'); socket.emit('getUiSettings'); });
+socket.on('connect', function(){ socket.emit('getUiSettings'); });
 /* Language of the Volumio UI: the app adopts it (i18n.js) unless ?lang= or LANGUAGE say otherwise.
    Volumio delivers info texts only in this language; if LANG differs, ask() fetches the texts itself first (infotext.js). */
 var volumioLang = langStored().slice(0, 2);
