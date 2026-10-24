@@ -1,0 +1,20 @@
+{
+	"XPLORIO": {
+		"TITLE": "Xplorio",
+		"OPEN": "Open Xplorio",
+		"OPEN_DOC": "Xplorio runs on its own port: {url}",
+		"SECTION_SETTINGS": "Settings",
+		"SECTION_SETTINGS_DOC": "Further settings (language, theme, Rotel amplifier and more) are in /data/xplorio/config.local.js on the player, see the setup guide.",
+		"PORT": "Port",
+		"PORT_DOC": "Port of the Xplorio web server (default 4040). Bookmarks and home screen icons use this address.",
+		"TAG_SERVICE": "Tag service",
+		"TAG_SERVICE_DOC": "Needed for the tag editor, library check, history, discovery and mood mix.",
+		"ROTEL_BRIDGE": "Rotel bridge",
+		"ROTEL_BRIDGE_DOC": "Control of a Rotel amplifier over the network (address as ROTEL_HOST in config.local.js).",
+		"SAVE": "Save",
+		"SAVED": "Settings saved, Xplorio restarted",
+		"BAD_PORT": "Please enter a port between 1024 and 65535 (not 3000).",
+		"SYSTEMD": "{name} runs as a system service (systemd), the plugin leaves it as it is.",
+		"PORT_BUSY": "Port {port} is in use: the Xplorio web server could not start."
+	}
+}

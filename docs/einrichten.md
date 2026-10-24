@@ -19,6 +19,40 @@ sudo xplorio-deploy --rotel <IP>     # optional: Rotel-Verstärker im Netz
 Danach `http://<player>/xplorio.html` aufrufen. Das Skript spielt die Oberfläche in jeden vorhandenen Ordner
 `/volumio/http/www*/` ein, den Volumio mitbringt; mehr dazu unter [Aktualisieren mit xplorio-deploy](#aktualisieren-mit-xplorio-deploy).
 Eigene Einstellungen kommen anschließend nach `web/config.local.js` (siehe [Oberfläche](#oberfläche)).
+Neu und noch im Test: Xplorio als Volumio-Plugin, ohne Dateien unter `/volumio` (siehe [Als Volumio-Plugin](#als-volumio-plugin-neu-im-test)).
+
+## Als Volumio-Plugin (neu, im Test)
+Als Plugin legt Xplorio nichts unter `/volumio` ab. Volumios Prüfung vor einem System-Update bleibt dadurch intakt, und
+das Entfernen und Wiederherstellen vor einem Update ([Volumio-Update](#volumio-update)) entfällt. Das Plugin liefert die
+Oberfläche über einen eigenen Webserver auf Port 4040 aus und startet Tag-Dienst und Rotel-Bridge selbst. Der Webserver
+läuft in Volumios eigenem Prozess, es kommt also kein weiterer Dienst hinzu.
+
+**Installieren oder aktualisieren** (mit `xplorio-deploy` wie unter [Ersteinrichtung](#ersteinrichtung)):
+```bash
+sudo xplorio-deploy --plugin            # main als Plugin; mit Branch: sudo xplorio-deploy --plugin <branch>
+```
+Beim ersten Mal das Plugin danach in Volumio einschalten: Plugins > Installierte Plugins > Xplorio. Xplorio ist dann unter
+`http://<player>:4040/` erreichbar. Ist das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` das
+Plugin statt der Oberfläche unter `/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus
+`plugin/`, Oberfläche und Dienste in `app/`).
+
+**Einstellungen:** Auf der Einstellungsseite des Plugins stehen der Port, Tag-Dienst ein/aus und Rotel-Bridge ein/aus, dazu
+ein Knopf, der Xplorio öffnet. Alles andere bleibt in `config.local.js`, beim Plugin in `/data/xplorio/config.local.js` (das
+Plugin verlinkt die Datei nach `app/web/`, damit Oberfläche und Dienste dieselbe lesen). Bei der ersten Installation
+übernimmt das Plugin eine vorhandene Datei aus `/volumio/http/www*/web/` (als Kopie, die alte bleibt unverändert). Daten,
+Verlauf und Last.fm-Zugang bleiben in `/data/xplorio/data/`, auch wenn das Plugin aktualisiert oder entfernt wird.
+
+**Umstieg von der bisherigen Installation:**
+```bash
+sudo xplorio-deploy --plugin                                     # Plugin installieren, dann in Volumio einschalten
+sudo systemctl disable --now tag-service rotel-bridge xplorio-server   # bisherige Dienste: das Plugin übernimmt
+sudo xplorio-deploy --remove                                     # Oberfläche aus /volumio entfernen (mit Sicherung)
+```
+Danach das Plugin in Volumio einmal aus- und wieder einschalten, damit es Tag-Dienst und Rotel-Bridge startet. Solange einer
+der Dienste noch als systemd-Dienst läuft, lässt das Plugin ihn in Ruhe und nennt ihn auf seiner Einstellungsseite.
+Lesezeichen, Home-Bildschirm-Symbole und im Browser gespeicherte Einstellungen (z. B. Stage-Ansicht, Begrüßung aus) gelten
+pro Adresse und müssen für Port 4040 einmal neu angelegt werden. Zurück geht es mit `sudo xplorio-deploy --restore` und
+`sudo systemctl enable --now tag-service rotel-bridge`, danach das Plugin in Volumio ausschalten oder deinstallieren.
 
 ## Oberfläche
 Von Hand statt mit `xplorio-deploy`: `xplorio.html`, `app.html` und `web/` nach `/volumio/http/www3/` kopieren, Aufruf `http://<player>/xplorio.html`
@@ -73,6 +107,7 @@ Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Dana
 | `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
 | `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung; mit `--force` auch eine andere Adresse (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
 | `sudo xplorio-deploy --server` | eigenen Webserver für Xplorio einrichten (Port 4040, nichts unter `/volumio`; siehe [Eigener Webserver](#eigener-webserver-test)) |
+| `sudo xplorio-deploy --plugin [branch]` | Xplorio als Volumio-Plugin installieren oder aktualisieren (siehe [Als Volumio-Plugin](#als-volumio-plugin-neu-im-test)) |
 | `sudo xplorio-deploy --check-update` | prüfen, ob Xplorio Volumios System-Update blockiert (siehe [Volumio-Update](#volumio-update)) |
 | `sudo xplorio-deploy --remove` / `--restore` | Oberfläche vor einem Volumio-Update sichern und entfernen bzw. danach genau so wiederherstellen |
 
@@ -102,6 +137,7 @@ Vor einem System-Update prüft Volumio, ob Dateien unter `/volumio` verändert w
 Dateien dort und vergleicht sie mit `VOLUMIO_HASH` in `/etc/os-release`. Xplorio ändert keine Datei von Volumio, legt aber
 seine Oberfläche in `/volumio/http/www*/` ab. Das ändert die Prüfsumme, und Volumio lehnt das Update ab („Integritätsüberprüfung
 der Systemsoftware fehlgeschlagen, manuell editierte Dateien wurden entdeckt“). Die Dienste unter `/data/xplorio` stören nicht.
+Mit Xplorio als [Volumio-Plugin](#als-volumio-plugin-neu-im-test) entfällt das Folgende.
 
 **Empfohlen: Oberfläche vorübergehend entfernen.**
 ```bash
@@ -133,7 +169,7 @@ Danach ist Xplorio unter `http://<player>:4040/` erreichbar. Solange es unter `/
 `config.local.js` gibt, liest der Webserver die aus `/volumio/http/www*/web/` (nur lesend). Die Volumio-Seiten im Menü
 öffnen dann Volumios eigene Adresse. Lesezeichen, Symbole auf dem Home-Bildschirm und im Browser gespeicherte
 Einstellungen (z. B. Stage-Ansicht, Begrüßung aus) gelten pro Adresse und müssen für Port 4040 einmal neu angelegt werden.
-Der Port lässt sich in der Dienstdatei mit `Environment=HTTP_PORT=…` ändern, dann auch `SERVER_PORT` in `config.local.js`.
+Der Port lässt sich in der Dienstdatei mit `Environment=HTTP_PORT=…` ändern.
 
 **Umstieg von web-app-deploy (bis Oktober 2026 hießen Repo und Befehl `volumio-web-app` bzw. `web-app-deploy`):**
 `xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „move: /data/web-app to

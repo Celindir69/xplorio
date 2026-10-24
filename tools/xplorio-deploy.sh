@@ -10,6 +10,7 @@
 #   sudo xplorio-deploy --tag-service      set up the tag service (systemd unit, data folder, start, health check)
 #   sudo xplorio-deploy --rotel [IP]       set up the Rotel bridge (amplifier address in config.local.js, unit, start)
 #   sudo xplorio-deploy --server           set up Xplorio's own web server (port 4040, interface from /data/xplorio/www)
+#   sudo xplorio-deploy --plugin [branch]  install or update Xplorio as a Volumio plugin (nothing below /volumio)
 #   sudo xplorio-deploy --check-update     does Xplorio block Volumio's system update? (Volumio's integrity check)
 #   sudo xplorio-deploy --remove           before a Volumio update: back up the interface and remove it from /volumio
 #   sudo xplorio-deploy --restore          after the update: put the interface back exactly as it was (with config.local.js)
@@ -197,13 +198,14 @@ if [ "$1" = "--restore" ]; then
   exit 0
 fi
 
-DRY=0; YES=0; FORCE=0; SETUP=""; ROTEL_IP=""
+DRY=0; YES=0; FORCE=0; SETUP=""; ROTEL_IP=""; PLUGIN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     -n) DRY=1 ;;
     -y) YES=1 ;;
     --tag-service|--tagdienst) SETUP="$SETUP tag" ;;
     --server) SETUP="$SETUP server" ;;
+    --plugin) PLUGIN=1 ;;
     --rotel|--rotel-bridge)
       SETUP="$SETUP rotel"
       # optional address right after it: an IP or a host name with a dot (branch names have a slash or no dot)
@@ -215,6 +217,11 @@ while [ $# -gt 0 ]; do
   shift
 done
 BRANCH=${BRANCH:-main}
+# installed as Volumio plugin: updates go to the plugin, not below /volumio again
+if [ $PLUGIN = 0 ] && [ -z "$SETUP" ] && [ -d "$ROOT/data/plugins/user_interface/xplorio" ]; then
+  echo "Xplorio is installed as Volumio plugin: updating the plugin."
+  PLUGIN=1
+fi
 valid_host() { echo "$1" | grep -Eq '^[A-Za-z0-9._-]+$'; }
 
 # ---------- set up services (--tag-service, --rotel) ----------
@@ -412,6 +419,27 @@ printf '{"branch":"%s","commit":"%s","date":"%s"}\n' "$BRANCH" "$commit" "$stamp
 # so it changes exactly when something there changed
 build=$(cd "$TMP/src" && find xplorio.html web -type f ! -name build.js ! -name version.json 2>/dev/null | LC_ALL=C sort | xargs cat 2>/dev/null | md5sum | cut -c1-12)
 printf "window.XPLORIO_BUILD = '%s';\n" "$build" > "$TMP/src/web/build.js"
+
+# ---------- Volumio plugin (--plugin) ----------
+# tools/make-plugin.sh puts it together, Volumio's own "volumio plugin install/update" installs it into
+# /data/plugins/user_interface/xplorio; the data in /data/xplorio stays as it is
+if [ $PLUGIN = 1 ]; then
+  [ -f "$TMP/src/tools/make-plugin.sh" ] || die "branch $BRANCH has no plugin yet"
+  if [ $DRY = 1 ]; then echo "Branch $BRANCH would be installed as Volumio plugin (nothing done with -n)"; exit 0; fi
+  bash "$TMP/src/tools/make-plugin.sh" "$TMP/src" "$TMP/plugin" >/dev/null || die "the plugin could not be put together"
+  PLUGIN_DIR=$ROOT/data/plugins/user_interface/xplorio
+  if [ -d "$PLUGIN_DIR" ]; then how=update; else how=install; fi
+  if [ -n "$ROOT" ]; then
+    rm -rf "$ROOT/plugin-build"; cp -R "$TMP/plugin/xplorio" "$ROOT/plugin-build"; echo "(test) volumio plugin $how"; exit 0
+  fi
+  command -v volumio >/dev/null || die "the volumio command is missing: install the folder by hand ($TMP/plugin/xplorio)"
+  chmod 755 "$TMP"; chown -R volumio:volumio "$TMP/plugin"
+  echo "Xplorio as Volumio plugin ($BRANCH): volumio plugin $how …"
+  (cd "$TMP/plugin/xplorio" && sudo -u volumio volumio plugin $how) || die "volumio plugin $how failed"
+  [ $how = install ] && echo "Now switch the plugin on in Volumio: Plugins > Installed plugins > Xplorio."
+  echo "Xplorio then runs at http://$(hostname -I 2>/dev/null | cut -d' ' -f1):4040/ (port in the plugin settings)."
+  exit 0
+fi
 
 # ---------- compare ----------
 CHANGED=""; NEW=""; n=0

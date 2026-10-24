@@ -240,6 +240,23 @@ t('--server: unit for the own web server, without config folder; a second time s
   var r2 = shs(['--server']);
   assert.ok(/xplorio-server is already set up/.test(r2.stdout), r2.stdout);
 });
+t('--plugin: puts the Volumio plugin together, nothing below /volumio or /data/xplorio changes', function(){
+  var before = cp.execSync('find ' + RS + ' -type f | sort', {encoding: 'utf8'});
+  var r = shs(['--plugin']);
+  assert.strictEqual(r.status, 0, r.stderr + r.stdout);
+  assert.ok(/\(test\) volumio plugin install/.test(r.stdout), r.stdout);
+  var b = path.join(RS, 'plugin-build');
+  assert.ok(fs.existsSync(path.join(b, 'index.js')) && fs.existsSync(path.join(b, 'app/web/js/core.js')));
+  assert.ok(/"branch":"main"/.test(fs.readFileSync(path.join(b, 'app/web/version.json'), 'utf8')));
+  cp.execSync('rm -rf ' + b);
+  assert.strictEqual(cp.execSync('find ' + RS + ' -type f | sort', {encoding: 'utf8'}), before);
+  fs.mkdirSync(path.join(RS, 'data/plugins/user_interface/xplorio'), {recursive: true});
+  assert.ok(/\(test\) volumio plugin update/.test(shs(['--plugin']).stdout));
+  var u = shs([]);                                                   /* plain call: the plugin is updated, /volumio stays */
+  assert.ok(/installed as Volumio plugin: updating the plugin/.test(u.stdout) && /\(test\) volumio plugin update/.test(u.stdout), u.stdout);
+  cp.execSync('rm -rf ' + path.join(RS, 'plugin-build') + ' ' + path.join(RS, 'data/plugins'));
+  assert.ok(/would be installed as Volumio plugin/.test(shs(['-n', '--plugin']).stdout));
+});
 t('--rotel IP: writes the amplifier into config.local.js (appends to an existing one, else creates it) and sets up the bridge', function(){
   var r = shs(['--rotel', '192.168.1.50']);
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);

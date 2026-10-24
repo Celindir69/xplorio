@@ -24,11 +24,9 @@ volumio.on('upgrade', function(req, sock){
 });
 
 volumio.listen(0, function(){
-  process.env.VOLUMIO_PORT = volumio.address().port;
-  process.env.XPLORIO_WWW = www; process.env.VOLUMIO_HTTP = vh;
-  var srv = require('../server/xplorio-server.js');
-  srv.server.listen(0, function(){
-    var port = srv.server.address().port, steps = [];
+  var srv = require('../server/xplorio-server.js').create({volumioPort: volumio.address().port, www: www, volumioHttp: vh});
+  srv.listen(0, function(){
+    var port = srv.address().port, steps = [];
     function get(p, o, cb) {
       var r = http.request(Object.assign({port: port, path: p}, o || {}), function(res){
         var d = ''; res.on('data', function(c){ d += c; }); res.on('end', function(){ cb(res, d); });

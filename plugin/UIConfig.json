@@ -1,0 +1,57 @@
+{
+	"page": {
+		"label": "TRANSLATE.XPLORIO.TITLE"
+	},
+	"sections": [
+		{
+			"id": "section_open",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.TITLE",
+			"description": "",
+			"icon": "fa-music",
+			"content": [
+				{
+					"id": "open",
+					"element": "button",
+					"label": "TRANSLATE.XPLORIO.OPEN",
+					"description": "",
+					"onClick": {"type": "openUrl", "url": ""}
+				}
+			]
+		},
+		{
+			"id": "section_settings",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_SETTINGS",
+			"description": "TRANSLATE.XPLORIO.SECTION_SETTINGS_DOC",
+			"icon": "fa-cog",
+			"onSave": {"type": "controller", "endpoint": "user_interface/xplorio", "method": "saveSettings"},
+			"saveButton": {"label": "TRANSLATE.XPLORIO.SAVE", "data": ["port", "tagService", "rotelBridge"]},
+			"content": [
+				{
+					"id": "port",
+					"element": "input",
+					"type": "number",
+					"label": "TRANSLATE.XPLORIO.PORT",
+					"doc": "TRANSLATE.XPLORIO.PORT_DOC",
+					"attributes": [{"min": 1024}, {"max": 65535}],
+					"value": 4040
+				},
+				{
+					"id": "tagService",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.TAG_SERVICE",
+					"doc": "TRANSLATE.XPLORIO.TAG_SERVICE_DOC",
+					"value": true
+				},
+				{
+					"id": "rotelBridge",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.ROTEL_BRIDGE",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_BRIDGE_DOC",
+					"value": false
+				}
+			]
+		}
+	]
+}

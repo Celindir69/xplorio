@@ -129,6 +129,8 @@ Fortschritt der Stimmungs-Tags.
 | `tags/` | Tag-Dienst (Port 8766): Tag-Editor, Bibliothek prüfen, Verlauf, Stimmungs-Tags, Cover; nimmt nur Aufträge der Oberfläche an; Python 2.7 oder 3 mit mitgelieferter mutagen-Bibliothek (GPLv2, siehe `tags/vendor/mutagen/COPYING`) | `/data/xplorio/tags/` (Daten: `/data/xplorio/data/`) |
 | `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/volumio/http/www3/tools/` |
+| `server/xplorio-server.js` | eigener Webserver (Port 4040): liefert die Oberfläche aus und reicht alles andere an Volumio durch, damit nichts unter `/volumio` liegen muss | `/data/xplorio/server/` bzw. im Plugin |
+| `plugin/`, `tools/make-plugin.sh` | Volumio-Plugin (neu, im Test): Webserver, Tag-Dienst und Rotel-Bridge ohne Dateien unter `/volumio`; `make-plugin.sh` stellt es zusammen | `/data/plugins/user_interface/xplorio/` |
 | `tools/xplorio-deploy.sh` | installiert und aktualisiert Xplorio auf dem Player aus diesem Repository (`xplorio-deploy`) | `/usr/local/bin/` |
 | `tools/essentia/` | optionale Audio-Analyse auf Mac oder Windows-PC, Ergebnis wird zum Tag-Dienst hochgeladen | nicht auf dem Player |
 

@@ -21,6 +21,31 @@ sudo xplorio-deploy --rotel <IP>     # optional: network-connected Rotel amplifi
 ```
 
 Then open `http://<player>/xplorio.html`. The script installs the interface into every existing `/volumio/http/www*/` folder that Volumio ships with; more under [Updating with xplorio-deploy](#updating-with-xplorio-deploy). Custom settings then go into `web/config.local.js` (see [Interface](#interface)).
+New and still in testing: Xplorio as a Volumio plugin, without files below `/volumio` (see [As a Volumio plugin](#as-a-volumio-plugin-new-in-testing)).
+
+## As a Volumio plugin (new, in testing)
+
+As a plugin, Xplorio puts nothing below `/volumio`. Volumio's check before a system update therefore stays intact, and removing and restoring the interface before an update ([Volumio update](#volumio-update)) is no longer needed. The plugin serves the interface through its own web server on port 4040 and starts the Tag Service and the Rotel bridge itself. The web server runs inside Volumio's own process, so no further service is added.
+
+**Install or update** (with `xplorio-deploy` as under [First-time setup](#first-time-setup)):
+
+```bash
+sudo xplorio-deploy --plugin            # main as plugin; with a branch: sudo xplorio-deploy --plugin <branch>
+```
+
+The first time, switch the plugin on in Volumio afterwards: Plugins > Installed plugins > Xplorio. Xplorio is then available at `http://<player>:4040/`. Once the plugin is installed, a plain `sudo xplorio-deploy` also updates the plugin instead of the interface below `/volumio`. The plugin itself is put together by `tools/make-plugin.sh` (plugin files from `plugin/`, interface and services in `app/`).
+
+**Settings:** The plugin's settings page has the port, Tag Service on/off and Rotel bridge on/off, plus a button that opens Xplorio. Everything else stays in `config.local.js`, with the plugin in `/data/xplorio/config.local.js` (the plugin links the file into `app/web/` so the interface and the services read the same one). On the first install the plugin takes over an existing file from `/volumio/http/www*/web/` (as a copy, the old one stays unchanged). Data, history and Last.fm credentials stay in `/data/xplorio/data/`, also when the plugin is updated or removed.
+
+**Switching from the existing installation:**
+
+```bash
+sudo xplorio-deploy --plugin                                     # install the plugin, then switch it on in Volumio
+sudo systemctl disable --now tag-service rotel-bridge xplorio-server   # existing services: the plugin takes over
+sudo xplorio-deploy --remove                                     # remove the interface from /volumio (with backup)
+```
+
+Then switch the plugin off and on again in Volumio once, so it starts the Tag Service and the Rotel bridge. As long as one of the services still runs as a systemd service, the plugin leaves it alone and names it on its settings page. Bookmarks, home screen icons and settings stored in the browser (e.g. stage view, welcome off) are per address and have to be set up once more for port 4040. To go back: `sudo xplorio-deploy --restore` and `sudo systemctl enable --now tag-service rotel-bridge`, then switch the plugin off or uninstall it in Volumio.
 
 ## Interface
 
@@ -81,6 +106,7 @@ The script is set up as described under [First-time setup](#first-time-setup). T
 | `sudo xplorio-deploy --tag-service` | set up the Tag Service: unit file, data folder, start and check (see [Tag Service](#tag-service-for-the-tag-editor)) |
 | `sudo xplorio-deploy --rotel <IP>` | set up the Rotel bridge: amplifier address in `config.local.js`, unit file, start and check; with `--force` also a different address (see [Rotel Bridge](#rotel-bridge-optional)) |
 | `sudo xplorio-deploy --server` | set up Xplorio's own web server (port 4040, nothing below `/volumio`; see [Own web server](#own-web-server-test)) |
+| `sudo xplorio-deploy --plugin [branch]` | install or update Xplorio as a Volumio plugin (see [As a Volumio plugin](#as-a-volumio-plugin-new-in-testing)) |
 | `sudo xplorio-deploy --check-update` | check whether Xplorio blocks Volumio's system update (see [Volumio update](#volumio-update)) |
 | `sudo xplorio-deploy --remove` / `--restore` | back up and remove the interface before a Volumio update, put it back exactly as it was afterwards |
 
@@ -94,7 +120,7 @@ Everything except the interface lives in `/data/xplorio/`: `tags/` (Tag Service)
 
 ### Volumio update
 
-Before a system update, Volumio checks whether files below `/volumio` were changed: it computes a checksum over all files there and compares it with `VOLUMIO_HASH` in `/etc/os-release`. Xplorio does not change any of Volumio's files, but it puts its interface into `/volumio/http/www*/`. That changes the checksum, and Volumio refuses the update ("System integrity check failed, manually edited files were detected"). The services in `/data/xplorio` do not matter.
+Before a system update, Volumio checks whether files below `/volumio` were changed: it computes a checksum over all files there and compares it with `VOLUMIO_HASH` in `/etc/os-release`. Xplorio does not change any of Volumio's files, but it puts its interface into `/volumio/http/www*/`. That changes the checksum, and Volumio refuses the update ("System integrity check failed, manually edited files were detected"). The services in `/data/xplorio` do not matter. With Xplorio as a [Volumio plugin](#as-a-volumio-plugin-new-in-testing), the following is not needed.
 
 **Recommended: remove the interface temporarily.**
 
@@ -118,7 +144,7 @@ In the long run Xplorio should not put anything below `/volumio` at all, so it n
 sudo xplorio-deploy --server         # set up and start the xplorio-server service
 ```
 
-Xplorio is then available at `http://<player>:4040/`. As long as there is no `config.local.js` of its own in `/data/xplorio/www/web/`, the web server reads the one from `/volumio/http/www*/web/` (read only). The Volumio pages in the menu then open Volumio's own address. Bookmarks, home screen icons and settings stored in the browser (e.g. stage view, welcome off) are per address and have to be set up once more for port 4040. The port can be changed in the unit file with `Environment=HTTP_PORT=…`, then also set `SERVER_PORT` in `config.local.js`.
+Xplorio is then available at `http://<player>:4040/`. As long as there is no `config.local.js` of its own in `/data/xplorio/www/web/`, the web server reads the one from `/volumio/http/www*/web/` (read only). The Volumio pages in the menu then open Volumio's own address. Bookmarks, home screen icons and settings stored in the browser (e.g. stage view, welcome off) are per address and have to be set up once more for port 4040. The port can be changed in the unit file with `Environment=HTTP_PORT=…`.
 
 **Switching from web-app-deploy (until October 2026 the repository and command were called `volumio-web-app` and `web-app-deploy`):** set up `xplorio-deploy` as above, then run `sudo xplorio-deploy -n` (among other things it shows "move: /data/web-app to /data/xplorio") and `sudo xplorio-deploy`. The script moves `/data/web-app` with its data, Last.fm credentials and backups to `/data/xplorio`, leaves `/data/web-app` behind as a symlink, updates the systemd files and restarts the services. `web-app-deploy` and the even older names `mx-deploy` and `volumio4-deploy` keep working and call `xplorio-deploy` (on first use they set it up themselves).
 
