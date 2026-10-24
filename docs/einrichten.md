@@ -36,8 +36,10 @@ Beim ersten Mal das Plugin danach in Volumio einschalten: Plugins > Installierte
 Plugin statt der Oberfläche unter `/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus
 `plugin/`, Oberfläche und Dienste in `app/`).
 
-**Einstellungen:** Auf der Einstellungsseite des Plugins stehen der Port, Tag-Dienst ein/aus und Rotel-Bridge ein/aus, dazu
-ein Knopf, der Xplorio öffnet. Alles andere bleibt in `config.local.js`, beim Plugin in `/data/xplorio/config.local.js` (das
+**Einstellungen:** Auf der Einstellungsseite des Plugins stehen der Port, Tag-Dienst ein/aus, Rotel-Bridge ein/aus und der
+[Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret), dazu ein Knopf, der Xplorio öffnet. Key und Secret schreibt das
+Plugin nach `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten
+Wert, „Last.fm-Zugang löschen“ entfernt beide. Alles andere bleibt in `config.local.js`, beim Plugin in `/data/xplorio/config.local.js` (das
 Plugin verlinkt die Datei nach `app/web/`, damit Oberfläche und Dienste dieselbe lesen). Bei der ersten Installation
 übernimmt das Plugin eine vorhandene Datei aus `/volumio/http/www*/web/` (als Kopie, die alte bleibt unverändert). Daten,
 Verlauf und Last.fm-Zugang bleiben in `/data/xplorio/data/`, auch wenn das Plugin aktualisiert oder entfernt wird.
@@ -250,6 +252,7 @@ KEYS
 sudo chmod 600 /data/xplorio/data/keys.json && sudo systemctl restart tag-service
 ```
 Der Key reicht für ähnliche Künstler, Texte, Cover-Suche und Stimmungs-Tags; das Secret braucht nur das Scrobbeln.
+Mit dem [Plugin](#als-volumio-plugin-neu-im-test) geht es ohne ssh: beide auf dessen Einstellungsseite eintragen.
 Stehen `LASTFM_KEY`/`LASTFM_SECRET` noch in `web/config.local.js` (frühere Versionen), übernimmt der Dienst sie beim
 Start nach `keys.json`; danach die beiden Zeilen aus `web/config.local.js` löschen, denn diese Datei kann jeder Browser
 im Netz laden. `curl -s localhost:8766/health` zeigt `"keysInWeb":true`, solange sie dort noch stehen.

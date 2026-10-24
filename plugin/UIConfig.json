@@ -15,7 +15,10 @@
 					"element": "button",
 					"label": "TRANSLATE.XPLORIO.OPEN",
 					"description": "",
-					"onClick": {"type": "openUrl", "url": ""}
+					"onClick": {
+						"type": "openUrl",
+						"url": ""
+					}
 				}
 			]
 		},
@@ -25,8 +28,22 @@
 			"label": "TRANSLATE.XPLORIO.SECTION_SETTINGS",
 			"description": "TRANSLATE.XPLORIO.SECTION_SETTINGS_DOC",
 			"icon": "fa-cog",
-			"onSave": {"type": "controller", "endpoint": "user_interface/xplorio", "method": "saveSettings"},
-			"saveButton": {"label": "TRANSLATE.XPLORIO.SAVE", "data": ["port", "tagService", "rotelBridge"]},
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"port",
+					"tagService",
+					"rotelBridge",
+					"lastfmKey",
+					"lastfmSecret",
+					"lastfmClear"
+				]
+			},
 			"content": [
 				{
 					"id": "port",
@@ -34,7 +51,14 @@
 					"type": "number",
 					"label": "TRANSLATE.XPLORIO.PORT",
 					"doc": "TRANSLATE.XPLORIO.PORT_DOC",
-					"attributes": [{"min": 1024}, {"max": 65535}],
+					"attributes": [
+						{
+							"min": 1024
+						},
+						{
+							"max": 65535
+						}
+					],
 					"value": 4040
 				},
 				{
@@ -49,6 +73,29 @@
 					"element": "switch",
 					"label": "TRANSLATE.XPLORIO.ROTEL_BRIDGE",
 					"doc": "TRANSLATE.XPLORIO.ROTEL_BRIDGE_DOC",
+					"value": false
+				},
+				{
+					"id": "lastfmKey",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.LASTFM_KEY",
+					"doc": "TRANSLATE.XPLORIO.LASTFM_KEY_DOC",
+					"value": ""
+				},
+				{
+					"id": "lastfmSecret",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.LASTFM_SECRET",
+					"doc": "TRANSLATE.XPLORIO.LASTFM_SECRET_DOC",
+					"value": ""
+				},
+				{
+					"id": "lastfmClear",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.LASTFM_CLEAR",
+					"doc": "TRANSLATE.XPLORIO.LASTFM_CLEAR_DOC",
 					"value": false
 				}
 			]

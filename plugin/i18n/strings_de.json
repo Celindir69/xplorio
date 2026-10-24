@@ -15,6 +15,16 @@
 		"SAVED": "Einstellungen gespeichert, Xplorio neu gestartet",
 		"BAD_PORT": "Bitte einen Port zwischen 1024 und 65535 angeben (nicht 3000).",
 		"SYSTEMD": "{name} läuft als Systemdienst (systemd), das Plugin lässt ihn so.",
-		"PORT_BUSY": "Port {port} ist belegt: Der Xplorio-Webserver konnte nicht starten."
+		"PORT_BUSY": "Port {port} ist belegt: Der Xplorio-Webserver konnte nicht starten.",
+		"LASTFM_KEY": "Last.fm API-Key",
+		"LASTFM_KEY_DOC": "Von https://www.last.fm/api/accounts. Für ähnliche Künstler, Texte, Cover-Suche und Stimmungs-Tags. Bleibt auf dem Player (/data/xplorio/data/keys.json) und wird nicht wieder angezeigt; leer lassen behält den gespeicherten.",
+		"LASTFM_SECRET": "Last.fm Shared Secret",
+		"LASTFM_SECRET_DOC": "Nur fürs Scrobbeln nötig. Leer lassen behält das gespeicherte.",
+		"LASTFM_CLEAR": "Last.fm-Zugang löschen",
+		"LASTFM_CLEAR_DOC": "Entfernt Key und Secret beim Speichern vom Player.",
+		"LASTFM_SAVED": "Gespeichert.",
+		"LASTFM_NONE": "Noch nicht eingetragen.",
+		"LASTFM_BAD": "Last.fm-Key oder -Secret enthält ungültige Zeichen (nur Buchstaben und Ziffern).",
+		"LASTFM_FAIL": "Der Last.fm-Zugang ließ sich nicht speichern: {error}"
 	}
 }

@@ -166,6 +166,9 @@ ControllerXplorio.prototype.getUIConfig = function() {
     set[0].value = self.port();
     set[1].value = !!self.config.get('tagService');
     set[2].value = !!self.config.get('rotelBridge');
+    var k = self.keys().read();                         /* only whether it is set, never the value */
+    set[3].doc = self.str('LASTFM_KEY_DOC') + ' ' + self.str(k.LASTFM_KEY ? 'LASTFM_SAVED' : 'LASTFM_NONE');
+    set[4].doc = self.str('LASTFM_SECRET_DOC') + ' ' + self.str(k.LASTFM_SECRET ? 'LASTFM_SAVED' : 'LASTFM_NONE');
     defer.resolve(ui);
   }).fail(function(e){ defer.reject(e); });
   return defer.promise;
@@ -174,10 +177,31 @@ ControllerXplorio.prototype.getUIConfig = function() {
 ControllerXplorio.prototype.saveSettings = function(data) {
   var self = this, p = parseInt(data.port, 10);
   if (!(p >= 1024 && p <= 65535) || p === 3000) { self.toast('error', self.str('BAD_PORT')); return libQ.resolve({}); }
+  var key = String(data.lastfmKey || '').trim(), secret = String(data.lastfmSecret || '').trim();
+  if (!/^[A-Za-z0-9]{0,64}$/.test(key) || !/^[A-Za-z0-9]{0,64}$/.test(secret)) { self.toast('error', self.str('LASTFM_BAD')); return libQ.resolve({}); }
+  if (data.lastfmClear || key || secret) {
+    try { self.saveKeys(data.lastfmClear ? null : {LASTFM_KEY: key, LASTFM_SECRET: secret}); }
+    catch (e) { self.toast('error', self.str('LASTFM_FAIL').replace('{error}', e.message)); return libQ.resolve({}); }
+  }
   self.config.set('port', p);
   self.config.set('tagService', !!data.tagService);
   self.config.set('rotelBridge', !!data.rotelBridge);
   return self.onStop().then(function(){ return self.onStart(); }).then(function(){ self.toast('success', self.str('SAVED')); return {}; });
+};
+
+/* Last.fm access in /data/xplorio/data/keys.json (the tag service rereads it when it changes); other entries stay */
+ControllerXplorio.prototype.keys = function() {
+  var appdata = require(path.join(APP, 'tags', 'appdata.js'));
+  return new appdata.Keys(path.join(DATA, 'data'), function(){ return {}; });
+};
+/* vals: {LASTFM_KEY, LASTFM_SECRET} (empty = keep), null = delete both */
+ControllerXplorio.prototype.saveKeys = function(vals) {
+  var keys = this.keys(), k = {}, cur = keys.read();
+  Object.keys(cur).forEach(function(n){ k[n] = cur[n]; });
+  if (!vals) { delete k.LASTFM_KEY; delete k.LASTFM_SECRET; }
+  else Object.keys(vals).forEach(function(n){ if (vals[n]) k[n] = vals[n]; });
+  keys.write(k);
+  this.logger.info('Xplorio: Last.fm access ' + (vals ? 'saved' : 'deleted'));
 };
 
 /* ---------- helpers ---------- */

@@ -35,7 +35,7 @@ sudo xplorio-deploy --plugin            # main as plugin; with a branch: sudo xp
 
 The first time, switch the plugin on in Volumio afterwards: Plugins > Installed plugins > Xplorio. Xplorio is then available at `http://<player>:4040/`. Once the plugin is installed, a plain `sudo xplorio-deploy` also updates the plugin instead of the interface below `/volumio`. The plugin itself is put together by `tools/make-plugin.sh` (plugin files from `plugin/`, interface and services in `app/`).
 
-**Settings:** The plugin's settings page has the port, Tag Service on/off and Rotel bridge on/off, plus a button that opens Xplorio. Everything else stays in `config.local.js`, with the plugin in `/data/xplorio/config.local.js` (the plugin links the file into `app/web/` so the interface and the services read the same one). On the first install the plugin takes over an existing file from `/volumio/http/www*/web/` (as a copy, the old one stays unchanged). Data, history and Last.fm credentials stay in `/data/xplorio/data/`, also when the plugin is updated or removed.
+**Settings:** The plugin's settings page has the port, Tag Service on/off, Rotel bridge on/off and the [Last.fm credentials](#lastfm-credentials) (API key and shared secret), plus a button that opens Xplorio. The plugin writes key and secret to `/data/xplorio/data/keys.json`; afterwards the page only shows "Saved", an empty field keeps the saved value, and "Delete Last.fm access" removes both. Everything else stays in `config.local.js`, with the plugin in `/data/xplorio/config.local.js` (the plugin links the file into `app/web/` so the interface and the services read the same one). On the first install the plugin takes over an existing file from `/volumio/http/www*/web/` (as a copy, the old one stays unchanged). Data, history and Last.fm credentials stay in `/data/xplorio/data/`, also when the plugin is updated or removed.
 
 **Switching from the existing installation:**
 
@@ -224,7 +224,7 @@ KEYS
 sudo chmod 600 /data/xplorio/data/keys.json && sudo systemctl restart tag-service
 ```
 
-The key is enough for similar artists, information texts, cover search, and mood tags; the secret is only needed for scrobbling. If `LASTFM_KEY`/`LASTFM_SECRET` are still in `web/config.local.js` (earlier versions), the service copies them to `keys.json` on start; afterwards delete those two lines from `web/config.local.js`, because any browser on the network can load that file. `curl -s localhost:8766/health` shows `"keysInWeb":true` as long as they are still there.
+The key is enough for similar artists, information texts, cover search, and mood tags; the secret is only needed for scrobbling. With the [plugin](#as-a-volumio-plugin-new-in-testing) no ssh is needed: enter both on its settings page. If `LASTFM_KEY`/`LASTFM_SECRET` are still in `web/config.local.js` (earlier versions), the service copies them to `keys.json` on start; afterwards delete those two lines from `web/config.local.js`, because any browser on the network can load that file. `curl -s localhost:8766/health` shows `"keysInWeb":true` as long as they are still there.
 
 `tags.py` runs with Python 2.7 and 3 and includes mutagen itself; if there is no `python` command, the service uses `python3`.
 

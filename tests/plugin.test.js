@@ -20,7 +20,8 @@ Module._resolveFilename = function(r){ return stubs[r] ? r : resolve.apply(this,
 
 cp.execSync('bash tools/make-plugin.sh . ' + path.join(T, 'build'), {cwd: repo});
 var P = path.join(T, 'build/xplorio'), DATA = path.join(T, 'data');
-fs.mkdirSync(DATA);
+fs.mkdirSync(path.join(DATA, 'data'), {recursive: true});
+fs.writeFileSync(path.join(DATA, 'data/keys.json'), JSON.stringify({OTHER: 'bleibt'}));
 process.env.XPLORIO_DATA = DATA;
 process.env.HTTP_PORT = '1234';                                     /* from Volumio's environment: must not reach the children */
 
@@ -87,14 +88,33 @@ plug.onStart().then(function(){
         t('settings page: link to the plugin port, current values, note on services left to systemd', function(){
           assert.ok(new RegExp(':' + PORT + '/$').test(ui.sections[0].content[0].onClick.url));
           assert.ok(/rotel-bridge/.test(ui.sections[0].description) && /Systemdienst/.test(ui.sections[0].description), ui.sections[0].description);
-          assert.deepStrictEqual(ui.sections[1].content.map(function(c){ return c.value; }), [PORT, true, true]);
+          assert.deepStrictEqual(ui.sections[1].content.slice(0, 3).map(function(c){ return c.value; }), [PORT, true, true]);
+          assert.ok(/Noch nicht eingetragen/.test(ui.sections[1].content[3].doc) && ui.sections[1].content[3].value === '');
         });
         plug.saveSettings({port: 3000, tagService: true, rotelBridge: true});
         t('saving: Volumio\'s own port is refused', function(){ assert.strictEqual(toasts.pop()[0], 'error'); assert.strictEqual(plug.config.get('port'), PORT); });
+        var kf = path.join(DATA, 'data/keys.json');
+        plug.saveSettings({port: PORT, lastfmKey: 'abc def'});
+        t('Last.fm: invalid characters refused, nothing written', function(){
+          assert.strictEqual(toasts.pop()[0], 'error'); assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
+        });
         spawned = [];
-        plug.saveSettings({port: String(PORT), tagService: false, rotelBridge: true}).then(function(){
+        plug.saveSettings({port: String(PORT), tagService: false, rotelBridge: true, lastfmKey: ' abc123 ', lastfmSecret: ''}).then(function(){
           t('saving restarts: tag service off, no new child process', function(){
             assert.strictEqual(spawned.length, 0); assert.strictEqual(toasts.pop()[0], 'success');
+          });
+          t('Last.fm: key into keys.json (only for the service), other entries stay; the page only says "saved"', function(){
+            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123'});
+            assert.strictEqual(fs.statSync(kf).mode & 511, 384);
+            plug.saveKeys({LASTFM_KEY: '', LASTFM_SECRET: 'sec1'});
+            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1'});
+          });
+          plug.getUIConfig().then(function(ui2){
+          t('Last.fm: settings page shows "saved", not the values; delete removes both', function(){
+            var c = ui2.sections[1].content;
+            assert.ok(/Gespeichert/.test(c[3].doc) && /Gespeichert/.test(c[4].doc) && c[3].value === '' && JSON.stringify(ui2).indexOf('abc123') < 0);
+            plug.saveKeys(null);
+            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
           });
           get('/xplorio.html', function(r){
           t('saving restarts: web server answers again on the same port', function(){ assert.strictEqual(r.statusCode, 200); });
@@ -103,6 +123,7 @@ plug.onStart().then(function(){
               t('stop: web server closed', function(){});
               console.log(n + ' checks passed'); process.exit(0);
             });
+          });
           });
           });
         });
