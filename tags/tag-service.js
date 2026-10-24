@@ -23,7 +23,7 @@ var DATA_DIR    = DATA_PREP.dir;
 var LOG_FILE    = process.env.TAGS_LOG    || path.join(DATA_DIR, 'changes.jsonl');
 var MPD_HOST    = process.env.MPD_HOST    || 'localhost';
 var MPD_PORT    = parseInt(process.env.MPD_PORT || '6600', 10);
-var SCRIPT      = path.join(__dirname, 'tags.py');
+var SCRIPT      = process.env.TAGS_SCRIPT || path.join(__dirname, 'tags.py');   /* plugin with root rights: root-owned copy */
 var ROOTS       = ['INTERNAL', 'USB', 'NAS'];            /* allowed folders below MUSIC_ROOT */
 var EXT_RE      = /\.(m4a|mp4|m4b|flac|mp3|dsf)$/i;
 var MAX_ITEMS   = 500;                                   /* files per request */
@@ -1263,7 +1263,9 @@ function doSysinfo(query, res) {
 
 /* GET /services: state of the player services; POST /service {unit, action}: restart (kiosk also start/stop) */
 /* actions only with password (adminpass.js): POST /servicelogin {password} -> {token}, the device sends the token along */
-var services = require('./services.js'), svc = new services.Services();
+/* as a Volumio plugin the plugin itself starts the tag service and the Rotel bridge and restarts them on request (IPC) */
+var services = require('./services.js');
+var svc = new services.Services({plugin: process.env.XPLORIO_PLUGIN === '1' && process.send ? services.pluginLink(process) : null});
 var adminpass = require('./adminpass.js'), adminAuth = new adminpass.Auth(DATA_DIR);
 function doServices(query, cb) { svc.status(function(r){ r.pw = adminAuth.isSet(); cb(r.ok ? 200 : 500, r); }); }
 function doService(body, cb) {

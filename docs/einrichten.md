@@ -31,18 +31,36 @@ läuft in Volumios eigenem Prozess, es kommt also kein weiterer Dienst hinzu.
 ```bash
 sudo xplorio-deploy --plugin            # main als Plugin; mit Branch: sudo xplorio-deploy --plugin <branch>
 ```
-Beim ersten Mal das Plugin danach in Volumio einschalten: Plugins > Installierte Plugins > Xplorio. Xplorio ist dann unter
-`http://<player>:4040/` erreichbar. Ist das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` das
-Plugin statt der Oberfläche unter `/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus
-`plugin/`, Oberfläche und Dienste in `app/`).
+Ohne Konsole: `bash tools/make-plugin.sh` legt neben dem Plugin-Ordner auch `build/xplorio.zip` an; diese Datei lässt sich
+über Volumios Plugin-Seite hochladen, sofern die Volumio-Version das Hochladen anbietet. Beim ersten Mal das Plugin danach in
+Volumio einschalten: Plugins > Installierte Plugins > Xplorio. Xplorio ist dann unter `http://<player>:4040/` erreichbar. Ist
+das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` das Plugin statt der Oberfläche unter
+`/volumio`. Das Plugin selbst stellt `tools/make-plugin.sh` zusammen (Plugin-Dateien aus `plugin/`, Oberfläche und Dienste in
+`app/`).
 
-**Einstellungen:** Auf der Einstellungsseite des Plugins stehen der Port, Tag-Dienst ein/aus, Rotel-Bridge ein/aus und der
-[Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret), dazu ein Knopf, der Xplorio öffnet. Key und Secret schreibt das
-Plugin nach `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten
-Wert, „Last.fm-Zugang löschen“ entfernt beide. Alles andere bleibt in `config.local.js`, beim Plugin in `/data/xplorio/config.local.js` (das
-Plugin verlinkt die Datei nach `app/web/`, damit Oberfläche und Dienste dieselbe lesen). Bei der ersten Installation
-übernimmt das Plugin eine vorhandene Datei aus `/volumio/http/www*/web/` (als Kopie, die alte bleibt unverändert). Daten,
-Verlauf und Last.fm-Zugang bleiben in `/data/xplorio/data/`, auch wenn das Plugin aktualisiert oder entfernt wird.
+**Einstellungen:** Alles Nötige steht auf der Einstellungsseite des Plugins, ssh und Konsole braucht es dafür nicht:
+- **Grundeinstellungen:** Port, Tag-Dienst ein/aus, Sprache, hell/dunkel; dazu ein Knopf, der Xplorio öffnet.
+- **Funktionen:** Verlauf, Erscheinungstage, Stimmungs-Tags, Farbstimmung, m4a-Codec und m4a als verlustfrei, TIDAL, Qobuz,
+  HIGHRESAUDIO und Spotify (automatisch, immer oder nie) und weitere Namen des Players (`ALLOWED_HOSTS`).
+- **Rotel-Verstärker:** Rotel-Bridge ein/aus, Adresse des Verstärkers und auf Wunsch eigene Namen der Eingänge, z. B.
+  `aux=Plattenspieler/phono, opt1=TV` (Symbol hinter dem Schrägstrich, optional).
+- **Last.fm:** [Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret). Das Plugin schreibt beides nach
+  `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten Wert,
+  „Last.fm-Zugang löschen“ entfernt beide.
+- **System und Rechte:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es) und der Schalter
+  „Tags mit Root-Rechten schreiben“. Die Seite nennt Musikordner, in die Volumio nicht schreiben darf; nur dann ist der
+  Schalter nötig. Tags und eingebettete Cover schreibt dann eine geschützte Kopie von `tags.py` mit Root-Rechten, und nur
+  unter `/mnt` und `/media`. `folder.jpg` und das Verschieben von Dubletten brauchen weiterhin Schreibrecht für Volumio.
+
+Das Plugin schreibt aus diesen Werten `app/web/config.local.js`, die Oberfläche und Dienste lesen. Wer mehr einstellen will
+(z. B. `ROTEL_PROFILE` für einen anderen Verstärker), legt das in `/data/xplorio/config.local.js` ab: Das Plugin übernimmt die
+Datei vor den Werten der Einstellungsseite, die Seite hat also Vorrang. Eine fehlerhafte Datei lässt es weg und sagt das auf
+der Einstellungsseite. Beim ersten Start kopiert das Plugin eine vorhandene `config.local.js` aus `/volumio/http/www*/web/`
+einmal dorthin (die alte bleibt unverändert) und übernimmt ihre Werte auf die Einstellungsseite, einen Last.fm-Key auch nach
+`keys.json`. Für die Seite „System“ legt das Plugin bei der Installation eine sudo-Regel an (`/etc/sudoers.d/xplorio-plugin`:
+Volumio, MPD und Kiosk neu starten, Player neu starten und ausschalten, `tags.py` mit Root-Rechten); Tag-Dienst und
+Rotel-Bridge startet das Plugin selbst neu. Daten, Verlauf, Passwort und Last.fm-Zugang bleiben in `/data/xplorio/data/`,
+auch wenn das Plugin aktualisiert oder entfernt wird.
 
 **Umstieg von der bisherigen Installation:**
 ```bash

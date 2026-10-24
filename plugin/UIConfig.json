@@ -38,10 +38,8 @@
 				"data": [
 					"port",
 					"tagService",
-					"rotelBridge",
-					"lastfmKey",
-					"lastfmSecret",
-					"lastfmClear"
+					"language",
+					"theme"
 				]
 			},
 			"content": [
@@ -51,6 +49,7 @@
 					"type": "number",
 					"label": "TRANSLATE.XPLORIO.PORT",
 					"doc": "TRANSLATE.XPLORIO.PORT_DOC",
+					"value": 4040,
 					"attributes": [
 						{
 							"min": 1024
@@ -58,16 +57,183 @@
 						{
 							"max": 65535
 						}
-					],
-					"value": 4040
+					]
 				},
 				{
 					"id": "tagService",
 					"element": "switch",
 					"label": "TRANSLATE.XPLORIO.TAG_SERVICE",
 					"doc": "TRANSLATE.XPLORIO.TAG_SERVICE_DOC",
-					"value": true
+					"value": false
 				},
+				{
+					"id": "language",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.LANGUAGE",
+					"doc": "TRANSLATE.XPLORIO.LANGUAGE_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "theme",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.THEME",
+					"doc": "TRANSLATE.XPLORIO.THEME_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				}
+			]
+		},
+		{
+			"id": "section_features",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_FEATURES",
+			"description": "TRANSLATE.XPLORIO.SECTION_FEATURES_DOC",
+			"icon": "fa-sliders",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"history",
+					"releaseDates",
+					"moodTags",
+					"colorMood",
+					"m4aProbe",
+					"m4aLossless",
+					"tidal",
+					"qobuz",
+					"hra",
+					"spotify",
+					"allowedHosts"
+				]
+			},
+			"content": [
+				{
+					"id": "history",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.HISTORY",
+					"doc": "TRANSLATE.XPLORIO.HISTORY_DOC",
+					"value": false
+				},
+				{
+					"id": "releaseDates",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.RELEASEDATES",
+					"doc": "TRANSLATE.XPLORIO.RELEASEDATES_DOC",
+					"value": false
+				},
+				{
+					"id": "moodTags",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.MOODTAGS",
+					"doc": "TRANSLATE.XPLORIO.MOODTAGS_DOC",
+					"value": false
+				},
+				{
+					"id": "colorMood",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.COLOR_MOOD",
+					"doc": "TRANSLATE.XPLORIO.COLOR_MOOD_DOC",
+					"value": false
+				},
+				{
+					"id": "m4aProbe",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.M4A_PROBE",
+					"doc": "TRANSLATE.XPLORIO.M4A_PROBE_DOC",
+					"value": false
+				},
+				{
+					"id": "m4aLossless",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.M4A_LOSSLESS",
+					"doc": "TRANSLATE.XPLORIO.M4A_LOSSLESS_DOC",
+					"value": false
+				},
+				{
+					"id": "tidal",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.TIDAL",
+					"doc": "TRANSLATE.XPLORIO.TIDAL_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "qobuz",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.QOBUZ",
+					"doc": "TRANSLATE.XPLORIO.QOBUZ_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "hra",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.HRA",
+					"doc": "TRANSLATE.XPLORIO.HRA_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "spotify",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.SPOTIFY",
+					"doc": "TRANSLATE.XPLORIO.SPOTIFY_DOC",
+					"value": {
+						"value": "",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "allowedHosts",
+					"element": "input",
+					"type": "text",
+					"label": "TRANSLATE.XPLORIO.ALLOWED_HOSTS",
+					"doc": "TRANSLATE.XPLORIO.ALLOWED_HOSTS_DOC",
+					"value": ""
+				}
+			]
+		},
+		{
+			"id": "section_rotel",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_ROTEL",
+			"description": "TRANSLATE.XPLORIO.SECTION_ROTEL_DOC",
+			"icon": "fa-volume-up",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"rotelBridge",
+					"rotelHost",
+					"rotelInputs"
+				]
+			},
+			"content": [
 				{
 					"id": "rotelBridge",
 					"element": "switch",
@@ -75,6 +241,44 @@
 					"doc": "TRANSLATE.XPLORIO.ROTEL_BRIDGE_DOC",
 					"value": false
 				},
+				{
+					"id": "rotelHost",
+					"element": "input",
+					"type": "text",
+					"label": "TRANSLATE.XPLORIO.ROTEL_HOST",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_HOST_DOC",
+					"value": ""
+				},
+				{
+					"id": "rotelInputs",
+					"element": "input",
+					"type": "text",
+					"label": "TRANSLATE.XPLORIO.ROTEL_INPUTS",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_INPUTS_DOC",
+					"value": ""
+				}
+			]
+		},
+		{
+			"id": "section_lastfm",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_LASTFM",
+			"description": "TRANSLATE.XPLORIO.SECTION_LASTFM_DOC",
+			"icon": "fa-lastfm",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"lastfmKey",
+					"lastfmSecret",
+					"lastfmClear"
+				]
+			},
+			"content": [
 				{
 					"id": "lastfmKey",
 					"element": "input",
@@ -96,6 +300,42 @@
 					"element": "switch",
 					"label": "TRANSLATE.XPLORIO.LASTFM_CLEAR",
 					"doc": "TRANSLATE.XPLORIO.LASTFM_CLEAR_DOC",
+					"value": false
+				}
+			]
+		},
+		{
+			"id": "section_system",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_SYSTEM",
+			"description": "TRANSLATE.XPLORIO.SECTION_SYSTEM_DOC",
+			"icon": "fa-lock",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"password",
+					"tagsRoot"
+				]
+			},
+			"content": [
+				{
+					"id": "password",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.PASSWORD",
+					"doc": "TRANSLATE.XPLORIO.PASSWORD_DOC",
+					"value": ""
+				},
+				{
+					"id": "tagsRoot",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.TAGS_ROOT",
+					"doc": "TRANSLATE.XPLORIO.TAGS_ROOT_DOC",
 					"value": false
 				}
 			]

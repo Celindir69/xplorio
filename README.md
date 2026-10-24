@@ -130,7 +130,7 @@ Fortschritt der Stimmungs-Tags.
 | `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/volumio/http/www3/tools/` |
 | `server/xplorio-server.js` | eigener Webserver (Port 4040): liefert die Oberfläche aus und reicht alles andere an Volumio durch, damit nichts unter `/volumio` liegen muss | `/data/xplorio/server/` bzw. im Plugin |
-| `plugin/`, `tools/make-plugin.sh` | Volumio-Plugin (neu, im Test): Webserver, Tag-Dienst und Rotel-Bridge ohne Dateien unter `/volumio`; `make-plugin.sh` stellt es zusammen | `/data/plugins/user_interface/xplorio/` |
+| `plugin/`, `tools/make-plugin.sh` | Volumio-Plugin (neu, im Test): Webserver, Tag-Dienst und Rotel-Bridge ohne Dateien unter `/volumio`, alle Einstellungen auf der Plugin-Seite; `make-plugin.sh` stellt es zusammen (auch als ZIP) | `/data/plugins/user_interface/xplorio/` |
 | `tools/xplorio-deploy.sh` | installiert und aktualisiert Xplorio auf dem Player aus diesem Repository (`xplorio-deploy`) | `/usr/local/bin/` |
 | `tools/essentia/` | optionale Audio-Analyse auf Mac oder Windows-PC, Ergebnis wird zum Tag-Dienst hochgeladen | nicht auf dem Player |
 

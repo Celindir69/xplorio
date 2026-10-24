@@ -137,7 +137,7 @@ progress of the mood tags.
 | `rotel/rotel-bridge.js` | optional: HTTP service (port 8765) for a network-connected Rotel amplifier (volume, power, input), interface only | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | restarts Volumio or reconnects TIDAL if the TIDAL plugin becomes unresponsive (tested only on Volumio 2) | `/volumio/http/www3/tools/` |
 | `server/xplorio-server.js` | own web server (port 4040): serves the interface and passes everything else through to Volumio, so nothing has to live below `/volumio` | `/data/xplorio/server/` or in the plugin |
-| `plugin/`, `tools/make-plugin.sh` | Volumio plugin (new, in testing): web server, Tag Service and Rotel bridge without files below `/volumio`; `make-plugin.sh` puts it together | `/data/plugins/user_interface/xplorio/` |
+| `plugin/`, `tools/make-plugin.sh` | Volumio plugin (new, in testing): web server, Tag Service and Rotel bridge without files below `/volumio`, all settings on the plugin page; `make-plugin.sh` puts it together (also as a ZIP) | `/data/plugins/user_interface/xplorio/` |
 | `tools/xplorio-deploy.sh` | installs and updates Xplorio on the player from this repository (`xplorio-deploy`) | `/usr/local/bin/` |
 | `tools/essentia/` | optional audio analysis on a Mac or Windows PC; results are uploaded to the Tag Service | not on the player |
 

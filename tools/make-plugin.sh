@@ -1,11 +1,13 @@
 #!/bin/bash
 # make-plugin: put the Volumio plugin together from the repo (plugin/ plus the interface and the services in app/).
-#   bash tools/make-plugin.sh [repo folder] [target folder]     -> <target folder>/xplorio (default: ./build/xplorio)
-# Install on the player from that folder with "volumio plugin install" (xplorio-deploy --plugin does all of it),
-# or copy the folder into the Volumio plugin sources for the plugin store.
+#   bash tools/make-plugin.sh [repo folder] [target folder]     -> <target folder>/xplorio and <target folder>/xplorio.zip
+#                                                                  (default: ./build)
+# Install on the player from that folder with "volumio plugin install" (xplorio-deploy --plugin does all of it), upload
+# xplorio.zip on Volumio's plugin page (no console needed), or copy the folder into the Volumio plugin sources for the store.
 set -e
 SRC=$(cd "${1:-$(dirname "$0")/..}" && pwd -P)
 OUT=${2:-$SRC/build}
+mkdir -p "$OUT" && OUT=$(cd "$OUT" && pwd -P)
 DEST=$OUT/xplorio
 [ -f "$SRC/plugin/package.json" ] && [ -f "$SRC/xplorio.html" ] || { echo "make-plugin: $SRC is not the Xplorio repo" >&2; exit 1; }
 rm -rf "$DEST"
@@ -28,4 +30,18 @@ if [ ! -f "$W/build.js" ]; then
   build=$(cd "$SRC" && find xplorio.html web -type f ! -name build.js ! -name version.json ! -name config.local.js 2>/dev/null | LC_ALL=C sort | xargs cat 2>/dev/null | md5sum | cut -c1-12)
   printf "window.XPLORIO_BUILD = '%s';\n" "$build" > "$W/build.js"
 fi
-echo "Plugin ready: $DEST"
+# ZIP as Volumio expects it: the plugin files at the top level (kew and v-conf come with npm install in install.sh)
+rm -f "$OUT/xplorio.zip"
+if command -v zip >/dev/null 2>&1; then
+  (cd "$DEST" && zip -qrX "$OUT/xplorio.zip" .)
+else
+  python3 -c 'import os, sys, zipfile
+src, out = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+    for d, dirs, files in os.walk(src):
+        dirs.sort()
+        for f in sorted(files):
+            full = os.path.join(d, f)
+            z.write(full, os.path.relpath(full, src))' "$DEST" "$OUT/xplorio.zip"
+fi
+echo "Plugin ready: $DEST ($OUT/xplorio.zip)"
