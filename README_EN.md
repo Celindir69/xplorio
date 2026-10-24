@@ -9,7 +9,7 @@ It also runs on Volumio 4 (for differences, see [Setup](docs/setup.md#volumio-4)
 `xplorio-deploy` deploys only the runtime files.
 
 <p align="center">
-  <img src="docs/bilder/display-ipad.jpg" width="820" alt="display-layout on iPad: cover, albuminfo and synced Lyrics">
+  <img src="docs/bilder/en/display-ipad.jpg" width="820" alt="display-layout on iPad: cover, albuminfo and synced Lyrics">
 </p>
 
 All images in this file show a fictional example library in German language setting (artists, cover art, and texts are made up). They do not always show the latest state of development, so some features have been moved or added since the screenshots were taken.
@@ -32,10 +32,10 @@ its own information right below. If Volumio does not provide album or artist inf
 singles), an extra "Track" tab appears.
 
 <p>
-  <img src="docs/bilder/wiedergabe.jpg" width="200" alt="Playback">
-  <img src="docs/bilder/lyrics.jpg" width="200" alt="synced lyrics">
-  <img src="docs/bilder/info.jpg" width="200" alt="Album infos">
-  <img src="docs/bilder/warteschlange.jpg" width="200" alt="Playing queue">
+  <img src="docs/bilder/en/wiedergabe.jpg" width="200" alt="Playback">
+  <img src="docs/bilder/en/lyrics.jpg" width="200" alt="synced lyrics">
+  <img src="docs/bilder/en/info.jpg" width="200" alt="Album infos">
+  <img src="docs/bilder/en/warteschlange.jpg" width="200" alt="Playing queue">
 </p>
 
 
@@ -46,8 +46,8 @@ automatically cycles through the available pages. Switch using the control at th
 `kioskTV.html` is a display-only interface for a TV connected to the audio system, without controls.
 
 <p>
-  <img src="docs/bilder/display-desktop.jpg" width="49%" alt="Display-Layout on Desktop">
-  <img src="docs/bilder/kiosk.jpg" width="49%" alt="kioskTV.html">
+  <img src="docs/bilder/en/display-desktop.jpg" width="49%" alt="Display-Layout on Desktop">
+  <img src="docs/bilder/en/kiosk.jpg" width="49%" alt="kioskTV.html">
 </p>
 
 ### Search & Discover
@@ -60,9 +60,9 @@ Ratings: a heart for artists, one to five stars for albums, thumbs up or down fo
 track and displays station logos in the station list.
 
 <p>
-  <img src="docs/bilder/entdecken.jpg" width="200" alt="discover in search">
-  <img src="docs/bilder/album.jpg" width="200" alt="album page with stars and thumbs">
-  <img src="docs/bilder/album-entdecken.jpg" width="200" alt="album page: discover">
+  <img src="docs/bilder/en/entdecken.jpg" width="200" alt="discover in search">
+  <img src="docs/bilder/en/album.jpg" width="200" alt="album page with stars and thumbs">
+  <img src="docs/bilder/en/album-entdecken.jpg" width="200" alt="album page: discover">
 </p>
 
 ### Mood Mix
@@ -77,8 +77,8 @@ remain unchanged. Optionally, Essentia on a Mac or PC can analyze each track dir
 energy and mood are derived from the audio, and a tempo control (BPM) is added.
 
 <p>
-  <img src="docs/bilder/mix-auswahl.jpg" width="200" alt="Mood-Mix: Selection">
-  <img src="docs/bilder/mix-vorschau.jpg" width="200" alt="Mood-Mix: Preview">
+  <img src="docs/bilder/en/mix-auswahl.jpg" width="200" alt="Mood-Mix: Selection">
+  <img src="docs/bilder/en/mix-vorschau.jpg" width="200" alt="Mood-Mix: Preview">
 </p>
 
 ### History, Statistics, and Review
@@ -89,11 +89,11 @@ weekday, and genre, and an annual review with a comparison to the previous year,
 Tapping a month displays the rankings for that month.
 
 <p>
-  <img src="docs/bilder/begruessung.jpg" width="200" alt="Welcome screen">
-  <img src="docs/bilder/menue.jpg" width="200" alt="Menu behind the gear">
-  <img src="docs/bilder/verlauf.jpg" width="200" alt="Recent">
-  <img src="docs/bilder/statistik.jpg" width="200" alt="Stats">
-  <img src="docs/bilder/rueckblick.jpg" width="200" alt="Year in review">
+  <img src="docs/bilder/en/begruessung.jpg" width="200" alt="Welcome screen">
+  <img src="docs/bilder/en/menue.jpg" width="200" alt="Menu behind the gear">
+  <img src="docs/bilder/en/verlauf.jpg" width="200" alt="Recent">
+  <img src="docs/bilder/en/statistik.jpg" width="200" alt="Stats">
+  <img src="docs/bilder/en/rueckblick.jpg" width="200" alt="Year in review">
 </p>
 
 ### Tag Editor and “Check library”
@@ -106,9 +106,9 @@ existing genre tags and the audio analysis); each entry opens the appropriate ed
 progress of the mood tags.
 
 <p>
-  <img src="docs/bilder/tag-editor.jpg" width="200" alt="Tag-Editor">
-  <img src="docs/bilder/check.jpg" width="200" alt="Library-Check">
-  <img src="docs/bilder/stimmungs-tags.jpg" width="200" alt="Mood-Tags in Library-Check">
+  <img src="docs/bilder/en/tag-editor.jpg" width="200" alt="Tag-Editor">
+  <img src="docs/bilder/en/check.jpg" width="200" alt="Library-Check">
+  <img src="docs/bilder/en/stimmungs-tags.jpg" width="200" alt="Mood-Tags in Library-Check">
 </p>
 
 ### More
