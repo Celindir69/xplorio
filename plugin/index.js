@@ -1,16 +1,18 @@
 'use strict';
-/* Volumio plugin Xplorio: serves the interface on its own port (app/server/xplorio-server.js, inside Volumio's own
-   Node process) and starts the tag service and the Rotel bridge as child processes. Nothing below /volumio changes,
-   so Volumio's integrity check before a system update stays intact. Data and own settings live in /data/xplorio
-   (stay when the plugin is updated or removed). A service that already runs as a systemd unit (earlier installation
-   with xplorio-deploy) is left as it is. Everything is set on the plugin's settings page, no console needed: the plugin
-   writes app/web/config.local.js from it (plus the optional own additions in /data/xplorio/config.local.js).
-   Node 8, ES5 only. */
+/* Volumio plugin Xplorio: web server (port 4040), tag service and Rotel bridge run as systemd services of their own
+   (xplorio-web, xplorio-tags, xplorio-rotel; install.sh sets them up), started in onStart and stopped in onStop as
+   Volumio asks of plugins. Nothing below /volumio changes, so Volumio's integrity check before a system update stays
+   intact. Data and own settings live in /data/xplorio (stay when the plugin is updated or removed). A service of an
+   earlier installation with xplorio-deploy that still runs is left as it is. Everything is set on the plugin's
+   settings page, no console needed: the plugin writes app/web/config.local.js from it (plus the optional own
+   additions in /data/xplorio/config.local.js) and the settings of the services to /tmp/xplorio/<service>.env.
+   Node 8, ES5 only (runs on Volumio 2 to 4). */
 var libQ = require('kew');
 var fs   = require('fs');
 var os   = require('os');
 var path = require('path');
 var cp   = require('child_process');
+var net  = require('net');
 var vm   = require('vm');
 
 module.exports = ControllerXplorio;
@@ -18,11 +20,13 @@ module.exports = ControllerXplorio;
 var APP    = path.join(__dirname, 'app');            /* the interface and the services (tools/make-plugin.sh) */
 var DATA   = process.env.XPLORIO_DATA || '/data/xplorio';
 var OLD_HTTP = process.env.XPLORIO_VOLUMIO_HTTP || '/volumio/http';   /* earlier installation below /volumio (read only) */
-var ROOT_TAGS = '/usr/local/lib/xplorio/tags/tags.py';             /* root-owned copy for the sudo rule (install.sh) */
+var RUN  = process.env.XPLORIO_RUN || '/tmp/xplorio';             /* settings of the services (EnvironmentFile) */
 var MUSIC = process.env.XPLORIO_MUSIC || '/mnt';
-var CHILDREN = [
-  {id: 'tagService',  unit: 'tag-service',  script: 'tags/tag-service.js',   node: ['--max-old-space-size=384'], ipc: true},
-  {id: 'rotelBridge', unit: 'rotel-bridge', script: 'rotel/rotel-bridge.js', node: []}
+/* the services: unit of the plugin, unit of an earlier installation with xplorio-deploy, switch on the page */
+var SERVICES = [
+  {unit: 'xplorio-web',   old: 'xplorio-server', id: null},
+  {unit: 'xplorio-tags',  old: 'tag-service',    id: 'tagService'},
+  {unit: 'xplorio-rotel', old: 'rotel-bridge',   id: 'rotelBridge'}
 ];
 /* settings on the page that go into config.local.js: id on the page, key in APP_CONFIG, kind (see toApp / fromApp) */
 var FIELDS = [
@@ -44,17 +48,13 @@ var FIELDS = [
 ];
 var LANG_NAMES = {de: 'Deutsch', en: 'English', fr: 'Français', es: 'Español', it: 'Italiano'};
 var ICONS = ['phono', 'cd', 'tuner', 'bluetooth', 'usb', 'digital', 'aux', 'pc', 'tv'];
-var RESTART_MIN = 5000, RESTART_MAX = 60000;          /* a child that ends is started again, waiting longer each time */
 
 function ControllerXplorio(context) {
   this.context = context;
   this.commandRouter = context.coreCommand;
   this.logger = context.logger;
-  this.server = null;
-  this.children = {};
-  this.stopping = false;
-  this.notes = [];                                    /* shown on the settings page (services left to systemd) */
-  this.exec = cp.execFile; this.spawn = cp.spawn;     /* replaced in the tests */
+  this.notes = [];                                    /* shown on the settings page (services of an earlier installation) */
+  this.exec = cp.execFile;                            /* replaced in the tests */
 }
 
 ControllerXplorio.prototype.onVolumioStart = function() {
@@ -64,7 +64,6 @@ ControllerXplorio.prototype.onVolumioStart = function() {
   this.config.loadFile(file);
   if (this.config.get('port') === undefined) this.config.set('port', 4040);
   if (this.config.get('tagService') === undefined) this.config.set('tagService', true);
-  if (this.config.get('tagsRoot') === undefined) this.config.set('tagsRoot', false);
   this.takeOver();
   return libQ.resolve();
 };
@@ -96,37 +95,40 @@ ControllerXplorio.prototype.takeOver = function() {
 ControllerXplorio.prototype.getConfigurationFiles = function() { return ['config.json']; };
 
 ControllerXplorio.prototype.onStart = function() {
-  var self = this, defer = libQ.defer();
-  self.stopping = false; self.notes = [];
+  var self = this, defer = libQ.defer(), port = self.port();
+  self.notes = [];
   self.writeConfig();
-  var port = self.port();
-  self.unitActive('xplorio-server', function(active){
-    if (active) { self.note('xplorio-server'); } else { self.startServer(port); }
-    var todo = CHILDREN.filter(function(c){ return self.config.get(c.id); });
-    (function next() {
-      var c = todo.shift();
-      if (!c) return defer.resolve();
-      self.unitActive(c.unit, function(on){ if (on) self.note(c.unit); else self.startChild(c); next(); });
-    })();
-  });
+  self.writeEnv();
+  var todo = SERVICES.filter(function(s){ return !s.id || self.config.get(s.id); }), failed = null;
+  (function next() {
+    var s = todo.shift();
+    if (!s) return failed ? defer.reject(new Error(failed)) : defer.resolve();
+    self.unitActive(s.old, function(on){
+      if (on) { self.note(s.old); return next(); }
+      var go = function(){
+        self.systemctl('restart', s.unit, function(err){
+          if (err) {
+            self.logger.error('Xplorio: ' + s.unit + ' did not start: ' + (err.message || err));
+            if (!s.id) failed = s.unit + ' did not start';           /* without the web server the plugin is not running */
+          }
+          next();
+        });
+      };
+      if (s.id) return go();
+      portFree(port, function(free){                                /* web server: is the port taken by something else? */
+        if (free) return go();
+        self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
+        failed = 'port ' + port + ' in use'; next();
+      });
+    });
+  })();
   return defer.promise;
 };
 
+/* all services of the plugin off (also those switched off on the page); a service of an earlier installation stays */
 ControllerXplorio.prototype.onStop = function() {
-  var self = this, defer = libQ.defer(), left = 0;
-  self.stopping = true;
-  if (self.server) { self.server.close(); self.server.dropAll(); self.server = null; }
-  Object.keys(self.children).forEach(function(id){
-    var ch = self.children[id];
-    clearTimeout(ch.timer);
-    if (!ch.proc) return;
-    left++;
-    ch.proc.once('exit', function(){ if (--left === 0) defer.resolve(); });
-    ch.proc.kill('SIGTERM');
-  });
-  self.children = {};
-  if (!left) defer.resolve();
-  else setTimeout(function(){ defer.resolve(); }, 8000);      /* do not hold up Volumio for long */
+  var self = this, defer = libQ.defer(), left = SERVICES.length;
+  SERVICES.forEach(function(s){ self.systemctl('stop', s.unit, function(){ if (--left === 0) defer.resolve(); }); });
   return defer.promise;
 };
 
@@ -135,95 +137,32 @@ ControllerXplorio.prototype.port = function() {
   return p >= 1024 && p <= 65535 && p !== 3000 ? p : 4040;
 };
 
+/* as in Volumio's examples: systemctl via sudo (-n: never wait for a password) */
+ControllerXplorio.prototype.systemctl = function(action, unit, cb) {
+  this.exec('/usr/bin/sudo', ['-n', '/bin/systemctl', action, unit + '.service'], function(err){ cb(err || null); });
+};
 /* is a systemd unit of an earlier installation running? (then it keeps the job) */
 ControllerXplorio.prototype.unitActive = function(unit, cb) {
-  this.exec('systemctl', ['is-active', '--quiet', unit], function(err){ cb(!err); });
+  this.exec('/bin/systemctl', ['is-active', '--quiet', unit + '.service'], function(err){ cb(!err); });
 };
 ControllerXplorio.prototype.note = function(unit) {
   this.notes.push(unit);
-  this.logger.info('Xplorio: ' + unit + ' runs as a systemd service, left as it is');
+  this.logger.info('Xplorio: ' + unit + ' of an earlier installation is running, left as it is');
 };
 
-ControllerXplorio.prototype.startServer = function(port) {
-  var self = this;
-  var srv = require(path.join(APP, 'server', 'xplorio-server.js')).create({www: APP, port: port});
-  var tries = 0, socks = [];
-  srv.on('connection', function(sock){                /* closed on stop: browsers keep connections open */
-    socks.push(sock);
-    sock.on('close', function(){ socks.splice(socks.indexOf(sock), 1); });
-  });
-  srv.dropAll = function(){ socks.slice().forEach(function(x){ x.destroy(); }); };
-  srv.on('error', function(e){
-    /* right after a restart (saving the settings) the old server may still hold the port for a moment */
-    if (e.code === 'EADDRINUSE' && ++tries <= 5 && !self.stopping) return setTimeout(function(){ srv.listen(port); }, 1000);
-    self.logger.error('Xplorio: web server on port ' + port + ': ' + e.message);
-    if (e.code === 'EADDRINUSE') self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
-  });
-  srv.on('listening', function(){ self.logger.info('Xplorio: interface on port ' + port); });
-  srv.listen(port);
-  self.server = srv;
-};
-
-ControllerXplorio.prototype.startChild = function(c) {
-  var self = this, ch = self.children[c.id] || (self.children[c.id] = {wait: RESTART_MIN, proc: null, timer: null});
-  var env = {};
-  Object.keys(process.env).forEach(function(k){ if (k !== 'HTTP_PORT') env[k] = process.env[k]; });
-  env.APP_CONFIG_DIR = path.join(APP, 'web');       /* config.js and config.local.js (written by the plugin) */
-  env.TAGS_DATA = path.join(DATA, 'data');
-  env.XPLORIO_PLUGIN = '1';                          /* the System page restarts the services via the plugin */
-  if (c.id === 'tagService' && self.config.get('tagsRoot')) {
-    env.USE_SUDO = '1'; env.PYTHON = python(); env.TAGS_SCRIPT = ROOT_TAGS;
-  }
-  var started = Date.now();
-  var proc = self.spawn(process.execPath, c.node.concat([path.join(APP, c.script)]),
-                        {cwd: path.join(APP, path.dirname(c.script)), env: env,
-                         stdio: c.ipc ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe']});
-  ch.proc = proc; ch.since = started; ch.now = false;
-  function log(level) {
-    return function(d){ String(d).split('\n').forEach(function(l){ if (l.trim()) self.logger[level]('Xplorio ' + c.unit + ': ' + l); }); };
-  }
-  if (proc.stdout) proc.stdout.on('data', log('info'));
-  if (proc.stderr) proc.stderr.on('data', log('error'));
-  proc.on('error', function(e){ self.logger.error('Xplorio ' + c.unit + ': ' + e.message); });
-  proc.on('message', function(m){ self.answer(proc, m); });
-  proc.on('exit', function(code, sig){
-    if (ch.proc !== proc) return;
-    ch.proc = null;
-    if (self.stopping) return;
-    if (ch.now) { ch.wait = RESTART_MIN; return self.startChild(c); }      /* restart from the System page */
-    if (Date.now() - started > RESTART_MAX) ch.wait = RESTART_MIN;          /* ran for a while: start again soon */
-    self.logger.error('Xplorio ' + c.unit + ' ended (' + (sig || code) + '), new start in ' + ch.wait / 1000 + ' s');
-    ch.timer = setTimeout(function(){ if (!self.stopping) self.startChild(c); }, ch.wait);
-    ch.wait = Math.min(RESTART_MAX, ch.wait * 2);
-  });
-};
-
-/* questions of the tag service (System page): state of the services the plugin starts, restart of one of them */
-ControllerXplorio.prototype.answer = function(proc, m) {
-  var self = this;
-  if (!m || typeof m !== 'object') return;
-  function reply(o) { o.id = m.id; try { proc.send(o); } catch (e) { /* ended meanwhile */ } }
-  if (m.type === 'status') {
-    var units = {};
-    CHILDREN.forEach(function(c){
-      var ch = self.children[c.id];
-      units[c.unit] = {managed: !!ch, running: !!(ch && ch.proc), since: ch && ch.proc ? ch.since : null};
+/* /tmp/xplorio/<service>.env: what the systemd units read (EnvironmentFile) */
+ControllerXplorio.prototype.writeEnv = function() {
+  var web = path.join(APP, 'web'), envs = {
+    'xplorio-web':   {HTTP_PORT: this.port(), XPLORIO_WWW: APP},
+    'xplorio-tags':  {APP_CONFIG_DIR: web, TAGS_DATA: path.join(DATA, 'data'), XPLORIO_UNIT: 'xplorio-tags'},
+    'xplorio-rotel': {APP_CONFIG_DIR: web}
+  };
+  try {
+    mkdirs(RUN);
+    Object.keys(envs).forEach(function(u){
+      fs.writeFileSync(path.join(RUN, u + '.env'), Object.keys(envs[u]).map(function(k){ return k + '=' + envs[u][k]; }).join('\n') + '\n');
     });
-    return reply({type: 'status', units: units});
-  }
-  if (m.type === 'restart') {
-    var c = CHILDREN.filter(function(x){ return x.unit === m.unit; })[0];
-    if (!c || !self.children[c.id]) return reply({type: 'restart', ok: false});
-    reply({type: 'restart', ok: true});
-    self.restartChild(c);
-  }
-};
-ControllerXplorio.prototype.restartChild = function(c) {
-  var ch = this.children[c.id];
-  if (!ch) return;
-  this.logger.info('Xplorio: ' + c.unit + ' restart (System page)');
-  if (ch.proc) { ch.now = true; ch.proc.kill('SIGTERM'); return; }
-  clearTimeout(ch.timer); ch.wait = RESTART_MIN; this.startChild(c);
+  } catch (e) { this.logger.error('Xplorio: writing ' + RUN + ': ' + e.message); }
 };
 
 /* app/web/config.local.js for the interface and the services: own additions from /data/xplorio/config.local.js
@@ -277,7 +216,7 @@ ControllerXplorio.prototype.getUIConfig = function() {
       return {};
     }
     el('port').value = self.port();
-    ['tagService', 'rotelBridge', 'tagsRoot'].forEach(function(id){ el(id).value = !!self.config.get(id); });
+    ['tagService', 'rotelBridge'].forEach(function(id){ el(id).value = !!self.config.get(id); });
     FIELDS.forEach(function(f){
       var e = el(f.id), v = self.config.get(f.id);
       if (f.kind === 'bool') { e.value = !!v; return; }
@@ -300,27 +239,11 @@ ControllerXplorio.prototype.getUIConfig = function() {
       sec.content = (sec.content || []).filter(function(c){ return c.id !== 'passwordOld'; });
       if (sec.saveButton) sec.saveButton.data = sec.saveButton.data.filter(function(d){ return d !== 'passwordOld'; });
     });
-    self.rootCheck(function(ro, sudo){
-      el('tagsRoot').doc = [self.str('TAGS_ROOT_DOC'),
-        ro.length ? self.str('TAGS_RO').replace('{dirs}', ro.join(', ')) : self.str('TAGS_RW'),
-        sudo ? '' : self.str('TAGS_NOSUDO')].filter(Boolean).join(' ');
-      defer.resolve(ui);
-    });
+    var ro = readOnlyMusic();
+    if (ro.length) el('tagService').doc = self.str('TAG_SERVICE_DOC') + ' ' + self.str('TAGS_RO').replace('{dirs}', ro.join(', '));
+    defer.resolve(ui);
   }).fail(function(e){ defer.reject(e); });
   return defer.promise;
-};
-
-/* music folders the plugin (user volumio) cannot write to, and whether the sudo rule of install.sh is there */
-ControllerXplorio.prototype.rootCheck = function(cb) {
-  var ro = [];
-  ['INTERNAL'].concat(['USB', 'NAS'].reduce(function(a, d){
-    try { return a.concat(fs.readdirSync(path.join(MUSIC, d)).map(function(x){ return d + '/' + x; })); } catch (e) { return a; }
-  }, [])).forEach(function(d){
-    var full = path.join(MUSIC, d);
-    try { if (!fs.statSync(full).isDirectory()) return; } catch (e) { return; }
-    try { fs.accessSync(full, fs.W_OK); } catch (e) { ro.push(full); }
-  });
-  this.exec('sudo', ['-n', '-l', python(), ROOT_TAGS], function(err){ cb(ro, !err); });
 };
 
 /* one method for all sections: each sends only its own fields */
@@ -333,7 +256,7 @@ ControllerXplorio.prototype.saveSettings = function(data) {
     var p = parseInt(data.port, 10);
     if (!(p >= 1024 && p <= 65535) || p === 3000) err = 'BAD_PORT'; else set.port = p;
   }
-  ['tagService', 'rotelBridge', 'tagsRoot'].forEach(function(id){ if (has(id)) set[id] = !!data[id]; });
+  ['tagService', 'rotelBridge'].forEach(function(id){ if (has(id)) set[id] = !!data[id]; });
   FIELDS.forEach(function(f){
     if (!has(f.id) || err) return;
     var v = check(f, val(f.id));
@@ -458,8 +381,26 @@ function check(f, v) {
 }
 function splitList(v) { return String(v || '').split(',').map(function(x){ return x.trim(); }).filter(Boolean); }
 
-/* Python for tags.py with root rights: the same choice as the tag service, as a full path (sudo rule) */
-function python() { return exists('/usr/bin/python') ? '/usr/bin/python' : '/usr/bin/python3'; }
+/* music folders Volumio (user volumio, as the tag service) cannot write to: the tag editor fails there */
+function readOnlyMusic() {
+  var ro = [];
+  ['INTERNAL'].concat(['USB', 'NAS'].reduce(function(a, d){
+    try { return a.concat(fs.readdirSync(path.join(MUSIC, d)).map(function(x){ return d + '/' + x; })); } catch (e) { return a; }
+  }, [])).forEach(function(d){
+    var full = path.join(MUSIC, d);
+    try { if (!fs.statSync(full).isDirectory()) return; } catch (e) { return; }
+    try { fs.accessSync(full, fs.W_OK); } catch (e) { ro.push(full); }
+  });
+  return ro;
+}
+
+/* is the port free? (a short listen on it; cb(false) when something else holds it) */
+function portFree(port, cb) {
+  var srv = net.createServer();
+  srv.once('error', function(e){ cb(e.code !== 'EADDRINUSE'); });
+  srv.once('listening', function(){ srv.close(function(){ cb(true); }); });
+  try { srv.listen(port); } catch (e) { cb(true); }
+}
 
 /* the player's address for the link on the settings page */
 function address() {
@@ -470,5 +411,5 @@ function address() {
   return found || os.hostname() + '.local';
 }
 
-ControllerXplorio.CHILDREN = CHILDREN;
+ControllerXplorio.SERVICES = SERVICES;
 ControllerXplorio.FIELDS = FIELDS;

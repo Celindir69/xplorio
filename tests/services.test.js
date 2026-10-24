@@ -1,10 +1,10 @@
-/* services (tags/services.js): parse systemctl show, allowed actions, sudo commands, services of the Volumio plugin (IPC) */
+/* services (tags/services.js): parse systemctl show, allowed actions, sudo commands */
 var assert = require('assert'), fs = require('fs'), path = require('path'), os = require('os');
 var sv = require('../tags/services.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function ta(name, fn) { fn(function(){ n++; console.log('ok   ' + name); }); }
-process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 10, 'not all checks finished'); console.log(n + ' checks'); } });
+process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 8, 'not all checks finished'); console.log(n + ' checks'); } });
 
 var SHOW = [
   'Id=volumio.service', 'LoadState=loaded', 'ActiveState=active', 'SubState=running', 'ActiveEnterTimestampMonotonic=1000000000', '',
@@ -128,48 +128,5 @@ ta('kiosk "failed" after own stop: show as stopped, real state again after start
         });
       });
     });
-  });
-});
-
-/* the plugin as the other end of the IPC channel: answers like plugin/index.js (answer) */
-function fakePlugin(units, restarted) {
-  var EventEmitter = require('events'), proc = new EventEmitter();
-  proc.send = function(m){
-    setImmediate(function(){
-      if (m.type === 'status') proc.emit('message', {id: m.id, type: 'status', units: units});
-      if (m.type === 'restart') { restarted.push(m.unit); proc.emit('message', {id: m.id, type: 'restart', ok: !!(units[m.unit] && units[m.unit].managed)}); }
-    });
-  };
-  return sv.pluginLink(proc);
-}
-
-ta('plugin: services the plugin starts replace the systemd entry, the others stay', function(done){
-  var restarted = [], calls = [];
-  var s = new sv.Services({root: '/nix', plugin: fakePlugin({'tag-service': {managed: true, running: true, since: 1234}, 'rotel-bridge': {managed: false}}, restarted),
-                           run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(null, f === 'sudo' ? '' : SHOW); }});
-  s.status(function(r){
-    assert.deepStrictEqual(r.units.map(function(u){ return u.id; }), ['volumio', 'mpd', 'tag-service', 'volumio-kiosk']);
-    assert.deepStrictEqual(r.units[2], {id: 'tag-service', active: 'active', sub: 'running', since: 1234, actions: ['restart'], plugin: true});
-    s.act('tag-service', 'restart', 'tag-service', function(code, o){
-      assert.deepStrictEqual(o, {ok: true, self: true});                  /* answer first, then the restart */
-      setTimeout(function(){
-        assert.deepStrictEqual(restarted, ['tag-service']);
-        assert.ok(!calls.some(function(c){ return /restart tag-service/.test(c); }));
-        s.act('mpd', 'restart', 'tag-service', function(c2, o2){
-          assert.ok(o2.ok && calls.some(function(c){ return c === 'sudo -n /bin/systemctl --no-block restart mpd'; }));
-          done();
-        });
-      }, 400);
-    });
-  });
-});
-
-ta('plugin: no answer within 2 s: the systemd state as before', function(done){
-  var EventEmitter = require('events'), proc = new EventEmitter();
-  proc.send = function(){};
-  var s = new sv.Services({root: '/nix', plugin: sv.pluginLink(proc), run: function(f, a, cb){ cb(null, f === 'sudo' ? '' : SHOW); }});
-  s.status(function(r){
-    assert.strictEqual(r.units[2].active, 'activating'); assert.ok(!r.units[2].plugin);
-    done();
   });
 });

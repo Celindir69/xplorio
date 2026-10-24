@@ -24,8 +24,9 @@ Neu und noch im Test: Xplorio als Volumio-Plugin, ohne Dateien unter `/volumio` 
 ## Als Volumio-Plugin (neu, im Test)
 Als Plugin legt Xplorio nichts unter `/volumio` ab. Volumios Prüfung vor einem System-Update bleibt dadurch intakt, und
 das Entfernen und Wiederherstellen vor einem Update ([Volumio-Update](#volumio-update)) entfällt. Das Plugin liefert die
-Oberfläche über einen eigenen Webserver auf Port 4040 aus und startet Tag-Dienst und Rotel-Bridge selbst. Der Webserver
-läuft in Volumios eigenem Prozess, es kommt also kein weiterer Dienst hinzu.
+Oberfläche über einen eigenen Webserver auf Port 4040 aus. Webserver, Tag-Dienst und Rotel-Bridge laufen als eigene
+systemd-Dienste (`xplorio-web`, `xplorio-tags`, `xplorio-rotel`), wie Volumio es für Plugins vorgibt: `install.sh` richtet sie
+ein, das Plugin startet sie beim Einschalten und stoppt sie beim Ausschalten.
 
 **Installieren oder aktualisieren** (mit `xplorio-deploy` wie unter [Ersteinrichtung](#ersteinrichtung)):
 ```bash
@@ -47,20 +48,19 @@ das Plugin installiert, aktualisiert auch ein einfaches `sudo xplorio-deploy` da
 - **Last.fm:** [Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret). Das Plugin schreibt beides nach
   `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten Wert,
   „Last.fm-Zugang löschen“ entfernt beide.
-- **System und Rechte:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es; ist eines gesetzt,
-  geht Ändern nur mit dem bisherigen, vergessen: `sudo xplorio-deploy --password`) und der Schalter
-  „Tags mit Root-Rechten schreiben“. Die Seite nennt Musikordner, in die Volumio nicht schreiben darf; nur dann ist der
-  Schalter nötig. Tags und eingebettete Cover schreibt dann eine geschützte Kopie von `tags.py` mit Root-Rechten, und nur
-  unter `/mnt` und `/media`. `folder.jpg` und das Verschieben von Dubletten brauchen weiterhin Schreibrecht für Volumio.
+- **Passwort:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es; ist eines gesetzt, geht
+  Ändern nur mit dem bisherigen, vergessen: `sudo xplorio-deploy --password`).
+
+Musikordner, in die Volumio nicht schreiben darf, nennt die Seite beim Tag-Dienst; dort scheitert der Tag-Editor.
 
 Das Plugin schreibt aus diesen Werten `app/web/config.local.js`, die Oberfläche und Dienste lesen. Wer mehr einstellen will
 (z. B. `ROTEL_PROFILE` für einen anderen Verstärker), legt das in `/data/xplorio/config.local.js` ab: Das Plugin übernimmt die
 Datei vor den Werten der Einstellungsseite, die Seite hat also Vorrang. Eine fehlerhafte Datei lässt es weg und sagt das auf
 der Einstellungsseite. Beim ersten Start kopiert das Plugin eine vorhandene `config.local.js` aus `/volumio/http/www*/web/`
 einmal dorthin (die alte bleibt unverändert) und übernimmt ihre Werte auf die Einstellungsseite, einen Last.fm-Key auch nach
-`keys.json`. Für die Seite „System“ legt das Plugin bei der Installation eine sudo-Regel an (`/etc/sudoers.d/xplorio-plugin`:
-Volumio, MPD und Kiosk neu starten, Player neu starten und ausschalten, `tags.py` mit Root-Rechten); Tag-Dienst und
-Rotel-Bridge startet das Plugin selbst neu. Daten, Verlauf, Passwort und Last.fm-Zugang bleiben in `/data/xplorio/data/`,
+`keys.json`. Die Einstellungen der Dienste (Port, Pfade) schreibt das Plugin nach `/tmp/xplorio/`. Die Seite „System“ startet
+die Dienste über `sudo systemctl` neu, das Volumio dem Benutzer `volumio` erlaubt; eine eigene sudo-Regel legt das Plugin
+nicht an. Daten, Verlauf, Passwort und Last.fm-Zugang bleiben in `/data/xplorio/data/`,
 auch wenn das Plugin aktualisiert oder entfernt wird.
 
 **Umstieg von der bisherigen Installation:**

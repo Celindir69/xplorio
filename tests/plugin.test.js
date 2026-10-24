@@ -1,6 +1,6 @@
-/* Volumio plugin (plugin/index.js, tools/make-plugin.sh): build and ZIP, settings of an earlier installation taken
-   over, config.local.js written from the settings page, web server inside Volumio's process, child processes with the
-   right settings, services left to systemd, restart via the System page (IPC), stop, settings page and its checks */
+/* Volumio plugin (plugin/index.js, install.sh, tools/make-plugin.sh): build, what the plugin store asks for, settings of
+   an earlier installation taken over, config.local.js written from the settings page, the services started and stopped
+   via systemctl with their settings in /tmp/xplorio, services of an earlier installation left alone, settings page */
 var assert = require('assert'), fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 var http = require('http'), Module = require('module'), EventEmitter = require('events'), vm = require('vm');
 var n = 0;
@@ -32,6 +32,7 @@ fs.mkdirSync(path.join(T, 'music/USB/Stick'), {recursive: true});
 process.env.XPLORIO_DATA = DATA;
 process.env.XPLORIO_VOLUMIO_HTTP = OLD;
 process.env.XPLORIO_MUSIC = path.join(T, 'music');
+var RUN = path.join(T, 'run'); process.env.XPLORIO_RUN = RUN;
 process.env.HTTP_PORT = '1234';                                     /* from Volumio's environment: must not reach the children */
 function evalConfig() {
   var ctx = {window: {}};
@@ -57,8 +58,23 @@ t('settings page: every text has a German and an English string', function(){
   keys.forEach(function(k){ assert.ok(de[k] && en[k], k); });
 });
 
+t('package.json: what the Volumio 4 plugin store asks for', function(){
+  var pk = JSON.parse(fs.readFileSync(path.join(P, 'package.json'), 'utf8')), vi = pk.volumio_info;
+  assert.deepStrictEqual(pk.engines, {node: '>=20', volumio: '>=4'});
+  assert.deepStrictEqual(vi.os, ['bookworm']); assert.ok(vi.architectures.length && vi.details && vi.changelog && vi.prettyName);
+  assert.ok(vi.boot_priority >= 1 && vi.boot_priority <= 10);
+});
+
+t('install.sh: systemd services of the plugin, only own files, no sudo rule, no copies into system paths', function(){
+  var sh = fs.readFileSync(path.join(P, 'install.sh'), 'utf8');
+  ['xplorio-web', 'xplorio-tags', 'xplorio-rotel'].forEach(function(u){ assert.ok(sh.indexOf('unit ' + u + ' ') >= 0, u); });
+  assert.ok(/EnvironmentFile=-\/tmp\/xplorio\/\$1\.env/.test(sh) && /User=volumio/.test(sh));
+  assert.ok(!/sudoers\.d\/[^ \n]*\s*<</.test(sh) && !/cp [^\n]*\/usr\/local/.test(sh) && !/\/volumio\//.test(sh.replace(/^#.*$/mg, '')));
+  assert.ok(/plugininstallend"\s*$/.test(sh) && /rm -rf "\$SCRIPTPATH"/.test(sh));
+});
+
 var Plugin = require(path.join(P, 'index.js'));
-var toasts = [], spawned = [], active = {'rotel-bridge': true};
+var toasts = [], calls = [], active = {'rotel-bridge.service': true}, failing = {};
 function makePlugin() {
   var p = new Plugin({coreCommand: {
       pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); }},
@@ -66,27 +82,29 @@ function makePlugin() {
       sharedVars: {get: function(){ return 'de'; }},
       i18nJson: function(a, b, ui){ return kew.resolve(JSON.parse(fs.readFileSync(ui, 'utf8'))); }},
     logger: {info: function(){}, error: function(){}}});
-  p.exec = function(cmd, args, cb){ setImmediate(function(){ cb(active[args[2]] ? null : new Error('inactive')); }); };
-  p.spawn = function(bin, args, o){
-    var e = new EventEmitter(); e.stdout = new EventEmitter(); e.stderr = new EventEmitter();
-    e.kill = function(){ setImmediate(function(){ e.emit('exit', null, 'SIGTERM'); }); };
-    e.send = function(m){ e.sent = (e.sent || []).concat([m]); };
-    spawned.push({bin: bin, args: args, o: o, proc: e}); return e;
+  /* /bin/systemctl is-active --quiet <unit>, /usr/bin/sudo -n /bin/systemctl <action> <unit> */
+  p.exec = function(cmd, args, cb){
+    calls.push([cmd].concat(args).join(' '));
+    setImmediate(function(){
+      if (cmd === '/bin/systemctl') return cb(active[args[2]] ? null : new Error('inactive'));
+      cb(failing[args[3]] ? new Error('failed') : null);
+    });
   };
   return p;
 }
 var PORT = 40000 + Math.floor(Math.random() * 20000), plug = makePlugin();
-function get(p, cb) { http.get({port: PORT, path: p, agent: false}, function(r){ var d = ''; r.on('data', function(c){ d += c; }); r.on('end', function(){ cb(r, d); }); }); }
 function el(ui, id) {
   var all = []; ui.sections.forEach(function(s){ all = all.concat(s.content || []); });
   return all.filter(function(c){ return c.id === id; })[0];
 }
+function sudo() { return calls.filter(function(c){ return /^\/usr\/bin\/sudo/.test(c); }).map(function(c){ return c.replace('/usr/bin/sudo -n /bin/systemctl ', ''); }); }
+function env(u) { return fs.readFileSync(path.join(RUN, u + '.env'), 'utf8'); }
 var kf = path.join(DATA, 'data/keys.json');
 
 plug.onVolumioStart();
 t('first start: settings of the earlier installation on the page, own file copied once, Last.fm key into keys.json', function(){
   var c = plug.config;
-  assert.deepStrictEqual([c.get('port'), c.get('tagService'), c.get('rotelBridge'), c.get('tagsRoot')], [4040, true, true, false]);
+  assert.deepStrictEqual([c.get('port'), c.get('tagService'), c.get('rotelBridge')], [4040, true, true]);
   assert.deepStrictEqual([c.get('theme'), c.get('tidal'), c.get('qobuz'), c.get('history'), c.get('language')], ['dark', 'off', 'auto', true, '']);
   assert.strictEqual(c.get('rotelHost'), '192.168.1.50'); assert.strictEqual(c.get('rotelInputs'), 'aux=Plattenspieler/phono');
   assert.ok(/ROTEL_PROFILE/.test(fs.readFileSync(path.join(DATA, 'config.local.js'), 'utf8')));
@@ -94,19 +112,18 @@ t('first start: settings of the earlier installation on the page, own file copie
   assert.strictEqual(c.get('imported'), true);
   c.set('theme', 'auto'); plug.takeOver();
   assert.strictEqual(c.get('theme'), 'auto');                     /* only once */
+  assert.deepStrictEqual(calls, []);                               /* nothing started before onStart */
 });
 plug.config.set('port', PORT);
 plug.onStart().then(function(){
-  t('services: tag service as child process with more heap, IPC and the settings in app/web; Rotel bridge left to systemd', function(){
-    assert.strictEqual(spawned.length, 1);
-    var s = spawned[0];
-    assert.strictEqual(s.bin, process.execPath);
-    assert.deepStrictEqual(s.args, ['--max-old-space-size=384', path.join(P, 'app/tags/tag-service.js')]);
-    assert.strictEqual(s.o.cwd, path.join(P, 'app/tags'));
-    assert.strictEqual(s.o.env.APP_CONFIG_DIR, path.join(P, 'app/web')); assert.strictEqual(s.o.env.TAGS_DATA, path.join(DATA, 'data'));
-    assert.strictEqual(s.o.env.XPLORIO_PLUGIN, '1'); assert.strictEqual(s.o.stdio[3], 'ipc');
-    assert.ok(!('HTTP_PORT' in s.o.env) && !('USE_SUDO' in s.o.env));
+  t('start: the services via systemctl (sudo), the Rotel bridge of an earlier installation left as it is', function(){
+    assert.deepStrictEqual(sudo(), ['restart xplorio-web.service', 'restart xplorio-tags.service']);
     assert.deepStrictEqual(plug.notes, ['rotel-bridge']);
+  });
+  t('start: settings of the services in /tmp/xplorio/<service>.env', function(){
+    assert.strictEqual(env('xplorio-web'), 'HTTP_PORT=' + PORT + '\nXPLORIO_WWW=' + path.join(P, 'app') + '\n');
+    assert.ok(env('xplorio-tags').indexOf('APP_CONFIG_DIR=' + path.join(P, 'app/web') + '\nTAGS_DATA=' + path.join(DATA, 'data') + '\nXPLORIO_UNIT=xplorio-tags') === 0);
+    assert.strictEqual(env('xplorio-rotel'), 'APP_CONFIG_DIR=' + path.join(P, 'app/web') + '\n');
   });
   t('config.local.js: written by the plugin, own additions first, then the values of the settings page', function(){
     var f = path.join(P, 'app/web/config.local.js');
@@ -126,132 +143,120 @@ plug.onStart().then(function(){
     assert.ok(!plug.ownBroken); assert.strictEqual(evalConfig().THEME, 'auto');       /* error while running: rest still runs */
     fs.writeFileSync(own, keep); plug.writeConfig();
   });
-  t('System page: the tag service asks the plugin for the state and for a restart (IPC)', function(){
-    var tag = spawned[0].proc;
-    tag.emit('message', {type: 'status', id: 7});
-    var st = tag.sent.pop();
-    assert.strictEqual(st.id, 7);
-    assert.deepStrictEqual(st.units['rotel-bridge'], {managed: false, running: false, since: null});
-    assert.ok(st.units['tag-service'].managed && st.units['tag-service'].running && st.units['tag-service'].since > 0);
-    tag.emit('message', {type: 'restart', unit: 'rotel-bridge', id: 8});
-    assert.deepStrictEqual(tag.sent.pop(), {type: 'restart', ok: false, id: 8});
+  calls = [];
+  return plug.onStop();
+}).then(function(){
+  t('stop: all services of the plugin stopped, nothing else', function(){
+    assert.deepStrictEqual(sudo(), ['stop xplorio-web.service', 'stop xplorio-tags.service', 'stop xplorio-rotel.service']);
   });
-  get('/', function(r, d){
-    get('/web/config.local.js', function(r2, d2){
-      t('web server inside the plugin: interface and settings on the plugin port', function(){
-        assert.strictEqual(r.statusCode, 200); assert.ok(/<html/i.test(d));
-        assert.ok(/192\.168\.1\.50/.test(d2), d2);
-      });
-      spawned[0].proc.emit('message', {type: 'restart', unit: 'tag-service', id: 9});
-      setTimeout(function(){
-      t('System page: restart of the tag service at once, without waiting', function(){
-        assert.deepStrictEqual(spawned[0].proc.sent.pop(), {type: 'restart', ok: true, id: 9});
-        assert.strictEqual(spawned.length, 2); assert.ok(plug.children.tagService.proc === spawned[1].proc);
-      });
-      spawned[1].proc.emit('exit', 1, null);
-      t('a child process that ends is started again later', function(){
-        assert.ok(plug.children.tagService.timer && plug.children.tagService.wait === 10000);
-      });
-      plug.getUIConfig().then(function(ui){
-        t('settings page: link to the plugin port, current values, choices, notes', function(){
-          assert.ok(new RegExp(':' + PORT + '/$').test(ui.sections[0].content[0].onClick.url));
-          assert.ok(/rotel-bridge/.test(ui.sections[0].description) && /Systemdienst/.test(ui.sections[0].description), ui.sections[0].description);
-          assert.deepStrictEqual(['port', 'tagService', 'rotelBridge', 'rotelHost', 'history'].map(function(id){ return el(ui, id).value; }),
-                                 [PORT, true, true, '192.168.1.50', true]);
-          assert.deepStrictEqual(el(ui, 'tidal').value, {value: 'off', label: 'Nie'});
-          assert.deepStrictEqual(el(ui, 'language').options.map(function(o){ return o.label; }), ['Automatisch', 'Deutsch', 'English', 'Français', 'Español', 'Italiano']);
-          assert.strictEqual(el(ui, 'rotelInputs').value, 'aux=Plattenspieler/phono');
-          assert.ok(/Gespeichert/.test(el(ui, 'lastfmKey').doc) && /Noch nicht/.test(el(ui, 'lastfmSecret').doc) && el(ui, 'lastfmKey').value === '');
-          assert.ok(JSON.stringify(ui).indexOf('oldkey1') < 0);
-          assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc) && !el(ui, 'passwordOld'));
-          assert.ok(/music\/USB\/Stick/.test(el(ui, 'tagsRoot').doc) === (process.getuid() !== 0) && /Freigabe dafür fehlt/.test(el(ui, 'tagsRoot').doc), el(ui, 'tagsRoot').doc);
-          ui.sections.slice(1).forEach(function(s){
-            assert.deepStrictEqual(s.saveButton.data, s.content.map(function(c){ return c.id; }));
-            assert.strictEqual(s.onSave.method, 'saveSettings');
-          });
-        });
-        function refused(data, what) {
-          var before = JSON.stringify(plug.config.d);
-          plug.saveSettings(data);
-          var last = toasts.pop();
-          assert.ok(last[0] === 'error' && what.test(last[1]), last); assert.strictEqual(JSON.stringify(plug.config.d), before);
-        }
-        t('saving: wrong values are refused with a message, nothing changes', function(){
-          refused({port: 3000, tagService: true}, /Port/);
-          refused({lastfmKey: 'abc def'}, /ungültige Zeichen/);
-          assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'oldkey1'});
-          refused({rotelBridge: true, rotelHost: '', rotelInputs: ''}, /Adresse des Verstärkers/);
-          refused({rotelBridge: true, rotelHost: '1.2.3.4; rm', rotelInputs: ''}, /ungültige Zeichen/);
-          refused({rotelBridge: true, rotelHost: '1.2.3.4', rotelInputs: 'aux=Platte/blink'}, /Eingänge/);
-          refused({theme: {value: 'pink', label: 'x'}}, /Auswahl/);
-          refused({allowedHosts: 'a.example.net, b c'}, /Namen/);
-          refused({password: 'abc', tagsRoot: false}, /4 Zeichen/);
-          assert.ok(!fs.existsSync(path.join(DATA, 'data/admin.json')));
-        });
-        plug.saveSettings({password: 'geheim', tagsRoot: true}).then(function(){
-          t('password for the System page set from the settings page; tags with root rights via the root-owned copy', function(){
-            assert.ok(fs.existsSync(path.join(DATA, 'data/admin.json')));
-            assert.strictEqual(toasts.pop()[0], 'success');
-            var env = spawned[spawned.length - 1].o.env;
-            assert.strictEqual(env.USE_SUDO, '1'); assert.strictEqual(env.TAGS_SCRIPT, '/usr/local/lib/xplorio/tags/tags.py');
-            assert.ok(/^\/usr\/bin\/python3?$/.test(env.PYTHON));
-          });
-          plug.saveSettings({password: 'anders', passwordOld: 'falsch', tagsRoot: true}).then(function(){
-            t('password: once set, changed only with the current one (the plugin page is open to everyone)', function(){
-              assert.deepStrictEqual(toasts.pop(), ['error', 'Das bisherige Passwort stimmt nicht, nichts geändert.']);
-            });
-            return plug.saveSettings({password: 'anders', passwordOld: 'geheim', tagsRoot: true});
-          }).then(function(){
-            var d = kew.defer();
-            new (require(path.join(P, 'app/tags/adminpass.js')).Auth)(path.join(DATA, 'data')).verify('anders', 0, d.resolve);
-            return d.promise;
-          }).then(function(r){
-            t('password: changed with the right current one', function(){ assert.ok(r.ok); assert.strictEqual(toasts.pop()[0], 'success'); });
-            spawned = [];
-            return plug.saveSettings({theme: {value: 'light', label: 'Immer hell'}, tidal: {value: 'on', label: 'Immer'}, history: false,
-                             allowedHosts: ' player.example.net ,x.lan', releaseDates: true, moodTags: true, colorMood: true,
-                             m4aProbe: true, m4aLossless: false, qobuz: {value: 'auto'}, hra: {value: 'off'}, spotify: {value: 'auto'}});
-          }).then(function(){ return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}}); })
-          .then(function(){ spawned = []; return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV'}); })
-          .then(function(){
-          t('saving: values into config.local.js, tag service off, no new child process', function(){
-            var c = evalConfig();
-            assert.deepStrictEqual([c.THEME, c.TIDAL, c.HRA, c.HISTORY, c.M4A_LOSSLESS, c.LANGUAGE, c.ROTEL_HOST], ['light', true, false, false, false, 'en', '10.0.0.9']);
-            assert.deepStrictEqual(c.ALLOWED_HOSTS, ['player.example.net', 'x.lan']);
-            assert.deepStrictEqual(c.ROTEL_INPUTS, {aux: {name: 'Plattenspieler', icon: 'phono'}, opt1: {name: 'TV'}});
-            assert.strictEqual(spawned.length, 0); assert.strictEqual(toasts.pop()[0], 'success');
-          });
-          plug.saveSettings({lastfmKey: ' abc123 ', lastfmSecret: '', lastfmClear: false});
-          t('Last.fm: key into keys.json (only for the service), other entries stay; no restart', function(){
-            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123'});
-            assert.strictEqual(fs.statSync(kf).mode & 511, 384);
-            assert.deepStrictEqual(toasts.pop(), ['success', 'Last.fm-Zugang gespeichert.']);
-            plug.saveKeys({LASTFM_KEY: '', LASTFM_SECRET: 'sec1'});
-            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1'});
-          });
-          plug.getUIConfig().then(function(ui2){
-          t('settings page shows "saved" for Last.fm and the password, never the values; delete removes both', function(){
-            assert.ok(el(ui2, 'passwordOld') && /Neues Passwort/.test(el(ui2, 'password').label));
-            assert.ok(/Gespeichert/.test(el(ui2, 'lastfmKey').doc) && /Gespeichert/.test(el(ui2, 'lastfmSecret').doc));
-            assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('anders') < 0);
-            assert.ok(/Passwort ist gesetzt/.test(el(ui2, 'password').doc));
-            plug.saveSettings({lastfmKey: '', lastfmSecret: '', lastfmClear: true});
-            assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
-          });
-          get('/xplorio.html', function(r){
-          t('saving restarts: web server answers again on the same port', function(){ assert.strictEqual(r.statusCode, 200); });
-          plug.onStop().then(function(){
-            http.get({port: PORT, path: '/', agent: false}, function(){ console.error('server still running'); process.exit(1); }).on('error', function(){
-              t('stop: web server closed', function(){});
-              console.log(n + ' checks passed'); process.exit(0);
-            });
-          });
-          });
-          });
-          });
-        });
-      });
-      }, 50);
+  /* the port taken by something else: message, the plugin does not count as started */
+  var blocker = require('net').createServer().listen(PORT);
+  return new Promise(function(res){ blocker.on('listening', res); }).then(function(){
+    calls = [];
+    return new Promise(function(res){ plug.onStart().then(function(){ res('started'); }, function(e){ res(e.message); }); });
+  }).then(function(r){
+    t('start: port in use, message and the start fails, the web server is not started', function(){
+      assert.ok(/in use/.test(r), r);
+      assert.ok(/Port \d+ ist belegt/.test(toasts.pop()[1]));
+      assert.ok(sudo().indexOf('restart xplorio-web.service') < 0);
+    });
+    blocker.close();
+  });
+}).then(function(){
+  failing['xplorio-web.service'] = true; calls = [];
+  return new Promise(function(res){ plug.onStart().then(function(){ res('started'); }, function(e){ res(e.message); }); });
+}).then(function(r){
+  t('start: the web server does not start, the plugin reports a failed start (red indicator)', function(){ assert.ok(/did not start/.test(r), r); });
+  delete failing['xplorio-web.service'];
+  return plug.getUIConfig();
+}).then(function(ui){
+  t('settings page: link to the plugin port, current values, choices, notes', function(){
+    assert.ok(new RegExp(':' + PORT + '/$').test(ui.sections[0].content[0].onClick.url));
+    assert.ok(/rotel-bridge/.test(ui.sections[0].description), ui.sections[0].description);
+    assert.deepStrictEqual(['port', 'tagService', 'rotelBridge', 'rotelHost', 'history'].map(function(id){ return el(ui, id).value; }),
+                           [PORT, true, true, '192.168.1.50', true]);
+    assert.deepStrictEqual(el(ui, 'tidal').value, {value: 'off', label: 'Nie'});
+    assert.deepStrictEqual(el(ui, 'language').options.map(function(o){ return o.label; }), ['Automatisch', 'Deutsch', 'English', 'Français', 'Español', 'Italiano']);
+    assert.strictEqual(el(ui, 'rotelInputs').value, 'aux=Plattenspieler/phono');
+    assert.ok(/Gespeichert/.test(el(ui, 'lastfmKey').doc) && /Noch nicht/.test(el(ui, 'lastfmSecret').doc) && el(ui, 'lastfmKey').value === '');
+    assert.ok(JSON.stringify(ui).indexOf('oldkey1') < 0);
+    assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc) && !el(ui, 'passwordOld') && !el(ui, 'tagsRoot'));
+    ui.sections.slice(1).forEach(function(s){
+      assert.deepStrictEqual(s.saveButton.data, s.content.map(function(c){ return c.id; }));
+      assert.strictEqual(s.onSave.method, 'saveSettings');
     });
   });
+  function refused(data, what) {
+    var before = JSON.stringify(plug.config.d);
+    plug.saveSettings(data);
+    var last = toasts.pop();
+    assert.ok(last[0] === 'error' && what.test(last[1]), last); assert.strictEqual(JSON.stringify(plug.config.d), before);
+  }
+  t('saving: wrong values are refused with a message, nothing changes', function(){
+    refused({port: 3000, tagService: true}, /Port/);
+    refused({lastfmKey: 'abc def'}, /ungültige Zeichen/);
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'oldkey1'});
+    refused({rotelBridge: true, rotelHost: '', rotelInputs: ''}, /Adresse des Verstärkers/);
+    refused({rotelBridge: true, rotelHost: '1.2.3.4; rm', rotelInputs: ''}, /ungültige Zeichen/);
+    refused({rotelBridge: true, rotelHost: '1.2.3.4', rotelInputs: 'aux=Platte/blink'}, /Eingänge/);
+    refused({theme: {value: 'pink', label: 'x'}}, /Auswahl/);
+    refused({allowedHosts: 'a.example.net, b c'}, /Namen/);
+    refused({password: 'abc'}, /4 Zeichen/);
+    assert.ok(!fs.existsSync(path.join(DATA, 'data/admin.json')));
+  });
+  return plug.saveSettings({password: 'geheim'});
+}).then(function(){
+  t('password for the System page set from the settings page, no restart needed', function(){
+    assert.ok(fs.existsSync(path.join(DATA, 'data/admin.json')));
+    assert.deepStrictEqual(toasts.pop(), ['success', 'Passwort gespeichert.']);
+  });
+  return plug.saveSettings({password: 'anders', passwordOld: 'falsch'});
+}).then(function(){
+  t('password: once set, changed only with the current one (the plugin page is open to everyone)', function(){
+    assert.deepStrictEqual(toasts.pop(), ['error', 'Das bisherige Passwort stimmt nicht, nichts geändert.']);
+  });
+  return plug.saveSettings({password: 'anders', passwordOld: 'geheim'});
+}).then(function(){
+  var d = kew.defer();
+  new (require(path.join(P, 'app/tags/adminpass.js')).Auth)(path.join(DATA, 'data')).verify('anders', 0, d.resolve);
+  return d.promise;
+}).then(function(r){
+  t('password: changed with the right current one', function(){ assert.ok(r.ok); assert.strictEqual(toasts.pop()[0], 'success'); });
+  return plug.saveSettings({theme: {value: 'light', label: 'Immer hell'}, tidal: {value: 'on', label: 'Immer'}, history: false,
+                            allowedHosts: ' player.example.net ,x.lan', releaseDates: true, moodTags: true, colorMood: true,
+                            m4aProbe: true, m4aLossless: false, qobuz: {value: 'auto'}, hra: {value: 'off'}, spotify: {value: 'auto'}});
+}).then(function(){
+  return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}});
+}).then(function(){
+  calls = []; delete active['rotel-bridge.service'];
+  return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV'});
+}).then(function(){
+  t('saving: values into config.local.js; restart: all stopped, then only the services switched on', function(){
+    var c = evalConfig();
+    assert.deepStrictEqual([c.THEME, c.TIDAL, c.HRA, c.HISTORY, c.M4A_LOSSLESS, c.LANGUAGE, c.ROTEL_HOST], ['light', true, false, false, false, 'en', '10.0.0.9']);
+    assert.deepStrictEqual(c.ALLOWED_HOSTS, ['player.example.net', 'x.lan']);
+    assert.deepStrictEqual(c.ROTEL_INPUTS, {aux: {name: 'Plattenspieler', icon: 'phono'}, opt1: {name: 'TV'}});
+    assert.deepStrictEqual(sudo(), ['stop xplorio-web.service', 'stop xplorio-tags.service', 'stop xplorio-rotel.service',
+                                    'restart xplorio-web.service', 'restart xplorio-rotel.service']);
+    assert.strictEqual(toasts.pop()[0], 'success');
+  });
+  plug.saveSettings({lastfmKey: ' abc123 ', lastfmSecret: '', lastfmClear: false});
+  t('Last.fm: key into keys.json (only for the service), other entries stay; no restart', function(){
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123'});
+    assert.strictEqual(fs.statSync(kf).mode & 511, 384);
+    assert.deepStrictEqual(toasts.pop(), ['success', 'Last.fm-Zugang gespeichert.']);
+    plug.saveKeys({LASTFM_KEY: '', LASTFM_SECRET: 'sec1'});
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1'});
+  });
+  return plug.getUIConfig();
+}).then(function(ui2){
+  t('settings page shows "saved" for Last.fm and the password, never the values; delete removes both', function(){
+    assert.ok(el(ui2, 'passwordOld') && /Neues Passwort/.test(el(ui2, 'password').label));
+    assert.ok(/Gespeichert/.test(el(ui2, 'lastfmKey').doc) && /Gespeichert/.test(el(ui2, 'lastfmSecret').doc));
+    assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('anders') < 0);
+    assert.ok(/Passwort ist gesetzt/.test(el(ui2, 'password').doc));
+    plug.saveSettings({lastfmKey: '', lastfmSecret: '', lastfmClear: true});
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
+  });
+  console.log(n + ' checks passed'); process.exit(0);
 }).fail(function(e){ console.error(e); process.exit(1); });

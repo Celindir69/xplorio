@@ -1,7 +1,7 @@
 /* Services for the "System" page: state of the player services (systemctl show) and restart, for the kiosk also
    start and stop. Only the services and actions in UNITS are allowed. The tag service runs as user
-   volumio and needs a sudo rule for this (instructions: docs/einrichten.md, "Dienste"); without it the
-   display stays, the buttons report "nosudo". Also restart and power-off of the whole player (power).
+   volumio and needs sudo for systemctl (Volumio allows it; for an installation with xplorio-deploy see
+   docs/einrichten.md, "Dienste"); without it the display stays, the buttons report "nosudo". Also restart and power-off of the whole player (power).
    Node 8, ES5 only. run: replacement for execFile (tests) */
 var fs = require('fs'), cp = require('child_process');
 
@@ -10,11 +10,13 @@ var UNITS = [
   {id: 'mpd',           actions: ['restart']},
   {id: 'tag-service',   actions: ['restart']},
   {id: 'rotel-bridge',  actions: ['restart']},
+  {id: 'xplorio-web',   actions: ['restart']},   /* the Volumio plugin's own services */
+  {id: 'xplorio-tags',  actions: ['restart']},
+  {id: 'xplorio-rotel', actions: ['restart']},
   {id: 'volumio-kiosk', actions: ['start', 'stop', 'restart']}
 ];
 var SYSTEMCTL = '/bin/systemctl', TIMEOUT = 8000, SUDO_CACHE_MS = 300000;
 var POWER = {reboot: ['/sbin/reboot'], poweroff: ['/sbin/poweroff']};   /* the same commands as Volumio itself */
-var PLUGIN_UNITS = ['tag-service', 'rotel-bridge'], PLUGIN_TIMEOUT = 2000;   /* started by the Volumio plugin */
 
 function unitOf(id) {
   for (var i = 0; i < UNITS.length; i++) if (UNITS[i].id === id) return UNITS[i];
@@ -60,32 +62,9 @@ function defaultRun(file, args, cb) {
   cp.execFile(file, args, {timeout: TIMEOUT}, function(err, stdout){ cb(err, String(stdout || '')); });
 }
 
-/* connection to the Volumio plugin (IPC of the child process): status(cb(units|null)), restart(unit, cb(ok)).
-   units: {'tag-service': {managed, running, since}, …}; no answer within 2 s counts as null / false */
-function pluginLink(proc) {
-  var seq = 0, wait = {};
-  proc.on('message', function(m){
-    var w = m && wait[m.id];
-    if (!w) return;
-    delete wait[m.id]; clearTimeout(w.timer); w.cb(m);
-  });
-  proc.on('disconnect', function(){ process.exit(0); });   /* plugin (Volumio) gone: end as well */
-  function ask(msg, cb) {
-    var id = ++seq;
-    msg.id = id;
-    wait[id] = {cb: cb, timer: setTimeout(function(){ delete wait[id]; cb(null); }, PLUGIN_TIMEOUT)};
-    try { proc.send(msg); } catch (e) { clearTimeout(wait[id].timer); delete wait[id]; cb(null); }
-  }
-  return {
-    status: function(cb){ ask({type: 'status'}, function(m){ cb(m && m.units || null); }); },
-    restart: function(unit, cb){ ask({type: 'restart', unit: unit}, function(m){ cb(!!(m && m.ok)); }); }
-  };
-}
-
 function Services(opts) {
   opts = opts || {};
   this.run = opts.run || defaultRun;
-  this.plugin = opts.plugin || null;
   this.root = opts.root || '';
   this.sudoOk = null; this.sudoAt = 0;
   this.stopped = {};                        /* services stopped via the page (until the next start) */
@@ -113,23 +92,7 @@ Services.prototype.status = function(cb) {
     /* When stopped, the kiosk often exits with an error code (browser and X server are terminated), and systemd then
        reports "failed". After a stop via this page that is not an error, just stopped. */
     list.forEach(function(u){ if (u.active === 'failed' && self.stopped[u.id]) { u.active = 'inactive'; u.sub = 'dead'; } });
-    self.withPlugin(list, function(list){
-      self.sudoCheck(function(ok){ cb({ok: true, units: list, sudo: ok}); });
-    });
-  });
-};
-
-/* services the plugin starts itself replace the systemd entry (which then is not installed or not running) */
-Services.prototype.withPlugin = function(list, cb) {
-  if (!this.plugin) return cb(list);
-  this.plugin.status(function(pu){
-    if (!pu) return cb(list);
-    cb(UNITS.map(function(u){
-      var p = PLUGIN_UNITS.indexOf(u.id) >= 0 && pu[u.id];
-      if (p && p.managed) return {id: u.id, active: p.running ? 'active' : 'activating', sub: p.running ? 'running' : 'auto-restart',
-                                  since: p.since || null, actions: u.actions, plugin: true};
-      return list.filter(function(x){ return x.id === u.id; })[0];
-    }).filter(Boolean));
+    self.sudoCheck(function(ok){ cb({ok: true, units: list, sudo: ok}); });
   });
 };
 
@@ -137,21 +100,6 @@ Services.prototype.withPlugin = function(list, cb) {
 Services.prototype.act = function(id, action, self_, cb) {
   var me = this;
   if (!allowed(id, action)) return cb(400, {ok: false, error: 'not allowed'});
-  if (this.plugin && PLUGIN_UNITS.indexOf(id) >= 0) {
-    return this.plugin.status(function(pu){
-      if (!pu || !pu[id] || !pu[id].managed) return me.actSystemd(id, action, self_, cb);
-      if (id === self_) {                   /* respond first: the restart ends this process */
-        cb(200, {ok: true, self: true});
-        return setTimeout(function(){ me.plugin.restart(id, function(){}); }, 300);
-      }
-      me.plugin.restart(id, function(ok){ cb(200, ok ? {ok: true} : {ok: false, error: 'plugin'}); });
-    });
-  }
-  this.actSystemd(id, action, self_, cb);
-};
-
-Services.prototype.actSystemd = function(id, action, self_, cb) {
-  var me = this;
   function go(done) {
     me.run('sudo', ['-n'].concat(command(id, action)), function(err){
       if (err) { me.sudoOk = null; console.error('service ' + id + ' ' + action + ' failed: ' + (err.message || err)); }
@@ -187,4 +135,4 @@ Services.prototype.power = function(action, cb) {
   });
 };
 
-module.exports = {Services: Services, pluginLink: pluginLink, PLUGIN_UNITS: PLUGIN_UNITS, UNITS: UNITS, allowed: allowed, command: command, POWER: POWER, parseShow: parseShow, merge: merge};
+module.exports = {Services: Services, UNITS: UNITS, allowed: allowed, command: command, POWER: POWER, parseShow: parseShow, merge: merge};
