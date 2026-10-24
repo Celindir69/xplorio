@@ -13,6 +13,7 @@ window.APP_CONFIG = {
   M4A_PROBE: true,    /* m4a: read the codec (ALAC/AAC) from the file; false = only M4A_LOSSLESS */
   M4A_LOSSLESS: true, /* classify m4a as lossless (ALAC); false = no badge for m4a (AAC would otherwise be misclassified) */
   TAGS_PORT: 8766,    /* port of the tag service (tag editor) on the player */
+  SERVER_PORT: 4040,  /* port of Xplorio's own web server (server/xplorio-server.js) */
   ALLOWED_HOSTS: [],  /* tag service and Rotel bridge only answer on IP, names without a dot and .local/.lan/.home/.internal/
                          .home.arpa/.fritz.box. Add further names of the player here, e.g. ['player.example.net'] */
   ROTEL: false,       /* Rotel amplifier via rotel/rotel-bridge.js: on/off at the top left, volume on the amplifier.

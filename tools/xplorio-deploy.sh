@@ -9,6 +9,7 @@
 #   sudo xplorio-deploy --password         set or change the password for the services on the "System" page
 #   sudo xplorio-deploy --tag-service      set up the tag service (systemd unit, data folder, start, health check)
 #   sudo xplorio-deploy --rotel [IP]       set up the Rotel bridge (amplifier address in config.local.js, unit, start)
+#   sudo xplorio-deploy --server           set up Xplorio's own web server (port 4040, interface from /data/xplorio/www)
 #   sudo xplorio-deploy --check-update     does Xplorio block Volumio's system update? (Volumio's integrity check)
 #   sudo xplorio-deploy --remove           before a Volumio update: back up the interface and remove it from /volumio
 #   sudo xplorio-deploy --restore          after the update: put the interface back exactly as it was (with config.local.js)
@@ -20,6 +21,7 @@
 # Volumio 4: www4). The script creates no new folders; if there is none, it stops.
 # Everything else lives in /data/xplorio (survives Volumio updates; backing up this folder is enough):
 #   tags/  tag service   rotel/  Rotel bridge   data/  tag service data   backup/  backups made by this script
+#   www/   a copy of the interface for the own web server   server/  the web server (--server; nothing below /volumio)
 # Earlier installations had everything under /data/web-app (before that the services under /data/INTERNAL): the script
 # moves /data/web-app with data and backups to /data/xplorio, leaves a symlink behind and switches the services'
 # systemd units to the new paths (the tag service moves its data from /data/INTERNAL by itself).
@@ -53,10 +55,12 @@ target() {
   case "$1" in
     tags/*)                  echo "$APP/$1" ;;
     rotel/rotel-bridge.js)   echo "$APP/$1" ;;
+    server/*)                echo "$APP/$1" ;;
     tools/xplorio-deploy.sh) echo "$ROOT/usr/local/bin/$PROG"; for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;   # also for the wrappers
     tools/web-app-deploy.sh) [ -e "$ROOT/usr/local/bin/web-app-deploy" ] && echo "$ROOT/usr/local/bin/web-app-deploy"; true ;;   # only earlier names that exist
     tools/mx-deploy.sh)      for p in mx-deploy volumio4-deploy; do [ -e "$ROOT/usr/local/bin/$p" ] && echo "$ROOT/usr/local/bin/$p"; done; true ;;
-    xplorio.html|app.html|kioskTV.html|web/*|tools/*)  for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
+    xplorio.html|app.html|kioskTV.html|web/*)  echo "$APP/www/$1"; for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
+    tools/*)                 for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
   esac
 }
 TAB=$'\t'                                           # list entries: repo path TAB target
@@ -85,11 +89,15 @@ prepare_dirs() {
 }
 
 restart_services() {               # $1: list of changed repo paths (services as tags/… or rotel/…)
-  [ -n "$ROOT" ] && { echo "$1" | grep -q '^tags/' && echo "(test) restart tag-service"; echo "$1" | grep -q '^rotel/' && echo "(test) restart rotel-bridge"; return 0; }
+  [ -n "$ROOT" ] && { echo "$1" | grep -q '^tags/' && echo "(test) restart tag-service"; echo "$1" | grep -q '^rotel/' && echo "(test) restart rotel-bridge"
+                      echo "$1" | grep -q '^server/' && [ -e "$UNIT_DIR/xplorio-server.service" ] && echo "(test) restart xplorio-server"; return 0; }
   systemctl daemon-reload 2>/dev/null || true
   if echo "$1" | grep -q '^tags/'; then
     chown -R volumio:volumio "$APP/tags" 2>/dev/null || true
     systemctl restart tag-service 2>/dev/null && echo "tag-service restarted" || echo "Note: tag-service not restarted (not set up? sudo $PROG --tag-service)"
+  fi
+  if echo "$1" | grep -q '^server/' && [ -e "$UNIT_DIR/xplorio-server.service" ]; then
+    systemctl restart xplorio-server 2>/dev/null && echo "xplorio-server restarted" || echo "Note: xplorio-server not restarted (journalctl -u xplorio-server -n 30 --no-pager)"
   fi
   if echo "$1" | grep -q '^rotel/'; then
     systemctl restart rotel-bridge 2>/dev/null && echo "rotel-bridge restarted" || echo "Note: rotel-bridge not restarted (not set up? sudo $PROG --rotel)"
@@ -195,6 +203,7 @@ while [ $# -gt 0 ]; do
     -n) DRY=1 ;;
     -y) YES=1 ;;
     --tag-service|--tagdienst) SETUP="$SETUP tag" ;;
+    --server) SETUP="$SETUP server" ;;
     --rotel|--rotel-bridge)
       SETUP="$SETUP rotel"
       # optional address right after it: an IP or a host name with a dot (branch names have a slash or no dot)
@@ -210,7 +219,7 @@ valid_host() { echo "$1" | grep -Eq '^[A-Za-z0-9._-]+$'; }
 
 # ---------- set up services (--tag-service, --rotel) ----------
 if [ -n "$SETUP" ]; then
-  [ $DRY = 0 ] || die "-n does not work with --tag-service or --rotel"
+  [ $DRY = 0 ] || die "-n does not work with --tag-service, --rotel or --server"
   [ -z "$ROTEL_IP" ] || valid_host "$ROTEL_IP" || die "invalid amplifier address: $ROTEL_IP"
   has() { case "$SETUP" in *"$1"*) return 0 ;; esac; return 1; }
 
@@ -218,6 +227,7 @@ if [ -n "$SETUP" ]; then
   need=0
   has tag   && [ ! -f "$APP/tags/tag-service.js" ]   && need=1
   has rotel && [ ! -f "$APP/rotel/rotel-bridge.js" ] && need=1
+  has server && { [ ! -f "$APP/server/xplorio-server.js" ] || [ ! -f "$APP/www/xplorio.html" ]; } && need=1
   if [ $need = 1 ] || [ $MOVE = 1 ]; then
     echo "Files in /data/xplorio are missing, installing $BRANCH first."
     bash "$0" -y "$BRANCH" || die "install failed"
@@ -259,6 +269,7 @@ if [ -n "$SETUP" ]; then
 
   # Node's default heap (about 256 MB on 32-bit ARM) is too small for large collections with audio analysis
   has tag && unit tag-service tags tag-service.js "Xplorio tag service" "" "--max-old-space-size=384"
+  has server && unit xplorio-server server xplorio-server.js "Xplorio web server"
 
   if has rotel; then
     cfg_of() { echo "$ROOT/volumio/http/$1/web/config.local.js"; }
@@ -355,6 +366,14 @@ if [ -n "$SETUP" ]; then
         *) echo "tag-service does not answer on port 8766: journalctl -u tag-service -n 30 --no-pager" ;; esac
     fi
   fi
+  if has server; then
+    go=1; if changed xplorio-server; then start xplorio-server || go=0; fi
+    if [ $go = 1 ] && [ -z "$ROOT" ]; then
+      v=$(ask localhost:4040/web/version.json '"branch"')
+      case "$v" in *'"branch"'*) echo "xplorio-server is running: http://$(hostname -I 2>/dev/null | cut -d' ' -f1):4040/" ;;
+        *) echo "xplorio-server does not answer on port 4040: journalctl -u xplorio-server -n 30 --no-pager" ;; esac
+    fi
+  fi
   if has rotel; then
     go=1; if changed rotel-bridge; then start rotel-bridge || go=0; fi
     if [ $go = 1 ] && [ -z "$ROOT" ]; then
@@ -407,11 +426,12 @@ while IFS= read -r f; do
     fi
   done <<< "$(target "$f")"
 done < <(find . -type f ! -name '*.pyc' | sort)
-# display: repo path, with several interface folders followed by the folder
+# display: repo path, interface files followed by the folder (www3 … or /data/xplorio/www for the own web server)
 show() { while IFS="$TAB" read -r f t; do
   [ -n "$f" ] || continue
   r=${t#$ROOT/volumio/http/}
-  if [ "$r" != "$t" ] && [ "${WWWS#* }" != "$WWWS" ]; then echo "$f (${r%%/*})"; else echo "$f"; fi
+  if [ "$r" != "$t" ]; then echo "$f (${r%%/*})"
+  elif [ "${t#$APP/www/}" != "$t" ]; then echo "$f (/data/xplorio/www)"; else echo "$f"; fi
 done; }
 
 UNITS=$(old_units)

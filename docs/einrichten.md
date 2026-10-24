@@ -72,10 +72,11 @@ Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Dana
 | `sudo xplorio-deploy --password` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
 | `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
 | `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung; mit `--force` auch eine andere Adresse (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
+| `sudo xplorio-deploy --server` | eigenen Webserver für Xplorio einrichten (Port 4040, nichts unter `/volumio`; siehe [Eigener Webserver](#eigener-webserver-test)) |
 | `sudo xplorio-deploy --check-update` | prüfen, ob Xplorio Volumios System-Update blockiert (siehe [Volumio-Update](#volumio-update)) |
 | `sudo xplorio-deploy --remove` / `--restore` | Oberfläche vor einem Volumio-Update sichern und entfernen bzw. danach genau so wiederherstellen |
 
-Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
+Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/`, `server/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`, die Oberfläche ohne `tools/` außerdem nach `/data/xplorio/www/` (für den [eigenen Webserver](#eigener-webserver-test)); das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
 `www3`, Volumio 4 `www4`); deshalb bekommen alle vorhandenen die Oberfläche. Neue Ordner legt das Skript nicht an, ohne
 einen bricht es ab; `DEPLOY_WWW=<ordner>` wählt einen bestimmten. `web/config.local.js` liegt je Ordner: Wer die
@@ -119,6 +120,20 @@ sudo xplorio-deploy                  # optional: neuesten Stand einspielen
 die Prüfung ganz (`sudo touch /data/ignoresystemcheck`, rückgängig mit `sudo rm /data/ignoresystemcheck`). Das sollte gut
 überlegt sein: Die Prüfung schützt davor, ein Update über ein verändertes System zu spielen, und sie ist dann auch für alle
 anderen Änderungen aus. Nur sinnvoll, wenn `--check-update` meldet, dass allein Xplorio im Weg ist.
+
+#### Eigener Webserver (Test)
+Auf Dauer soll Xplorio gar nichts mehr unter `/volumio` ablegen, dann blockiert es das Update nicht mehr (danach folgt ein
+Volumio-Plugin). Dafür gibt es einen eigenen kleinen Webserver: Er liefert die Oberfläche aus `/data/xplorio/www/` aus und
+reicht alles andere (`/api/v1`, `/socket.io`, Cover, Musikdateien) an Volumio auf Port 3000 durch. Zum Ausprobieren läuft er
+neben der bisherigen Installation:
+```bash
+sudo xplorio-deploy --server         # Dienst xplorio-server einrichten und starten
+```
+Danach ist Xplorio unter `http://<player>:4040/` erreichbar. Solange es unter `/data/xplorio/www/web/` keine eigene
+`config.local.js` gibt, liest der Webserver die aus `/volumio/http/www*/web/` (nur lesend). Die Volumio-Seiten im Menü
+öffnen dann Volumios eigene Adresse. Lesezeichen, Symbole auf dem Home-Bildschirm und im Browser gespeicherte
+Einstellungen (z. B. Stage-Ansicht, Begrüßung aus) gelten pro Adresse und müssen für Port 4040 einmal neu angelegt werden.
+Der Port lässt sich in der Dienstdatei mit `Environment=HTTP_PORT=…` ändern, dann auch `SERVER_PORT` in `config.local.js`.
 
 **Umstieg von web-app-deploy (bis Oktober 2026 hießen Repo und Befehl `volumio-web-app` bzw. `web-app-deploy`):**
 `xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „move: /data/web-app to

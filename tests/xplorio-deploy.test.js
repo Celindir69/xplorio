@@ -33,6 +33,12 @@ t('first run installs everything', function(){
   assert.ok(!fs.existsSync(path.join(R, 'volumio/http/www3/tests')));
   assert.strictEqual(fs.statSync(path.join(R, 'data/xplorio/data')).mode & 511, 448);   /* 0700 */
   assert.ok(!fs.existsSync(path.join(R, 'data/INTERNAL')));
+  /* copy for the own web server, outside /volumio */
+  assert.ok(fs.existsSync(path.join(R, 'data/xplorio/www/xplorio.html')) && fs.existsSync(path.join(R, 'data/xplorio/www/web/js/core.js')));
+  assert.ok(fs.existsSync(path.join(R, 'data/xplorio/www/web/build.js')) && !fs.existsSync(path.join(R, 'data/xplorio/www/tools')));
+  assert.ok(fs.existsSync(path.join(R, 'data/xplorio/server/xplorio-server.js')));
+  assert.ok(!fs.existsSync(path.join(R, 'data/xplorio/www/web/config.local.js')));
+  assert.ok(!/restart xplorio-server/.test(out));                                    /* not set up: nothing to restart */
 });
 t('--passwort creates the hash for the services, without plain text', function(){
   var o = sh('bash tools/xplorio-deploy.sh --passwort', 'geheim1\ngeheim1\n'), f = path.join(R, 'data/xplorio/data/admin.json');
@@ -82,7 +88,7 @@ t('answering j (like y) installs and restarts the tag service', function(){
 t('interface files shown with their folder', function(){
   fs.appendFileSync(path.join(app, 'app.html'), '\n<!-- X -->\n');
   var o = sh('MX_SOURCE=' + pack('v3.tar.gz') + ' bash tools/xplorio-deploy.sh -n');
-  assert.ok(/changed: app.html \(www3\)/.test(o) && /changed: app.html \(www\)/.test(o), o);
+  assert.ok(/changed: app.html \(www3\)/.test(o) && /changed: app.html \(www\)/.test(o) && /changed: app.html \(\/data\/xplorio\/www\)/.test(o), o);
   fs.writeFileSync(path.join(app, 'app.html'), fs.readFileSync(path.join(app, 'app.html'), 'utf8').replace('\n<!-- X -->\n', ''));
 });
 t('--rollback restores the previous state', function(){
@@ -223,6 +229,16 @@ t('--tag-service --force rewrites the unit file, --rollback brings back the old 
   var o = shs(['--rollback']).stdout;
   assert.ok(/restart tag-service/.test(o), o);
   assert.strictEqual(rd('etc/systemd/system/tag-service.service'), 'eigen\n');
+});
+t('--server: unit for the own web server, without config folder; a second time stays as it is', function(){
+  var r = shs(['--server']);
+  assert.strictEqual(r.status, 0, r.stderr + r.stdout);
+  var u = rd('etc/systemd/system/xplorio-server.service');
+  assert.ok(/ExecStart=\/usr\/bin\/env node \/data\/xplorio\/server\/xplorio-server.js/.test(u) && /WorkingDirectory=\/data\/xplorio\/server/.test(u), u);
+  assert.ok(/User=volumio/.test(u) && !/max-old-space-size/.test(u), u);
+  assert.ok(/\(test\) enable and restart xplorio-server/.test(r.stdout), r.stdout);
+  var r2 = shs(['--server']);
+  assert.ok(/xplorio-server is already set up/.test(r2.stdout), r2.stdout);
 });
 t('--rotel IP: writes the amplifier into config.local.js (appends to an existing one, else creates it) and sets up the bridge', function(){
   var r = shs(['--rotel', '192.168.1.50']);
