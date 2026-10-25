@@ -12,10 +12,12 @@ DEST=$OUT/xplorio
 rm -rf "$DEST"
 mkdir -p "$DEST/app/rotel"
 cp -R "$SRC/plugin/." "$DEST/"
-cp "$SRC/xplorio.html" "$SRC/app.html" "$DEST/app/"
+cp "$SRC/xplorio.html" "$DEST/app/"                       # app.html only redirects old bookmarks on Volumio's port
 cp -R "$SRC/web" "$SRC/server" "$SRC/tags" "$DEST/app/"
 cp "$SRC/rotel/rotel-bridge.js" "$DEST/app/rotel/"
 rm -f "$DEST/app/web/config.local.js"                     # own settings: /data/xplorio/config.local.js (link at start)
+rm -f "$DEST/app/web/config.local.js.example"             # the plugin's settings page replaces it
+rm -rf "$DEST/app/tags/vendor/mutagen/_tools"           # mutagen's command line tools, not used
 find "$DEST/app" \( -name '*.pyc' -o -name '__pycache__' \) -prune -exec rm -rf {} +
 # version for the menu and id for the browser cache, as xplorio-deploy writes them (unless already there)
 W=$DEST/app/web

@@ -45,6 +45,8 @@ t('make-plugin: plugin files at the top, interface and services in app/, no own 
    'app/web/build.js', 'app/web/version.json', 'app/server/xplorio-server.js', 'app/tags/tag-service.js', 'app/rotel/rotel-bridge.js']
     .forEach(function(f){ assert.ok(fs.existsSync(path.join(P, f)), f); });
   assert.ok(!fs.existsSync(path.join(P, 'app/web/config.local.js')) && !fs.existsSync(path.join(P, 'app/tests')));
+  ['app/app.html', 'app/web/config.local.js.example', 'app/tags/vendor/mutagen/_tools'].forEach(function(f){ assert.ok(!fs.existsSync(path.join(P, f)), f); });
+  assert.ok(fs.existsSync(path.join(P, 'app/tags/vendor/mutagen/COPYING')));
   var pk = JSON.parse(fs.readFileSync(path.join(P, 'package.json'), 'utf8'));
   assert.strictEqual(pk.name, 'xplorio'); assert.strictEqual(pk.volumio_info.plugin_type, 'user_interface');
 });
