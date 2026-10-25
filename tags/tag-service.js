@@ -1261,7 +1261,7 @@ function doSysinfo(query, res) {
   sysInfo.report(query.full === '1', function(r){ send(res, 200, r); });
 }
 
-/* GET /services: state of the player services; POST /service {unit, action}: restart (kiosk also start/stop) */
+/* GET /services: state of the player services; POST /service {unit, action}: restart */
 /* actions only with password (adminpass.js): POST /servicelogin {password} -> {token}, the device sends the token along */
 var services = require('./services.js'), svc = new services.Services();
 var SELF_UNIT = process.env.XPLORIO_UNIT || 'tag-service';     /* xplorio-tags as a Volumio plugin */

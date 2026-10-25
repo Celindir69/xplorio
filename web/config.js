@@ -3,7 +3,7 @@
 window.APP_CONFIG = {
   LANGUAGE: '',       /* UI language, e.g. 'de' or 'en'; empty = as set in Volumio (else device language, else English) */
   LANGUAGES: ['de', 'en', 'fr', 'es', 'it'],  /* available language files in web/lang/; add a new language (e.g. nl.js) here */
-  THEME: 'auto',      /* 'auto' = light or dark like the device; 'light' = always light; 'dark' = always dark (kioskTV.html stays dark) */
+  THEME: 'auto',      /* 'auto' = light or dark like the device; 'light' = always light; 'dark' = always dark */
   LASTFM_KEY: '',     /* deprecated: Last.fm access is in /data/xplorio/data/keys.json (tag service); here only a fallback without tag service */
   LASTFM_SECRET: '',  /* deprecated: copied once into keys.json by the tag service, then delete it here */
   HISTORY: true,      /* history: tag service records played tracks; false = off (restart the tag service) */

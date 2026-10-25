@@ -12,7 +12,7 @@ DEST=$OUT/xplorio
 rm -rf "$DEST"
 mkdir -p "$DEST/app/rotel"
 cp -R "$SRC/plugin/." "$DEST/"
-cp "$SRC/xplorio.html" "$SRC/app.html" "$SRC/kioskTV.html" "$DEST/app/"
+cp "$SRC/xplorio.html" "$SRC/app.html" "$DEST/app/"
 cp -R "$SRC/web" "$SRC/server" "$SRC/tags" "$DEST/app/"
 cp "$SRC/rotel/rotel-bridge.js" "$DEST/app/rotel/"
 rm -f "$DEST/app/web/config.local.js"                     # own settings: /data/xplorio/config.local.js (link at start)

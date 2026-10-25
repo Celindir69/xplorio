@@ -80,9 +80,6 @@ Von Hand statt mit `xplorio-deploy`: `xplorio.html`, `app.html` und `web/` nach 
 (`app.html` ist der frühere Name und leitet nur weiter; alte Lesezeichen und Home-Bildschirm-Verknüpfungen gehen also weiter).
 Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser seine
 Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN ins Heimnetz.
-`kioskTV.html` neben `xplorio.html` (der Kiosk lädt `http://localhost:3000/kioskTV.html`, also aus dem Ordner, den Volumio ausliefert).
-`kioskTV.html` zeigt Cover, Titel, Lyrics und wechselnde Infos zu Album und Künstler. Ist gestoppt und ein Album in der
-Warteschlange, stehen neben dem Cover nur Album und Künstler, und statt der Lyrics erscheint die Titelliste des Albums.
 Nach einem Update mit `xplorio-deploy` lädt der Browser die neuen Dateien von selbst (das Skript schreibt dazu `web/build.js`); bei Kopieren von Hand einmal hart neu laden. Eine vorhandene `web/config.local.js` bleibt erhalten.
 Eigene Einstellungen (Rotel, Dienste ein/aus, Sprache) kommen in `web/config.local.js`, Vorlage
 `web/config.local.js.example`. Der Last.fm-Zugang gehört nicht dorthin, sondern nach `/data/xplorio/data/keys.json`
@@ -91,7 +88,7 @@ Eigene Einstellungen (Rotel, Dienste ein/aus, Sprache) kommen in `web/config.loc
 ### Hell und dunkel
 Die Oberfläche folgt der Einstellung des Geräts (hell oder dunkel) und wechselt mit, wenn das Gerät umschaltet.
 Fest einstellen: `THEME: 'light'` oder `'dark'` in `web/config.local.js`; zum Ausprobieren `?theme=light` in der Adresse.
-Das gilt auch für die Bühnenansicht auf großen Bildschirmen; nur `kioskTV.html` bleibt immer dunkel.
+Das gilt auch für die Bühnenansicht auf großen Bildschirmen.
 
 ### Sprache
 Die Oberfläche gibt es auf Deutsch, Englisch, Französisch, Spanisch und Italienisch. Sie übernimmt die Sprache, die in Volumio unter Einstellungen eingestellt
@@ -132,7 +129,7 @@ Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Dana
 | `sudo xplorio-deploy --check-update` | prüfen, ob Xplorio Volumios System-Update blockiert (siehe [Volumio-Update](#volumio-update)) |
 | `sudo xplorio-deploy --remove` / `--restore` | Oberfläche vor einem Volumio-Update sichern und entfernen bzw. danach genau so wiederherstellen |
 
-Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/`, `server/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`, die Oberfläche ohne `tools/` außerdem nach `/data/xplorio/www/` (für den [eigenen Webserver](#eigener-webserver-test)); das Skript aktualisiert sich selbst.
+Ziele: `xplorio.html`, `app.html` (Weiterleitung), `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/`, `server/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`, die Oberfläche ohne `tools/` außerdem nach `/data/xplorio/www/` (für den [eigenen Webserver](#eigener-webserver-test)); das Skript aktualisiert sich selbst.
 Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
 `www3`, Volumio 4 `www4`); deshalb bekommen alle vorhandenen die Oberfläche. Neue Ordner legt das Skript nicht an, ohne
 einen bricht es ab; `DEPLOY_WWW=<ordner>` wählt einen bestimmten. `web/config.local.js` liegt je Ordner: Wer die
@@ -340,7 +337,7 @@ Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Edi
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der
-App und auf dem Kiosk-TV; ohne Titel oder ohne Treffer bleibt das Senderlogo. Die Radio-Liste zeigt die Senderlogos
+App; ohne Titel oder ohne Treffer bleibt das Senderlogo. Die Radio-Liste zeigt die Senderlogos
 (Adresse aus Volumio, sonst über den Sendernamen von radio-browser.info). Beides speichert der Tag-Dienst unter
 `/data/xplorio/data/radio-covers/` und `/data/xplorio/data/stations/`.
 
@@ -375,9 +372,8 @@ jedes Laufwerks (interne Karte, USB und jede Verbindung unter `/mnt/NAS/` einzel
 10 Minuten in `/data/xplorio/data/sysinfo.json`.
 
 #### Dienste
-Darunter die Karte „Dienste“: Volumio, MPD, Tag-Dienst, Rotel-Steuerung und Kiosk mit Zustand (läuft seit …, gestoppt,
-Fehler) und einem Knopf „Neustart“, beim Kiosk zusätzlich „Start“ und „Stopp“ (etwa, damit er nur läuft, wenn der Fernseher
-angeschlossen ist). Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht eingerichtet sind, fehlen in
+Darunter die Karte „Dienste“: Volumio, MPD, Tag-Dienst, Rotel-Steuerung mit Zustand (läuft seit …, gestoppt,
+Fehler) und einem Knopf „Neustart“. Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht eingerichtet sind, fehlen in
 der Liste. Der Tag-Dienst läuft als Benutzer `volumio` und darf genau diese Befehle nur mit einer sudo-Regel ausführen;
 ohne sie zeigt die Karte den Zustand und einen Hinweis. Einmalig einrichten (`visudo` prüft die Regel vor dem Speichern):
 
@@ -388,7 +384,7 @@ sudo visudo -f /etc/sudoers.d/xplorio-dienste
 und diese eine Zeile eintragen:
 
 ```
-volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk, /sbin/reboot, /sbin/poweroff
+volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /sbin/reboot, /sbin/poweroff
 ```
 
 Die Regel erlaubt nur diese Befehle, nichts sonst.
@@ -862,11 +858,5 @@ Die Oberfläche läuft auch unter Volumio 4 (auf einer Testinstanz erprobt). Unt
 - **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Last.fm und Wikipedia
   (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit `LASTFM_KEY` in `/data/xplorio/data/keys.json` gibt es
   auch Albumtexte.
-- **Bildschirm am Player (Kiosk):** Läuft auf dem angeschlossenen Display Volumios eigene Oberfläche, kann dort auch
-  Xplorio laufen (erprobt auf einem MacBook mit Volumio 4). Der Kiosk-Browser bekommt seine Dateien aus `/volumio/http/www/`;
-  `xplorio-deploy` spielt dort mit ein (prüfen: `ls /volumio/http/www*/xplorio.html`). In der letzten Zeile von
-  `/opt/volumiokiosk.sh` `http://localhost:3000` durch `http://localhost:3000/xplorio.html` ersetzen (oder
-  `…/kioskTV.html` für Cover, Titel und Lyrics ohne Bedienung), dann `sudo systemctl restart volumio-kiosk`. Ein
-  Volumio-Update kann das Script zurücksetzen; dann die Zeile erneut ändern.
-- **Nicht erprobt unter Volumio 4:** `kioskTV.html` (Kiosk-Ordner), Rotel-Bridge und TIDAL-Wächter (der Wächter liegt dort
+- **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter (der Wächter liegt dort
   unter `/volumio/http/www4/tools/`; den Pfad im Cron-Eintrag entsprechend anpassen).

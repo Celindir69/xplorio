@@ -13,7 +13,7 @@
 		"LANGUAGE_DOC": "Language of the interface. Automatic = as set in Volumio.",
 		"LANG_AUTO": "Automatic",
 		"THEME": "Appearance",
-		"THEME_DOC": "Light, dark or like the device (kioskTV stays dark).",
+		"THEME_DOC": "Light, dark or like the device.",
 		"THEME_AUTO": "Like the device",
 		"THEME_LIGHT": "Always light",
 		"THEME_DARK": "Always dark",

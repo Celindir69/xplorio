@@ -1,7 +1,7 @@
   *, *:before, *:after { box-sizing:border-box; }
 
 /* Colors: dark is the default; html.light (web/js/theme.js) sets the light values. --fg-rgb is used with
-   its own opacity (rgba(var(--fg-rgb), .2)). Also applies to the stage view; kioskTV.html has its own, always dark colors. */
+   its own opacity (rgba(var(--fg-rgb), .2)). Also applies to the stage view. */
 :root {
   --fg:#fff; --fg-rgb:255,255,255;          /* text, icons, lines */
   --ink:#111;                               /* text/icons on --fg or accent surfaces */

@@ -43,11 +43,9 @@ singles), an extra "Track" tab appears.
 
 On large screens, cover art, information, and controls are displayed on the left, with lyrics on the right; the information
 automatically cycles through the available pages. Switch using the control at the top right or with `?layout=stage`.
-`kioskTV.html` is a display-only interface for a TV connected to the audio system, without controls.
 
 <p>
   <img src="docs/bilder/display-desktop.jpg" width="49%" alt="Display-Layout on Desktop">
-  <img src="docs/bilder/kiosk.jpg" width="49%" alt="kioskTV.html">
 </p>
 
 ### Search & Discover
@@ -132,7 +130,6 @@ progress of the mood tags.
 | File / Folder | Contents | Location on the Player |
 |---|---|---|
 | `xplorio.html` + `web/` | Interface for phone, iPad, and desktop (playback, queue, local and streaming-service search, lyrics, information, Tag Editor, Mood Mix, history, display layout for large screens) | `/volumio/http/www3/` (Volumio 4: `www4/`) |
-| `kioskTV.html` | Page for a kiosk display (cover art, track information, lyrics) | `/volumio/http/www*/` |
 | `tags/` | Tag Service (port 8766): Tag Editor, Check library, history, mood tags, cover art; accepts commands only from the interface; Python 2.7 or 3 with bundled mutagen library (GPLv2, see `tags/vendor/mutagen/COPYING`) | `/data/xplorio/tags/` (data: `/data/xplorio/data/`) |
 | `rotel/rotel-bridge.js` | optional: HTTP service (port 8765) for a network-connected Rotel amplifier (volume, power, input), interface only | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | restarts Volumio or reconnects TIDAL if the TIDAL plugin becomes unresponsive (tested only on Volumio 2) | `/volumio/http/www3/tools/` |

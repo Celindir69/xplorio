@@ -272,7 +272,7 @@ function sysRender(st) {
   if (!(d.disks || []).length) disks.appendChild(histEl('div', 'syNote', T('sys.diskNone')));
   grid.appendChild(disks);
 
-  /* services: state, restart; kiosk also start and stop (missing with an older tag service) */
+  /* services: state and restart (missing with an older tag service) */
   if (sysSvc) {
     var svc = sysCard(T('sys.svc'), 'syWide');
     sysEls.svc = histEl('div', 'sySvcList');

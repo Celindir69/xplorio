@@ -13,7 +13,7 @@
 		"LANGUAGE_DOC": "Sprache der Oberfläche. Automatisch = wie in Volumio eingestellt.",
 		"LANG_AUTO": "Automatisch",
 		"THEME": "Darstellung",
-		"THEME_DOC": "Hell, dunkel oder wie das Gerät (kioskTV bleibt dunkel).",
+		"THEME_DOC": "Hell, dunkel oder wie das Gerät.",
 		"THEME_AUTO": "Wie das Gerät",
 		"THEME_LIGHT": "Immer hell",
 		"THEME_DARK": "Immer dunkel",

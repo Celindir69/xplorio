@@ -42,12 +42,10 @@ ein Reiter „Titel“.
 
 ### Display-Layout für iPad, Desktop und Fernseher
 Auf großen Bildschirmen stehen Cover, Infos und Steuerung links und die Lyrics rechts; die Infos blättern von selbst
-weiter. Umschalten oben rechts oder mit `?layout=stage`. `kioskTV.html` ist eine reine Anzeige für einen Fernseher an
-der Anlage, ohne Bedienung.
+weiter. Umschalten oben rechts oder mit `?layout=stage`.
 
 <p>
   <img src="docs/bilder/display-desktop.jpg" width="49%" alt="Display-Layout am Desktop">
-  <img src="docs/bilder/kiosk.jpg" width="49%" alt="kioskTV.html">
 </p>
 
 ### Suchen & Entdecken
@@ -125,7 +123,6 @@ Fortschritt der Stimmungs-Tags.
 | Datei / Ordner | Inhalt | Ort auf dem Player |
 |---|---|---|
 | `xplorio.html` + `web/` | Oberfläche für Handy, iPad, Desktop (Wiedergabe, Queue, Suche lokal und bei Streamingdiensten, Lyrics, Infos, Tag-Editor, Mood Mix, Verlauf, Display-Layout für große Bildschirme) | `/volumio/http/www3/` (Volumio 4: `www4/`) |
-| `kioskTV.html` | Seite für einen Kiosk-Bildschirm (Cover, Titel, Lyrics) | `/volumio/http/www*/` |
 | `tags/` | Tag-Dienst (Port 8766): Tag-Editor, Bibliothek prüfen, Verlauf, Stimmungs-Tags, Cover; nimmt nur Aufträge der Oberfläche an; Python 2.7 oder 3 mit mitgelieferter mutagen-Bibliothek (GPLv2, siehe `tags/vendor/mutagen/COPYING`) | `/data/xplorio/tags/` (Daten: `/data/xplorio/data/`) |
 | `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | `/data/xplorio/rotel/` |
 | `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/volumio/http/www3/tools/` |

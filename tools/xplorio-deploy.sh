@@ -17,7 +17,7 @@
 #   --force                                with --tag-service/--rotel: rewrite an existing unit (the old one is backed up);
 #                                          with --rotel also replace the amplifier address (asks for it without IP)
 #
-# The interface (xplorio.html, app.html as a redirect, kioskTV.html, web/, tools/) goes into every existing folder
+# The interface (xplorio.html, app.html as a redirect, web/, tools/) goes into every existing folder
 # /volumio/http/www*/: which one Volumio serves depends on the version and the chosen interface (Volumio 3: www3,
 # Volumio 4: www4). The script creates no new folders; if there is none, it stops.
 # Everything else lives in /data/xplorio (survives Volumio updates; backing up this folder is enough):
@@ -60,7 +60,7 @@ target() {
     tools/xplorio-deploy.sh) echo "$ROOT/usr/local/bin/$PROG"; for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;   # also for the wrappers
     tools/web-app-deploy.sh) [ -e "$ROOT/usr/local/bin/web-app-deploy" ] && echo "$ROOT/usr/local/bin/web-app-deploy"; true ;;   # only earlier names that exist
     tools/mx-deploy.sh)      for p in mx-deploy volumio4-deploy; do [ -e "$ROOT/usr/local/bin/$p" ] && echo "$ROOT/usr/local/bin/$p"; done; true ;;
-    xplorio.html|app.html|kioskTV.html|web/*)  echo "$APP/www/$1"; for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
+    xplorio.html|app.html|web/*)  echo "$APP/www/$1"; for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
     tools/*)                 for w in $WWWS; do echo "$ROOT/volumio/http/$w/$1"; done ;;
   esac
 }
@@ -148,6 +148,7 @@ fi
 # ("md5deep -r -l -s -q /volumio | sort | md5sum", updater_comm/index.js). The interface in /volumio/http/www*/ changes
 # that sum, so the update is refused ("manually edited files"). --remove takes the interface out (backup under
 # backup/interface-*.tar.gz), --restore puts it back. The services in /data/xplorio are not part of the check and stay.
+# kioskTV.html only came with earlier versions; --remove takes it out as well
 OURS='/volumio/http/www[^/]*/(xplorio\.html|app\.html|kioskTV\.html|web/|tools/)'
 MD5DEEP=${DEPLOY_MD5DEEP:-md5deep}
 vol_hash() { grep -s '^VOLUMIO_HASH=' "$ROOT/etc/os-release" | cut -d= -f2 | tr -d '"'; }
