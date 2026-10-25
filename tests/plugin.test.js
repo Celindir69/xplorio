@@ -73,6 +73,20 @@ t('install.sh: systemd services of the plugin, only own files, no sudo rule, no 
   assert.ok(/unit xplorio-web .* nopriv$/m.test(sh) && /unit xplorio-rotel .* nopriv$/m.test(sh) && !/unit xplorio-tags .*nopriv/.test(sh));
 });
 
+t('uninstall.sh: caches and runtime files go, the user\'s data stays', function(){
+  var X = path.join(T, 'uninst'), D = path.join(X, 'data');
+  ['artists', 'radio-covers', 'stations', 'covers/b1', 'moodtags'].forEach(function(d){ fs.mkdirSync(path.join(D, d), {recursive: true}); });
+  ['artists/a.jpg', 'stations/s.jpg', 'albums.json', 'library-tracks.json', 'check.json', 'sysinfo.json', 'welcome.json',
+   'together.json', 'ratings.json.neu', 'plays.jsonl', 'ratings.json', 'lyrics-offsets.json', 'admin.json', 'keys.json', 'lastfm.json',
+   'changes.jsonl', 'covers/b1/0', 'essentia.jsonl', 'moodtags/tracks.jsonl', 'releasedates.jsonl'].forEach(function(f){ fs.writeFileSync(path.join(D, f), 'x'); });
+  fs.writeFileSync(path.join(X, 'config.local.js'), 'x');
+  var r = cp.spawnSync('bash', [path.join(P, 'uninstall.sh')], {encoding: 'utf8', env: Object.assign({}, process.env, {XPLORIO_DATA: X})});
+  assert.ok(/pluginuninstallend/.test(r.stdout), r.stdout + r.stderr);
+  assert.deepStrictEqual(fs.readdirSync(D).sort(), ['admin.json', 'changes.jsonl', 'covers', 'essentia.jsonl', 'keys.json', 'lastfm.json',
+    'lyrics-offsets.json', 'moodtags', 'plays.jsonl', 'ratings.json', 'releasedates.jsonl']);
+  assert.ok(fs.existsSync(path.join(X, 'config.local.js')) && fs.existsSync(path.join(D, 'covers/b1/0')));
+});
+
 var Plugin = require(path.join(P, 'index.js'));
 var toasts = [], calls = [], failing = {};
 function makePlugin() {

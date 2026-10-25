@@ -55,7 +55,8 @@ Das Plugin schreibt aus diesen Werten `app/web/config.local.js`, die Oberfläche
 Einstellungsseite, die Seite hat also Vorrang. Eine fehlerhafte Datei lässt es weg und sagt das auf der Einstellungsseite.
 Nach einer Änderung das Plugin einmal aus- und wieder einschalten. Die Einstellungen der Dienste (Port, Pfade) schreibt das
 Plugin nach `/tmp/xplorio/`. Daten, Verlauf, Passwort und Last.fm-Zugang bleiben in `/data/xplorio/data/`, auch wenn das
-Plugin aktualisiert oder entfernt wird.
+Plugin aktualisiert oder entfernt wird. Beim Deinstallieren löscht das Plugin nur Logs, Caches und Laufzeitdateien (Bilder,
+Bibliothekslisten, Prüfergebnis), die es bei Bedarf neu anlegt. Wer alles entfernen will, löscht danach `/data/xplorio` von Hand.
 
 ### Hell und dunkel
 Die Oberfläche folgt der Einstellung des Geräts (hell oder dunkel) und wechselt mit, wenn das Gerät umschaltet.

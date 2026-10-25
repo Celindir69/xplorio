@@ -54,7 +54,9 @@ From these values the plugin writes `app/web/config.local.js`, which the interfa
 [`web/config.local.js.example`](../web/config.local.js.example): the plugin takes the file before the values of the settings
 page, so the page wins. A broken file is left out, and the settings page says so. After a change, switch the plugin off and
 on once. The plugin writes the services' settings (port, paths) to `/tmp/xplorio/`. Data, history, password and Last.fm
-credentials stay in `/data/xplorio/data/`, also when the plugin is updated or removed.
+credentials stay in `/data/xplorio/data/`, also when the plugin is updated or removed. Uninstalling deletes only logs, caches
+and runtime files (images, library lists, check result), which the plugin rebuilds when needed. To remove everything, delete
+`/data/xplorio` by hand afterwards.
 
 ### Light and Dark
 
