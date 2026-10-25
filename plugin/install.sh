@@ -24,6 +24,10 @@ if [ ! -d node_modules/kew ] || [ ! -d node_modules/v-conf ]; then
 fi
 NODE=$(command -v node) || fail "node not found"
 
+# Volumio runs this script as root, but updates and removes the plugin folder as volumio: everything in it (above all
+# node_modules from npm install) must belong to volumio, or the next update stops with "Directory not empty"
+case "$SCRIPTPATH" in /data/plugins/*) chown -R volumio:volumio "$SCRIPTPATH" ;; esac
+
 echo "Preparing /data/xplorio"
 mkdir -p /data/xplorio || fail "mkdir /data/xplorio"
 [ -d /data/xplorio/data ] || mkdir -m 700 /data/xplorio/data || fail "mkdir /data/xplorio/data"

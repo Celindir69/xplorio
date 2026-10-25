@@ -93,6 +93,10 @@ fi
 id volumio >/dev/null 2>&1 || die "user volumio is missing: is this a Volumio player?"
 mkdir -p /data/xplorio/data && chown volumio:volumio /data/xplorio && chown -R volumio:volumio /data/xplorio/data
 mkdir -p /tmp/plugins && chown volumio:volumio /tmp/plugins
+# Volumio replaces the plugin folder as volumio: root-owned files from earlier installs (node_modules of install.sh)
+# would make the update stop with "Directory not empty"
+[ $how = update ] && chown -R volumio:volumio "$PLUGIN_DIR"
+rm -rf /data/plugins/xplorio /data/temp/downloaded_plugin    # leftovers of an update that failed halfway
 install -o volumio -g volumio -m 644 "$ZIP" /tmp/plugins/xplorio.zip
 install -o volumio -g volumio -m 644 "$TMP/src/tools/plugin-install.js" /tmp/plugins/xplorio-install.js
 echo "Xplorio plugin ($BRANCH): $how through Volumio …"
@@ -101,8 +105,10 @@ if ! sudo -u volumio "$NODE" /tmp/plugins/xplorio-install.js $how xplorio.zip; t
   [ $how = update ] || die "installing failed (log: sudo journalctl -u volumio -n 100)"
   # fallback: copy the new files into the plugin folder (settings and node_modules stay) and restart Volumio
   echo "Updating through Volumio failed: copying the files into $PLUGIN_DIR and restarting Volumio"
-  cp -R "$TMP/plugin/xplorio/." "$PLUGIN_DIR/" && chown -R volumio:volumio "$PLUGIN_DIR" || die "copying failed"
+  sleep 5                                                    # Volumio cleans up its plugin folders after a failure
+  mkdir -p "$PLUGIN_DIR" && cp -R "$TMP/plugin/xplorio/." "$PLUGIN_DIR/" || die "copying failed"
   (cd "$PLUGIN_DIR" && sh install.sh >/dev/null) || echo "install.sh reported an error"
+  chown -R volumio:volumio "$PLUGIN_DIR" 2>/dev/null || true
   systemctl restart volumio
 fi
 rm -f /tmp/plugins/xplorio-install.js /tmp/plugins/xplorio.zip
