@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="web/icons/favicon-32.png">
 <link rel="manifest" href="web/manifest.json">
 <script>
-  /* Installed build (written by xplorio-deploy): reload scripts and styles only after a deploy.
+  /* Installed build (written by make-plugin): reload scripts and styles only after an update.
      Without web/build.js (development) fresh every time. */
   document.write('<script src="web/build.js?t=' + Date.now() + '" onerror="void 0"><\/script>');
 </script>
@@ -397,7 +397,7 @@
 <script>
   langApply(document);                      /* data-i18n texts in the HTML in the chosen language */
 
-  /* load app scripts per build (?v=): fresh after xplorio-deploy, else from the browser cache (order matters) */
+  /* load app scripts per build (?v=): fresh after an update, else from the browser cache (order matters) */
   ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'playback', 'discover', 'genre', 'moodmix', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome'].forEach(function(n){
     document.write('<script src="web/js/' + n + '.js?v=' + XV + '"><\/script>');
   });

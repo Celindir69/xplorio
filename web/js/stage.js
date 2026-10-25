@@ -1,10 +1,10 @@
 /* Display layout for large landscape screens (iPad, MacBook, desktop), based on legacy/now_playing.html:
-   cover and title on the left, below them the info carousel (pages by itself like kioskTV.html), controls at the bottom;
+   cover and title on the left, below them the info carousel (pages by itself), controls at the bottom;
    lyrics always on the right. Toggle at the top right; each device remembers its choice.
    Classic script, shared global scope; loaded after poll.js. */
 var STAGE_KEY = 'mxLayout';
 var STAGE_MQ = window.matchMedia('(orientation:landscape) and (min-width:900px) and (min-height:560px)');
-var STAGE_PAGE_MS = 25000;       /* carousel: page change as in the kiosk */
+var STAGE_PAGE_MS = 25000;       /* carousel: page change */
 var STAGE_IDLE_MS = 60000;       /* after own swiping/tapping, do not auto-page for this long */
 
 var btnStage = document.getElementById('btnStage');

@@ -33,8 +33,8 @@ fake.listen(0, function(){
   var base = 'http://127.0.0.1:' + fake.address().port;
   process.env.ITUNES_URL = base; process.env.LASTFM_URL = base; process.env.MB_URL = base; process.env.CAA_URL = base;
   var cfg = fs.mkdtempSync(path.join(os.tmpdir(), 'cs-'));
-  fs.writeFileSync(path.join(cfg, 'config.js'), 'window.APP_CONFIG = {LASTFM_KEY: ""};');
-  fs.writeFileSync(path.join(cfg, 'config.local.js'), 'window.APP_CONFIG.LASTFM_KEY = "KEY";');
+  fs.writeFileSync(path.join(cfg, 'config.js'), 'window.APP_CONFIG = {};');
+  fs.mkdirSync(path.join(cfg, 'log')); fs.writeFileSync(path.join(cfg, 'log', 'keys.json'), JSON.stringify({LASTFM_KEY: 'KEY'}));
   process.env.APP_CONFIG_DIR = cfg;
   process.env.TAGS_LOG = path.join(cfg, 'log', 'changes.jsonl');
   var svc = require('../tags/tag-service.js').server;

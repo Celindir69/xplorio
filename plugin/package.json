@@ -1,0 +1,39 @@
+{
+	"name": "xplorio",
+	"version": "1.0.0",
+	"description": "Xplorio: a touch interface for Volumio with tag editor, history, discovery and lyrics, on its own port.",
+	"main": "index.js",
+	"scripts": {},
+	"author": "Celindir69",
+	"license": "MIT",
+	"volumio_info": {
+		"prettyName": "Xplorio",
+		"icon": "fa-music",
+		"plugin_type": "user_interface",
+		"boot_priority": 10,
+		"details": "Xplorio is an alternative interface for Volumio (playback, library, discovery, tag editor, history). It runs on its own port, so nothing below /volumio changes and system updates keep working.",
+		"architectures": [
+			"amd64",
+			"armhf"
+		],
+		"os": [
+			"bookworm"
+		],
+		"changelog": "First version as a plugin: interface on its own port, tag service and Rotel bridge as services of the plugin, all settings on the plugin page."
+	},
+	"engines": {
+		"node": ">=20",
+		"volumio": ">=4"
+	},
+	"dependencies": {
+		"kew": "^0.7.0",
+		"v-conf": "^1.4.2"
+	},
+	"repository": "https://github.com/Celindir69/xplorio",
+	"keywords": [
+		"volumio",
+		"xplorio",
+		"user interface",
+		"tag editor"
+	]
+}

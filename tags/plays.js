@@ -10,6 +10,7 @@ var MIN_TRACK  = 30;          /* s: shorter tracks never count */
 var MAX_NEEDED = 240;         /* s: after 4 minutes every track counts */
 var MAX_STEP   = 30000;       /* ms: more play time per poll is not counted (service hung, computer slept) */
 var DUP_WINDOW = 300;         /* s: same track within 5 min = the same play (Last.fm sync) */
+var MAX_PLAYS  = 500000;      /* in memory (about 100 MB): only the newest; 30 plays a day for 45 years */
 
 /* comparison key: ignoring accents, case, punctuation */
 function norm(s) {
@@ -35,9 +36,11 @@ Store.prototype.load = function() {
     var e = jsonl.parse(line); if (e && e.t && e.ti) list.push(e);   /* skip broken lines */
   });
   list.sort(function(a, b){ return a.t - b.t; });
+  if (list.length > MAX_PLAYS) list.splice(0, list.length - MAX_PLAYS);
   this.list = list;
   return list;
 };
+Store.prototype.full = function() { return this.load().length >= MAX_PLAYS; };
 
 /* append entries (file and memory); returns true if written */
 Store.prototype.add = function(entries) {
@@ -56,6 +59,7 @@ Store.prototype.add = function(entries) {
     if (i >= 0 && list[i].t > add[j].t) list[w--] = list[i--];
     else list[w--] = add[j--];
   }
+  if (list.length > MAX_PLAYS) list.splice(0, list.length - MAX_PLAYS);   /* the oldest go (same list: no copy) */
   return ok;
 };
 
@@ -379,5 +383,5 @@ function albumStats(list, rel, dir, al, ar) {
   return out;
 }
 
-module.exports = {albumStats: albumStats, recentAlbums: recentAlbums, Store: Store, Tracker: Tracker, recent: recent, top: top, topGenre: topGenre, stats: stats, rangeStart: rangeStart,
+module.exports = {MAX_PLAYS: MAX_PLAYS, albumStats: albumStats, recentAlbums: recentAlbums, Store: Store, Tracker: Tracker, recent: recent, top: top, topGenre: topGenre, stats: stats, rangeStart: rangeStart,
                   year: year, years: years, ago: ago, localStart: localStart, norm: norm, trackKey: trackKey, local: local};

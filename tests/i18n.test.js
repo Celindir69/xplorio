@@ -50,7 +50,7 @@ t('language files: de and en present, same keys, same placeholders and forms', f
 
 t('every key in the code (T(…), data-i18n*) is in de.js', function(){
   var src = fs.readdirSync(path.join(ROOT, 'web/js')).filter(function(f){ return f !== 'i18n.js'; }).map(function(f){ return path.join(ROOT, 'web/js', f); })
-    .concat([path.join(ROOT, 'xplorio.html'), path.join(ROOT, 'kioskTV.html')]);
+    .concat([path.join(ROOT, 'xplorio.html')]);
   var used = {};
   src.forEach(function(f){
     var s = fs.readFileSync(f, 'utf8'), m, re = /\b(?:T|textT)\(\s*'([\w.-]+)'|data-i18n(?:-title|-placeholder|-aria|-empty)?="([\w.-]+)"/g;

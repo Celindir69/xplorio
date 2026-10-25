@@ -8,6 +8,7 @@ var coversearch = require('./coversearch.js');
 var DEEZER   = process.env.DEEZER_URL || 'https://api.deezer.com';
 var NONE_TTL = 30 * 86400 * 1000;      /* no photo: ask again after 30 days */
 var PARALLEL = 2;                      /* concurrent requests to Deezer */
+var QUEUE_MAX = 100;                   /* waiting lookups; more at once (e.g. a foreign page with many image links): "busy" */
 
 function norm(s) {
   s = String(s || '');
@@ -16,29 +17,34 @@ function norm(s) {
 }
 
 /* dir: storage; opts.lookup(name, cb(image or null, temporary?), extra) replaces the Deezer artist search,
-   opts.noneTtl: how long "nothing found" holds, opts.max: at most this many files (oldest get removed) */
+   opts.noneTtl: how long "nothing found" holds, opts.max: at most this many files, opts.maxBytes: at most this much
+   together (oldest get removed), opts.queueMax: at most this many lookups waiting */
 function Store(dir, opts) {
   this.dir = dir; this.waiting = {}; this.queue = []; this.running = 0; this.writes = 0;
   opts = opts || {};
   if (opts.lookup) this.lookup = opts.lookup;
   this.noneTtl = opts.noneTtl || NONE_TTL;
   this.max = opts.max || 0;
-  if (this.max) this.prune();
+  this.maxBytes = opts.maxBytes || 0;
+  this.queueMax = opts.queueMax || QUEUE_MAX;
+  if (this.max || this.maxBytes) this.prune();
 }
 
-/* limit storage: delete the oldest files until at most max are left */
+/* limit storage: delete the oldest files until at most max are left and together they take at most maxBytes */
 Store.prototype.prune = function() {
-  var dir = this.dir, max = this.max, list;
-  if (!max) return 0;
+  var dir = this.dir, max = this.max || Infinity, maxBytes = this.maxBytes || Infinity, list;
+  if (max === Infinity && maxBytes === Infinity) return 0;
   try { list = fs.readdirSync(dir); } catch (e) { return 0; }
-  if (list.length <= max) return 0;
+  if (list.length <= max && maxBytes === Infinity) return 0;
+  var bytes = 0;
   list = list.map(function(n){
-    try { return {n: n, t: fs.statSync(path.join(dir, n)).mtime.getTime()}; } catch (e) { return null; }
+    try { var st = fs.statSync(path.join(dir, n)); bytes += st.size; return {n: n, t: st.mtime.getTime(), s: st.size}; } catch (e) { return null; }
   }).filter(Boolean).sort(function(a, b){ return a.t - b.t; });
-  var gone = 0;
-  list.slice(0, list.length - max).forEach(function(f){
-    try { fs.unlinkSync(path.join(dir, f.n)); gone++; } catch (e) { /* already gone */ }
-  });
+  var gone = 0, left = list.length;
+  for (var i = 0; i < list.length && (left > max || bytes > maxBytes); i++) {
+    try { fs.unlinkSync(path.join(dir, list[i].n)); gone++; } catch (e) { /* already gone */ }
+    left--; bytes -= list[i].s;
+  }
   return gone;
 };
 
@@ -47,7 +53,7 @@ Store.prototype.files = function(name) {
   return {img: path.join(this.dir, h + '.jpg'), none: path.join(this.dir, h + '.none')};
 };
 
-/* cb(null, Buffer) or cb(null, null) if there is no photo; extra is passed to lookup */
+/* cb(null, Buffer) or cb(null, null) if there is no photo, cb('busy') if too many lookups are waiting; extra is passed to lookup */
 Store.prototype.get = function(name, cb, extra) {
   var self = this, f = this.files(name);
   fs.readFile(f.img, function(e, buf){
@@ -57,6 +63,7 @@ Store.prototype.get = function(name, cb, extra) {
     /* "nothing found" holds until the time is up; a new image URL (extra) is still tried */
     if (none && Date.now() - none.mtime.getTime() < self.noneTtl && (!extra || String(extra) === noneFor)) return cb(null, null);
     if (self.waiting[f.img]) return self.waiting[f.img].push(cb);
+    if (self.queue.length >= self.queueMax) return cb('busy');
     self.waiting[f.img] = [cb];
     self.queue.push(function(done){
       self.lookup(name, function(buf, temporary){
@@ -65,7 +72,7 @@ Store.prototype.get = function(name, cb, extra) {
           if (buf) { fs.writeFileSync(f.img, buf); try { fs.unlinkSync(f.none); } catch (x) { /* there was none */ } }
           else if (!temporary) fs.writeFileSync(f.none, extra ? String(extra) : '');   /* don't remember network errors */
         } catch (x) { /* retry next time */ }
-        if (self.max && ++self.writes % 50 === 0) self.prune();
+        if ((self.max || self.maxBytes) && ++self.writes % 50 === 0) self.prune();
         var list = self.waiting[f.img]; delete self.waiting[f.img];
         list.forEach(function(c){ c(null, buf); });
         done();

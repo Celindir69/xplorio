@@ -13,6 +13,7 @@ var jsonl = require('./jsonl.js');
 var PROB = 0.6;                  /* from this probability on a mood counts */
 var RELOAD_CHECK_MS = 10000;     /* check at most this often whether the file is new */
 var STYLES_MAX = 5, STYLES_MIN = 0.05;   /* strongest styles per track (like analyse.py writes them; older or other files) */
+var MAX_ENTRIES = 200000;        /* about 100 MB in memory; a larger file is read only this far (memory of the service) */
 
 /* value at position q (0..1) of a sorted list */
 function quantile(sorted, q) {
@@ -58,6 +59,7 @@ Store.prototype.reload = function(force) {
   var by = {}, n = 0, aro = [], val = [], strings = {};
   function intern(x) { return strings.hasOwnProperty(x) ? strings[x] : (strings[x] = x); }
   var ok = jsonl.eachLine(this.file, function(l){            /* line by line: never the whole file in memory at once */
+    if (n >= MAX_ENTRIES) return;
     var o = jsonl.parse(l);
     if (!o || !o.ar || !o.ti || o.err) return;
     var k = moodtags.trackKey(o.ar, o.ti);
@@ -72,6 +74,7 @@ Store.prototype.reload = function(force) {
   /* energy and mood quadrants relative to the own collection: DEAM values otherwise crowd in the middle */
   this.stats = {aLo: quantile(aro, 0.02), aHi: quantile(aro, 0.98), vLow: quantile(val, 0.33), vHigh: quantile(val, 0.67),
                 aLow: quantile(aro, 0.33), aHigh: quantile(aro, 0.67)};
+  this.full = n >= MAX_ENTRIES;
   this.byKey = by; this.n = n; this.mtime = st.mtime.getTime(); this.at = this.mtime;
   return true;
 };

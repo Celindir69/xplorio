@@ -6,7 +6,8 @@ Listens to every track and writes one line per track to essentia.jsonl: BPM, key
 Discogs styles. The tag service on the player matches the lines by artist and title, so the
 folder structure does not matter. Files already analysed and unchanged are skipped; you can
 abort (Ctrl-C) and continue later at any time. With --upload or --player the progress so far is
-uploaded on abort, with --player also every 2 hours (--upload-every).
+uploaded on abort, with --player also every 2 hours (--upload-every). If a password for the services is
+set on the player (Xplorio settings), the script asks for it once at the start (or takes XPLORIO_PASSWORD).
 
     python3 analyse.py /Volumes/Data/Musik /Volumes/Data/AllFlac
     python3 analyse.py --upload http://<player>:8766 /Volumes/Data/Musik
@@ -22,6 +23,7 @@ Models: CC BY-NC-SA 4.0 (non-commercial only), https://essentia.upf.edu/models
 import argparse
 import concurrent.futures as cf
 import fnmatch
+import getpass
 import json
 import multiprocessing as mp
 import os
@@ -386,16 +388,38 @@ def wait_for_player(base, minutes):
         time.sleep(minutes * 60)
 
 
+PASSWORD = None                               # password for the services on the player, if one is set there
+
+
+def ask_password(base):
+    """The player has a password for the services: then the upload needs it (asked once, or XPLORIO_PASSWORD)."""
+    global PASSWORD
+    try:
+        with urllib.request.urlopen(base.rstrip('/') + '/services', timeout=10) as r:
+            needed = json.loads(r.read().decode('utf-8')).get('pw')
+    except Exception:
+        return                                # not reachable now: the upload says so later
+    if needed:
+        PASSWORD = os.environ.get('XPLORIO_PASSWORD') or getpass.getpass('Password for the services on the player: ')
+
+
 def upload(out, base):
     url = base.rstrip('/') + '/essentia'
     with open(out, 'rb') as f:
         data = f.read()
-    req = urllib.request.Request(url, data=data, method='POST', headers={'Content-Type': 'application/x-ndjson'})
+    headers = {'Content-Type': 'application/x-ndjson'}
+    if PASSWORD:
+        headers['X-Xplorio-Password'] = PASSWORD
+    req = urllib.request.Request(url, data=data, method='POST', headers=headers)
     with urllib.request.urlopen(req, timeout=300) as r:
         j = json.loads(r.read().decode('utf-8'))
     if not j.get('ok'):
-        sys.exit('Upload failed: ' + str(j.get('error')))
+        why = {'auth': 'wrong or missing password for the services (XPLORIO_PASSWORD)',
+               'locked': 'too many wrong passwords, try again in %s s' % j.get('wait')}.get(j.get('error'), str(j.get('error')))
+        sys.exit('Upload failed: ' + why)
     print('Uploaded: %d entries; on the player %d of %d tracks matched.' % (j['tracks'], j['matched'], j['library']))
+    if j.get('full'):
+        print('Note: the player keeps at most %d entries; the rest of the file is not used.' % j['tracks'])
 
 
 def upload_partial(done, out, base, player):
@@ -457,6 +481,8 @@ def main():
         a.upload = '%s://%s:8766' % (u.scheme or 'http', u.hostname)
     if a.upload_every is None:
         a.upload_every = 120 if a.player else 0
+    if a.upload:
+        ask_password(a.upload)
 
     if a.roots:
         fetch_models(a.models)

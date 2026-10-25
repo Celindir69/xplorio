@@ -1,7 +1,8 @@
 /* Password for the services on the "System" page (restart, start, stop). Node 8, ES5 only.
    admin.json in the data folder holds only a hash (PBKDF2-SHA256 with salt), plus the device logins as
    SHA-256 of their token with an expiry date (30 days). Without a password the buttons stay locked.
-   Set it with: sudo xplorio-deploy --password (calls this file); a new password logs out all devices.
+   Set it on the plugin's settings page, or with sudo xplorio-deploy --password (calls this file) (changing it there
+   needs the current one); a new password logs out all devices.
    After 5 wrong attempts the service waits, twice as long for each further one (at most 15 min). */
 var fs = require('fs'), path = require('path'), crypto = require('crypto');
 
@@ -35,8 +36,8 @@ Auth.prototype.setPassword = function(pw) {
   this.write({v: 1, salt: salt, iter: ITER, hash: hash, tokens: []});
 };
 
-/* login: cb({ok, token} | {ok:false, error:'unset'|'wrong'|'locked', wait (s)}) */
-Auth.prototype.login = function(pw, now, cb) {
+/* is it the password? cb({ok} | {ok:false, error:'unset'|'wrong'|'locked', wait (s)}), counts towards the lock */
+Auth.prototype.verify = function(pw, now, cb) {
   var self = this, j = this.read();
   now = now || Date.now();
   if (!j) return cb({ok: false, error: 'unset'});
@@ -48,7 +49,17 @@ Auth.prototype.login = function(pw, now, cb) {
       return cb({ok: false, error: 'wrong', wait: self.lockUntil > now ? Math.ceil((self.lockUntil - now) / 1000) : 0});
     }
     self.fails = 0; self.lockUntil = 0;
-    var token = crypto.randomBytes(32).toString('hex'), cur = self.read() || j;
+    cb({ok: true});
+  });
+};
+
+/* login: cb({ok, token} | {ok:false, error:'unset'|'wrong'|'locked', wait (s)}) */
+Auth.prototype.login = function(pw, now, cb) {
+  var self = this;
+  now = now || Date.now();
+  this.verify(pw, now, function(r){
+    if (!r.ok) return cb(r);
+    var token = crypto.randomBytes(32).toString('hex'), cur = self.read();
     var list = (cur.tokens || []).filter(function(t){ return t.exp > now; });
     list.push({h: sha(token), exp: now + TOKEN_DAYS * 86400000});
     cur.tokens = list.slice(-MAX_TOKENS);

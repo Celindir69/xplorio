@@ -4,11 +4,12 @@ var url  = require('url');
 
 var fs   = require('fs');
 var vm   = require('vm');
+var path = require('path');
 
 /* Amplifier address from the interface configuration (web/config.js, then web/config.local.js):
    ROTEL_HOST, ROTEL_AMP_PORT (amplifier, 9590) and ROTEL_PORT (this service, 8765).
    The environment variables ROTEL_HOST, ROTEL_PORT (amplifier) and HTTP_PORT take precedence. */
-var CONFIG_DIR = process.env.APP_CONFIG_DIR || '/volumio/http/www3/web';
+var CONFIG_DIR = process.env.APP_CONFIG_DIR || path.join(__dirname, '..', 'web');   /* app/web in the plugin */
 function loadAppConfig() {
   var ctx = {window: {}};
   ['config.js', 'config.local.js'].forEach(function(f){
@@ -196,6 +197,7 @@ function connect() {
     buf += d;
     var parts = buf.split('$');
     buf = parts.pop();
+    if (buf.length > 4096) buf = '';                    /* no "$" for that long: not a Rotel reply, start over */
     parts.forEach(parseMsg);
   });
   sock.on('error', function(){});

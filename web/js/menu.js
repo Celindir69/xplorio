@@ -55,7 +55,7 @@ function menuRender() {
   menuBody.appendChild(menuAbout());
 }
 
-/* Bottom of the menu: logo, name, claim; version (web/version.json, written by xplorio-deploy), copyright, license */
+/* Bottom of the menu: logo, name, claim; version (web/version.json, written by make-plugin or xplorio-deploy), copyright, license */
 var MENU_REPO = 'https://github.com/Celindir69/xplorio';
 /* third-party components and services: name, text (i18n) */
 var MENU_THIRD = [

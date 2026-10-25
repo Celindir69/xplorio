@@ -1,5 +1,5 @@
 /* Fallback for Volumio's artist and album texts (metavolumio) when they return nothing: Volumio 4 only provides them
-   with a paid subscription. First Last.fm (needs LASTFM_KEY, in the chosen language, else English), then for artists
+   with a paid subscription. First Last.fm (needs the Last.fm key in the plugin settings, in the chosen language, else English), then for artists
    Wikipedia (chosen language, else English, no key). Classic script, ES5; in tests with its own fetch. */
 
 /* clean Last.fm text: remove the "Read more on Last.fm" link and HTML, license note stays as source at the bottom */

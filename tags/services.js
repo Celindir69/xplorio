@@ -1,16 +1,15 @@
-/* Services for the "System" page: state of the player services (systemctl show) and restart, for the kiosk also
-   start and stop. Only the services and actions in UNITS are allowed. The tag service runs as user
-   volumio and needs a sudo rule for this (instructions: docs/einrichten.md, "Dienste"); without it the
-   display stays, the buttons report "nosudo". Also restart and power-off of the whole player (power).
+/* Services for the "System" page: state of the player services (systemctl show) and restart. Only the services and actions in UNITS are allowed. The tag service runs as user
+   volumio and needs sudo for systemctl (Volumio allows it); without it the display stays, the buttons report
+   "nosudo". Also restart and power-off of the whole player (power).
    Node 8, ES5 only. run: replacement for execFile (tests) */
 var fs = require('fs'), cp = require('child_process');
 
 var UNITS = [
   {id: 'volumio',       actions: ['restart']},
   {id: 'mpd',           actions: ['restart']},
-  {id: 'tag-service',   actions: ['restart']},
-  {id: 'rotel-bridge',  actions: ['restart']},
-  {id: 'volumio-kiosk', actions: ['start', 'stop', 'restart']}
+  {id: 'xplorio-web',   actions: ['restart']},   /* the plugin's own services */
+  {id: 'xplorio-tags',  actions: ['restart']},
+  {id: 'xplorio-rotel', actions: ['restart']}
 ];
 var SYSTEMCTL = '/bin/systemctl', TIMEOUT = 8000, SUDO_CACHE_MS = 300000;
 var POWER = {reboot: ['/sbin/reboot'], poweroff: ['/sbin/poweroff']};   /* the same commands as Volumio itself */
@@ -23,7 +22,7 @@ function allowed(id, action) {
   var u = unitOf(id);
   return !!u && u.actions.indexOf(action) >= 0;
 }
-/* exactly this command line is in the sudo rule */
+/* the command line run with sudo -n */
 function command(id, action) { return [SYSTEMCTL, '--no-block', action, id]; }
 
 /* output of systemctl show -p … a b c: one block per service, separated by blank lines.
@@ -64,7 +63,6 @@ function Services(opts) {
   this.run = opts.run || defaultRun;
   this.root = opts.root || '';
   this.sudoOk = null; this.sudoAt = 0;
-  this.stopped = {};                        /* services stopped via the page (until the next start) */
 }
 
 Services.prototype.uptime = function() {
@@ -86,9 +84,6 @@ Services.prototype.status = function(cb) {
   this.run(SYSTEMCTL, ['show', '-p', 'Id,LoadState,ActiveState,SubState,ActiveEnterTimestampMonotonic'].concat(ids), function(err, out){
     if (err && !out) return cb({ok: false, error: 'systemctl'});
     var list = merge(parseShow(out, self.uptime(), Date.now()));
-    /* When stopped, the kiosk often exits with an error code (browser and X server are terminated), and systemd then
-       reports "failed". After a stop via this page that is not an error, just stopped. */
-    list.forEach(function(u){ if (u.active === 'failed' && self.stopped[u.id]) { u.active = 'inactive'; u.sub = 'dead'; } });
     self.sudoCheck(function(ok){ cb({ok: true, units: list, sudo: ok}); });
   });
 };
@@ -113,7 +108,6 @@ Services.prototype.act = function(id, action, self_, cb) {
   }
   go(function(err){
     if (err) return cb(200, {ok: false, error: 'nosudo'});
-    if (action === 'stop') me.stopped[id] = true; else delete me.stopped[id];
     cb(200, {ok: true});
   });
 };

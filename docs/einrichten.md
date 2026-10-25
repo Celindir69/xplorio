@@ -1,55 +1,80 @@
 # Xplorio auf dem Player einrichten
 
-Alle Befehle auf dem Player (ssh), als Benutzer mit `sudo`. Geschrieben für Volumio 2; was unter Volumio 4 anders ist,
-steht gesammelt unter [Volumio 4](#volumio-4).
+Xplorio ist ein Volumio-Plugin. Es legt nichts unter `/volumio` ab, Volumios Prüfung vor einem System-Update bleibt also
+intakt. Das Plugin liefert die Oberfläche über einen eigenen Webserver auf Port 4040 aus. Webserver, Tag-Dienst und
+Rotel-Bridge laufen als eigene systemd-Dienste (`xplorio-web`, `xplorio-tags`, `xplorio-rotel`), wie Volumio es für Plugins
+vorgibt: `install.sh` richtet sie ein, das Plugin startet sie beim Einschalten und stoppt sie beim Ausschalten. Was unter
+Volumio 2 anders ist, steht unter [Volumio 2](#volumio-2).
 
-## Ersteinrichtung
-Am einfachsten mit `xplorio-deploy`; Dateien muss man dafür nicht von Hand kopieren. Erst das Skript holen:
+## Installieren
+Im Plugin-Store von Volumio: Plugins > Plugins suchen > Xplorio > Installieren, danach unter Installierte Plugins
+einschalten. Xplorio ist dann unter `http://<player>:4040/` erreichbar; der Knopf „Xplorio öffnen“ auf der
+Einstellungsseite führt dorthin.
+
+**Ohne Plugin-Store** (Volumio 2 oder zum Testen eines Branches) mit `xplorio-deploy` per ssh:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/xplorio-deploy.sh | sudo tee /usr/local/bin/xplorio-deploy >/dev/null
 sudo chmod +x /usr/local/bin/xplorio-deploy
+sudo xplorio-deploy                  # main installieren oder aktualisieren; mit Branch: sudo xplorio-deploy <branch>
 ```
-Dann:
-```bash
-sudo xplorio-deploy                  # Oberfläche einspielen (zeigt die neuen Dateien, nach Rückfrage)
-sudo xplorio-deploy --tag-service    # Tag-Dienst für Tag-Editor, Bibliothek prüfen, Verlauf
-sudo xplorio-deploy --password       # optional: Passwort für die Seite „System“
-sudo xplorio-deploy --rotel <IP>     # optional: Rotel-Verstärker im Netz
-```
-Danach `http://<player>/xplorio.html` aufrufen. Das Skript spielt die Oberfläche in jeden vorhandenen Ordner
-`/volumio/http/www*/` ein, den Volumio mitbringt; mehr dazu unter [Aktualisieren mit xplorio-deploy](#aktualisieren-mit-xplorio-deploy).
-Eigene Einstellungen kommen anschließend nach `web/config.local.js` (siehe [Oberfläche](#oberfläche)).
+| Aufruf | Wirkung |
+|---|---|
+| `sudo xplorio-deploy` | Plugin aus `main` installieren oder aktualisieren |
+| `sudo xplorio-deploy <branch>` | einen anderen Branch, z. B. zum Testen vor dem Merge |
+| `sudo xplorio-deploy -n <branch>` | nur sagen, was passieren würde |
+| `sudo xplorio-deploy --password` | Passwort für die Seite „System“ neu setzen, falls es vergessen ist |
 
-## Oberfläche
-Von Hand statt mit `xplorio-deploy`: `xplorio.html`, `app.html` und `web/` nach `/volumio/http/www3/` kopieren, Aufruf `http://<player>/xplorio.html`
-(`app.html` ist der frühere Name und leitet nur weiter; alte Lesezeichen und Home-Bildschirm-Verknüpfungen gehen also weiter).
-Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser seine
-Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN ins Heimnetz.
-`kioskTV.html` neben `xplorio.html` (der Kiosk lädt `http://localhost:3000/kioskTV.html`, also aus dem Ordner, den Volumio ausliefert).
-`kioskTV.html` zeigt Cover, Titel, Lyrics und wechselnde Infos zu Album und Künstler. Ist gestoppt und ein Album in der
-Warteschlange, stehen neben dem Cover nur Album und Künstler, und statt der Lyrics erscheint die Titelliste des Albums.
-Nach einem Update mit `xplorio-deploy` lädt der Browser die neuen Dateien von selbst (das Skript schreibt dazu `web/build.js`); bei Kopieren von Hand einmal hart neu laden. Eine vorhandene `web/config.local.js` bleibt erhalten.
-Eigene Einstellungen (Rotel, Dienste ein/aus, Sprache) kommen in `web/config.local.js`, Vorlage
-`web/config.local.js.example`. Der Last.fm-Zugang gehört nicht dorthin, sondern nach `/data/xplorio/data/keys.json`
-(siehe [Last.fm-Zugang](#lastfm-zugang)).
+`xplorio-deploy` stellt das Plugin mit `tools/make-plugin.sh` zusammen (Plugin-Dateien aus `plugin/`, Oberfläche und
+Dienste in `app/`) und installiert es über Volumios eigene Schnittstelle, wie die Plugin-Seite in Volumio. `volumio plugin
+install` bleibt auf manchen Volumio-2-Geräten (z. B. MX-Stream) hängen. Beim ersten Mal das Plugin danach in Volumio
+einschalten. Das Menü zeigt unten unter Logo und Namen den installierten Stand (Branch, Commit und Datum).
+
+Xplorio liegt ganz auf dem Player: Ist er nicht erreichbar (etwa unterwegs außerhalb des Heimnetzes), zeigt der Browser
+seine Fehlerseite und die Web-App auf dem Home-Bildschirm bleibt einfach schwarz. Von unterwegs geht es nur über ein VPN
+ins Heimnetz. Nach einem Update lädt der Browser die neuen Dateien von selbst.
+
+## Einstellungen
+Alles Nötige steht auf der Einstellungsseite des Plugins (Plugins > Installierte Plugins > Xplorio), ssh und Konsole
+braucht es dafür nicht:
+- **Grundeinstellungen:** Port, Tag-Dienst ein/aus, Sprache, hell/dunkel; dazu ein Knopf, der Xplorio öffnet.
+- **Funktionen:** Verlauf, Erscheinungstage, Stimmungs-Tags, Farbstimmung, m4a-Codec und m4a als verlustfrei, TIDAL, Qobuz,
+  HIGHRESAUDIO und Spotify (automatisch, immer oder nie) und weitere Namen des Players (`ALLOWED_HOSTS`).
+- **Rotel-Verstärker:** Rotel-Bridge ein/aus, Adresse des Verstärkers und auf Wunsch eigene Namen der Eingänge, z. B.
+  `aux=Plattenspieler/phono, opt1=TV` (Symbol hinter dem Schrägstrich, optional).
+- **Last.fm:** [Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret). Das Plugin schreibt beides nach
+  `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten Wert,
+  „Last.fm-Zugang löschen“ entfernt beide.
+- **Passwort:** Passwort für die Seite „System“ (mindestens 4 Zeichen, leer lassen behält es; ist eines gesetzt, geht
+  Ändern nur mit dem bisherigen, vergessen: `sudo xplorio-deploy --password`).
+
+Musikordner, in die Volumio nicht schreiben darf, nennt die Seite beim Tag-Dienst; dort scheitert der Tag-Editor.
+
+Das Plugin schreibt aus diesen Werten `app/web/config.local.js`, die Oberfläche und Dienste lesen. Wer mehr einstellen will
+(z. B. `ROTEL_PROFILE` für einen anderen Verstärker), legt das in `/data/xplorio/config.local.js` ab, Vorlage
+[`web/config.local.js.example`](../web/config.local.js.example): Das Plugin übernimmt die Datei vor den Werten der
+Einstellungsseite, die Seite hat also Vorrang. Eine fehlerhafte Datei lässt es weg und sagt das auf der Einstellungsseite.
+Nach einer Änderung das Plugin einmal aus- und wieder einschalten. Die Einstellungen der Dienste (Port, Pfade) schreibt das
+Plugin nach `/tmp/xplorio/`. Daten, Verlauf, Passwort und Last.fm-Zugang bleiben in `/data/xplorio/data/`, auch wenn das
+Plugin aktualisiert oder entfernt wird.
 
 ### Hell und dunkel
 Die Oberfläche folgt der Einstellung des Geräts (hell oder dunkel) und wechselt mit, wenn das Gerät umschaltet.
-Fest einstellen: `THEME: 'light'` oder `'dark'` in `web/config.local.js`; zum Ausprobieren `?theme=light` in der Adresse.
-Das gilt auch für die Bühnenansicht auf großen Bildschirmen; nur `kioskTV.html` bleibt immer dunkel.
+Fest einstellen auf der Einstellungsseite; zum Ausprobieren `?theme=light` in der Adresse.
+Das gilt auch für die Bühnenansicht auf großen Bildschirmen.
 
 ### Sprache
 Die Oberfläche gibt es auf Deutsch, Englisch, Französisch, Spanisch und Italienisch. Sie übernimmt die Sprache, die in Volumio unter Einstellungen eingestellt
 ist; so passen auch die Künstler- und Albumtexte von Volumio dazu. Beim allerersten Aufruf kennt die App diese Sprache noch
 nicht, zeigt kurz die Sprache des Geräts (Browser) und lädt einmal neu. Ist die Volumio-Sprache nicht vorhanden, gilt die
-Gerätesprache, sonst Englisch. Fest einstellen: z. B. `LANGUAGE: 'de'` (oder `'en'`, `'fr'`, `'es'`, `'it'`) in `web/config.local.js`. Zum Ausprobieren geht
-auch `http://<player>/xplorio.html?lang=en`.
+Gerätesprache, sonst Englisch. Fest einstellen auf der Einstellungsseite. Zum Ausprobieren geht
+auch `http://<player>:4040/?lang=en`.
 
 Weitere Sprache: `web/lang/en.js` kopieren, z. B. als `web/lang/nl.js`, in der letzten Zeile Code, Namen und Locale
 anpassen (`langRegister('nl', 'Nederlands', {…}, 'nl-NL')`) und die Texte übersetzen; `{name}` sind Platzhalter und bleiben
-stehen, `{one: …, other: …}` sind Einzahl und Mehrzahl. Dann in `web/config.local.js` eintragen:
-`LANGUAGES: ['de', 'en', 'fr', 'es', 'it', 'nl']`. Fehlt in der Datei ein Text, erscheint er englisch. `xplorio-deploy` lässt eigene
-Sprachdateien in `web/lang/` stehen. Datum, Zahlen, Monats- und Wochentagsnamen kommen vom Browser in der gewählten Sprache.
+stehen, `{one: …, other: …}` sind Einzahl und Mehrzahl. Die Sprache dann in `web/config.js` unter `LANGUAGES` eintragen.
+Weil ein Update den Plugin-Ordner ersetzt, gehört eine neue Sprache ins Repo (Pull Request), nicht nur auf den Player.
+Fehlt in der Datei ein Text, erscheint er englisch. Datum, Zahlen, Monats- und Wochentagsnamen kommen vom Browser in der
+gewählten Sprache.
 
 Nicht übersetzt werden Texte, die Volumio selbst liefert (z. B. Menünamen beim Durchsuchen), und Fehlermeldungen des
 Tag-Dienstes; die bleiben deutsch.
@@ -60,148 +85,31 @@ erreichbar“ bzw. „Audioziel ist belegt“; der Fortschrittsbalken bleibt dan
 Gerät, erscheint „Audioziel getrennt“ statt Volumios Fenster mit Bestätigung; „Audioziel verbunden“ gibt es nur, wenn
 Volumio die Rückkehr meldet (USB-DAC). Erkannt werden Volumios Meldungen auf Deutsch, Englisch, Französisch, Spanisch und Italienisch.
 
-## Aktualisieren mit xplorio-deploy
-Eingerichtet wird das Skript wie unter [Ersteinrichtung](#ersteinrichtung). Danach auf dem Player:
-| Aufruf | Wirkung |
-|---|---|
-| `sudo xplorio-deploy` | `main` aus xplorio laden, geänderte und neue Dateien zeigen, nach Rückfrage einspielen |
-| `sudo xplorio-deploy <branch>` | einen anderen Branch, z. B. zum Testen vor dem Merge |
-| `sudo xplorio-deploy -n <branch>` | nur zeigen, was sich ändern würde |
-| `sudo xplorio-deploy -y <branch>` | ohne Rückfrage |
-| `sudo xplorio-deploy --rollback` | letzte Sicherung wiederherstellen (mehrmals: Schritt für Schritt weiter zurück) |
-| `sudo xplorio-deploy --password` | Passwort für die Dienste auf der Seite „System“ festlegen oder ändern |
-| `sudo xplorio-deploy --tag-service` | Tag-Dienst einrichten: Dienstdatei, Datenordner, Start und Prüfung (siehe [Tag-Dienst](#tag-dienst-für-den-tag-editor)) |
-| `sudo xplorio-deploy --rotel <IP>` | Rotel-Bridge einrichten: Adresse des Verstärkers in `config.local.js`, Dienstdatei, Start und Prüfung; mit `--force` auch eine andere Adresse (siehe [Rotel-Bridge](#rotel-bridge-optional)) |
-| `sudo xplorio-deploy --check-update` | prüfen, ob Xplorio Volumios System-Update blockiert (siehe [Volumio-Update](#volumio-update)) |
-| `sudo xplorio-deploy --remove` / `--restore` | Oberfläche vor einem Volumio-Update sichern und entfernen bzw. danach genau so wiederherstellen |
-
-Ziele: `xplorio.html`, `app.html` (Weiterleitung), `kioskTV.html`, `web/` und `tools/` in jeden vorhandenen Ordner `/volumio/http/www*/`, `tags/` und `rotel/rotel-bridge.js` nach `/data/xplorio/`; das Skript aktualisiert sich selbst.
-Welchen der Ordner Volumio ausliefert, hängt von Version und gewählter Oberfläche ab (z. B. klassisch `www`, Volumio 3
-`www3`, Volumio 4 `www4`); deshalb bekommen alle vorhandenen die Oberfläche. Neue Ordner legt das Skript nicht an, ohne
-einen bricht es ab; `DEPLOY_WWW=<ordner>` wählt einen bestimmten. `web/config.local.js` liegt je Ordner: Wer die
-Oberfläche wechselt, kopiert sie mit. Dazu schreibt das Skript `web/version.json` (Branch, Commit und dessen Datum);
-den Stand zeigt das Menü unten unter Logo und Namen, ohne die Datei steht dort „Entwicklungsstand“.
-
-`tag-service` bzw. `rotel-bridge` werden nur neu gestartet, wenn sich ihre Dateien geändert haben. Vor jedem Einspielen
-sichert das Skript die betroffenen Dateien nach `/data/xplorio/backup/` (die letzten 5). Gelöscht wird nichts; eigene
-Dateien wie `web/config.local.js` bleiben.
-
-Das Skript meldet sich auf Englisch (wie die Befehle). Die deutschen Optionen früherer Versionen (`--passwort`,
-`--zurueck`) gehen weiter, und die Rückfrage nimmt auch `j` an.
-
-Alles außer der Oberfläche liegt in `/data/xplorio/`: `tags/` (Tag-Dienst), `rotel/` (Rotel-Bridge), `data/` (Daten des
-Tag-Dienstes) und `backup/` (Sicherungen). Der Ordner übersteht Volumio-Updates; vor einer Neuinstallation genügt es, ihn zu
-sichern. Frühere Installationen hatten die Dienste unter `/data/INTERNAL/`: Das Skript stellt `tag-service.service` und
-`rotel-bridge.service` dann einmal auf die neuen Pfade um (mit Sicherung) und startet die Dienste neu; der Tag-Dienst zieht
-seine Daten selbst um. Die alten Ordner `/data/INTERNAL/tags` und `/data/INTERNAL/rotel` bleiben liegen und können nach
-einem Test gelöscht werden.
-
-### Volumio-Update
-Vor einem System-Update prüft Volumio, ob Dateien unter `/volumio` verändert wurden: Es bildet eine Prüfsumme über alle
-Dateien dort und vergleicht sie mit `VOLUMIO_HASH` in `/etc/os-release`. Xplorio ändert keine Datei von Volumio, legt aber
-seine Oberfläche in `/volumio/http/www*/` ab. Das ändert die Prüfsumme, und Volumio lehnt das Update ab („Integritätsüberprüfung
-der Systemsoftware fehlgeschlagen, manuell editierte Dateien wurden entdeckt“). Die Dienste unter `/data/xplorio` stören nicht.
-
-**Empfohlen: Oberfläche vorübergehend entfernen.**
-```bash
-sudo xplorio-deploy --check-update   # zeigt, ob nur Xplorio im Weg ist
-sudo xplorio-deploy --remove         # Oberfläche sichern (mit config.local.js) und aus /volumio entfernen
-# jetzt das Update in Volumio ausführen, nach dem Neustart:
-sudo xplorio-deploy --restore        # Oberfläche genau wie vorher zurück
-sudo xplorio-deploy                  # optional: neuesten Stand einspielen
-```
-`--remove` prüft vorher, ob die Prüfsumme ohne Xplorio wieder stimmt. Ist unter `/volumio` noch etwas anderes verändert
-(z. B. von Hand oder durch ein anderes Werkzeug), entfernt es nichts, weil das Update dann trotzdem scheitern würde;
-`--remove --force` entfernt die Oberfläche trotzdem. Die Sicherung liegt unter `/data/xplorio/backup/interface-*.tar.gz`
-(die letzten 5).
-
-**Alternative auf eigenes Risiko: Prüfung abschalten.** Gibt es die Datei `/data/ignoresystemcheck`, überspringt Volumio
-die Prüfung ganz (`sudo touch /data/ignoresystemcheck`, rückgängig mit `sudo rm /data/ignoresystemcheck`). Das sollte gut
-überlegt sein: Die Prüfung schützt davor, ein Update über ein verändertes System zu spielen, und sie ist dann auch für alle
-anderen Änderungen aus. Nur sinnvoll, wenn `--check-update` meldet, dass allein Xplorio im Weg ist.
-
-**Umstieg von web-app-deploy (bis Oktober 2026 hießen Repo und Befehl `volumio-web-app` bzw. `web-app-deploy`):**
-`xplorio-deploy` wie oben einrichten, dann `sudo xplorio-deploy -n` (zeigt unter anderem „move: /data/web-app to
-/data/xplorio“) und `sudo xplorio-deploy`. Das Skript verschiebt `/data/web-app` samt Daten, Last.fm-Zugang und
-Sicherungen nach `/data/xplorio`, lässt `/data/web-app` als Verweis (Symlink) stehen, stellt die systemd-Dateien um und
-startet die Dienste neu. `web-app-deploy` und die noch älteren Namen `mx-deploy` und `volumio4-deploy` funktionieren
-weiter und rufen `xplorio-deploy` auf (beim ersten Aufruf richten sie es selbst ein).
-
 ## Tag-Dienst (für den Tag-Editor)
-Am einfachsten mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy):
-```bash
-sudo xplorio-deploy --tag-service
-```
-Das spielt bei Bedarf erst `main` ein, legt `/data/xplorio/data` und `/etc/systemd/system/tag-service.service` an, startet
-den Dienst und prüft ihn (`tag-service is running: {"ok":true,…}`). Ist der Dienst schon eingerichtet, ändert der Befehl
-nichts und sagt das; `--force` schreibt die Dienstdatei neu (die alte kommt in die Sicherung, zurück mit `--rollback`).
+Der Tag-Dienst (`xplorio-tags`, Port 8766) schreibt Tags und Cover, prüft die Bibliothek, führt den Verlauf und liefert
+Entdecken, Mix und die Seite „System“. Er läuft als Benutzer `volumio`, wie Volumio selbst, und schreibt damit nur in
+Musikordner, die `volumio` beschreiben darf; die Einstellungsseite nennt die übrigen. Ein- und ausschalten auf der
+Einstellungsseite. Log: `journalctl -u xplorio-tags -e`.
 
-Von Hand, im Ordner des Repos:
-```bash
-sudo mkdir -p /data/xplorio/tags && sudo cp -r tags/. /data/xplorio/tags/
-sudo chown -R volumio:volumio /data/xplorio/tags
-sudo mkdir -p /data/xplorio && sudo mkdir -m 700 -p /data/xplorio/data && sudo chown volumio:volumio /data/xplorio/data
-sudo tee /etc/systemd/system/tag-service.service > /dev/null << 'UNIT'
-[Unit]
-Description=Tag-Dienst fuer Xplorio
-After=network-online.target
-
-[Service]
-ExecStart=/usr/bin/env node --max-old-space-size=384 /data/xplorio/tags/tag-service.js
-WorkingDirectory=/data/xplorio/tags
-Restart=always
-User=volumio
-# Environment=USE_SUDO=1
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-sudo systemctl daemon-reload && sudo systemctl enable tag-service && sudo systemctl start tag-service
-curl -s localhost:8766/health
-```
-Der Dienst schreibt als `volumio` in die Musikdateien. Ob das geht:
-`sudo -u volumio touch /mnt/USB/<Musikordner>/.test && sudo rm /mnt/USB/<Musikordner>/.test && echo schreibbar`.
-Wenn nicht, `Environment=USE_SUDO=1` einkommentieren (dann läuft nur `tags.py` als root).
-
-`--max-old-space-size=384` gibt dem Tag-Dienst mehr Speicher als Nodes Standard (auf 32-Bit-ARM etwa 256 MB). Große
-Sammlungen mit Audio-Analyse brauchen das, sonst bricht er mit `JavaScript heap out of memory` ab (im Protokoll `status=6/ABRT`)
-und ist bis zum Neustart eine halbe Minute nicht erreichbar. Eine ältere Dienstdatei ohne die Angabe ergänzt:
-```bash
-grep -q max-old-space /etc/systemd/system/tag-service.service || sudo sed -i 's|^ExecStart=/usr/bin/env node /|ExecStart=/usr/bin/env node --max-old-space-size=384 /|' /etc/systemd/system/tag-service.service; sudo systemctl daemon-reload && sudo systemctl restart tag-service
-```
-
-Nach einem Update: `sudo systemctl restart tag-service`. Log: `journalctl -u tag-service -e`.
-Weitere Variablen: `HTTP_PORT`, `MUSIC_ROOT` (`/mnt`), `PYTHON`, `MPC`, `TAGS_DATA` (Datenordner, Standard `/data/xplorio/data`).
+Der Dienst startet mit `--max-old-space-size=384`, also mit mehr Speicher als Nodes Standard (auf 32-Bit-ARM etwa 256 MB).
+Große Sammlungen mit Audio-Analyse brauchen das, sonst bricht er mit `JavaScript heap out of memory` ab.
 
 **Zugriffsschutz:** Tag-Dienst und Rotel-Bridge nehmen Aufträge nur von der Oberfläche auf demselben Gerät an.
 Eine andere Webseite, die gerade im Browser offen ist, kann dort weder Tags schreiben noch den Verstärker schalten
 oder den Verlauf lesen. Die Dienste antworten nur, wenn der Player über seine IP-Adresse, einen Namen ohne Punkt
 (`volumio`) oder einen Namen auf `.local`, `.lan`, `.home`, `.internal`, `.home.arpa` oder `.fritz.box` aufgerufen wird.
-Weitere Namen in `web/config.local.js` eintragen und beide Dienste neu starten:
-`window.APP_CONFIG.ALLOWED_HOSTS = ['player.example.net'];` (oder Umgebungsvariable `XPLORIO_HOSTS`, mit Komma getrennt).
+Weitere Namen auf der Einstellungsseite unter „Funktionen“ eintragen.
 Eigene Skripte, die ohne Browser schreiben (etwa mit `curl`), schicken den Kopf `X-Xplorio: 1` mit;
 `curl -s localhost:8766/health` und andere Abfragen gehen wie bisher.
 
-**Datenordner:** Das Programm liegt in `/data/xplorio/tags/`, alles, was der Dienst anlegt (Verlauf, Last.fm-Sitzung,
-Check-Ergebnis, Cover, Analyse …), in `/data/xplorio/data/`. Der Ordner ist nur für `volumio` lesbar und liegt weder im
-Webordner noch in `/data/INTERNAL`, das Volumio im Netzwerk freigeben kann. Ältere Installationen hatten die Daten neben
-dem Programm; der Dienst verschiebt sie beim ersten Start selbst. Fehlt der Ordner und darf der Dienst ihn nicht anlegen,
-arbeitet er im alten Ordner weiter; dann einmal
-`sudo mkdir -p /data/xplorio && sudo mkdir -m 700 -p /data/xplorio/data && sudo chown volumio:volumio /data/xplorio/data && sudo systemctl restart tag-service`.
+**Datenordner:** Alles, was der Dienst anlegt (Verlauf, Last.fm-Sitzung, Check-Ergebnis, Cover, Analyse …), liegt in
+`/data/xplorio/data/`. Der Ordner ist nur für `volumio` lesbar und liegt weder im Plugin-Ordner noch in `/data/INTERNAL`,
+das Volumio im Netzwerk freigeben kann. Vor einer Neuinstallation von Volumio genügt es, `/data/xplorio` zu sichern.
 
 ### Last.fm-Zugang
-API-Key und „Shared secret“ von https://www.last.fm/api/accounts stehen in `/data/xplorio/data/keys.json`; nur der Tag-Dienst
-liest sie, die App fragt Last.fm über den Dienst:
-```bash
-sudo -u volumio tee /data/xplorio/data/keys.json > /dev/null << 'KEYS'
-{ "LASTFM_KEY": "DEIN_LASTFM_SCHLUESSEL", "LASTFM_SECRET": "DEIN_SHARED_SECRET" }
-KEYS
-sudo chmod 600 /data/xplorio/data/keys.json && sudo systemctl restart tag-service
-```
+API-Key und „Shared secret“ von https://www.last.fm/api/accounts auf der Einstellungsseite unter „Last.fm“ eintragen. Das
+Plugin legt sie in `/data/xplorio/data/keys.json` ab; nur der Tag-Dienst liest sie, die App fragt Last.fm über den Dienst.
 Der Key reicht für ähnliche Künstler, Texte, Cover-Suche und Stimmungs-Tags; das Secret braucht nur das Scrobbeln.
-Stehen `LASTFM_KEY`/`LASTFM_SECRET` noch in `web/config.local.js` (frühere Versionen), übernimmt der Dienst sie beim
-Start nach `keys.json`; danach die beiden Zeilen aus `web/config.local.js` löschen, denn diese Datei kann jeder Browser
-im Netz laden. `curl -s localhost:8766/health` zeigt `"keysInWeb":true`, solange sie dort noch stehen.
 `tags.py` läuft mit Python 2.7 und 3 und bringt mutagen selbst mit; gibt es kein `python`, nimmt der Dienst `python3`.
 
 Hinweise: Erlaubt sind nur Dateien unter `/mnt/INTERNAL`, `/mnt/USB`, `/mnt/NAS`. Alte Werte für „Rückgängig“ stehen in
@@ -267,7 +175,7 @@ Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Edi
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der
-App und auf dem Kiosk-TV; ohne Titel oder ohne Treffer bleibt das Senderlogo. Die Radio-Liste zeigt die Senderlogos
+App; ohne Titel oder ohne Treffer bleibt das Senderlogo. Die Radio-Liste zeigt die Senderlogos
 (Adresse aus Volumio, sonst über den Sendernamen von radio-browser.info). Beides speichert der Tag-Dienst unter
 `/data/xplorio/data/radio-covers/` und `/data/xplorio/data/stations/`.
 
@@ -290,8 +198,8 @@ gehört“ und „Neu in der Sammlung“. Runde Geburtstage (10, 20, 30 … Jahr
 (JJJJ-MM-TT, passend zum Jahr des Albums); fehlt es, schlägt der Tag-Dienst es einmal bei MusicBrainz nach (erstes
 Erscheinen der Release-Group, eine Anfrage je 1,5 Sekunden, Sampler ausgenommen) und merkt es sich in
 `/data/xplorio/data/releasedates.jsonl`; nicht Gefundenes fragt er nach 90 Tagen erneut. Bei einer großen Sammlung dauert
-das beim ersten Mal einige Stunden; solange kaum Daten da sind und noch kein Geburtstag gefunden ist, zeigt Entdecken den Stand. Ausschalten: `RELEASEDATES: false` in
-`web/config.local.js`, dann den Tag-Dienst neu starten.
+das beim ersten Mal einige Stunden; solange kaum Daten da sind und noch kein Geburtstag gefunden ist, zeigt Entdecken den Stand. Ausschalten auf der
+Einstellungsseite unter „Funktionen“ (Erscheinungstage).
 
 ### System
 Im Menü unter „System“: die aktuelle Prozessorlast (alle 2 Sekunden neu, mit den letzten 3 Minuten und je Kern), ein Verlauf
@@ -302,36 +210,19 @@ jedes Laufwerks (interne Karte, USB und jede Verbindung unter `/mnt/NAS/` einzel
 10 Minuten in `/data/xplorio/data/sysinfo.json`.
 
 #### Dienste
-Darunter die Karte „Dienste“: Volumio, MPD, Tag-Dienst, Rotel-Steuerung und Kiosk mit Zustand (läuft seit …, gestoppt,
-Fehler) und einem Knopf „Neustart“, beim Kiosk zusätzlich „Start“ und „Stopp“ (etwa, damit er nur läuft, wenn der Fernseher
-angeschlossen ist). Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht eingerichtet sind, fehlen in
-der Liste. Der Tag-Dienst läuft als Benutzer `volumio` und darf genau diese Befehle nur mit einer sudo-Regel ausführen;
-ohne sie zeigt die Karte den Zustand und einen Hinweis. Einmalig einrichten (`visudo` prüft die Regel vor dem Speichern):
-
-```
-sudo visudo -f /etc/sudoers.d/xplorio-dienste
-```
-
-und diese eine Zeile eintragen:
-
-```
-volumio ALL=(root) NOPASSWD: /bin/systemctl --no-block restart volumio, /bin/systemctl --no-block restart mpd, /bin/systemctl --no-block restart tag-service, /bin/systemctl --no-block restart rotel-bridge, /bin/systemctl --no-block start volumio-kiosk, /bin/systemctl --no-block stop volumio-kiosk, /bin/systemctl --no-block restart volumio-kiosk, /sbin/reboot, /sbin/poweroff
-```
-
-Die Regel erlaubt nur diese Befehle, nichts sonst.
+Darunter die Karte „Dienste“: Volumio, MPD, Xplorio-Webserver, Tag-Dienst und Rotel-Steuerung mit Zustand (läuft seit …,
+gestoppt, Fehler) und einem Knopf „Neustart“. Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht
+laufen, fehlen in der Liste. Der Tag-Dienst startet die Dienste über `sudo systemctl` neu, das Volumio dem Benutzer
+`volumio` erlaubt; eine eigene sudo-Regel legt das Plugin nicht an. Lässt der Player das nicht zu, zeigt die Karte den
+Zustand und einen Hinweis.
 
 Unter den Diensten stehen „Neustart“ und „Ausschalten“ für den ganzen Player, jeweils mit Rückfrage. Ist ein Passwort
 festgelegt (siehe unten), fragen auch sie danach; sonst nicht, denn Volumio selbst bietet beides ohne Passwort an. Sie nutzen
-`/sbin/reboot` und `/sbin/poweroff` wie Volumio; die sudo-Regel oben enthält beide.
+`/sbin/reboot` und `/sbin/poweroff` wie Volumio.
 
-Die Knöpfe der Dienste sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines festgelegt ist:
-
-```
-sudo xplorio-deploy --password
-```
-
-Gespeichert wird nur ein Hash (PBKDF2 mit Salt) in `/data/xplorio/data/admin.json`; derselbe Befehl ändert es und meldet
-alle Geräte ab. Beim ersten Tipp auf einen Knopf fragt die Seite nach dem Passwort, danach bleibt das Gerät (der Browser)
+Die Knöpfe der Dienste sind außerdem durch ein Passwort geschützt und bleiben gesperrt, bis eines auf der
+Einstellungsseite des Plugins festgelegt ist. Gespeichert wird nur ein Hash (PBKDF2 mit Salt) in
+`/data/xplorio/data/admin.json`; ein neues Passwort meldet alle Geräte ab. Beim ersten Tipp auf einen Knopf fragt die Seite nach dem Passwort, danach bleibt das Gerät (der Browser)
 30 Tage angemeldet. Nach 5 falschen Versuchen wartet der Dienst, bei jedem weiteren doppelt so lange (höchstens 15 Minuten).
 Die Verbindung ist unverschlüsselt (http): Das Passwort hält Gäste fern, schützt aber nicht vor Mitlesen im eigenen Netz,
 also keines nehmen, das anderswo verwendet wird. Hinweis: Volumio selbst lässt sich im Heimnetz ohne Passwort neu starten
@@ -350,7 +241,7 @@ so: `id volumio` zeigt die Gruppen, steht dort `systemd-journal` oder `adm`, ist
 
 ```
 sudo usermod -a -G systemd-journal volumio
-sudo systemctl restart tag-service
+sudo systemctl restart xplorio-tags
 ```
 
 Die Gruppe erlaubt nur das Lesen des Journals.
@@ -499,8 +390,8 @@ Künstlerfotos holt der Tag-Dienst einmal von Deezer und speichert sie unter `/d
 
 Der Tag-Dienst fragt Volumio alle 5 s (bei Pause/Stopp alle 15 s) nach dem Wiedergabestand (`VOLUMIO_URL`, Standard
 `http://localhost:3000`). Ein Titel zählt, wenn er länger als 30 s ist und zur Hälfte oder 4 Minuten lief; Webradio zählt
-nicht. Jede Wiedergabe ist eine Zeile in `/data/xplorio/data/plays.jsonl`. Ausschalten: `HISTORY: false` in
-`web/config.local.js`, dann den Tag-Dienst neu starten.
+nicht. Jede Wiedergabe ist eine Zeile in `/data/xplorio/data/plays.jsonl`. Ausschalten auf der
+Einstellungsseite unter „Funktionen“ (Verlauf).
 
 **Last.fm:** Zum Scrobbeln braucht der Dienst neben `LASTFM_KEY` auch `LASTFM_SECRET` in `/data/xplorio/data/keys.json`
 (siehe [Last.fm-Zugang](#lastfm-zugang)). Dann unter Statistik „Mit Last.fm verbinden“, bei Last.fm
@@ -520,7 +411,7 @@ brauchbare Titel-Tags ersatzweise die Tags des Künstlers) und rechnet sie nach 
 (Stopp oder Pause; geprüft alle 5 s), mit etwa 4 Anfragen je Sekunde. Die Musikdateien bleiben unverändert; die Rohtags
 liegen in `/data/xplorio/data/moodtags/`, die Titelliste dazu in `/data/xplorio/data/library-tracks.json` (entsteht
 zusammen mit der Albenliste). Fortschritt und Verteilung zeigt „Bibliothek prüfen“ unter „Stimmungs-Tags (Last.fm)“.
-Ausschalten: `MOODTAGS: false` in `web/config.local.js`, dann den Tag-Dienst neu starten.
+Ausschalten auf der Einstellungsseite unter „Funktionen“ (Stimmungs-Tags).
 
 **Mood Mix:** Playlisten-Taste, Reiter „Mood Mix“ (erscheint, sobald der Tag-Dienst läuft). Dort lassen sich
 mehrere Stimmungen, ein Energie-Bereich, ein oder mehrere Genres (Genre-Tag des Albums, nie gelockert) und unter „Feinabstimmung“ Stile, Tempo (mit Audio-Analyse), Jahre (Erscheinungsjahr des Albums aus dem Date-Tag; mit Grenze fallen Alben ohne Jahr weg, nie gelockert), Länge, Höchstlänge je Titel (Vorgabe 20 min, hält DJ-Mixe draußen) und Entdeckungsgrad (nach dem Verlauf:
@@ -577,6 +468,8 @@ python3 analyse.py --upload http://<player>:8766
 - Zugeordnet wird über Künstler und Titel (wie bei den Last.fm-Tags), nicht über den Pfad: Ordnerstruktur und Laufwerk
   auf dem Mac sind egal. Titel, die es auf dem Player nicht gibt, werden dort einfach nicht verwendet.
 - Mehrere Ordner lassen sich angeben, Symlinks werden verfolgt; `--exclude "*/Hörbücher/*"` lässt Pfade aus.
+- Ist in den Xplorio-Einstellungen ein Passwort für die Dienste gesetzt, nimmt der Player das Ergebnis nur damit an:
+  Das Skript fragt beim Start einmal danach (oder nimmt es aus der Umgebungsvariable `XPLORIO_PASSWORD`).
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.
   Mit `--upload` oder `--player` lädt es beim Abbrechen den bisherigen Stand hoch (ein zweites Ctrl-C bricht auch das ab;
   spielt der Player gerade, holt das der nächste Lauf nach).
@@ -638,85 +531,24 @@ allen Geräten (`/data/xplorio/data/lyrics-offsets.json`); Tippen auf den Wert s
 
 ## Rotel-Bridge (optional)
 Steuert einen Rotel-Verstärker im Netz: Ein/Aus, Lautstärke und die Fernbedienung (siehe unten). Die Bridge ist ein
-kleiner Dienst auf dem Player (Port 8765), der die Verbindung zum Verstärker hält (TCP, Port 9590); die Oberfläche
-spricht nur mit der Bridge.
+kleiner Dienst auf dem Player (`xplorio-rotel`, Port 8765), der die Verbindung zum Verstärker hält (TCP, Port 9590); die
+Oberfläche spricht nur mit der Bridge.
 
 **Vorbereitung am Verstärker:** Netzwerkkabel anschließen, im Menü des Verstärkers die IP-Adresse ablesen (am besten
 im Router fest vergeben) und den Power Mode auf „Quick“ stellen, damit er sich aus dem Standby per Netz einschalten lässt.
 
-**Am einfachsten** mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy), mit der Adresse des Verstärkers:
-```bash
-sudo xplorio-deploy --rotel 192.168.1.50
-```
-Das spielt bei Bedarf erst `main` ein, trägt `ROTEL = true` und `ROTEL_HOST` in `web/config.local.js` ein (nur wenn dort
-noch kein `ROTEL_HOST` steht, vorher mit Sicherung; ohne Adresse fragt es danach), legt `/etc/systemd/system/rotel-bridge.service`
-mit dem passenden Ordner (`www`, `www3` oder `www4`) an, startet die Bridge und meldet `rotel-bridge is running: connected
-to the amplifier`. Ist die Bridge schon eingerichtet, ändert der Befehl nichts und sagt das; `--force` schreibt die
-Dienstdatei neu (mit Sicherung). Eigene Einträge in `config.local.js` bleiben unberührt. Steht die Adresse schon in einem
-der www-Ordner, fragt der Befehl nicht und lässt auch die anderen Ordner, wie sie sind.
+**Einschalten:** Auf der Einstellungsseite des Plugins unter „Rotel-Verstärker“ die Rotel-Bridge einschalten und die
+Adresse des Verstärkers eintragen, z. B. `192.168.1.50`. Das Plugin startet die Bridge beim Speichern neu. Ohne
+Rotel-Bridge regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
 
-**Falsche Adresse eingegeben?** `sudo xplorio-deploy --rotel <richtige IP> --force` ersetzt `ROTEL_HOST` (vorher mit
-Sicherung) und startet die Bridge neu. Ohne IP fragt der Befehl nach der neuen Adresse; Enter behält die alte.
-
-**Von Hand**, Schritt für Schritt:
-
-**1. Datei auf den Player kopieren** (im Ordner des Repos; `xplorio-deploy` erledigt das bei jedem Einspielen selbst):
-```bash
-sudo mkdir -p /data/xplorio/rotel && sudo cp rotel/rotel-bridge.js /data/xplorio/rotel/
-sudo chown -R volumio:volumio /data/xplorio/rotel
-```
-
-**2. Einstellungen in `web/config.local.js`** (die Bridge liest sie beim Start; Ordner je nach Volumio-Version
-`/volumio/http/www3/web/`, bei Volumio 2 `/volumio/http/www/web/`, bei Volumio 4 `/volumio/http/www4/web/`):
-```bash
-sudo nano /volumio/http/www3/web/config.local.js
-```
-und eintragen:
-```js
-window.APP_CONFIG.ROTEL = true;                            // Ein/Aus, Verstärker-Lautstärke und Fernbedienung
-window.APP_CONFIG.ROTEL_HOST = '<IP-des-Verstaerkers>';    // z. B. '192.168.1.50'
-```
-Ohne `ROTEL: true` regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
-
-**3. Als Dienst einrichten und starten:**
-```bash
-sudo tee /etc/systemd/system/rotel-bridge.service > /dev/null << 'UNIT'
-[Unit]
-Description=Rotel-Bridge fuer Xplorio
-After=network-online.target
-
-[Service]
-ExecStart=/usr/bin/env node /data/xplorio/rotel/rotel-bridge.js
-WorkingDirectory=/data/xplorio/rotel
-Restart=always
-User=volumio
-Environment=APP_CONFIG_DIR=/volumio/http/www3/web
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-sudo systemctl daemon-reload && sudo systemctl enable rotel-bridge && sudo systemctl start rotel-bridge
-```
-`APP_CONFIG_DIR` ist der Ordner aus Schritt 2; unter Volumio 2 vor dem Kopieren `www3` durch `www` ersetzen, unter
-Volumio 4 durch `www4`.
-
-**4. Prüfen:**
+**Prüfen** (per ssh):
 ```bash
 curl -s localhost:8765/state
 ```
 Steht dort `"connected":true`, hat die Bridge den Verstärker erreicht; `"power"` und `"volume"` zeigen seinen Stand.
 Bei `"connected":false` zeigt das Log den Grund (falsche Adresse, Verstärker ohne Netz):
 ```bash
-journalctl -u rotel-bridge -n 30 --no-pager
-```
-Einschalten zum Test (ohne Browser braucht die Bridge den Kopf `X-Xplorio`):
-```bash
-curl -s -H 'X-Xplorio: 1' 'localhost:8765/cmd?c=power_on'
-```
-
-**5. Nach Änderungen** an `config.local.js` (Adresse, Profil unten) die Bridge neu starten:
-```bash
-sudo systemctl restart rotel-bridge
+journalctl -u xplorio-rotel -n 30 --no-pager
 ```
 Die Oberfläche einmal neu laden; das Fernbedienungs-Symbol erscheint oben rechts in der Player-Ansicht.
 
@@ -727,7 +559,7 @@ Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs
 Fernbedienung.
 
 Die Befehle sind für den Rotel RA-1572 / RA-1572MKII voreingestellt (ASCII-Protokoll V2, Port 9590). Andere Modelle
-oder eigene Namen für die Eingänge in `web/config.local.js`; was fehlt, bleibt beim Standard:
+in `/data/xplorio/config.local.js` (siehe [Einstellungen](#einstellungen)); was fehlt, bleibt beim Standard:
 ```js
 window.APP_CONFIG.ROTEL_PROFILE = {
   model: 'Mein Verstärker',
@@ -738,31 +570,30 @@ window.APP_CONFIG.ROTEL_PROFILE = {
 ```
 Weitere Felder: `bypass: ['bypass_on', 'bypass_off']`, `speakerA`/`speakerB` je `[an, aus]`, `bass`/`treble`
 je `[höher, tiefer, Mitte]`, `balance: [rechts, links, Mitte]`, `toneMax` (Standard 10) und `balanceMax` (15).
-Dasselbe ASCII-Protokoll nutzen auch andere Rotel-Geräte und die Michi-Serie von Rotel (X3, X5, P5, S5, M8); Befehle und Port (`ROTEL_AMP_PORT`) stehen im Protokoll-PDF des Geräts auf rotel.com (der P5 etwa nutzt Port 9596 statt 9590). Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung die Bridge
-neu starten (`sudo systemctl restart rotel-bridge`; das Einspielen-Skript tut das nur, wenn sich `rotel-bridge.js` geändert hat).
+Dasselbe ASCII-Protokoll nutzen auch andere Rotel-Geräte und die Michi-Serie von Rotel (X3, X5, P5, S5, M8); Befehle und Port (`ROTEL_AMP_PORT`) stehen im Protokoll-PDF des Geräts auf rotel.com (der P5 etwa nutzt Port 9596 statt 9590). Befehle ohne das abschließende `!`; die Bridge nimmt nur Befehle aus dem Profil an. Nach einer Änderung das Plugin
+einmal aus- und wieder einschalten.
 
 **Aktiver Eingang in der Player-Ansicht:** Ist am Verstärker ein anderer Eingang gewählt als der des Players
 (`powerOnSource`, ohne Angabe `pcusb`), steht unter dem Titel statt Format und Qualität der Name des Eingangs, und statt
 des Stifts ein Icon (Tippen öffnet die Fernbedienung). An Stelle des Covers steht groß das Icon des Eingangs und als Titel sein Name; Zeitleiste und Tasten sind gesperrt (die Lautstärke nicht). Wählt man in dieser Zeit in Xplorio ein Album oder einen Titel zum Abspielen, legt Xplorio es nur in die Warteschlange, ohne zu starten (ein Start ins Leere ließe Volumio ungehört durch das Album springen), und zeigt die Player-Ansicht das Album mit Cover, Künstler und Albumtitel (Titel, Titelinfo und Liedtext erst am Eingang des Players, denn am anderen Eingang läuft gerade etwas anderes), auch bei Streamingdiensten. Nach dem Umschalten auf den Eingang des Players startet ein Tipp auf Abspielen den ersten Titel. Ein Tipp auf einen Titel der Warteschlange spielt in dieser Zeit nicht, sondern nennt nur den Eingang. Die Icons folgen dem Eingang: `phono`, `cd`, `tuner`,
 `bluetooth`, `usb`, `digital` (Opt/Coax), `aux` (auch XLR), `pc` (PC-USB) und `tv`. Name und Icon einzelner Eingänge
-ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung; Bridge danach neu starten):
-```js
-window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: 'Plattenspieler', icon: 'phono'}, opt1: {name: 'Fernseher', icon: 'tv'}};
-```
+ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung): auf der Einstellungsseite unter
+„Rotel-Verstärker“, z. B. `aux=Plattenspieler/phono, opt1=Fernseher/tv`.
 
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und
-Albumseiten des Dienstes) erscheinen nur, wenn das jeweilige Plugin in Volumio aktiv ist. Fest ein- oder ausschalten:
-`window.APP_CONFIG.TIDAL = true;` bzw. `false` (ebenso `QOBUZ`, `HRA`, `SPOTIFY`) in `web/config.local.js`. Sind
+Albumseiten des Dienstes) erscheinen nur, wenn das jeweilige Plugin in Volumio aktiv ist. Fest ein- oder ausschalten
+auf der Einstellungsseite unter „Funktionen“ (automatisch, immer oder nie). Sind
 mehrere Dienste aktiv, zeigt die Suche ihre Treffer in eigenen Abschnitten. Spotify braucht Volumios Spotify-Plugin
 mit Suche (Premium-Konto); Spotify Connect allein bringt keine Suche mit. Der TIDAL-Wächter unten gilt nur für TIDAL.
 
 ## TIDAL-Wächter (optional)
+Gehört nicht zum Plugin, sondern wird bei Bedarf per ssh eingerichtet (aus dem Ordner des Repos):
 ```bash
-sudo mkdir -p /volumio/http/www3/tools && sudo cp tools/tidal-watchdog.sh /volumio/http/www3/tools/
-sudo chmod +x /volumio/http/www3/tools/tidal-watchdog.sh
-sudo /volumio/http/www3/tools/tidal-watchdog.sh --check      # nur prüfen
-echo '*/10 * * * * root /volumio/http/www3/tools/tidal-watchdog.sh' | sudo tee /etc/cron.d/tidal-watchdog
+sudo mkdir -p /data/xplorio/tools && sudo cp tools/tidal-watchdog.sh /data/xplorio/tools/
+sudo chmod +x /data/xplorio/tools/tidal-watchdog.sh
+sudo /data/xplorio/tools/tidal-watchdog.sh --check      # nur prüfen
+echo '*/10 * * * * root /data/xplorio/tools/tidal-watchdog.sh' | sudo tee /etc/cron.d/tidal-watchdog
 ```
 Prüft alle 10 Minuten, ob TIDAL antwortet, und startet Volumio sonst neu (höchstens einmal je Stunde). Protokoll:
 `/var/log/tidal-watchdog.log`. Ist TIDAL nicht angemeldet, den Wächter nicht einrichten.
@@ -774,26 +605,11 @@ Wiederholen-Knopf einen vierten Zustand: aus → alle → einer → ∞. Bei ∞
 Volumio umgeschaltet zeigt der Knopf den Zustand (spätestens nach 30 s). Ohne Plugin oder ohne Last.fm-Key in den
 Plugin-Einstellungen bleibt es bei drei Zuständen.
 
-## Volumio 4
-Die Oberfläche läuft auch unter Volumio 4 (auf einer Testinstanz erprobt). Unterschiede zu Volumio 2:
+## Volumio 2
+Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf Volumio 2 (z. B. MX-Stream) läuft das Plugin
+ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#installieren). Unterschiede:
 
-- **Ordner:** Volumio 4 liefert die Oberfläche aus `/volumio/http/www4/` statt `www3/`. Aufruf weiter
-  `http://<player>/xplorio.html`; `web/config.local.js` gehört nach `/volumio/http/www4/web/`.
-- **Aktualisieren:** wie oben mit [xplorio-deploy](#aktualisieren-mit-xplorio-deploy); es findet `www4/` selbst. Beim
-  ersten Mal erst ansehen: `sudo xplorio-deploy -n` („geändert“ hieße, eine Datei von Volumio würde ersetzt). In der
-  Meldung „Installed to …“ muss `www4` stehen.
-- **Tag-Dienst:** Die Dienstdatei oben startet Node über `/usr/bin/env node` und läuft damit auf beiden Versionen. Eine
-  ältere Dienstdatei mit `/usr/local/bin/node` scheitert unter Volumio 4 mit `status=203/EXEC`; dann:
-  `sudo sed -i 's|^ExecStart=/usr/local/bin/node|ExecStart=/usr/bin/env node|' /etc/systemd/system/tag-service.service && sudo systemctl daemon-reload && sudo systemctl restart tag-service`.
-  Python 3 ist dabei, mutagen bringt der Tag-Dienst mit.
+- **Python:** Volumio 2 hat Python 2.7, Volumio 4 Python 3; `tags.py` läuft mit beiden, mutagen bringt der Tag-Dienst mit.
 - **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Last.fm und Wikipedia
-  (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit `LASTFM_KEY` in `/data/xplorio/data/keys.json` gibt es
-  auch Albumtexte.
-- **Bildschirm am Player (Kiosk):** Läuft auf dem angeschlossenen Display Volumios eigene Oberfläche, kann dort auch
-  Xplorio laufen (erprobt auf einem MacBook mit Volumio 4). Der Kiosk-Browser bekommt seine Dateien aus `/volumio/http/www/`;
-  `xplorio-deploy` spielt dort mit ein (prüfen: `ls /volumio/http/www*/xplorio.html`). In der letzten Zeile von
-  `/opt/volumiokiosk.sh` `http://localhost:3000` durch `http://localhost:3000/xplorio.html` ersetzen (oder
-  `…/kioskTV.html` für Cover, Titel und Lyrics ohne Bedienung), dann `sudo systemctl restart volumio-kiosk`. Ein
-  Volumio-Update kann das Script zurücksetzen; dann die Zeile erneut ändern.
-- **Nicht erprobt unter Volumio 4:** `kioskTV.html` (Kiosk-Ordner), Rotel-Bridge und TIDAL-Wächter (der Wächter liegt dort
-  unter `/volumio/http/www4/tools/`; den Pfad im Cron-Eintrag entsprechend anpassen).
+  (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit Last.fm-Key gibt es auch Albumtexte.
+- **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
