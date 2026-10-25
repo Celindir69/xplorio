@@ -35,4 +35,16 @@ t('invalid values are rejected (thumbs up are Volumio favorites)', function(){
   assert.strictEqual(s.set({kind: 'x', v: 1}), null);
 });
 
+t('full: no new ratings beyond the limit, changing and deleting still work; long names are cut', function(){
+  var f = file + '.voll', albums = {};
+  for (var i = 0; i < r.MAX_PER_KIND; i++) albums['USB/A/' + i] = {al: 'x', ar: 'y', v: 3, t: 1};
+  fs.writeFileSync(f, JSON.stringify({artists: {}, albums: albums, tracks: {}}));
+  var s = new r.Store(f);
+  assert.strictEqual(s.set({kind: 'album', uri: 'USB/B/C/01.flac', v: 4}), null);
+  assert.strictEqual(s.set({kind: 'album', uri: 'USB/A/7/01.flac', v: 5}), 5);
+  assert.strictEqual(s.set({kind: 'album', uri: 'USB/A/8/01.flac', v: 0}), 0);
+  assert.strictEqual(s.set({kind: 'artist', name: 'Long ' + new Array(600).join('n'), v: 1}), 1);
+  var a = s.load().artists; assert.strictEqual(a[Object.keys(a)[0]].n.length, 300);
+});
+
 console.log(n + ' checks');

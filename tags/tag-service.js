@@ -562,7 +562,8 @@ function playerState(cb) {
   var req = http.get(VOLUMIO_URL + '/api/v1/getState', function(res){
     var data = '';
     res.setEncoding('utf8');
-    res.on('data', function(d){ data += d; });
+    res.on('data', function(d){ data += d; if (data.length > 1024 * 1024) { req.abort(); finish(new Error('response too large')); } });
+    res.on('aborted', function(){ finish(new Error('aborted')); });
     res.on('end', function(){ try { finish(null, JSON.parse(data)); } catch (e) { finish(e); } });
   });
   req.setTimeout(5000, function(){ req.abort(); finish(new Error('timeout')); });
@@ -753,10 +754,22 @@ function doMoodtags(query, cb) {
 }
 function strip(o) { var r = {}; Object.keys(o).forEach(function(k){ if (k.charAt(0) !== '_') r[k] = o[k]; }); return r; }
 
-/* POST /essentia: the analysis script's result file (JSON Lines) replaces the current one */
+/* POST /essentia: the analysis script's result file (JSON Lines) replaces the current one.
+   With a password for the services (adminpass.js) only with it, in the header X-Xplorio-Password */
 function doEssentiaUpload(req, res) {
   if (essentiaBusy) { req.resume(); return send(res, 409, {ok: false, error: 'an upload is already running'}); }
   if (Number(req.headers['content-length']) > ESSENTIA_MAX) { req.resume(); return send(res, 413, {ok: false, error: 'file too large'}); }
+  if (!adminAuth.isSet()) return essentiaReceive(req, res);
+  req.pause();
+  adminAuth.verify(String(req.headers['x-xplorio-password'] || ''), 0, function(r){
+    if (!r.ok) { req.resume(); return send(res, 200, {ok: false, error: r.error === 'locked' ? 'locked' : 'auth', wait: r.wait || 0}); }
+    if (req.aborted || req.destroyed) return;                 /* gone while checking */
+    if (essentiaBusy) { req.resume(); return send(res, 409, {ok: false, error: 'an upload is already running'}); }
+    essentiaReceive(req, res);
+    req.resume();
+  });
+}
+function essentiaReceive(req, res) {
   try { mkdirs(DATA_DIR); } catch (e) { /* exists */ }
   essentiaBusy = true;
   var tmp = ESSENTIA_FILE + '.neu', out = fs.createWriteStream(tmp), size = 0, failed = false, ended = false;
@@ -778,7 +791,7 @@ function doEssentiaUpload(req, res) {
     audioStore.reload(true);
     var st = audioStore.status(), lib = moodCollector.loadLib(), matched = 0;
     lib.forEach(function(it){ if (audioStore.get(it.ar, it.ti, it.al)) matched++; });
-    send(res, 200, {ok: true, tracks: st.tracks, library: lib.length, matched: matched});
+    send(res, 200, {ok: true, tracks: st.tracks, library: lib.length, matched: matched, full: !!audioStore.full});
   });
   req.pipe(out);
 }
@@ -982,7 +995,10 @@ var gems = require('./gems.js'), gemState = null, favState = {at: 0, map: {}, re
 function volumioFavs(cb) {
   if (Date.now() - favState.at < 60000 || favState.loading) return cb(favState);
   favState.loading = true;
+  var finished = false;
   function done(map) {
+    if (finished) return;
+    finished = true;
     favState.loading = false; favState.at = Date.now();
     if (map && Object.keys(map).sort().join('\n') !== Object.keys(favState.map).sort().join('\n')) { favState.map = map; favState.rev++; }
     cb(favState);
@@ -990,8 +1006,10 @@ function volumioFavs(cb) {
   var req = http.get(VOLUMIO_URL + '/api/v1/browse?uri=favourites', function(res){
     var data = '';
     res.setEncoding('utf8');
-    res.on('data', function(d){ data += d; });
+    res.on('data', function(d){ data += d; if (data.length > 20 * 1024 * 1024) { req.abort(); done(null); } });
+    res.on('aborted', function(){ done(null); });
     res.on('end', function(){
+      if (finished) return;
       var map = {};
       try {
         ((JSON.parse(data).navigation || {}).lists || []).forEach(function(l){
@@ -1001,7 +1019,7 @@ function volumioFavs(cb) {
       done(map);
     });
   });
-  req.setTimeout(5000, function(){ req.abort(); });
+  req.setTimeout(5000, function(){ req.abort(); done(null); });
   req.on('error', function(){ done(null); });
 }
 /* prepared taste for the gems (gems.prepare), rebuilt only when library, history, ratings or favourites change */
@@ -1208,12 +1226,15 @@ function doLastfm(body, cb) {
 
 /* GET /artistimage?name=…: artist photo (Deezer, stored on the player under artists/); 404 without photo */
 var artistimg = require('./artistimg.js');
-var artistImages = new artistimg.Store(path.join(DATA_DIR, 'artists'));
+/* at most 10,000 photos (usually about 300 MB, never more than 500 MB): older ones are deleted and loaded again when needed */
+var artistImages = new artistimg.Store(path.join(DATA_DIR, 'artists'), {max: 10000, maxBytes: 500 * 1024 * 1024});
+function sendBusy(res) { res.writeHead(503, {'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store', 'Retry-After': '5'}); res.end(); }
 
 function doArtistImage(query, res) {
   var name = String(query.name || '').trim();
   if (!name || name.length > 200) return send(res, 400, {ok: false, error: 'name missing'});
   artistImages.get(name, function(e, buf){
+    if (e === 'busy') return sendBusy(res);
     if (!buf) { res.writeHead(404, {'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=3600'}); return res.end(); }
     res.writeHead(200, {'Content-Type': buf[0] === 0x89 ? 'image/png' : 'image/jpeg', 'Content-Length': buf.length,
                         'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=2592000'});
@@ -1224,8 +1245,8 @@ function doArtistImage(query, res) {
 /* Web radio: GET /radiocover?artist=…&title=… (cover for the current track) and GET /stationlogo?name=…[&url=…] (station logo);
    both stored on the player under radio-covers/ and stations/; 404 without image */
 var radio = require('./radio.js');
-var radioCovers = new artistimg.Store(path.join(DATA_DIR, 'radio-covers'), {lookup: radio.songLookup, noneTtl: 7 * 86400000, max: 3000});
-var stationLogos = new artistimg.Store(path.join(DATA_DIR, 'stations'), {lookup: radio.logoLookup, max: 1000});
+var radioCovers = new artistimg.Store(path.join(DATA_DIR, 'radio-covers'), {lookup: radio.songLookup, noneTtl: 7 * 86400000, max: 3000, maxBytes: 300 * 1024 * 1024});
+var stationLogos = new artistimg.Store(path.join(DATA_DIR, 'stations'), {lookup: radio.logoLookup, max: 1000, maxBytes: 100 * 1024 * 1024});
 
 function sendImage(res, buf) {
   var type = buf && radio.mime(buf);
@@ -1236,12 +1257,12 @@ function sendImage(res, buf) {
 function doRadioCover(query, res) {
   var artist = String(query.artist || '').trim(), title = String(query.title || '').trim();
   if (!artist || !title || artist.length + title.length > 300) return send(res, 400, {ok: false, error: 'artist and title required'});
-  radioCovers.get(artist + '\n' + title, function(e, buf){ sendImage(res, buf); });
+  radioCovers.get(artist + '\n' + title, function(e, buf){ if (e === 'busy') sendBusy(res); else sendImage(res, buf); });
 }
 function doStationLogo(query, res) {
   var name = String(query.name || '').trim(), u = String(query.url || '').trim();
   if (!name || name.length > 200 || u.length > 1000) return send(res, 400, {ok: false, error: 'name missing'});
-  stationLogos.get(name, function(e, buf){ sendImage(res, buf); }, u);
+  stationLogos.get(name, function(e, buf){ if (e === 'busy') sendBusy(res); else sendImage(res, buf); }, u);
 }
 
 /* GET /sysinfo[?full=1]: system values for the "System" page (sysinfo.js) */
@@ -1287,6 +1308,7 @@ function doServiceLogin(body, cb) {
 /* GET /lyricsoffset?key=… -> {ok, ms}; POST /lyricsoffset {key, ms}: offset of the synced lyrics per track
    (in ms, positive = text comes later), shared by all devices in lyrics-offsets.json */
 var OFFSET_FILE = path.join(DATA_DIR, 'lyrics-offsets.json');
+var OFFSET_MAX = 10000;          /* tracks with their own lyrics offset; more are refused */
 function readOffsets() { try { return JSON.parse(fs.readFileSync(OFFSET_FILE, 'utf8')) || {}; } catch (e) { return {}; } }
 
 function doOffsetGet(query, cb) {
@@ -1299,6 +1321,7 @@ function doOffsetSet(body, cb) {
   var key = String(body.key || ''), ms = Math.round(Number(body.ms) || 0);
   if (!key || key.length > 400 || Math.abs(ms) > 600000) return cb(400, {ok: false, error: 'invalid key or ms'});
   var all = readOffsets();
+  if (ms && !Object.prototype.hasOwnProperty.call(all, key) && Object.keys(all).length >= OFFSET_MAX) return cb(400, {ok: false, error: 'too many offsets'});
   if (ms) all[key] = ms; else delete all[key];
   try { mkdirs(DATA_DIR); fs.writeFileSync(OFFSET_FILE + '.neu', JSON.stringify(all)); fs.renameSync(OFFSET_FILE + '.neu', OFFSET_FILE); }
   catch (e) { return cb(500, {ok: false, error: e.message}); }

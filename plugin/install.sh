@@ -29,7 +29,8 @@ mkdir -p /data/xplorio || fail "mkdir /data/xplorio"
 [ -d /data/xplorio/data ] || mkdir -m 700 /data/xplorio/data || fail "mkdir /data/xplorio/data"
 chown volumio:volumio /data/xplorio /data/xplorio/data
 
-# unit name, description, script below app/, node options; only our own files (marked) are written or replaced
+# unit name, description, script below app/, node options, "nopriv" (needs no sudo: no privileges at all);
+# only our own files (marked) are written or replaced. /usr, /boot and /etc stay read-only for all three
 unit() {
   local f="/etc/systemd/system/$1.service"
   if [ -e "$f" ] && ! grep -qs "^$MARK" "$f"; then echo "$f exists and is not from Xplorio, left unchanged"; return 0; fi
@@ -48,11 +49,13 @@ WorkingDirectory=$SCRIPTPATH/app/$(dirname "$3")
 ExecStart=$NODE ${4:+$4 }$SCRIPTPATH/app/$3
 Restart=always
 RestartSec=5
+ProtectSystem=full
+${5:+NoNewPrivileges=true}
 UNIT
 }
-unit xplorio-web   "Xplorio web server (Volumio plugin)"  server/xplorio-server.js
+unit xplorio-web   "Xplorio web server (Volumio plugin)"  server/xplorio-server.js "" nopriv
 unit xplorio-tags  "Xplorio tag service (Volumio plugin)" tags/tag-service.js "--max-old-space-size=384"
-unit xplorio-rotel "Xplorio Rotel bridge (Volumio plugin)" rotel/rotel-bridge.js
+unit xplorio-rotel "Xplorio Rotel bridge (Volumio plugin)" rotel/rotel-bridge.js "" nopriv
 systemctl daemon-reload || fail "systemctl daemon-reload"
 
 echo "Xplorio installed"

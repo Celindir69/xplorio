@@ -24,6 +24,7 @@ function sign(params, secret) {
 }
 
 /* cfg {key, secret}; signed: with api_sig; post: as a form; cb(err, json) */
+var MAX_RESPONSE = 5 * 1024 * 1024;        /* one page of 200 plays is about 100 kB */
 function call(cfg, method, params, signed, post, cb) {
   var p = {method: method, api_key: cfg.key};
   Object.keys(params).forEach(function(k){ if (params[k] !== undefined && params[k] !== '') p[k] = String(params[k]); });
@@ -37,8 +38,11 @@ function call(cfg, method, params, signed, post, cb) {
     headers: post ? {'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body)}
                   : {'User-Agent': UA}
   }, function(res){
-    var parts = [];
-    res.on('data', function(d){ parts.push(d); });
+    var parts = [], size = 0;
+    res.on('data', function(d){
+      size += d.length; parts.push(d);
+      if (size > MAX_RESPONSE) { req.abort(); finish({code: 0, message: 'response too large'}); }
+    });
     res.on('end', function(){
       var j;
       try { j = JSON.parse(Buffer.concat(parts).toString('utf8')); } catch (e) { return finish({code: 0, message: 'HTTP ' + res.statusCode}); }
@@ -194,9 +198,11 @@ Sync.prototype.importAll = function() {
       self.store.add(fresh);
       run.added += fresh.length;
       r.tracks.forEach(function(t){ if (t.t > maxT) maxT = t.t; });
-      if (page < r.pages && r.tracks.length) return setTimeout(function(){ step(page + 1); }, PAGE_PAUSE);
+      if (self.store.full && self.store.full()) run.full = true;   /* pages go back in time: everything older would be dropped */
+      if (page < r.pages && r.tracks.length && !run.full) return setTimeout(function(){ step(page + 1); }, PAGE_PAUSE);
       self.state.importedTo = Math.max(maxT, from ? from : 0) || started;
       self.state.lastImport = {at: started, added: run.added};
+      if (run.full) self.state.lastImport.full = true;
       self.save();
       self.importRun = null;
     });

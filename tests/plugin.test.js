@@ -68,6 +68,9 @@ t('install.sh: systemd services of the plugin, only own files, no sudo rule, no 
   assert.ok(/EnvironmentFile=-\/tmp\/xplorio\/\$1\.env/.test(sh) && /User=volumio/.test(sh));
   assert.ok(!/sudoers\.d\/[^ \n]*\s*<</.test(sh) && !/cp [^\n]*\/usr\/local/.test(sh) && !/\/volumio\//.test(sh.replace(/^#.*$/mg, '')));
   assert.ok(/plugininstallend"\s*$/.test(sh) && /rm -rf "\$SCRIPTPATH"/.test(sh));
+  /* hardening: system folders read-only; no privileges except for the tag service (it needs sudo for systemctl) */
+  assert.ok(/^ProtectSystem=full$/m.test(sh) && /^\$\{5:\+NoNewPrivileges=true\}$/m.test(sh));
+  assert.ok(/unit xplorio-web .* nopriv$/m.test(sh) && /unit xplorio-rotel .* nopriv$/m.test(sh) && !/unit xplorio-tags .*nopriv/.test(sh));
 });
 
 var Plugin = require(path.join(P, 'index.js'));

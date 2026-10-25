@@ -33,9 +33,10 @@ function mime(b) {
   if (b[0] === 0 && b[1] === 0 && b[2] === 1 && b[3] === 0) return 'image/x-icon';
   return '';
 }
-/* URLs come from Volumio or radio-browser.info: public servers only */
-function loadImage(u, cb) {
-  coversearch.fetchUrl(u, 4 * 1024 * 1024, function(e, r){ cb(e || !mime(r.body) ? null : r.body, !!e); }, {pub: !process.env.RADIO_ALLOW_LOCAL});
+/* URLs come from Volumio or radio-browser.info: public servers only. max: covers 1 MB, logos 512 kB */
+var COVER_MAX = 1024 * 1024, LOGO_MAX = 512 * 1024;
+function loadImage(u, max, cb) {
+  coversearch.fetchUrl(u, max, function(e, r){ cb(e || !mime(r.body) ? null : r.body, !!e); }, {pub: !process.env.RADIO_ALLOW_LOCAL});
 }
 
 /* "artist - title" -> {artist, title}; null if no title can be recognized */
@@ -51,7 +52,7 @@ function songLookup(name, cb) {
   json(ITUNES + '/search?media=music&entity=song&limit=15&term=' + encodeURIComponent(s.artist + ' ' + s.title), function(e, j){
     var hit = !e && j && best((j.results || []).filter(function(r){ return r.artworkUrl100; }),
       function(r){ return r.artistName; }, function(r){ return r.trackName; }, s.artist, s.title);
-    if (hit) return loadImage(hit.artworkUrl100.replace(/\/\d+x\d+(bb)?\.(jpg|png)$/, '/600x600bb.jpg'), function(img, tmp){
+    if (hit) return loadImage(hit.artworkUrl100.replace(/\/\d+x\d+(bb)?\.(jpg|png)$/, '/600x600bb.jpg'), COVER_MAX, function(img, tmp){
       if (img) return cb(img);
       deezer(tmp || !!e);
     });
@@ -64,7 +65,7 @@ function songLookup(name, cb) {
       var hit = best(list.filter(function(t){ return t.artist && t.album && t.album.cover_xl; }),
         function(t){ return t.artist.name; }, function(t){ return t.title; }, s.artist, s.title);
       if (!hit) return cb(null, failed);
-      loadImage(hit.album.cover_xl, cb);
+      loadImage(hit.album.cover_xl, COVER_MAX, cb);
     });
   }
 }
@@ -72,7 +73,7 @@ function songLookup(name, cb) {
 /* station logo: first the URL from Volumio (extra), else radio-browser.info by station name */
 function logoLookup(name, cb, extra) {
   if (extra && /^https?:\/\//.test(extra)) {
-    return loadImage(extra, function(img){ if (img) cb(img); else search(); });
+    return loadImage(extra, LOGO_MAX, function(img){ if (img) cb(img); else search(); });
   }
   search();
   function search() {
@@ -82,7 +83,7 @@ function logoLookup(name, cb, extra) {
       var withIcon = list.filter(function(s){ return s && s.favicon && /^https?:\/\//.test(s.favicon); });
       var hit = withIcon.filter(function(s){ return key(s.name) === want; })[0] || withIcon.filter(function(s){ return similar(s.name, name); })[0];
       if (!hit) return cb(null);
-      loadImage(hit.favicon, function(img, tmp){ cb(img, tmp); });
+      loadImage(hit.favicon, LOGO_MAX, function(img, tmp){ cb(img, tmp); });
     });
   }
 }

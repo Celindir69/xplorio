@@ -197,6 +197,7 @@ function connect() {
     buf += d;
     var parts = buf.split('$');
     buf = parts.pop();
+    if (buf.length > 4096) buf = '';                    /* no "$" for that long: not a Rotel reply, start over */
     parts.forEach(parseMsg);
   });
   sock.on('error', function(){});
