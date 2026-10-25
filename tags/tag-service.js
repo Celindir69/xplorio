@@ -12,13 +12,12 @@ var MUSIC_ROOT  = process.env.MUSIC_ROOT  || '/mnt';
 /* Volumio 2: python (2.7); Volumio 4 (Debian 12) only has python3 */
 var PYTHON      = process.env.PYTHON      || (['/usr/bin/python', '/usr/local/bin/python'].some(function(p){
   try { return fs.statSync(p).isFile(); } catch (e) { return false; } }) ? 'python' : 'python3');
-var USE_SUDO    = process.env.USE_SUDO === '1';          /* start tags.py via "sudo -n" (needed when only root may write to the mount) */
 var MPC         = process.env.MPC         || 'mpc';
-/* data folder /data/xplorio/data (formerly /data/web-app/data or /data/INTERNAL/tags; see appdata.js) */
+/* data folder /data/xplorio/data (see appdata.js) */
 var appdata     = require('./appdata.js');
 var guard       = require('./guard.js');
 var DATA_PREP   = process.env.TAGS_LOG ? {dir: path.dirname(process.env.TAGS_LOG)}
-  : appdata.prepare(process.env.TAGS_DATA || appdata.defaultDir('/data/xplorio/data', '/data/web-app/data'), process.env.TAGS_OLD_DATA || '/data/INTERNAL/tags', console.log);
+  : appdata.prepare(process.env.TAGS_DATA || '/data/xplorio/data', console.log);
 var DATA_DIR    = DATA_PREP.dir;
 var LOG_FILE    = process.env.TAGS_LOG    || path.join(DATA_DIR, 'changes.jsonl');
 var MPD_HOST    = process.env.MPD_HOST    || 'localhost';
@@ -84,8 +83,7 @@ function next() {
   if (busy || !queue.length) return;
   busy = true;
   var q = queue.shift();
-  var args = USE_SUDO ? ['-n', PYTHON, SCRIPT] : [SCRIPT];
-  var child = cp.spawn(USE_SUDO ? 'sudo' : PYTHON, args, {stdio: ['pipe', 'pipe', 'pipe']});
+  var child = cp.spawn(PYTHON, [SCRIPT], {stdio: ['pipe', 'pipe', 'pipe']});
   var out = '', err = '', done = false;
   function finish(res) {
     if (done) return;
@@ -503,7 +501,7 @@ function doDupMove(body, cb) {
 /* GET /coversearch?artist=…&album=… -> {ok, results:[{id, source}]}; GET /coverimage?id=… returns the image.
    Only addresses found by the search itself are loaded (via the id). Last.fm key from web/config*.js. */
 var coversearch = require('./coversearch.js');
-var APP_CONFIG_DIR = process.env.APP_CONFIG_DIR || '/volumio/http/www3/web';
+var APP_CONFIG_DIR = process.env.APP_CONFIG_DIR || path.join(__dirname, '..', 'web');   /* app/web in the plugin */
 var coverHits = Object.create(null), coverHitIds = [], coverHitSeq = 0;   /* no prototype: ?id=constructor and the like match nothing */
 
 /* reread only when one of the two files has changed (asked for very often) */
@@ -553,9 +551,7 @@ var plays  = require('./plays.js');
 var lastfm = require('./lastfm.js');
 var VOLUMIO_URL = process.env.VOLUMIO_URL || 'http://localhost:3000';
 var playStore = new plays.Store(path.join(DATA_DIR, 'plays.jsonl'));
-var keys = new appdata.Keys(DATA_DIR, appConfig, console.log);   /* Last.fm key and secret (keys.json) */
-/* migrate only into our own data folder, never into the old one (may be on a network share) */
-if (!DATA_PREP.error) keys.migrate();
+var keys = new appdata.Keys(DATA_DIR);                   /* Last.fm key and secret (keys.json) */
 var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, function(){ return keys.lastfm(); });
 var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); }, function(e){ lfm.nowPlaying(e); });
 var recording = false;
@@ -1264,7 +1260,7 @@ function doSysinfo(query, res) {
 /* GET /services: state of the player services; POST /service {unit, action}: restart */
 /* actions only with password (adminpass.js): POST /servicelogin {password} -> {token}, the device sends the token along */
 var services = require('./services.js'), svc = new services.Services();
-var SELF_UNIT = process.env.XPLORIO_UNIT || 'tag-service';     /* xplorio-tags as a Volumio plugin */
+var SELF_UNIT = 'xplorio-tags';                                 /* the plugin's unit of this service */
 var adminpass = require('./adminpass.js'), adminAuth = new adminpass.Auth(DATA_DIR);
 function doServices(query, cb) { svc.status(function(r){ r.pw = adminAuth.isSet(); cb(r.ok ? 200 : 500, r); }); }
 function doService(body, cb) {
@@ -1521,7 +1517,7 @@ function handle(req, res) {
   res.xplorioOrigin = g.origin;
   var route = req.url.split('?')[0];
   if (req.method === 'OPTIONS') return send(res, 204, {});
-  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!keys.lastfm().key, keysInWeb: keys.inWeb()});
+  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!keys.lastfm().key});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/image')   return doImage(url.parse(req.url, true).query, res);

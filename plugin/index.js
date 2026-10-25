@@ -2,8 +2,7 @@
 /* Volumio plugin Xplorio: web server (port 4040), tag service and Rotel bridge run as systemd services of their own
    (xplorio-web, xplorio-tags, xplorio-rotel; install.sh sets them up), started in onStart and stopped in onStop as
    Volumio asks of plugins. Nothing below /volumio changes, so Volumio's integrity check before a system update stays
-   intact. Data and own settings live in /data/xplorio (stay when the plugin is updated or removed). A service of an
-   earlier installation with xplorio-deploy that still runs is left as it is. Everything is set on the plugin's
+   intact. Data and own settings live in /data/xplorio (stay when the plugin is updated or removed). Everything is set on the plugin's
    settings page, no console needed: the plugin writes app/web/config.local.js from it (plus the optional own
    additions in /data/xplorio/config.local.js) and the settings of the services to /tmp/xplorio/<service>.env.
    Node 8, ES5 only (runs on Volumio 2 to 4). */
@@ -19,14 +18,13 @@ module.exports = ControllerXplorio;
 
 var APP    = path.join(__dirname, 'app');            /* the interface and the services (tools/make-plugin.sh) */
 var DATA   = process.env.XPLORIO_DATA || '/data/xplorio';
-var OLD_HTTP = process.env.XPLORIO_VOLUMIO_HTTP || '/volumio/http';   /* earlier installation below /volumio (read only) */
 var RUN  = process.env.XPLORIO_RUN || '/tmp/xplorio';             /* settings of the services (EnvironmentFile) */
 var MUSIC = process.env.XPLORIO_MUSIC || '/mnt';
-/* the services: unit of the plugin, unit of an earlier installation with xplorio-deploy, switch on the page */
+/* the services: systemd unit, switch on the page (the web server always runs) */
 var SERVICES = [
-  {unit: 'xplorio-web',   old: 'xplorio-server', id: null},
-  {unit: 'xplorio-tags',  old: 'tag-service',    id: 'tagService'},
-  {unit: 'xplorio-rotel', old: 'rotel-bridge',   id: 'rotelBridge'}
+  {unit: 'xplorio-web',   id: null},
+  {unit: 'xplorio-tags',  id: 'tagService'},
+  {unit: 'xplorio-rotel', id: 'rotelBridge'}
 ];
 /* settings on the page that go into config.local.js: id on the page, key in APP_CONFIG, kind (see toApp / fromApp) */
 var FIELDS = [
@@ -53,7 +51,6 @@ function ControllerXplorio(context) {
   this.context = context;
   this.commandRouter = context.coreCommand;
   this.logger = context.logger;
-  this.notes = [];                                    /* shown on the settings page (services of an earlier installation) */
   this.exec = cp.execFile;                            /* replaced in the tests */
 }
 
@@ -64,68 +61,47 @@ ControllerXplorio.prototype.onVolumioStart = function() {
   this.config.loadFile(file);
   if (this.config.get('port') === undefined) this.config.set('port', 4040);
   if (this.config.get('tagService') === undefined) this.config.set('tagService', true);
-  this.takeOver();
+  this.defaults();
   return libQ.resolve();
 };
 
-/* settings for the page: defaults from app/web/config.js. On the first start also the own settings of an earlier
-   installation: /volumio/http/www…/web/config.local.js is copied once to /data/xplorio/config.local.js (the original
-   stays untouched), its known values come onto the page, a Last.fm key into keys.json */
-ControllerXplorio.prototype.takeOver = function() {
-  var self = this, first = !self.config.get('imported'), own = path.join(DATA, 'config.local.js');
-  if (first && !exists(own)) {
-    var old = ['www4', 'www3', 'www'].map(function(w){ return path.join(OLD_HTTP, w, 'web', 'config.local.js'); }).filter(exists)[0];
-    if (old) {
-      try { mkdirs(DATA); fs.writeFileSync(own, fs.readFileSync(old)); self.logger.info('Xplorio: settings taken over from ' + old); }
-      catch (e) { self.logger.error('Xplorio: taking over ' + old + ': ' + e.message); }
-    }
-  }
-  var cfg = appConfig([path.join(APP, 'web', 'config.js')].concat(first ? [own] : []));
-  FIELDS.forEach(function(f){ if (first || self.config.get(f.id) === undefined) self.config.set(f.id, fromApp(f, cfg[f.key])); });
-  if (first || self.config.get('rotelBridge') === undefined) self.config.set('rotelBridge', !!cfg.ROTEL_HOST);
-  if (!first) return;
-  var key = String(cfg.LASTFM_KEY || ''), secret = String(cfg.LASTFM_SECRET || '');
-  try {
-    if (/^[A-Za-z0-9]{1,64}$/.test(key) && !self.keys().read().LASTFM_KEY)
-      self.saveKeys({LASTFM_KEY: key, LASTFM_SECRET: /^[A-Za-z0-9]{1,64}$/.test(secret) ? secret : ''});
-  } catch (e) { self.logger.error('Xplorio: Last.fm access: ' + e.message); }
-  self.config.set('imported', true);
+/* settings for the page: defaults from app/web/config.js for everything not set yet */
+ControllerXplorio.prototype.defaults = function() {
+  var self = this, cfg = appConfig([path.join(APP, 'web', 'config.js')]);
+  FIELDS.forEach(function(f){ if (self.config.get(f.id) === undefined) self.config.set(f.id, fromApp(f, cfg[f.key])); });
+  if (self.config.get('rotelBridge') === undefined) self.config.set('rotelBridge', false);
 };
 
 ControllerXplorio.prototype.getConfigurationFiles = function() { return ['config.json']; };
 
 ControllerXplorio.prototype.onStart = function() {
   var self = this, defer = libQ.defer(), port = self.port();
-  self.notes = [];
   self.writeConfig();
   self.writeEnv();
   var todo = SERVICES.filter(function(s){ return !s.id || self.config.get(s.id); }), failed = null;
   (function next() {
     var s = todo.shift();
     if (!s) return failed ? defer.reject(new Error(failed)) : defer.resolve();
-    self.unitActive(s.old, function(on){
-      if (on) { self.note(s.old); return next(); }
-      var go = function(){
-        self.systemctl('restart', s.unit, function(err){
-          if (err) {
-            self.logger.error('Xplorio: ' + s.unit + ' did not start: ' + (err.message || err));
-            if (!s.id) failed = s.unit + ' did not start';           /* without the web server the plugin is not running */
-          }
-          next();
-        });
-      };
-      if (s.id) return go();
-      portFree(port, function(free){                                /* web server: is the port taken by something else? */
-        if (free) return go();
-        self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
-        failed = 'port ' + port + ' in use'; next();
+    var go = function(){
+      self.systemctl('restart', s.unit, function(err){
+        if (err) {
+          self.logger.error('Xplorio: ' + s.unit + ' did not start: ' + (err.message || err));
+          if (!s.id) failed = s.unit + ' did not start';             /* without the web server the plugin is not running */
+        }
+        next();
       });
+    };
+    if (s.id) return go();
+    portFree(port, function(free){                                  /* web server: is the port taken by something else? */
+      if (free) return go();
+      self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
+      failed = 'port ' + port + ' in use'; next();
     });
   })();
   return defer.promise;
 };
 
-/* all services of the plugin off (also those switched off on the page); a service of an earlier installation stays */
+/* all services of the plugin off (also those switched off on the page) */
 ControllerXplorio.prototype.onStop = function() {
   var self = this, defer = libQ.defer(), left = SERVICES.length;
   SERVICES.forEach(function(s){ self.systemctl('stop', s.unit, function(){ if (--left === 0) defer.resolve(); }); });
@@ -141,20 +117,12 @@ ControllerXplorio.prototype.port = function() {
 ControllerXplorio.prototype.systemctl = function(action, unit, cb) {
   this.exec('/usr/bin/sudo', ['-n', '/bin/systemctl', action, unit + '.service'], function(err){ cb(err || null); });
 };
-/* is a systemd unit of an earlier installation running? (then it keeps the job) */
-ControllerXplorio.prototype.unitActive = function(unit, cb) {
-  this.exec('/bin/systemctl', ['is-active', '--quiet', unit + '.service'], function(err){ cb(!err); });
-};
-ControllerXplorio.prototype.note = function(unit) {
-  this.notes.push(unit);
-  this.logger.info('Xplorio: ' + unit + ' of an earlier installation is running, left as it is');
-};
 
 /* /tmp/xplorio/<service>.env: what the systemd units read (EnvironmentFile) */
 ControllerXplorio.prototype.writeEnv = function() {
   var web = path.join(APP, 'web'), envs = {
     'xplorio-web':   {HTTP_PORT: this.port(), XPLORIO_WWW: APP},
-    'xplorio-tags':  {APP_CONFIG_DIR: web, TAGS_DATA: path.join(DATA, 'data'), XPLORIO_UNIT: 'xplorio-tags'},
+    'xplorio-tags':  {APP_CONFIG_DIR: web, TAGS_DATA: path.join(DATA, 'data')},
     'xplorio-rotel': {APP_CONFIG_DIR: web}
   };
   try {
@@ -182,7 +150,6 @@ ControllerXplorio.prototype.writeConfig = function() {
   var file = path.join(APP, 'web', 'config.local.js'), text = lines.join('\n') + '\n';
   if (read(file) === text) return;
   try {
-    try { if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file); } catch (e) { /* not there */ }   /* link of earlier versions */
     fs.writeFileSync(file + '.neu', text); fs.renameSync(file + '.neu', file);
   } catch (e) { self.logger.error('Xplorio: writing ' + file + ': ' + e.message); }
 };
@@ -206,9 +173,7 @@ ControllerXplorio.prototype.getUIConfig = function() {
   self.commandRouter.i18nJson(path.join(__dirname, 'i18n', 'strings_' + lang + '.json'), path.join(__dirname, 'i18n', 'strings_en.json'),
                               path.join(__dirname, 'UIConfig.json')).then(function(ui){
     var url = self.url(), open = ui.sections[0];
-    open.description = [self.str('OPEN_DOC').replace('{url}', url)].concat(self.notes.map(function(u){
-      return self.str('SYSTEMD').replace('{name}', u);
-    }), self.ownBroken ? [self.str('OWN_BROKEN')] : []).join(' ');
+    open.description = [self.str('OPEN_DOC').replace('{url}', url)].concat(self.ownBroken ? [self.str('OWN_BROKEN')] : []).join(' ');
     open.content[0].onClick.url = url;
     function el(id) {
       for (var i = 0; i < ui.sections.length; i++)
@@ -306,7 +271,7 @@ ControllerXplorio.prototype.auth = function() {
 /* Last.fm access in /data/xplorio/data/keys.json (the tag service rereads it when it changes); other entries stay */
 ControllerXplorio.prototype.keys = function() {
   var appdata = require(path.join(APP, 'tags', 'appdata.js'));
-  return new appdata.Keys(path.join(DATA, 'data'), function(){ return {}; });
+  return new appdata.Keys(path.join(DATA, 'data'));
 };
 /* vals: {LASTFM_KEY, LASTFM_SECRET} (empty = keep), null = delete both */
 ControllerXplorio.prototype.saveKeys = function(vals) {

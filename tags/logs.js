@@ -9,7 +9,7 @@ var JOURNALCTL = '/bin/journalctl', TIMEOUT = 8000, LINES = [50, 100, 300], MAX_
 var SOURCES = [
   {id: 'volumio',        unit: 'volumio'},
   {id: 'mpd',            unit: 'mpd'},
-  {id: 'tag-service',    unit: process.env.XPLORIO_UNIT || 'tag-service'},   /* xplorio-tags as a Volumio plugin */
+  {id: 'tag-service',    unit: 'xplorio-tags'},
   {id: 'autodj',         file: '/data/volumio_autodj_data/autodj.debug.log'},
   {id: 'smartplaylists', file: '/data/smart_playlists_data/smart_playlists.debug.log'}
 ];

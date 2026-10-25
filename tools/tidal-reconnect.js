@@ -1,7 +1,7 @@
 /* Reconnect TIDAL without restarting Volumio: disable the plugin and enable it again
    (the switch in the plugin manager does the same). Runs on the MX-Stream:
 
-     node /volumio/http/www3/tools/tidal-reconnect.js
+     node /data/xplorio/tools/tidal-reconnect.js
 
    Node 8 is enough; uses Volumio's socket.io-client package. Do not run while TIDAL is playing. */
 var io = require('/volumio/node_modules/socket.io-client');

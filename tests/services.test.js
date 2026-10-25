@@ -9,8 +9,8 @@ process.on('exit', function(code){ if (!code) { assert.strictEqual(n, 7, 'not al
 var SHOW = [
   'Id=volumio.service', 'LoadState=loaded', 'ActiveState=active', 'SubState=running', 'ActiveEnterTimestampMonotonic=1000000000', '',
   'Id=mpd.service', 'LoadState=loaded', 'ActiveState=failed', 'SubState=failed', 'ActiveEnterTimestampMonotonic=0', '',
-  'Id=tag-service.service', 'LoadState=loaded', 'ActiveState=activating', 'SubState=auto-restart', 'ActiveEnterTimestampMonotonic=0', '',
-  'Id=rotel-bridge.service', 'LoadState=not-found', 'ActiveState=inactive', 'SubState=dead', 'ActiveEnterTimestampMonotonic=0', '',
+  'Id=xplorio-web.service', 'LoadState=loaded', 'ActiveState=activating', 'SubState=auto-restart', 'ActiveEnterTimestampMonotonic=0', '',
+  'Id=xplorio-rotel.service', 'LoadState=not-found', 'ActiveState=inactive', 'SubState=dead', 'ActiveEnterTimestampMonotonic=0', '',
   'Id=xplorio-tags.service', 'LoadState=loaded', 'ActiveState=inactive', 'SubState=dead', 'ActiveEnterTimestampMonotonic=0'
 ].join('\n') + '\n';
 
@@ -25,7 +25,7 @@ t('systemctl show: one block per service, start time from the monotonic clock', 
 
 t('list: fixed order, services not installed are missing', function(){
   var m = sv.merge(sv.parseShow(SHOW, 4000, 10000000));
-  assert.deepStrictEqual(m.map(function(u){ return u.id; }), ['volumio', 'mpd', 'tag-service', 'xplorio-tags']);
+  assert.deepStrictEqual(m.map(function(u){ return u.id; }), ['volumio', 'mpd', 'xplorio-web', 'xplorio-tags']);
   assert.deepStrictEqual(m[3].actions, ['restart']);
   assert.deepStrictEqual(m[0].actions, ['restart']);
 });
@@ -34,7 +34,7 @@ t('only allowed services and actions', function(){
   assert.ok(sv.allowed('volumio', 'restart'));
   assert.ok(!sv.allowed('volumio-kiosk', 'stop') && !sv.allowed('volumio-kiosk', 'restart'));   /* the kiosk is not Xplorio's */
   assert.ok(!sv.allowed('volumio', 'stop'));
-  assert.ok(!sv.allowed('ssh', 'restart'));
+  assert.ok(!sv.allowed('ssh', 'restart') && !sv.allowed('tag-service', 'restart'));   /* units of earlier installations are gone */
   assert.ok(!sv.allowed('volumio; reboot', 'restart'));
   assert.deepStrictEqual(sv.command('mpd', 'restart'), ['/bin/systemctl', '--no-block', 'restart', 'mpd']);
 });
@@ -60,13 +60,13 @@ ta('action: sudo without password, error as nosudo, disallowed rejected', functi
   var calls = [], fail = false, err = console.error;
   console.error = function(){};
   var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(fail ? new Error('x') : null, ''); }});
-  s.act('mpd', 'restart', 'tag-service', function(c, o){
+  s.act('mpd', 'restart', 'xplorio-tags', function(c, o){
     assert.strictEqual(c, 200); assert.ok(o.ok);
     assert.strictEqual(calls[0], 'sudo -n /bin/systemctl --no-block restart mpd');
-    s.act('volumio', 'stop', 'tag-service', function(c2, o2){
+    s.act('volumio', 'stop', 'xplorio-tags', function(c2, o2){
       assert.strictEqual(c2, 400); assert.ok(!o2.ok);
       fail = true;
-      s.act('mpd', 'restart', 'tag-service', function(c3, o3){
+      s.act('mpd', 'restart', 'xplorio-tags', function(c3, o3){
         console.error = err;
         assert.strictEqual(o3.error, 'nosudo');
         done();
@@ -78,13 +78,13 @@ ta('action: sudo without password, error as nosudo, disallowed rejected', functi
 ta('own restart: response first, then command; without sudo permission nosudo right away', function(done){
   var calls = [], allow = true;
   var s = new sv.Services({root: root, run: function(f, a, cb){ calls.push([f].concat(a).join(' ')); cb(allow ? null : new Error('x'), ''); }});
-  s.act('tag-service', 'restart', 'tag-service', function(c, o){
+  s.act('xplorio-tags', 'restart', 'xplorio-tags', function(c, o){
     assert.ok(o.ok && o.self);
     assert.ok(calls.every(function(x){ return x.indexOf(' -l ') > 0; }));    /* not run yet */
     setTimeout(function(){
-      assert.strictEqual(calls[calls.length - 1], 'sudo -n /bin/systemctl --no-block restart tag-service');
+      assert.strictEqual(calls[calls.length - 1], 'sudo -n /bin/systemctl --no-block restart xplorio-tags');
       allow = false;
-      s.act('tag-service', 'restart', 'tag-service', function(c2, o2){
+      s.act('xplorio-tags', 'restart', 'xplorio-tags', function(c2, o2){
         assert.strictEqual(o2.error, 'nosudo');
         done();
       });

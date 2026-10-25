@@ -4,10 +4,10 @@
 
 [English version](README_EN.md) · [Was ist Xplorio?](docs/xplorio.md)
 
-Xplorio ist eine eigene Weboberfläche für Volumio 2 (gebaut für einen Musical Fidelity MX-Stream, Raspberry-Pi-CM3), läuft ohne Build-Schritt
-direkt im Browser. Auf Volumio 4 läuft sie ebenfalls (Unterschiede siehe [Einrichtung](docs/einrichten.md#volumio-4)). Auf Volumio 3 vermutlich auch, wurde aber nicht getestet. 
-Zusätzlich zu den Dateien, die auf dem Player laufen, enthält diese Repository nur Tests (`tests/`) und die Einrichtungs-Doku;
-`xplorio-deploy` spielt nur die Laufzeitdateien ein.
+Xplorio ist eine eigene Weboberfläche für Volumio, als Volumio-Plugin, und läuft ohne Build-Schritt direkt im Browser.
+Gebaut für einen Musical Fidelity MX-Stream (Volumio 2, Raspberry-Pi-CM3), erprobt auch auf Volumio 4 (Unterschiede siehe
+[Einrichtung](docs/einrichten.md#volumio-2)). Auf Volumio 3 vermutlich auch, wurde aber nicht getestet.
+Zusätzlich zu den Dateien, die auf dem Player laufen, enthält dieses Repository nur Tests (`tests/`) und die Einrichtungs-Doku.
 
 <p align="center">
   <img src="docs/bilder/display-ipad.jpg" width="820" alt="Display-Layout auf dem iPad: Cover, Albuminfos und mitlaufende Lyrics">
@@ -115,28 +115,27 @@ Fortschritt der Stimmungs-Tags.
 - Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`; ein anderer Eingang als der Player steht mit Icon in der Player-Ansicht.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 
   (Was auf meinem MX-Stream, aufgrund eines Session-Timeouts, etwa nach 4 Stunden ohne Tidal-Nutzung auftritt.)
-- `xplorio-deploy`: installiert und aktualisiert direkt auf dem Player aus diesem Repository, mit Sicherung und `--rollback`; gleich auf
-  Volumio 3 und 4. Richtet auf Wunsch auch Tag-Dienst (`--tag-service`) und Rotel-Bridge (`--rotel <IP>`) ein.
+- Alle Einstellungen auf der Einstellungsseite des Plugins in Volumio, ohne ssh.
 
 ## Aufbau
 
 | Datei / Ordner | Inhalt | Ort auf dem Player |
 |---|---|---|
-| `xplorio.html` + `web/` | Oberfläche für Handy, iPad, Desktop (Wiedergabe, Queue, Suche lokal und bei Streamingdiensten, Lyrics, Infos, Tag-Editor, Mood Mix, Verlauf, Display-Layout für große Bildschirme) | `/volumio/http/www3/` (Volumio 4: `www4/`) |
-| `tags/` | Tag-Dienst (Port 8766): Tag-Editor, Bibliothek prüfen, Verlauf, Stimmungs-Tags, Cover; nimmt nur Aufträge der Oberfläche an; Python 2.7 oder 3 mit mitgelieferter mutagen-Bibliothek (GPLv2, siehe `tags/vendor/mutagen/COPYING`) | `/data/xplorio/tags/` (Daten: `/data/xplorio/data/`) |
-| `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | `/data/xplorio/rotel/` |
-| `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/volumio/http/www3/tools/` |
-| `server/xplorio-server.js` | eigener Webserver (Port 4040): liefert die Oberfläche aus und reicht alles andere an Volumio durch, damit nichts unter `/volumio` liegen muss | `/data/xplorio/server/` bzw. im Plugin |
-| `plugin/`, `tools/make-plugin.sh` | Volumio-Plugin (neu, im Test): Webserver, Tag-Dienst und Rotel-Bridge ohne Dateien unter `/volumio`, alle Einstellungen auf der Plugin-Seite; `make-plugin.sh` stellt es zusammen | `/data/plugins/user_interface/xplorio/` |
-| `tools/xplorio-deploy.sh` | installiert und aktualisiert Xplorio auf dem Player aus diesem Repository (`xplorio-deploy`) | `/usr/local/bin/` |
+| `plugin/` | das Volumio-Plugin: startet Webserver, Tag-Dienst und Rotel-Bridge als systemd-Dienste, Einstellungsseite | `/data/plugins/user_interface/xplorio/` |
+| `xplorio.html` + `web/` | Oberfläche für Handy, iPad, Desktop (Wiedergabe, Queue, Suche lokal und bei Streamingdiensten, Lyrics, Infos, Tag-Editor, Mood Mix, Verlauf, Display-Layout für große Bildschirme) | im Plugin unter `app/` |
+| `server/xplorio-server.js` | eigener Webserver (Port 4040): liefert die Oberfläche aus und reicht alles andere an Volumio durch, damit nichts unter `/volumio` liegen muss | im Plugin unter `app/` |
+| `tags/` | Tag-Dienst (Port 8766): Tag-Editor, Bibliothek prüfen, Verlauf, Stimmungs-Tags, Cover; nimmt nur Aufträge der Oberfläche an; Python 2.7 oder 3 mit mitgelieferter mutagen-Bibliothek (GPLv2, siehe `tags/vendor/mutagen/COPYING`) | im Plugin unter `app/` (Daten: `/data/xplorio/data/`) |
+| `rotel/rotel-bridge.js` | optional: HTTP-Dienst (Port 8765) für einen Rotel-Verstärker im Netz (Lautstärke, Ein/Aus, Eingang), nur für die Oberfläche | im Plugin unter `app/` |
+| `tools/make-plugin.sh`, `tools/xplorio-deploy.sh`, `tools/plugin-install.js` | stellt das Plugin zusammen; installiert und aktualisiert es ohne Plugin-Store (Volumio 2, Test-Branches) | `xplorio-deploy` in `/usr/local/bin/` |
+| `tools/tidal-watchdog.sh`, `tools/tidal-reconnect.js` | optional, nicht Teil des Plugins: startet Volumio neu bzw. verbindet TIDAL neu, wenn das TIDAL-Plugin hängt (nur unter Volumio 2 erprobt) | `/data/xplorio/tools/` |
 | `tools/essentia/` | optionale Audio-Analyse auf Mac oder Windows-PC, Ergebnis wird zum Tag-Dienst hochgeladen | nicht auf dem Player |
 
-Voraussetzungen: Volumio 2 (Node 8, Python 2.7, `mpc`) oder Volumio 4 (Node und Python 3 sind dabei). Einrichtung und Aktualisieren direkt auf dem Player mit `sudo xplorio-deploy`
-(`tools/xplorio-deploy.sh`), siehe [docs/einrichten.md](docs/einrichten.md#ersteinrichtung).
+Voraussetzungen: Volumio 2 (Node 8, Python 2.7, `mpc`) oder Volumio 4 (Node und Python 3 sind dabei). Installieren über den
+Plugin-Store von Volumio oder mit `sudo xplorio-deploy`, siehe [docs/einrichten.md](docs/einrichten.md#installieren).
 
 Rotel-Verstärker und TIDAL-Wächter sind optional (siehe Einrichtung). 
-Eigene Einstellungen (Sprache, Rotel, Dienste ein/aus) gehören in `web/config.local.js`
-(Vorlage `web/config.local.js.example`); diese Datei ist nicht im Repository. Der Last.fm-Zugang (für ähnliche Künstler,
+Einstellungen (Sprache, Rotel, Dienste ein/aus) stehen auf der Einstellungsseite des Plugins; was dort fehlt, gehört nach
+`/data/xplorio/config.local.js` (Vorlage `web/config.local.js.example`). Der Last.fm-Zugang (für ähnliche Künstler,
 Stimmungs-Tags, Infotexte und Scrobbeln) liegt in `/data/xplorio/data/keys.json` und wird nur vom Tag-Dienst gelesen.
 
 ## Tests

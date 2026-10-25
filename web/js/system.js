@@ -10,7 +10,6 @@ var sysSvc = null, sysSvcBusy = {}, sysSvcMsg = '', sysSvcTimers = [], sysSvcPen
 var SYS_NS = 'http://www.w3.org/2000/svg';
 
 /* the Volumio plugin's services carry other names, same texts */
-function svcKey(id) { return {'xplorio-tags': 'tag-service', 'xplorio-rotel': 'rotel-bridge'}[id] || id; }
 function openSystem() {
   closeAllOverlays();
   overlaySystem.classList.add('on');
@@ -364,14 +363,11 @@ function sysPaintSvc() {
     var st = sysSvcBusy[u.id] ? 'busy' : u.active === 'active' ? 'on' : u.active === 'failed' ? 'bad' : /ing$/.test(u.active) ? 'busy' : 'off';
     row.appendChild(histEl('span', 'sySvcDot ' + st));
     var txt = histEl('div', 'sySvcText');
-    txt.appendChild(histEl('div', 'sySvcName', T('sys.svc.' + svcKey(u.id))));
+    txt.appendChild(histEl('div', 'sySvcName', T('sys.svc.' + u.id)));
     txt.appendChild(histEl('div', 'sySvcState' + (st === 'bad' ? ' syWarn' : ''), sysSvcState(u)));
     row.appendChild(txt);
     var btns = histEl('div', 'sySvcBtns'), on = u.active === 'active' || u.active === 'activating';
-    var acts = u.actions.indexOf('start') >= 0
-      ? (on ? ['stop', 'restart'] : ['start'])
-      : ['restart'];
-    acts.forEach(function(a){
+    ['restart'].forEach(function(a){
       var label = a === 'restart' && !on ? T('sys.svc.do.start') : T('sys.svc.do.' + a);
       var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || !sysSvc.pw ? ' off' : ''), label);
       b.addEventListener('click', function(){ sysSvcAct(u, a); });
@@ -455,7 +451,7 @@ function sysSvcAskLogin(u, action) {
 }
 function sysSvcAct(u, action) {
   if (sysSvcBusy[u.id]) return;
-  var ask = u.id === 'player' ? T('sys.power.ask.' + action) : action === 'start' ? '' : action === 'stop' ? T('sys.svc.askStop.' + svcKey(u.id)) : T('sys.svc.ask.' + svcKey(u.id));
+  var ask = u.id === 'player' ? T('sys.power.ask.' + action) : T('sys.svc.ask.' + u.id);
   if (ask && !window.confirm(ask)) return;
   sysSvcRun(u, action);
 }

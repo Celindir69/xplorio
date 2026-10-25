@@ -1,6 +1,6 @@
 /* plugin-install: installs or updates the Xplorio plugin through Volumio's own websocket (the same events as Volumio's
    plugin page). "volumio plugin install" hangs forever on some Volumio 2 devices (e.g. Musical Fidelity MX-Stream);
-   this way works there too. Called by xplorio-deploy --plugin as user volumio, Node 8, ES5 only.
+   this way works there too. Called by xplorio-deploy as user volumio, Node 8, ES5 only.
      node plugin-install.js install|update <zip name in /tmp/plugins> [category] [name]
    Exit code 0 when Volumio reports 100 %, 1 on an error or after 90 s without an answer. */
 var mode = process.argv[2], zip = process.argv[3];

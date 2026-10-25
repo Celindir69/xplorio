@@ -1,6 +1,6 @@
-/* Volumio plugin (plugin/index.js, install.sh, tools/make-plugin.sh): build, what the plugin store asks for, settings of
-   an earlier installation taken over, config.local.js written from the settings page, the services started and stopped
-   via systemctl with their settings in /tmp/xplorio, services of an earlier installation left alone, settings page */
+/* Volumio plugin (plugin/index.js, install.sh, tools/make-plugin.sh): build, what the plugin store asks for, the page:
+   defaults on the first start, config.local.js written from the settings page, the services started and stopped
+   via systemctl with their settings in /tmp/xplorio, settings page */
 var assert = require('assert'), fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 var http = require('http'), Module = require('module'), EventEmitter = require('events'), vm = require('vm');
 var n = 0;
@@ -20,17 +20,12 @@ Module._load = function(r){ return stubs[r] || load.apply(this, arguments); };
 Module._resolveFilename = function(r){ return stubs[r] ? r : resolve.apply(this, arguments); };
 
 cp.execSync('bash tools/make-plugin.sh . ' + path.join(T, 'build'), {cwd: repo});
-var P = path.join(T, 'build/xplorio'), DATA = path.join(T, 'data'), OLD = path.join(T, 'vhttp');
+var P = path.join(T, 'build/xplorio'), DATA = path.join(T, 'data');
 fs.mkdirSync(path.join(DATA, 'data'), {recursive: true});
-fs.writeFileSync(path.join(DATA, 'data/keys.json'), JSON.stringify({OTHER: 'bleibt'}));
-fs.mkdirSync(path.join(OLD, 'www3/web'), {recursive: true});
-fs.writeFileSync(path.join(OLD, 'www3/web/config.local.js'), [
-  'window.APP_CONFIG.ROTEL_HOST = "192.168.1.50";', 'window.APP_CONFIG.THEME = "dark";', 'window.APP_CONFIG.TIDAL = false;',
-  'window.APP_CONFIG.ROTEL_INPUTS = {aux: {name: "Plattenspieler", icon: "phono"}};', 'window.APP_CONFIG.LASTFM_KEY = "oldkey1";',
-  'window.APP_CONFIG.ROTEL_PROFILE = {speakerB: false};'].join('\n'));
+fs.writeFileSync(path.join(DATA, 'data/keys.json'), JSON.stringify({OTHER: 'bleibt', LASTFM_KEY: 'oldkey1'}));
+fs.writeFileSync(path.join(DATA, 'config.local.js'), 'window.APP_CONFIG.ROTEL_PROFILE = {speakerB: false};\n');   /* own additions */
 fs.mkdirSync(path.join(T, 'music/USB/Stick'), {recursive: true});
 process.env.XPLORIO_DATA = DATA;
-process.env.XPLORIO_VOLUMIO_HTTP = OLD;
 process.env.XPLORIO_MUSIC = path.join(T, 'music');
 var RUN = path.join(T, 'run'); process.env.XPLORIO_RUN = RUN;
 process.env.HTTP_PORT = '1234';                                     /* from Volumio's environment: must not reach the children */
@@ -76,7 +71,7 @@ t('install.sh: systemd services of the plugin, only own files, no sudo rule, no 
 });
 
 var Plugin = require(path.join(P, 'index.js'));
-var toasts = [], calls = [], active = {'rotel-bridge.service': true}, failing = {};
+var toasts = [], calls = [], failing = {};
 function makePlugin() {
   var p = new Plugin({coreCommand: {
       pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); }},
@@ -84,13 +79,10 @@ function makePlugin() {
       sharedVars: {get: function(){ return 'de'; }},
       i18nJson: function(a, b, ui){ return kew.resolve(JSON.parse(fs.readFileSync(ui, 'utf8'))); }},
     logger: {info: function(){}, error: function(){}}});
-  /* /bin/systemctl is-active --quiet <unit>, /usr/bin/sudo -n /bin/systemctl <action> <unit> */
+  /* /usr/bin/sudo -n /bin/systemctl <action> <unit> */
   p.exec = function(cmd, args, cb){
     calls.push([cmd].concat(args).join(' '));
-    setImmediate(function(){
-      if (cmd === '/bin/systemctl') return cb(active[args[2]] ? null : new Error('inactive'));
-      cb(failing[args[3]] ? new Error('failed') : null);
-    });
+    setImmediate(function(){ cb(failing[args[3]] ? new Error('failed') : null); });
   };
   return p;
 }
@@ -104,27 +96,26 @@ function env(u) { return fs.readFileSync(path.join(RUN, u + '.env'), 'utf8'); }
 var kf = path.join(DATA, 'data/keys.json');
 
 plug.onVolumioStart();
-t('first start: settings of the earlier installation on the page, own file copied once, Last.fm key into keys.json', function(){
+t('first start: defaults from config.js on the page, nothing started yet', function(){
   var c = plug.config;
-  assert.deepStrictEqual([c.get('port'), c.get('tagService'), c.get('rotelBridge')], [4040, true, true]);
-  assert.deepStrictEqual([c.get('theme'), c.get('tidal'), c.get('qobuz'), c.get('history'), c.get('language')], ['dark', 'off', 'auto', true, '']);
-  assert.strictEqual(c.get('rotelHost'), '192.168.1.50'); assert.strictEqual(c.get('rotelInputs'), 'aux=Plattenspieler/phono');
-  assert.ok(/ROTEL_PROFILE/.test(fs.readFileSync(path.join(DATA, 'config.local.js'), 'utf8')));
-  assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'oldkey1'});
-  assert.strictEqual(c.get('imported'), true);
-  c.set('theme', 'auto'); plug.takeOver();
-  assert.strictEqual(c.get('theme'), 'auto');                     /* only once */
+  assert.deepStrictEqual([c.get('port'), c.get('tagService'), c.get('rotelBridge')], [4040, true, false]);
+  assert.deepStrictEqual([c.get('theme'), c.get('tidal'), c.get('qobuz'), c.get('history'), c.get('language')], ['auto', 'auto', 'auto', true, '']);
+  assert.strictEqual(c.get('rotelHost'), '');
+  assert.ok(c.get('imported') === undefined);
+  c.set('theme', 'dark'); plug.defaults();
+  assert.strictEqual(c.get('theme'), 'dark');                     /* set values stay */
   assert.deepStrictEqual(calls, []);                               /* nothing started before onStart */
+  c.set('theme', 'auto'); c.set('tidal', 'off'); c.set('rotelBridge', true);
+  c.set('rotelHost', '192.168.1.50'); c.set('rotelInputs', 'aux=Plattenspieler/phono');
 });
 plug.config.set('port', PORT);
 plug.onStart().then(function(){
-  t('start: the services via systemctl (sudo), the Rotel bridge of an earlier installation left as it is', function(){
-    assert.deepStrictEqual(sudo(), ['restart xplorio-web.service', 'restart xplorio-tags.service']);
-    assert.deepStrictEqual(plug.notes, ['rotel-bridge']);
+  t('start: the services switched on via systemctl (sudo)', function(){
+    assert.deepStrictEqual(sudo(), ['restart xplorio-web.service', 'restart xplorio-tags.service', 'restart xplorio-rotel.service']);
   });
   t('start: settings of the services in /tmp/xplorio/<service>.env', function(){
     assert.strictEqual(env('xplorio-web'), 'HTTP_PORT=' + PORT + '\nXPLORIO_WWW=' + path.join(P, 'app') + '\n');
-    assert.ok(env('xplorio-tags').indexOf('APP_CONFIG_DIR=' + path.join(P, 'app/web') + '\nTAGS_DATA=' + path.join(DATA, 'data') + '\nXPLORIO_UNIT=xplorio-tags') === 0);
+    assert.ok(env('xplorio-tags').indexOf('APP_CONFIG_DIR=' + path.join(P, 'app/web') + '\nTAGS_DATA=' + path.join(DATA, 'data') + '\n') === 0);
     assert.strictEqual(env('xplorio-rotel'), 'APP_CONFIG_DIR=' + path.join(P, 'app/web') + '\n');
   });
   t('config.local.js: written by the plugin, own additions first, then the values of the settings page', function(){
@@ -172,9 +163,8 @@ plug.onStart().then(function(){
   delete failing['xplorio-web.service'];
   return plug.getUIConfig();
 }).then(function(ui){
-  t('settings page: link to the plugin port, current values, choices, notes', function(){
+  t('settings page: link to the plugin port, current values, choices', function(){
     assert.ok(new RegExp(':' + PORT + '/$').test(ui.sections[0].content[0].onClick.url));
-    assert.ok(/rotel-bridge/.test(ui.sections[0].description), ui.sections[0].description);
     assert.deepStrictEqual(['port', 'tagService', 'rotelBridge', 'rotelHost', 'history'].map(function(id){ return el(ui, id).value; }),
                            [PORT, true, true, '192.168.1.50', true]);
     assert.deepStrictEqual(el(ui, 'tidal').value, {value: 'off', label: 'Nie'});
@@ -230,7 +220,7 @@ plug.onStart().then(function(){
 }).then(function(){
   return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}});
 }).then(function(){
-  calls = []; delete active['rotel-bridge.service'];
+  calls = [];
   return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV'});
 }).then(function(){
   t('saving: values into config.local.js; restart: all stopped, then only the services switched on', function(){

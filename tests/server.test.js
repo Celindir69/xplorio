@@ -3,13 +3,11 @@
 var assert = require('assert'), http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
-var T = fs.mkdtempSync(path.join(os.tmpdir(), 'xsrv-')), www = path.join(T, 'www'), vh = path.join(T, 'volumio-http');
+var T = fs.mkdtempSync(path.join(os.tmpdir(), 'xsrv-')), www = path.join(T, 'www');
 fs.mkdirSync(path.join(www, 'web/js'), {recursive: true});
-fs.mkdirSync(path.join(vh, 'www3/web'), {recursive: true});
 fs.writeFileSync(path.join(www, 'xplorio.html'), '<html>X</html>');
 fs.writeFileSync(path.join(www, 'web/js/core.js'), 'var core;');
 fs.writeFileSync(path.join(T, 'geheim.txt'), 'nein');
-fs.writeFileSync(path.join(vh, 'www3/web/config.local.js'), 'window.LOCAL = "alt";');
 
 /* fake Volumio: echoes method, path, Range and body; WebSocket: answers 101, then echoes */
 var volumio = http.createServer(function(req, res){
@@ -24,7 +22,7 @@ volumio.on('upgrade', function(req, sock){
 });
 
 volumio.listen(0, function(){
-  var srv = require('../server/xplorio-server.js').create({volumioPort: volumio.address().port, www: www, volumioHttp: vh});
+  var srv = require('../server/xplorio-server.js').create({volumioPort: volumio.address().port, www: www});
   srv.listen(0, function(){
     var port = srv.address().port, steps = [];
     function get(p, o, cb) {
@@ -46,10 +44,10 @@ volumio.listen(0, function(){
       });
     }); });
     steps.push(function(next){ get('/web/config.local.js?t=1', null, function(res, d){
-      t('config.local.js: from the earlier installation below /volumio as long as there is no own one', function(){ assert.strictEqual(d, 'window.LOCAL = "alt";'); });
+      t('config.local.js: 404 as long as the plugin has not written it', function(){ assert.strictEqual(res.statusCode, 404); });
       fs.writeFileSync(path.join(www, 'web/config.local.js'), 'window.LOCAL = "neu";');
       get('/web/config.local.js', null, function(r2, d2){
-        t('config.local.js: the own one comes first', function(){ assert.strictEqual(d2, 'window.LOCAL = "neu";'); });
+        t('config.local.js: from the own folder', function(){ assert.strictEqual(d2, 'window.LOCAL = "neu";'); });
         next();
       });
     }); });

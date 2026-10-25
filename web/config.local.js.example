@@ -1,26 +1,13 @@
-/* Save a copy as web/config.local.js and adjust it (it is not added to the repository). */
-/* The Last.fm key and secret do not belong here (any browser can load this file), but in
-   /data/xplorio/data/keys.json on the player, see docs/einrichten.md, section on Last.fm access. */
-/* Fix the language (else as set in Volumio); additionally register your own language file web/lang/nl.js:
-window.APP_CONFIG.LANGUAGE = 'en';
-window.APP_CONFIG.LANGUAGES = ['de', 'en', 'fr', 'es', 'it', 'nl'];
-*/
-/* Always light or always dark (else like the device):
-window.APP_CONFIG.THEME = 'light';
-*/
-/* Rotel amplifier (rotel/rotel-bridge.js reads the address from this file; restart the service afterwards):
-window.APP_CONFIG.ROTEL = true;
-window.APP_CONFIG.ROTEL_HOST = '192.168.1.50';
-*/
+/* Own additions for the Xplorio plugin: save a copy on the player as /data/xplorio/config.local.js, adjust it, then
+   switch the plugin off and on once. The values of the plugin's settings page (language, theme, Rotel address, streaming
+   services, …) come after this file and win, so set those on the settings page.
+   The Last.fm key and secret do not belong here (any browser can load this file); enter them on the settings page. */
 /* Remote control for another model or custom input names (default: RA-1572 / RA-1572MKII):
 window.APP_CONFIG.ROTEL_PROFILE = {
   sources: [{cmd: 'pcusb', name: 'Player'}, {cmd: 'opt1', name: 'TV'}],
   speakerB: false
 };
 */
-/* Switch off parts for individual streaming services, even if the plugin is running:
-window.APP_CONFIG.TIDAL = false;
-window.APP_CONFIG.QOBUZ = false;
-window.APP_CONFIG.HRA = false;
-window.APP_CONFIG.SPOTIFY = false;
+/* Amplifier port, if it is not 9590 (e.g. Rotel Michi P5: 9596):
+window.APP_CONFIG.ROTEL_AMP_PORT = 9596;
 */

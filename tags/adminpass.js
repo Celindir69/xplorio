@@ -1,7 +1,7 @@
 /* Password for the services on the "System" page (restart, start, stop). Node 8, ES5 only.
    admin.json in the data folder holds only a hash (PBKDF2-SHA256 with salt), plus the device logins as
    SHA-256 of their token with an expiry date (30 days). Without a password the buttons stay locked.
-   Set it with: sudo xplorio-deploy --password (calls this file) or on the plugin's settings page (changing it there
+   Set it on the plugin's settings page, or with sudo xplorio-deploy --password (calls this file) (changing it there
    needs the current one); a new password logs out all devices.
    After 5 wrong attempts the service waits, twice as long for each further one (at most 15 min). */
 var fs = require('fs'), path = require('path'), crypto = require('crypto');

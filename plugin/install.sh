@@ -1,8 +1,7 @@
 #!/bin/bash
 # Volumio plugin Xplorio: dependencies, data folder and the systemd services xplorio-web, xplorio-tags and
 # xplorio-rotel (only defined here, the plugin starts and stops them). Data (tag service, history, keys) and own
-# additions in config.local.js live in /data/xplorio and stay when the plugin is updated or removed; the plugin takes
-# over the settings of an earlier installation itself on the first start.
+# additions in config.local.js live in /data/xplorio and stay when the plugin is updated or removed.
 echo "Installing Xplorio"
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 cd "$SCRIPTPATH" || exit 1
@@ -55,10 +54,6 @@ unit xplorio-web   "Xplorio web server (Volumio plugin)"  server/xplorio-server.
 unit xplorio-tags  "Xplorio tag service (Volumio plugin)" tags/tag-service.js "--max-old-space-size=384"
 unit xplorio-rotel "Xplorio Rotel bridge (Volumio plugin)" rotel/rotel-bridge.js
 systemctl daemon-reload || fail "systemctl daemon-reload"
-
-# earlier versions of the plugin: root-owned copy of tags.py and an own sudo rule, no longer needed
-rm -rf /usr/local/lib/xplorio
-rm -f /etc/sudoers.d/xplorio-plugin
 
 echo "Xplorio installed"
 # required to end the plugin install

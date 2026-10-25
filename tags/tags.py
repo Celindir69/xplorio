@@ -254,25 +254,6 @@ def native(p):
     return p.encode('utf-8') if PY2 and isinstance(p, text_type) else p
 
 
-# Started via sudo (Volumio plugin, switch "write tags with root rights", sudo rule for exactly this script): only
-# music below /mnt and /media, cover images and backups only in the data folder of the tag service. sudo always sets
-# SUDO_USER; started as root directly, nothing is restricted (root may do all of it anyway).
-MUSIC_DIRS = ('/mnt/', '/media/', '/data/INTERNAL/')
-DATA_DIRS = ('/data/xplorio/data/', '/data/web-app/data/', '/data/INTERNAL/tags/')
-
-
-def via_sudo():
-    return hasattr(os, 'geteuid') and os.geteuid() == 0 and 'SUDO_USER' in os.environ
-
-
-def check_dir(p, dirs):
-    if not via_sudo():
-        return
-    real = os.path.realpath(native(p))
-    if not any(real.startswith(d) for d in dirs):
-        fail('path not allowed')
-
-
 def cover_job(job, path, kind, audio):
     old, old_mime = get_cover(audio, kind)
     if job['op'] == 'cover_has':
@@ -284,7 +265,6 @@ def cover_job(job, path, kind, audio):
         return out
     data, mime = None, None
     if job.get('image'):
-        check_dir(job['image'], DATA_DIRS)
         with open(native(job['image']), 'rb') as f:
             data = f.read()
         mime = job.get('mime') or mime_of(data)
@@ -293,7 +273,6 @@ def cover_job(job, path, kind, audio):
     backup = None
     if old is not None and job.get('backup'):
         backup = job['backup'] + ('.png' if old_mime == 'image/png' else '.jpg')
-        check_dir(backup, DATA_DIRS)
         d = os.path.dirname(native(backup))
         if not os.path.isdir(d):
             os.makedirs(d)
@@ -311,7 +290,6 @@ def run_job(job):
         fail('invalid job')
     if PY2 and isinstance(path, text_type):
         path = path.encode('utf-8')
-    check_dir(path, MUSIC_DIRS)
     kind = kind_of(path)
     if not kind:
         fail('file type not supported')

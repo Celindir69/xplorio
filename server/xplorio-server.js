@@ -1,8 +1,8 @@
-/* Xplorio's own web server: serves the interface from /data/xplorio/www (nothing below /volumio, so Volumio's
+/* Xplorio's own web server: serves the interface from the plugin folder (nothing below /volumio, so Volumio's
    integrity check before a system update stays intact) and passes everything else through to Volumio on port 3000
    (/api/v1, /socket.io including WebSocket, /albumart, music files). For the browser it is one address, so the
    interface works as before. HTTP, port 4040. Runs on Node 8 (ES5 syntax only), no packages needed.
-   Runs on its own (systemd, xplorio-deploy --server) or inside the Volumio plugin (plugin/index.js: create(opts)). */
+   Runs as the plugin's systemd service xplorio-web (settings from /tmp/xplorio/xplorio-web.env, see plugin/index.js). */
 var http = require('http');
 var net  = require('net');
 var fs   = require('fs');
@@ -13,43 +13,26 @@ var DEFAULTS = {
   port:        parseInt(process.env.HTTP_PORT || '4040', 10),
   volumioHost: process.env.VOLUMIO_HOST || '127.0.0.1',
   volumioPort: parseInt(process.env.VOLUMIO_PORT || '3000', 10),
-  www:         process.env.XPLORIO_WWW || path.join(__dirname, '..', 'www'),
-  volumioHttp: process.env.VOLUMIO_HTTP || '/volumio/http'        /* earlier installation: config.local.js from there */
+  www:         process.env.XPLORIO_WWW || path.join(__dirname, '..')
 };
 
 /* files of the interface; everything else belongs to Volumio */
-var OURS = /^\/(xplorio\.html|app\.html|web\/.*)$/;
+var OURS = /^\/(xplorio\.html|web\/.*)$/;
 var TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
              '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
              '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8'};
 
-/* opts: port, volumioHost, volumioPort, www (folder of the interface), volumioHttp (see DEFAULTS) -> http.Server */
+/* opts: port, volumioHost, volumioPort, www (folder of the interface) (see DEFAULTS) -> http.Server */
 function create(opts) {
   var o = {};
   Object.keys(DEFAULTS).forEach(function(k){ o[k] = opts && opts[k] !== undefined ? opts[k] : DEFAULTS[k]; });
   o.www = path.resolve(o.www);
-  /* web/config.local.js: own settings, from the own folder; until then (parallel to an installation in /volumio)
-     read from there, only read */
-  function configFile() {
-    var own = path.join(o.www, 'web', 'config.local.js');
-    if (exists(own)) return own;
-    var dirs = [];
-    try { dirs = fs.readdirSync(o.volumioHttp).filter(function(d){ return /^www/.test(d); }).sort().reverse(); } catch (e) { /* no Volumio */ }
-    for (var i = 0; i < dirs.length; i++) {
-      var f = path.join(o.volumioHttp, dirs[i], 'web', 'config.local.js');
-      if (exists(f)) return f;
-    }
-    return null;
-  }
-  function exists(f) { try { return fs.statSync(f).isFile(); } catch (e) { return false; } }
-
   /* request path -> file in the interface folder, null if not ours or outside the folder */
   function fileFor(pathname) {
     var p;
     try { p = decodeURIComponent(pathname); } catch (e) { return null; }
     if (p === '/') p = '/xplorio.html';
     if (!OURS.test(p) || p.indexOf('\0') >= 0) return null;
-    if (p === '/web/config.local.js') return configFile() || '';
     var f = path.join(o.www, p);
     return f.indexOf(o.www + path.sep) === 0 ? f : null;
   }
@@ -100,7 +83,6 @@ function create(opts) {
 
   var server = http.createServer(function(req, res){
     var f = (req.method === 'GET' || req.method === 'HEAD') ? fileFor(url.parse(req.url).pathname) : null;
-    if (f === '') { res.writeHead(404, {'Content-Type': 'text/plain'}); return res.end('not found'); }   /* no config.local.js */
     if (f) return serveFile(req, res, f);
     proxy(req, res);
   });

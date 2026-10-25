@@ -84,7 +84,6 @@
 		"BAD_INPUTS": "Please enter the inputs like this: aux=Turntable/phono, opt1=TV (icon optional).",
 		"BAD_SELECT": "Invalid choice.",
 		"BAD_TRI": "Invalid choice.",
-		"SYSTEMD": "{name} runs as a system service (systemd), the plugin leaves it as it is.",
 		"PORT_BUSY": "Port {port} is in use: the Xplorio web server could not start.",
 		"OWN_BROKEN": "/data/xplorio/config.local.js contains an error and is left out.",
 		"PASSWORD_NEW": "New password for the \"System\" page",

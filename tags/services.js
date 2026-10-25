@@ -1,15 +1,13 @@
 /* Services for the "System" page: state of the player services (systemctl show) and restart. Only the services and actions in UNITS are allowed. The tag service runs as user
-   volumio and needs sudo for systemctl (Volumio allows it; for an installation with xplorio-deploy see
-   docs/einrichten.md, "Dienste"); without it the display stays, the buttons report "nosudo". Also restart and power-off of the whole player (power).
+   volumio and needs sudo for systemctl (Volumio allows it); without it the display stays, the buttons report
+   "nosudo". Also restart and power-off of the whole player (power).
    Node 8, ES5 only. run: replacement for execFile (tests) */
 var fs = require('fs'), cp = require('child_process');
 
 var UNITS = [
   {id: 'volumio',       actions: ['restart']},
   {id: 'mpd',           actions: ['restart']},
-  {id: 'tag-service',   actions: ['restart']},
-  {id: 'rotel-bridge',  actions: ['restart']},
-  {id: 'xplorio-web',   actions: ['restart']},   /* the Volumio plugin's own services */
+  {id: 'xplorio-web',   actions: ['restart']},   /* the plugin's own services */
   {id: 'xplorio-tags',  actions: ['restart']},
   {id: 'xplorio-rotel', actions: ['restart']}
 ];
@@ -24,7 +22,7 @@ function allowed(id, action) {
   var u = unitOf(id);
   return !!u && u.actions.indexOf(action) >= 0;
 }
-/* exactly this command line is in the sudo rule */
+/* the command line run with sudo -n */
 function command(id, action) { return [SYSTEMCTL, '--no-block', action, id]; }
 
 /* output of systemctl show -p … a b c: one block per service, separated by blank lines.

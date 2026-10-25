@@ -68,16 +68,6 @@ else {
     var r = cp.spawnSync(py, [path.join(__dirname, '..', 'tags', 'tags.py')], {input: JSON.stringify(job), encoding: 'utf8'});
     return JSON.parse(r.stdout);
   }
-  t('tags.py via sudo (root rights from the plugin): only music below /mnt and /media, images only from the data folder', function(){
-    if (process.getuid() !== 0) return;
-    function sudoRun(job) {
-      var env = {}; Object.keys(process.env).forEach(function(k){ env[k] = process.env[k]; }); env.SUDO_USER = 'volumio';
-      return JSON.parse(cp.spawnSync(py, [path.join(__dirname, '..', 'tags', 'tags.py')], {input: JSON.stringify(job), encoding: 'utf8', env: env}).stdout);
-    }
-    assert.deepStrictEqual(sudoRun({op: 'read', path: dsf}), {ok: false, error: 'path not allowed'});
-    assert.deepStrictEqual(sudoRun({op: 'read', path: '/mnt/../etc/x.flac'}), {ok: false, error: 'path not allowed'});
-    assert.deepStrictEqual(sudoRun({op: 'read', path: '/mnt/USB/none.flac'}), {ok: false, error: 'file not found'});
-  });
   t('tags.py: read empty DSF', function(){
     var r = run({op: 'read', path: dsf});
     assert.ok(r.ok); assert.strictEqual(r.format, 'dsf'); assert.strictEqual(r.tags.title, '');

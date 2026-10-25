@@ -84,7 +84,6 @@
 		"BAD_INPUTS": "Die Eingänge bitte so angeben: aux=Plattenspieler/phono, opt1=TV (Symbol optional).",
 		"BAD_SELECT": "Ungültige Auswahl.",
 		"BAD_TRI": "Ungültige Auswahl.",
-		"SYSTEMD": "{name} läuft als Systemdienst (systemd), das Plugin lässt ihn so.",
 		"PORT_BUSY": "Port {port} ist belegt: Der Xplorio-Webserver konnte nicht starten.",
 		"OWN_BROKEN": "/data/xplorio/config.local.js enthält einen Fehler und bleibt außen vor.",
 		"PASSWORD_NEW": "Neues Passwort für die Seite „System“",
