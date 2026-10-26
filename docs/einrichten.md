@@ -485,6 +485,10 @@ python3 analyse.py --upload http://<player>:8766
 - Zugeordnet wird über Künstler und Titel (wie bei den Last.fm-Tags), nicht über den Pfad: Ordnerstruktur und Laufwerk
   auf dem Mac sind egal. Titel, die es auf dem Player nicht gibt, werden dort einfach nicht verwendet.
 - Mehrere Ordner lassen sich angeben, Symlinks werden verfolgt; `--exclude "*/Hörbücher/*"` lässt Pfade aus.
+- Einträge unter Pfaden, die nicht mehr angegeben sind (anderer Laufwerksname, alte Ordner), bleiben in `essentia.jsonl`
+  stehen, damit ein gerade nicht verbundenes Laufwerk seine Ergebnisse behält. Der Player lädt sie trotzdem in den
+  Speicher. `--prune` entfernt beim Lauf alles außerhalb der angegebenen Ordner; vorher legt es `essentia.jsonl.bak` an.
+  Dafür alle Musikordner angeben, sonst fallen die Ergebnisse der fehlenden weg.
 - Ist in den Xplorio-Einstellungen ein Passwort für die Dienste gesetzt, nimmt der Player das Ergebnis nur damit an:
   Das Skript fragt beim Start einmal danach (oder nimmt es aus der Umgebungsvariable `XPLORIO_PASSWORD`).
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.

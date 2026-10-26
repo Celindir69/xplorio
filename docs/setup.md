@@ -369,6 +369,10 @@ python3 analyse.py --upload http://<player>:8766
 
 - Matching is based on artist and title (as with the Last.fm tags), not on the path: the folder structure and drive used on the Mac do not matter. Tracks that do not exist on the player are simply ignored there.
 - Multiple folders can be specified, symlinks are followed; `--exclude "*/Audiobooks/*"` excludes matching paths.
+- Entries under paths no longer given (another drive name, old folders) stay in `essentia.jsonl`, so a drive that is not
+  connected right now keeps its results. The player still loads them into memory. `--prune` removes everything outside
+  the given folders during the run, after making a backup `essentia.jsonl.bak`. Give all music folders then, otherwise
+  the results of the missing ones are dropped.
 - If a password for the services is set in the Xplorio settings, the player only accepts the result with it:
   the script asks for it once at the start (or takes it from the environment variable `XPLORIO_PASSWORD`).
 - Unchanged files are skipped on subsequent runs; Ctrl-C aborts the process, and the next invocation continues where it left off.

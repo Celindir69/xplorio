@@ -349,14 +349,20 @@ def load_done(out):
     return done
 
 
-def compact(out, done, seen_roots, present):
-    """remove duplicate lines and drop entries for deleted files under the scanned folders"""
+def compact(out, done, seen_roots, present, prune=False):
+    """remove duplicate lines and drop entries for deleted files under the scanned folders;
+    prune: also drop everything outside these folders (old paths, other drives), with a backup <out>.bak"""
     seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # share disconnected in the meantime: keep its entries
-    keep = []
+    keep, dropped = [], 0
     for p, o in done.items():
-        if any(p.startswith(r + os.sep) for r in seen_roots) and p not in present:
+        inside = any(p.startswith(r + os.sep) for r in seen_roots)
+        if (inside and p not in present) or (prune and not inside):
+            dropped += prune and not inside
             continue
         keep.append(o)
+    if dropped:
+        shutil.copy2(out, out + '.bak')
+        print('--prune: %d entries outside the given folders removed (backup: %s.bak)' % (dropped, out))
     with open(out + '.neu', 'w', encoding='utf-8') as f:
         for o in keep:
             f.write(json.dumps(o, ensure_ascii=False) + '\n')
@@ -457,6 +463,8 @@ def main():
     ap.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 4) // 4), help='parallel processes')
     ap.add_argument('--exclude', action='append', default=[], help='pattern for paths to skip, e.g. "*/Audiobooks/*"')
     ap.add_argument('--retry-errors', action='store_true', help='retry files that had errors')
+    ap.add_argument('--prune', action='store_true', help='remove entries outside the given music folders '
+                    '(old paths, other drives); backup in <out>.bak')
     ap.add_argument('--profile', action='store_true', help='print the time per analysis step (for speeding up)')
     ap.add_argument('--max-minutes', type=int, default=30,
                     help='skip longer files, they are loaded whole (default 30, 0 = all)')
@@ -656,7 +664,7 @@ def main():
         for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
             if not os.path.exists(q):
                 del done[q]
-        kept = compact(a.out, done, roots, present)
+        kept = compact(a.out, done, roots, present, a.prune)
         ok = sum(1 for o in done.values() if not o.get('err'))
         print('Done: %d entries in %s, %d of them analysed.' % (kept, a.out, ok))
 
