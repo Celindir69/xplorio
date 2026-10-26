@@ -43,7 +43,7 @@ langRegister('fr', 'Français', {
   'check.cat.albumArtist': 'Artiste de l\'album manquant ou incohérent',
   'check.cat.albumArtistHint': 'Plusieurs artistes dans le dossier, mais pas partout le même artiste d\'album (p. ex. compilations). Crayon : modification groupée.',
   'check.cat.duplicates': 'Albums en double',
-  'check.cat.duplicatesHint': 'Même artiste de l\'album et même titre ; les ajouts comme « Remastered » ou « Deluxe Edition » ne comptent pas, les compilations seulement par titre. La meilleure version est marquée. Déplacer met les dossiers dans le dossier caché .duplicates sur le même disque ; Volumio les oublie à la prochaine lecture. Les remettre en place les restaure.',
+  'check.cat.duplicatesHint': 'Même artiste de l\'album et même titre ; les ajouts comme « Remastered » ou « Deluxe Edition » ne comptent pas, les compilations seulement par titre. La meilleure version est marquée. Déplacer met les dossiers dans le dossier « Xplorio Duplicates » sur le même disque ; Volumio les oublie à la prochaine lecture. Les remettre en place les restaure.',
   'check.cat.genreMerge': 'Regrouper les genres',
   'check.cat.genreMergeHint': 'Tags de genre existants rattachés à une catégorie principale Discogs ; pour les noms ambigus, l\'analyse audio tranche. Un genre par album. Crayon : tous les titres de cette ligne avec la suggestion ; rien n\'est écrit avant l\'enregistrement.',
   'check.cat.genreMissing': 'Albums sans genre',

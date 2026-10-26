@@ -321,7 +321,8 @@ def find_files(roots, excludes):
     for root in roots:
         root = os.path.abspath(os.path.expanduser(root))
         for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
-            dirnames[:] = sorted(d for d in dirnames if not d.startswith('.'))
+            # hidden folders and the duplicates moved aside by Xplorio ("Library check") are not part of the library
+            dirnames[:] = sorted(d for d in dirnames if not d.startswith('.') and d != 'Xplorio Duplicates')
             for fn in sorted(filenames):
                 if fn.startswith('._') or os.path.splitext(fn)[1].lower() not in AUDIO_EXT:
                     continue

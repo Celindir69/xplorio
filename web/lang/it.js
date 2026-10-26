@@ -42,7 +42,7 @@ langRegister('it', 'Italiano', {
   'check.cat.albumArtist': 'Artista dell\'album mancante o incoerente',
   'check.cat.albumArtistHint': 'Più artisti nella cartella, ma non ovunque lo stesso artista dell\'album (ad es. compilation). Matita: modifica multipla.',
   'check.cat.duplicates': 'Album doppi',
-  'check.cat.duplicatesHint': 'Stesso artista dell\'album e stesso titolo; aggiunte come «Remastered» o «Deluxe Edition» non contano, le compilation solo per titolo. La versione migliore è segnata. Sposta mette le cartelle nella cartella nascosta .duplicates sullo stesso disco; Volumio le dimentica alla prossima scansione. Rimetterle a posto le ripristina.',
+  'check.cat.duplicatesHint': 'Stesso artista dell\'album e stesso titolo; aggiunte come «Remastered» o «Deluxe Edition» non contano, le compilation solo per titolo. La versione migliore è segnata. Sposta mette le cartelle nella cartella «Xplorio Duplicates» sullo stesso disco; Volumio le dimentica alla prossima scansione. Rimetterle a posto le ripristina.',
   'check.cat.genreMerge': 'Unifica generi',
   'check.cat.genreMergeHint': 'Tag di genere esistenti, assegnati a una categoria principale di Discogs; per i nomi ambigui decide l\'analisi audio. Un genere per album. Matita: tutti i brani di questa riga con il suggerimento; non viene scritto nulla finché non salvi.',
   'check.cat.genreMissing': 'Album senza genere',

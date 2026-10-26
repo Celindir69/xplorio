@@ -58,7 +58,9 @@ lc.dirsWithoutImage(songs.slice(0, 4), root, function(list){
 var tree = {
   '': 'directory: USB\nplaylist: x.m3u\n',
   'USB': 'directory: USB/A\ndirectory: USB/kaputt\ndirectory: USB/S\n',
-  'USB/S': 'directory: USB/S/Abbey Road\ndirectory: USB/S/Abbey Road (Remastered)\n',
+  'USB/S': 'directory: USB/S/Xplorio Duplicates\ndirectory: USB/S/Abbey Road\ndirectory: USB/S/Abbey Road (Remastered)\n',
+  'USB/S/Xplorio Duplicates': 'directory: USB/S/Xplorio Duplicates/Help\n',
+  'USB/S/Xplorio Duplicates/Help': 'file: USB/S/Xplorio Duplicates/Help/1.mp3\nArtist: The Beatles\nAlbum: Help!\n',
   'USB/S/Abbey Road': 'file: USB/S/Abbey Road/1.mp3\nArtist: The Beatles\nAlbum: Abbey Road\nFormat: 44100:24:2\nTime: 259\n',
   'USB/S/Abbey Road (Remastered)': 'file: USB/S/Abbey Road (Remastered)/1.flac\nArtist: Beatles\nAlbum: Abbey Road (2019 Remaster)\nFormat: 96000:24:2\nTime: 260\n',
   'USB/A': 'file: USB/A/1.flac\nArtist: Spliff\nArtist: Zweiter\nAlbum: 85555\nTrack: 1\nTitle: Carbonara\nGenre: Rock\nTime: 245\nfile: USB/A/2.flac\nTitle: Ohne Tags\n'
@@ -82,7 +84,7 @@ var srv = net.createServer(function(c){
 srv.listen(0, function(){
   var prog = [];
   lc.mpdWalk({port: srv.address().port}, function(err, list, dirs){
-    t('read MPD: all folders, tracks with tags, broken folder skipped', function(){
+    t('read MPD: all folders, tracks with tags, broken folder skipped, duplicates folder left out', function(){
       assert.ifError(err);
       assert.strictEqual(dirs, 7);
       assert.strictEqual(list.length, 4);
@@ -139,11 +141,12 @@ function service(mpdPort) {
                 assert.ok(fs.existsSync(path.join(root, 'USB/A')));
               });
               call('POST', '/dupmove', function(m2){
-                t('service: /dupmove moves into .duplicates on the same drive and marks it done', function(){
+                t('service: /dupmove moves into Xplorio Duplicates on the same drive and marks it done', function(){
                   assert.ok(m2.ok, m2.error);
-                  assert.deepStrictEqual(m2.moved, [{from: 'USB/S/Abbey Road', to: 'USB/S/.duplicates/Abbey Road'}]);
+                  assert.deepStrictEqual(m2.moved, [{from: 'USB/S/Abbey Road', to: 'USB/S/Xplorio Duplicates/Abbey Road'}]);
                   assert.ok(!fs.existsSync(path.join(root, 'USB/S/Abbey Road')));
-                  assert.ok(fs.statSync(path.join(root, 'USB/S/.duplicates/Abbey Road')).isDirectory());
+                  assert.ok(fs.statSync(path.join(root, 'USB/S/Xplorio Duplicates/Abbey Road')).isDirectory());
+                  assert.strictEqual(fs.readFileSync(path.join(root, 'USB/S/.mpdignore'), 'utf8'), 'Xplorio Duplicates\n');   /* MPD leaves it out */
                   var saved = JSON.parse(fs.readFileSync(path.join(root, 'log', 'check.json'), 'utf8'));
                   assert.strictEqual(saved.done['duplicates|USB/S/Abbey Road'], 1);
                 });

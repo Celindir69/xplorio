@@ -165,13 +165,17 @@ album name only. Folders of one album split by disc next to each other (CD1, CD2
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
 (lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
 
-“Move” puts the folders of a version into the hidden folder `.duplicates` on the same drive, keeping the rest of the
-path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). This is instant even for large
-albums, and MPD does not read folders starting with a dot, so the album disappears from the library with the next scan.
-Moving it back with `mv` restores it. If a password for the services is set, the device must be logged in once under
-System at the services. Xplorio deletes nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
+“Move” puts the folders of a version into the folder `Xplorio Duplicates` on the same drive, keeping the rest of the
+path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/Xplorio Duplicates/mp3/Nena/Nena`). This is instant even for
+large albums, and the folder is visible over the network share. So that MPD does not read it, Xplorio adds it to the
+drive's `.mpdignore` file (e.g. `/mnt/INTERNAL/.mpdignore`); the album disappears from the library with the next scan.
+Xplorio's own album list (welcome screen, random album, library check) always leaves the folder out. Earlier versions
+called it `.duplicates`; the Tag Service renames it once at the start. If moved albums were already in the library, run
+"Update library" in Volumio once ("Update", not "Rescan") and they are gone. Moving an album back with `mv` restores it.
+If a password for the services is set, the device must be logged in once under System at the services. Xplorio deletes
+nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
 ```bash
-sudo rm -rf '/mnt/INTERNAL/.duplicates'
+sudo rm -rf '/mnt/INTERNAL/Xplorio Duplicates'
 ```
 The Tag Service needs write access to the music folders for this, as for the Tag Editor.
 

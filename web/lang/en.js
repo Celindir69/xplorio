@@ -44,7 +44,7 @@ langRegister('en', 'English', {
   'check.cat.albumArtist': 'Album artist missing or inconsistent',
   'check.cat.albumArtistHint': 'Several artists in the folder but not the same album artist everywhere (e.g. compilations). Pen: batch edit.',
   'check.cat.duplicates': 'Duplicate albums',
-  'check.cat.duplicatesHint': 'Same album artist and album name; additions such as “Remastered” or “Deluxe Edition” do not count, compilations are compared by album name only. The best version is marked. Move puts the folders into the hidden folder .duplicates on the same drive; Volumio forgets them with the next scan. Moving them back restores them.',
+  'check.cat.duplicatesHint': 'Same album artist and album name; additions such as “Remastered” or “Deluxe Edition” do not count, compilations are compared by album name only. The best version is marked. Move puts the folders into the folder “Xplorio Duplicates” on the same drive; Volumio forgets them with the next scan. Moving them back restores them.',
   'check.cat.genreMerge': 'Merge genres',
   'check.cat.genreMergeHint': 'Existing genre tags mapped to a Discogs top category; for ambiguous names the audio analysis decides. One genre per album. Pen: all tracks of this row with the suggestion; nothing is written until you save.',
   'check.cat.genreMissing': 'Albums without genre',

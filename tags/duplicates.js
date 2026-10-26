@@ -7,7 +7,8 @@ var path = require('path');
 var LOSSLESS = ['flac', 'wav', 'aiff', 'aif', 'alac', 'ape', 'wv', 'tta', 'tak'];
 var DSD      = ['dsf', 'dff', 'dsd'];
 var LOSSY    = ['mp3', 'mp2', 'aac', 'ogg', 'oga', 'opus', 'wma'];
-var TRASH    = '.duplicates';                 /* hidden folder per drive: MPD skips names starting with a dot */
+var TRASH    = 'Xplorio Duplicates';          /* folder per drive, visible over SMB; .mpdignore keeps it out of MPD (ignoreLine) */
+var OLD_TRASH = '.duplicates';                /* name in earlier versions: renamed at the start (tag service) */
 
 var EXTRA_RE = /\s*[(\[][^)\]]*(remaster|deluxe|edition|expanded|anniversary|bonus|reissue|re-issue|version|mono|stereo|hi-?res|\d+\s*-?\s*bit|khz|special|collector|legacy|definitive)[^)\]]*[)\]]/gi;
 var DASH_RE  = /\s+[-–]\s+[^-–]*(remaster|deluxe|edition|anniversary|version)[^-–]*$/i;
@@ -21,10 +22,23 @@ function driveOf(dir) {
   var p = String(dir).split('/');
   return p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
 }
-/* where a folder goes when it is moved aside: <drive>/.duplicates/<rest of the path> */
+/* where a folder goes when it is moved aside: <drive>/Xplorio Duplicates/<rest of the path> */
 function trashPath(dir) {
   var drive = driveOf(dir);
   return drive + '/' + TRASH + '/' + String(dir).slice(drive.length + 1);
+}
+
+/* .mpdignore in the drive folder: MPD then leaves the folder out of the library. Returns the new content, or null if
+   the line is already there */
+function ignoreLine(text) {
+  text = String(text || '');
+  if (text.split(/\r?\n/).some(function(l){ return l.trim() === TRASH; })) return null;
+  return text + (text && !/\n$/.test(text) ? '\n' : '') + TRASH + '\n';
+}
+
+/* "USB/S/Xplorio Duplicates/x/1.flac" (or the old ".duplicates") -> true */
+function isTrash(file) {
+  return String(file).split('/').some(function(p){ return p === TRASH || p === OLD_TRASH; });
 }
 
 function most(list) {
@@ -58,7 +72,7 @@ function better(a, b) {
 function find(songs, artistKey) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
-    if (/(^|\/)\./.test(s.file)) return;                                    /* already moved aside */
+    if (/(^|\/)\./.test(s.file) || isTrash(s.file)) return;                 /* already moved aside */
     var d = path.dirname(s.file);
     if (!dirs[d]) { dirs[d] = []; order.push(d); }
     dirs[d].push(s);
@@ -117,4 +131,4 @@ function find(songs, artistKey) {
   });
 }
 
-module.exports = {find: find, albumKey: albumKey, quality: quality, driveOf: driveOf, trashPath: trashPath, TRASH: TRASH};
+module.exports = {find: find, albumKey: albumKey, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, isTrash: isTrash, TRASH: TRASH, OLD_TRASH: OLD_TRASH};

@@ -42,7 +42,7 @@ langRegister('es', 'Español', {
   'check.cat.albumArtist': 'Artista del álbum ausente o incoherente',
   'check.cat.albumArtistHint': 'Varios artistas en la carpeta, pero no el mismo artista del álbum en todas partes (p. ej. recopilatorios). Lápiz: edición por lotes.',
   'check.cat.duplicates': 'Álbumes duplicados',
-  'check.cat.duplicatesHint': 'Mismo artista del álbum y mismo nombre; añadidos como «Remastered» o «Deluxe Edition» no cuentan, los recopilatorios solo por nombre. La mejor versión está marcada. Mover lleva las carpetas a la carpeta oculta .duplicates en la misma unidad; Volumio las olvida en la próxima lectura. Devolverlas las restaura.',
+  'check.cat.duplicatesHint': 'Mismo artista del álbum y mismo nombre; añadidos como «Remastered» o «Deluxe Edition» no cuentan, los recopilatorios solo por nombre. La mejor versión está marcada. Mover lleva las carpetas a la carpeta «Xplorio Duplicates» en la misma unidad; Volumio las olvida en la próxima lectura. Devolverlas las restaura.',
   'check.cat.genreMerge': 'Unificar géneros',
   'check.cat.genreMergeHint': 'Etiquetas de género existentes asignadas a una categoría principal de Discogs; si el nombre es ambiguo, decide el análisis de audio. Un género por álbum. Lápiz: todas las canciones de esta fila con la sugerencia; no se escribe nada hasta que guardes.',
   'check.cat.genreMissing': 'Álbumes sin género',

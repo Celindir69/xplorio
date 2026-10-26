@@ -42,7 +42,7 @@ langRegister('de', 'Deutsch', {
   'check.cat.albumArtist': 'Album-Künstler fehlt oder uneinheitlich',
   'check.cat.albumArtistHint': 'Mehrere Künstler im Ordner, aber nicht überall derselbe Album-Künstler (z. B. Compilations). Stift: Mehrfachbearbeitung.',
   'check.cat.duplicates': 'Doppelte Alben',
-  'check.cat.duplicatesHint': 'Gleicher Album-Künstler und Albumname, Zusätze wie „Remastered“ oder „Deluxe Edition“ zählen nicht; Zusammenstellungen nur nach Albumname. Die beste Fassung ist markiert. Verschieben legt die Ordner in den versteckten Ordner .duplicates auf demselben Laufwerk, Volumio vergisst sie beim nächsten Einlesen. Zurückschieben stellt sie wieder her.',
+  'check.cat.duplicatesHint': 'Gleicher Album-Künstler und Albumname, Zusätze wie „Remastered“ oder „Deluxe Edition“ zählen nicht; Zusammenstellungen nur nach Albumname. Die beste Fassung ist markiert. Verschieben legt die Ordner in den Ordner „Xplorio Duplicates“ auf demselben Laufwerk, Volumio vergisst sie beim nächsten Einlesen. Zurückschieben stellt sie wieder her.',
   'check.cat.genreMerge': 'Genres zusammenfassen',
   'check.cat.genreMergeHint': 'Vorhandene Genre-Tags, einer Discogs-Oberkategorie zugeordnet; bei mehrdeutigen Namen entscheidet die Audio-Analyse. Ein Genre je Album. Stift: alle Titel dieser Zeile mit dem Vorschlag; geschrieben wird erst mit Speichern.',
   'check.cat.genreMissing': 'Alben ohne Genre',

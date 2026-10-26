@@ -175,14 +175,18 @@ liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je F
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
 Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen.
 
-„Verschieben“ legt die Ordner einer Fassung in den versteckten Ordner `.duplicates` auf demselben Laufwerk, mit dem
-übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). Das geht auch bei
-großen Alben sofort, und MPD liest Ordner mit Punkt am Anfang nicht ein, das Album verschwindet also beim nächsten
-Einlesen aus der Bibliothek. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
-das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig löschen geht per ssh mit
-dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
+„Verschieben“ legt die Ordner einer Fassung in den Ordner `Xplorio Duplicates` auf demselben Laufwerk, mit dem
+übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/Xplorio Duplicates/mp3/Nena/Nena`). Das geht auch bei
+großen Alben sofort, und der Ordner ist über die Netzwerkfreigabe sichtbar. Damit MPD ihn nicht mit einliest, trägt
+Xplorio ihn in die Datei `.mpdignore` des Laufwerks ein (z. B. `/mnt/INTERNAL/.mpdignore`); das Album verschwindet beim
+nächsten Einlesen aus der Bibliothek. Xplorios eigene Albenliste (Begrüßung, Zufallsalbum, Bibliothek prüfen) lässt den
+Ordner immer aus. Frühere Versionen nannten ihn `.duplicates`; der Tag-Dienst benennt ihn beim Start einmal um. Waren
+verschobene Alben schon in der Bibliothek, einmal „Bibliothek aktualisieren“ in Volumio („Aktualisieren“, nicht „Neu
+einlesen“), dann sind sie weg. Zurückschieben per `mv` stellt ein Album wieder her. Ist ein Passwort für die Dienste
+gesetzt, muss das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig
+löschen geht per ssh mit dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
 ```bash
-sudo rm -rf '/mnt/INTERNAL/.duplicates'
+sudo rm -rf '/mnt/INTERNAL/Xplorio Duplicates'
 ```
 Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
 

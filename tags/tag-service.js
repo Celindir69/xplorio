@@ -201,7 +201,7 @@ function mpdUpdate(relFiles, cb) {
   scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
   cb(scanOk);
 }
-/* folders that are gone (moved into .duplicates): MPD forgets them when exactly their path is updated. Never merged
+/* folders that are gone (moved aside into Xplorio Duplicates): MPD forgets them when exactly their path is updated. Never merged
    into a parent folder: on a large NTFS drive a scan of the whole drive overloads the player */
 function mpdForget(relDirs, cb) {
   scanExact = scanExact.concat(relDirs);
@@ -453,18 +453,50 @@ function doCheckDone(body, cb) {
 }
 
 /* POST /dupmove {dirs, token}: move one version of a duplicate album (its folders, as listed by the last check) into
-   the hidden folder .duplicates on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
+   the folder "Xplorio Duplicates" on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
    moving it back restores it. Password only if one is set (adminpass.js), like restarting the player. */
 var duplicates = require('./duplicates.js');
 function dupFolder(rel) {
   var parts = rel.split('/');
   if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (parts[0] === 'INTERNAL' ? 2 : 3) || rel.indexOf('\0') >= 0) return null;
-  for (var i = 0; i < parts.length; i++) if (!parts[i] || parts[i] === '.' || parts[i] === '..' || parts[i] === duplicates.TRASH) return null;
+  for (var i = 0; i < parts.length; i++) if (!parts[i] || parts[i] === '.' || parts[i] === '..' || duplicates.isTrash(parts[i])) return null;
   var full = path.join(MUSIC_ROOT, rel), real, root;
   try { real = fs.realpathSync(full); root = fs.realpathSync(path.join(MUSIC_ROOT, parts[0])); } catch (e) { return null; }
   if (real.indexOf(root + path.sep) !== 0) return null;   /* symlink leads out of INTERNAL/USB/NAS */
   try { if (!fs.statSync(full).isDirectory()) return null; } catch (e) { return null; }
   return full;
+}
+/* .mpdignore in the drive folder names the duplicates folder, so a later scan of the drive (or of the whole library) leaves it
+   out. true if the file was written now */
+function dupIgnore(drive) {
+  var f = path.join(MUSIC_ROOT, drive, '.mpdignore'), text = '';
+  try { text = fs.readFileSync(f, 'utf8'); } catch (e) { /* none yet */ }
+  var neu = duplicates.ignoreLine(text);
+  if (neu === null) return false;
+  try { fs.writeFileSync(f, neu); return true; }
+  catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
+}
+/* at the start: the folder of earlier versions (.duplicates, hidden on the Mac) gets its visible name, and every
+   duplicates folder its .mpdignore line. MPD forgets the old path when exactly it is updated */
+function dupMigrate() {
+  var drives = ['INTERNAL'];
+  ['USB', 'NAS'].forEach(function(r){
+    try { fs.readdirSync(path.join(MUSIC_ROOT, r)).forEach(function(d){ drives.push(r + '/' + d); }); } catch (e) { /* not there */ }
+  });
+  function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } }
+  var forget = [];
+  drives.forEach(function(d){
+    var old = path.join(MUSIC_ROOT, d, duplicates.OLD_TRASH), neu = path.join(MUSIC_ROOT, d, duplicates.TRASH);
+    if (isDir(old)) {
+      if (isDir(neu)) console.error('both ' + old + ' and ' + neu + ' exist: ' + old + ' left as it is');
+      else {
+        try { fs.renameSync(old, neu); forget.push(d + '/' + duplicates.OLD_TRASH); }
+        catch (e) { console.error('cannot rename ' + old + ': ' + e.message); }
+      }
+    }
+    if (isDir(neu) && dupIgnore(d)) forget.push(d + '/' + duplicates.TRASH);
+  });
+  if (forget.length) mpdForget(forget, function(){});
 }
 function doDupMove(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
@@ -489,6 +521,7 @@ function doDupMove(body, cb) {
       return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + dirs[i] : e.message, moved: moved});
     }
     moved.push({from: dirs[i], to: to});
+    dupIgnore(duplicates.driveOf(dirs[i]));
     last.done = last.done || {};
     last.done['duplicates|' + dirs[i]] = 1;
   }
@@ -1595,6 +1628,7 @@ if (require.main === module) {
   if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); }
   setTimeout(function(){ albumsEnsure(); }, 90000);       /* prepare the album list for the random album */
   setTimeout(pruneLog, 30000);                            /* clean up old undo data */
+  setTimeout(dupMigrate, 20000);                          /* duplicates folder of earlier versions: new name, .mpdignore */
   sysInfo.start();                                        /* measure CPU load ("System" page) */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
   if (process.env.MOODTAGS !== '0' && appConfig().MOODTAGS !== false) {
