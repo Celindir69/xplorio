@@ -13,9 +13,37 @@ paintTime();
   if (!data) return;
   if (data.kind === 'syncedLyrics') {
     renderSyncedLyrics(data.value, data.key);
+  } else if (data.kind === 'tracks') {
+    renderTrackList(data.value);
   } else {
     lyricsText.textContent = data.value;
   }
+}
+
+/* Stage view, album only queued while the amplifier is on another input: its track list in place of the lyrics */
+function fmtTrackDur(s) {
+  s = Math.round(Number(s) || 0);
+  return s > 0 ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : '';
+}
+function renderTrackList(tracks) {
+  if (!tracks || !tracks.length) return;
+  lyricsText.className = 'lyrTracks';
+  var head = document.createElement('div'); head.className = 'lyrTrkHead'; head.textContent = T('lyrics.tracks');
+  lyricsText.appendChild(head);
+  tracks.forEach(function(t, i){
+    var row = document.createElement('div'), n = document.createElement('span'), ti = document.createElement('span'), d = document.createElement('span');
+    row.className = 'lyrTrk'; n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
+    n.textContent = (i + 1) + '.';
+    ti.textContent = t.title || t.name || '';
+    d.textContent = fmtTrackDur(t.duration);
+    row.appendChild(n); row.appendChild(ti); row.appendChild(d);
+    lyricsText.appendChild(row);
+  });
+}
+/* the queued tracks of this album (all of the queue if none match, e.g. a playlist) */
+function albumTracks(queue, album, artist) {
+  var same = (queue || []).filter(function(t){ return album && t.album === album && (!artist || !t.artist || t.artist === artist || t.albumartist === artist); });
+  return same.length ? same : (queue || []);
 }
 
 /* ---------- Info ---------- */

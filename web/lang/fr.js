@@ -515,6 +515,7 @@ langRegister('fr', 'Français', {
   'lyrics.earlier': 'Paroles plus tôt ({state})',
   'lyrics.later': 'Paroles plus tard ({state})',
   'lyrics.none': 'Aucune parole trouvée',
+  'lyrics.tracks': 'Pistes',
   'lyrics.reset': 'Synchro des paroles réinitialisée',
   'lyrics.seconds': '{s} s',
   'lyrics.sync': 'synchro',

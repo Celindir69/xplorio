@@ -669,6 +669,13 @@ html.stage #overlayLyrics .overlayBody { padding:12px max(env(safe-area-inset-ri
   -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 56px, #000 calc(100% - 8vh), transparent 100%);
   mask-image:linear-gradient(to bottom, transparent 0, #000 56px, #000 calc(100% - 8vh), transparent 100%); }
 html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; font-size:.8em; }
+/* track list of the queued album (other input) in place of the lyrics */
+#lyricsText.lyrTracks { white-space:normal; }
+.lyrTrkHead { font-size:.8em; opacity:.55; margin-bottom:.4em; }
+.lyrTrk { display:flex; gap:.8em; }
+.lyrTrkN { flex:0 0 2.2em; text-align:right; opacity:.5; font-variant-numeric:tabular-nums; }
+.lyrTrkT { flex:1 1 auto; min-width:0; }
+.lyrTrkD { flex:0 0 auto; opacity:.55; font-variant-numeric:tabular-nums; }
 
 /* queue, playlists, search … at the top right as round buttons */
 html.stage #topRight .actBtn { padding:0; opacity:.55; }

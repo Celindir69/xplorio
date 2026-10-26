@@ -514,6 +514,7 @@ langRegister('es', 'Español', {
   'lyrics.earlier': 'Letras antes ({state})',
   'lyrics.later': 'Letras después ({state})',
   'lyrics.none': 'No se encontraron letras',
+  'lyrics.tracks': 'Pistas',
   'lyrics.reset': 'Sincronización de letras restablecida',
   'lyrics.seconds': '{s} s',
   'lyrics.sync': 'sync',
