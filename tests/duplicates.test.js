@@ -30,7 +30,8 @@ t('not duplicates: other artist, live album, no album tag, folder already moved 
     S('USB/S/d/1.flac', {artist: 'Queen', album: 'Live Killers (Live)'}),
     S('USB/S/e/1.flac', {artist: 'Queen'}),
     S('USB/S/f/1.flac', {artist: 'Queen'}),
-    S('USB/S/.duplicates/b/1.flac', {artist: 'Queen', album: 'Greatest Hits'})
+    S('USB/S/.duplicates/b/1.flac', {artist: 'Queen', album: 'Greatest Hits'}),
+    S('USB/S/Xplorio Duplicates/b/1.flac', {artist: 'Queen', album: 'Greatest Hits'})
   ]), []);
 });
 
@@ -71,14 +72,15 @@ t('quality: DSD before lossless before m4a before lossy', function(){
 });
 
 t('moved aside: hidden folder on the same drive, keeps the path', function(){
-  assert.strictEqual(dup.trashPath('INTERNAL/bandcamp/X/Album'), 'INTERNAL/.duplicates/bandcamp/X/Album');
-  assert.strictEqual(dup.trashPath('USB/Stick/Album'), 'USB/Stick/.duplicates/Album');
-  assert.strictEqual(dup.trashPath('NAS/Musik/Rock/Album'), 'NAS/Musik/.duplicates/Rock/Album');
+  assert.strictEqual(dup.trashPath('INTERNAL/bandcamp/X/Album'), 'INTERNAL/Xplorio Duplicates/bandcamp/X/Album');
+  assert.strictEqual(dup.trashPath('USB/Stick/Album'), 'USB/Stick/Xplorio Duplicates/Album');
+  assert.strictEqual(dup.trashPath('NAS/Musik/Rock/Album'), 'NAS/Musik/Xplorio Duplicates/Rock/Album');
 });
 
-t('.mpdignore: .duplicates added once, other lines stay', function(){
-  assert.strictEqual(dup.ignoreLine(''), '.duplicates\n');
-  assert.strictEqual(dup.ignoreLine('Hörbücher'), 'Hörbücher\n.duplicates\n');
-  assert.strictEqual(dup.ignoreLine('a\n.duplicates\n'), null);
+t('.mpdignore: the duplicates folder added once, other lines stay', function(){
+  assert.strictEqual(dup.ignoreLine(''), 'Xplorio Duplicates\n');
+  assert.strictEqual(dup.ignoreLine('.duplicates'), '.duplicates\nXplorio Duplicates\n');
+  assert.strictEqual(dup.ignoreLine('a\nXplorio Duplicates\n'), null);
+  assert.ok(dup.isTrash('USB/S/.duplicates/x/1.mp3') && dup.isTrash('USB/S/Xplorio Duplicates/x') && !dup.isTrash('USB/S/Duplicates/x'));
 });
 console.log(n + ' checks');

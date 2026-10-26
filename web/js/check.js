@@ -350,11 +350,12 @@ function checkSpellingRow(v, i, group) {
   return checkRow('spelling|' + v.name, v.name, T('check.spellingSub', {n: v.count, others: others}), function(){ openArtistEditor(v.name); });
 }
 
-/* ---------- Duplicate albums: move a version into .duplicates on the same drive (tag service POST /dupmove) ---------- */
+/* ---------- Duplicate albums: move a version into "Xplorio Duplicates" on the same drive (tag service POST /dupmove) ---------- */
+var CHECK_TRASH = 'Xplorio Duplicates';                /* duplicates.TRASH in the tag service */
 function checkShellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 function checkDupTrashPath(dir) {                       /* same rule as duplicates.trashPath in the tag service */
   var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
-  return drive + '/.duplicates/' + dir.slice(drive.length + 1);
+  return drive + '/' + CHECK_TRASH + '/' + dir.slice(drive.length + 1);
 }
 /* copy text: the clipboard API only exists on https, on http the old way via a selected text field */
 function checkCopy(text) {
@@ -385,7 +386,7 @@ function checkDupTrash(box, list) {
   list.forEach(function(g){ g.versions.forEach(function(v){ drives[v.drive] = 1; }); });
   var note = document.createElement('div'); note.className = 'ckCatHint'; note.textContent = T('check.dup.trash');
   box.appendChild(note);
-  Object.keys(drives).sort().forEach(function(d){ box.appendChild(checkCmdRow('sudo rm -rf ' + checkShellQuote('/mnt/' + d + '/.duplicates'))); });
+  Object.keys(drives).sort().forEach(function(d){ box.appendChild(checkCmdRow('sudo rm -rf ' + checkShellQuote('/mnt/' + d + '/' + CHECK_TRASH))); });
 }
 /* play one version (all its folders) in place of the queue; the check stays open to compare */
 function checkDupPlay(g, v) {
