@@ -13,8 +13,11 @@ var VOLUMIO_PAGES = [
 ];
 
 /* on Xplorio's own web server (server/xplorio-server.js, port 4040 or another one) "/" is Xplorio itself: Volumio's
-   pages then come from Volumio's own address (port 80, or 3000) */
-var VOLUMIO_ORIGIN = ['', '80', '443', '3000'].indexOf(location.port) < 0 ? location.protocol + '//' + location.hostname : '';
+   pages then come from Volumio's own address (port 80, or 3000). On the player itself (kiosk browser at localhost)
+   port 3000 directly: Volumio forwards port 80 to 3000 only for requests from the network */
+var VOLUMIO_ORIGIN = ['', '80', '443', '3000'].indexOf(location.port) >= 0 ? ''
+  : /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname) ? 'http://' + location.hostname + ':3000'
+  : location.protocol + '//' + location.hostname;
 
 var overlayVolumio   = document.getElementById('overlayVolumio');
 var volumioTabBar    = document.getElementById('volumioTabBar');
