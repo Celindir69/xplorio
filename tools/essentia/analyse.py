@@ -349,14 +349,15 @@ def load_done(out):
     return done
 
 
-def compact(out, done, seen_roots, present, prune=False):
+def compact(out, done, seen_roots, present, prune=False, keep_missing=False):
     """remove duplicate lines and drop entries for deleted files under the scanned folders;
-    prune: also drop everything outside these folders (old paths, other drives), with a backup <out>.bak"""
+    prune: also drop everything outside these folders (old paths, other drives), with a backup <out>.bak;
+    keep_missing: keep entries of files no longer in the scanned folders (import folder emptied after copying)"""
     seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # share disconnected in the meantime: keep its entries
     keep, dropped = [], 0
     for p, o in done.items():
         inside = any(p.startswith(r + os.sep) for r in seen_roots)
-        if (inside and p not in present) or (prune and not inside):
+        if (inside and p not in present and not keep_missing) or (prune and not inside):
             dropped += prune and not inside
             continue
         keep.append(o)
@@ -465,6 +466,8 @@ def main():
     ap.add_argument('--retry-errors', action='store_true', help='retry files that had errors')
     ap.add_argument('--prune', action='store_true', help='remove entries outside the given music folders '
                     '(old paths, other drives); backup in <out>.bak')
+    ap.add_argument('--keep-missing', action='store_true', help='keep the results of files no longer in the given '
+                    'folders, e.g. an import folder emptied after copying the music to the player')
     ap.add_argument('--profile', action='store_true', help='print the time per analysis step (for speeding up)')
     ap.add_argument('--max-minutes', type=int, default=30,
                     help='skip longer files, they are loaded whole (default 30, 0 = all)')
@@ -482,6 +485,8 @@ def main():
     a = ap.parse_args()
     if not a.roots and not a.upload:
         ap.error('give music folders (or only --upload)')
+    if a.prune and a.keep_missing:
+        ap.error('--prune and --keep-missing do not go together')
     a.player_wait = max(1, a.player_wait)
     if a.player and '//' not in a.player:
         a.player = 'http://' + a.player
@@ -664,7 +669,7 @@ def main():
         for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
             if not os.path.exists(q):
                 del done[q]
-        kept, ok = compact(a.out, done, roots, present, a.prune)
+        kept, ok = compact(a.out, done, roots, present, a.prune, a.keep_missing)
         print('Done: %d entries in %s, %d of them analysed.' % (kept, a.out, ok))
 
     if a.upload:
