@@ -514,6 +514,7 @@ langRegister('it', 'Italiano', {
   'lyrics.earlier': 'Testo prima ({state})',
   'lyrics.later': 'Testo dopo ({state})',
   'lyrics.none': 'Nessun testo trovato',
+  'lyrics.tracks': 'Tracce',
   'lyrics.reset': 'Sincronizzazione del testo azzerata',
   'lyrics.seconds': '{s} s',
   'lyrics.sync': 'sync',

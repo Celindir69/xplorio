@@ -234,12 +234,20 @@ updateSyncedLyrics();
     mTitle.classList.toggle('link', !!radioArtist || similarOk());   /* click opens their albums or similar tracks (browse.js) */
 
     var key    = artist + '|' + album + '|' + (radio ? title : '');
-    var lyrKey = artist + '|' + title;
+    var tracks = preview && stageOn && !!album;           /* stage view, album only queued (other input): its track list */
+    var lyrKey = tracks ? 'tracks|' + artist + '|' + album : artist + '|' + title;
 
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
       setTrackInfo(lyrKey, title, null, radio);                   /* remove the previous track's tab */
-      if (!artist || !title) showLyrics(null);                     /* e.g. other input */
+      if (tracks) {
+        (function(k, al, ar){
+          fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(q){
+            if (k === lastLyrKey) showLyrics({kind: 'tracks', value: albumTracks(q && q.queue, al, ar)});
+          }).catch(function(){ if (k === lastLyrKey) showLyrics(null); });
+        })(lyrKey, album, artist);
+      }
+      else if (!artist || !title) showLyrics(null);                /* e.g. other input */
       else {
         askExtra(artist, title, radio).then(function(res){ if (lyrKey === lastLyrKey) showLyrics(res); });   /* discard a late answer for the previous track */
         (function(k, ti){

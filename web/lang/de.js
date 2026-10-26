@@ -514,6 +514,7 @@ langRegister('de', 'Deutsch', {
   'lyrics.earlier': 'Lyrics früher ({state})',
   'lyrics.later': 'Lyrics später ({state})',
   'lyrics.none': 'Keine Lyrics gefunden',
+  'lyrics.tracks': 'Titelliste',
   'lyrics.reset': 'Lyrics wie geliefert',
   'lyrics.seconds': '{s} s',
   'lyrics.sync': 'sync',
