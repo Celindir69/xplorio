@@ -713,6 +713,7 @@ langRegister('it', 'Italiano', {
   'tag.empty': '(vuoto)',
   'tag.errSuffix': {one: ' – {n} errore: {error}', other: ' – {n} errori: {error}'},
   'tag.error': 'Errore: {error}',
+  'tag.noWrite': '{error}. Volumio non può modificare il file, spesso perché è stato copiato tramite la condivisione di rete e appartiene all\'ospite. Soluzione via ssh: sudo chown -R volumio:volumio /mnt/INTERNAL (con un NAS, collegare la condivisione con permesso di scrittura)',
   'tag.errorShort': 'Errore',
   'tag.field.album': 'Album',
   'tag.field.albumartist': 'Artista dell\'album',

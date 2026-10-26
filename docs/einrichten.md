@@ -93,6 +93,15 @@ Entdecken, Mix und die Seite „System“. Er läuft als Benutzer `volumio`, wie
 Musikordner, die `volumio` beschreiben darf; die Einstellungsseite nennt die übrigen. Ein- und ausschalten auf der
 Einstellungsseite. Log: `journalctl -u xplorio-tags -e`.
 
+**Über die Netzwerkfreigabe kopierte Musik:** Volumios Freigabe („Internal Storage“, vom Mac oder PC aus)
+speichert neue Dateien als Gast (`nobody:nogroup`). `volumio` darf sie dann nicht ändern, und der Tag-Editor meldet
+fehlende Schreibrechte. Nach dem Kopieren einmal per ssh:
+```bash
+sudo chown -R volumio:volumio /mnt/INTERNAL
+```
+Die Einstellungsseite prüft nur die Musikordner selbst, nicht jede Datei darin. Bei einem NAS die Freigabe mit
+Schreibrechten verbinden.
+
 Der Dienst startet mit `--max-old-space-size=384`, also mit mehr Speicher als Nodes Standard (auf 32-Bit-ARM etwa 256 MB).
 Große Sammlungen mit Audio-Analyse brauchen das, sonst bricht er mit `JavaScript heap out of memory` ab.
 

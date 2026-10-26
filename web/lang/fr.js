@@ -714,6 +714,7 @@ langRegister('fr', 'Français', {
   'tag.empty': '(vide)',
   'tag.errSuffix': {one: ' – {n} erreur : {error}', other: ' – {n} erreurs : {error}'},
   'tag.error': 'Erreur : {error}',
+  'tag.noWrite': '{error}. Volumio ne peut pas modifier le fichier, souvent parce qu\'il a été copié via le partage réseau et appartient à l\'invité. Solution par ssh : sudo chown -R volumio:volumio /mnt/INTERNAL (pour un NAS, connecter le partage en écriture)',
   'tag.errorShort': 'Erreur',
   'tag.field.album': 'Album',
   'tag.field.albumartist': 'Artiste de l\'album',

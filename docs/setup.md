@@ -97,6 +97,15 @@ Discover, Mix and the "System" page. It runs as user `volumio`, like Volumio its
 `volumio` may write to; the settings page lists the others. Switch it on and off on the settings page.
 Log: `journalctl -u xplorio-tags -e`.
 
+**Music copied over the network share:** Volumio's share ("Internal Storage", from a Mac or PC) stores new
+files as the guest user (`nobody:nogroup`). `volumio` may then not change them, and the Tag Editor reports missing write
+permission. After copying, once over ssh:
+```bash
+sudo chown -R volumio:volumio /mnt/INTERNAL
+```
+The settings page only checks the music folders themselves, not every file in them. For a NAS, connect the share with
+write access.
+
 The service starts with `--max-old-space-size=384`, i.e. with more memory than Node's default (about 256 MB on 32-bit ARM).
 Large collections with audio analysis need this, otherwise it aborts with `JavaScript heap out of memory`.
 
