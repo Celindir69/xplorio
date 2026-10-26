@@ -713,6 +713,7 @@ langRegister('de', 'Deutsch', {
   'tag.empty': '(leer)',
   'tag.errSuffix': {one: ' – {n} Fehler: {error}', other: ' – {n} Fehler: {error}'},
   'tag.error': 'Fehler: {error}',
+  'tag.noWrite': '{error}. Volumio darf die Datei nicht ändern, oft weil sie über die Netzwerkfreigabe kopiert wurde und dem Gast gehört. Abhilfe per ssh: sudo chown -R volumio:volumio /mnt/INTERNAL (bei einem NAS die Freigabe mit Schreibrechten verbinden)',
   'tag.errorShort': 'Fehler',
   'tag.field.album': 'Album',
   'tag.field.albumartist': 'Album-Künstler',

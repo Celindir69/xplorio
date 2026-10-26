@@ -102,7 +102,15 @@ function tagPaintPlayer(st) {
 
 function tagPost(route, body) {
   return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
-    .then(function(r){ return r.json(); });
+    .then(function(r){ return r.json(); }).then(tagNoWrite);
+}
+
+/* missing write permission: say how to fix it (files copied over Volumio's network share belong to the guest user) */
+var TAG_NOWRITE = /permission denied|read-only|no write permission|EACCES|EPERM/i;
+function tagNoWrite(res) {
+  function fix(o) { if (o && o.error && TAG_NOWRITE.test(o.error)) o.error = T('tag.noWrite', {error: o.error}); }
+  if (res) { fix(res); (res.items || []).forEach(fix); (res.folders || []).forEach(fix); }
+  return res;
 }
 
 function tagField(label, input, extra) {
@@ -556,7 +564,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden &
 /* JSON to the tag service (as text/plain: no browser preflight request needed) */
 function tagPostJson(route, body) {
   return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
-    .then(function(r){ return r.json(); });
+    .then(function(r){ return r.json(); }).then(tagNoWrite);
 }
 
 /* process a list in chunks one after another; fn(chunk) -> Promise */

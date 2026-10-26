@@ -107,7 +107,7 @@ function next() {
     var res;
     try { res = JSON.parse(out); } catch (e) { res = {ok: false, error: (err || 'no response from tags.py').trim().split('\n').pop()}; }
     if (!res.ok && /permission denied|read-only/i.test(res.error || '')) {
-      res.error += ' (no write permission on the drive; see docs/tags.md)';
+      res.error += ' (no write permission on the drive)';
     }
     finish(res);
   });

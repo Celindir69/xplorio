@@ -715,6 +715,7 @@ langRegister('en', 'English', {
   'tag.empty': '(empty)',
   'tag.errSuffix': {one: ' – {n} error: {error}', other: ' – {n} errors: {error}'},
   'tag.error': 'Error: {error}',
+  'tag.noWrite': '{error}. Volumio may not change the file, often because it was copied over the network share and belongs to the guest user. Fix over ssh: sudo chown -R volumio:volumio /mnt/INTERNAL (for a NAS, connect the share with write access)',
   'tag.errorShort': 'Error',
   'tag.field.album': 'Album',
   'tag.field.albumartist': 'Album artist',
