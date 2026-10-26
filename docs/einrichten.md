@@ -489,6 +489,11 @@ python3 analyse.py --upload http://<player>:8766
   stehen, damit ein gerade nicht verbundenes Laufwerk seine Ergebnisse behält. Der Player lädt sie trotzdem in den
   Speicher. `--prune` entfernt beim Lauf alles außerhalb der angegebenen Ordner; vorher legt es `essentia.jsonl.bak` an.
   Dafür alle Musikordner angeben, sonst fallen die Ergebnisse der fehlenden weg.
+- Neue Musik vorab auf dem Mac analysieren: in einem Import-Ordner ablegen, mit
+  `python3 analyse.py --keep-missing --upload http://<player>:8766 ~/Music/<Import-Ordner>` analysieren und danach auf
+  den Player kopieren (z. B. `rsync -av ~/Music/<Import-Ordner>/ volumio@<player>:/mnt/USB/<Ordner>/`). Ohne
+  `--keep-missing` hält der nächste Lauf die inzwischen weggeräumten Dateien für gelöscht und entfernt ihre Ergebnisse.
+  Ein späterer Lauf über die ganze Bibliothek erkennt sie an Dateiname und Größe wieder und analysiert sie nicht erneut.
 - Ist in den Xplorio-Einstellungen ein Passwort für die Dienste gesetzt, nimmt der Player das Ergebnis nur damit an:
   Das Skript fragt beim Start einmal danach (oder nimmt es aus der Umgebungsvariable `XPLORIO_PASSWORD`).
 - Unveränderte Dateien werden beim nächsten Lauf übersprungen; Ctrl-C bricht ab, der nächste Aufruf macht weiter.
