@@ -199,8 +199,12 @@ ControllerXplorio.prototype.getUIConfig = function() {
     el('lastfmSecret').doc = self.str('LASTFM_SECRET_DOC') + ' ' + self.str(k.LASTFM_SECRET ? 'LASTFM_SAVED' : 'LASTFM_NONE');
     var pwSet = self.auth().isSet();
     el('password').doc = self.str('PASSWORD_DOC') + ' ' + self.str(pwSet ? 'PASSWORD_SET' : 'PASSWORD_NONE');
+    /* the status in the label as well: Volumio 2 does not show a field's doc text */
+    el('lastfmKey').label = self.str('LASTFM_KEY') + ' (' + self.str(k.LASTFM_KEY ? 'STATE_SAVED' : 'STATE_NONE') + ')';
+    el('lastfmSecret').label = self.str('LASTFM_SECRET') + ' (' + self.str(k.LASTFM_SECRET ? 'STATE_SAVED' : 'STATE_NONE') + ')';
     if (pwSet) el('password').label = self.str('PASSWORD_NEW');
-    else ui.sections.forEach(function(sec){                 /* nothing to confirm yet: no field for the current one */
+    else el('password').label = self.str('PASSWORD') + ' (' + self.str('STATE_NO_PASSWORD') + ')';
+    if (!pwSet) ui.sections.forEach(function(sec){                 /* nothing to confirm yet: no field for the current one */
       sec.content = (sec.content || []).filter(function(c){ return c.id !== 'passwordOld'; });
       if (sec.saveButton) sec.saveButton.data = sec.saveButton.data.filter(function(d){ return d !== 'passwordOld'; });
     });

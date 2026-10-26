@@ -188,6 +188,9 @@ plug.onStart().then(function(){
     assert.deepStrictEqual(el(ui, 'language').options.map(function(o){ return o.label; }), ['Automatisch', 'Deutsch', 'English', 'Français', 'Español', 'Italiano']);
     assert.strictEqual(el(ui, 'rotelInputs').value, 'aux=Plattenspieler/phono');
     assert.ok(/Gespeichert/.test(el(ui, 'lastfmKey').doc) && /Noch nicht/.test(el(ui, 'lastfmSecret').doc) && el(ui, 'lastfmKey').value === '');
+    assert.strictEqual(el(ui, 'lastfmKey').label, 'Last.fm API-Key (gespeichert)');
+    assert.strictEqual(el(ui, 'lastfmSecret').label, 'Last.fm Shared Secret (nicht eingetragen)');
+    assert.ok(/noch keins gesetzt/.test(el(ui, 'password').label));
     assert.ok(JSON.stringify(ui).indexOf('oldkey1') < 0);
     assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc) && !el(ui, 'passwordOld') && !el(ui, 'tagsRoot'));
     ui.sections.slice(1).forEach(function(s){
