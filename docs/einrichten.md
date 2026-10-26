@@ -178,7 +178,7 @@ Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange),
 großen Alben sofort. Damit MPD den Ordner nicht mit einliest, trägt Xplorio ihn in die Datei `.mpdignore` des
 Laufwerks ein (z. B. `/mnt/INTERNAL/.mpdignore`); das Album verschwindet beim nächsten Einlesen aus der Bibliothek. Waren
 schon verschobene Alben in der Bibliothek (Versionen vor dieser Änderung), einmal „Bibliothek aktualisieren“ in Volumio
-(„Aktualisieren“, nicht „Neu einlesen“), dann sind sie weg. Xplorio selbst blendet `.duplicates` immer aus. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
+(„Aktualisieren“, nicht „Neu einlesen“), dann sind sie weg. Xplorios eigene Albenliste (Begrüßung, Zufallsalbum, Bibliothek prüfen) lässt `.duplicates` immer aus. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
 das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig löschen geht per ssh mit
 dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
 ```bash
