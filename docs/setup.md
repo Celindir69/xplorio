@@ -165,7 +165,10 @@ version. Each version shows format, resolution, number of tracks, playing time a
 
 “Move” puts the folders of a version into the hidden folder `.duplicates` on the same drive, keeping the rest of the
 path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). This is instant even for large
-albums, and MPD does not read folders starting with a dot, so the album disappears from the library with the next scan.
+albums. So that MPD does not read the folder, Xplorio adds it to the drive's `.mpdignore` file (e.g.
+`/mnt/INTERNAL/.mpdignore`); the album disappears from the library with the next scan. If moved albums were already in the
+library (versions before this change), run "Update library" in Volumio once ("Update", not "Rescan") and they are gone.
+Xplorio itself always leaves `.duplicates` out.
 Moving it back with `mv` restores it. If a password for the services is set, the device must be logged in once under
 System at the services. Xplorio deletes nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
 ```bash

@@ -76,4 +76,9 @@ t('moved aside: hidden folder on the same drive, keeps the path', function(){
   assert.strictEqual(dup.trashPath('NAS/Musik/Rock/Album'), 'NAS/Musik/.duplicates/Rock/Album');
 });
 
+t('.mpdignore: .duplicates added once, other lines stay', function(){
+  assert.strictEqual(dup.ignoreLine(''), '.duplicates\n');
+  assert.strictEqual(dup.ignoreLine('Hörbücher'), 'Hörbücher\n.duplicates\n');
+  assert.strictEqual(dup.ignoreLine('a\n.duplicates\n'), null);
+});
 console.log(n + ' checks');

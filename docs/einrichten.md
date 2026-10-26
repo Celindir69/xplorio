@@ -175,8 +175,10 @@ Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange),
 
 „Verschieben“ legt die Ordner einer Fassung in den versteckten Ordner `.duplicates` auf demselben Laufwerk, mit dem
 übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/.duplicates/mp3/Nena/Nena`). Das geht auch bei
-großen Alben sofort, und MPD liest Ordner mit Punkt am Anfang nicht ein, das Album verschwindet also beim nächsten
-Einlesen aus der Bibliothek. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
+großen Alben sofort. Damit MPD den Ordner nicht mit einliest, trägt Xplorio ihn in die Datei `.mpdignore` des
+Laufwerks ein (z. B. `/mnt/INTERNAL/.mpdignore`); das Album verschwindet beim nächsten Einlesen aus der Bibliothek. Waren
+schon verschobene Alben in der Bibliothek (Versionen vor dieser Änderung), einmal „Bibliothek aktualisieren“ in Volumio
+(„Aktualisieren“, nicht „Neu einlesen“), dann sind sie weg. Xplorio selbst blendet `.duplicates` immer aus. Zurückschieben per `mv` stellt es wieder her. Ist ein Passwort für die Dienste gesetzt, muss
 das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig löschen geht per ssh mit
 dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
 ```bash

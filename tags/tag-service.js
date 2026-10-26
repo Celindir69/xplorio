@@ -466,6 +466,28 @@ function dupFolder(rel) {
   try { if (!fs.statSync(full).isDirectory()) return null; } catch (e) { return null; }
   return full;
 }
+/* .mpdignore in the drive folder names .duplicates, so a later scan of the drive (or of the whole library) leaves it
+   out. true if the file was written now */
+function dupIgnore(drive) {
+  var f = path.join(MUSIC_ROOT, drive, '.mpdignore'), text = '';
+  try { text = fs.readFileSync(f, 'utf8'); } catch (e) { /* none yet */ }
+  var neu = duplicates.ignoreLine(text);
+  if (neu === null) return false;
+  try { fs.writeFileSync(f, neu); return true; }
+  catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
+}
+/* at the start: drives that already have a .duplicates folder (from versions without .mpdignore) */
+function dupIgnoreAll() {
+  var drives = ['INTERNAL'];
+  ['USB', 'NAS'].forEach(function(r){
+    try { fs.readdirSync(path.join(MUSIC_ROOT, r)).forEach(function(d){ drives.push(r + '/' + d); }); } catch (e) { /* not there */ }
+  });
+  var found = drives.filter(function(d){
+    try { return fs.statSync(path.join(MUSIC_ROOT, d, duplicates.TRASH)).isDirectory(); } catch (e) { return false; }
+  });
+  var added = found.filter(dupIgnore);
+  if (added.length) mpdForget(added.map(function(d){ return d + '/' + duplicates.TRASH; }), function(){});
+}
 function doDupMove(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   var dirs = Array.isArray(body.dirs) ? body.dirs.map(String) : [];
@@ -489,6 +511,7 @@ function doDupMove(body, cb) {
       return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + dirs[i] : e.message, moved: moved});
     }
     moved.push({from: dirs[i], to: to});
+    dupIgnore(duplicates.driveOf(dirs[i]));
     last.done = last.done || {};
     last.done['duplicates|' + dirs[i]] = 1;
   }
@@ -1595,6 +1618,7 @@ if (require.main === module) {
   if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); }
   setTimeout(function(){ albumsEnsure(); }, 90000);       /* prepare the album list for the random album */
   setTimeout(pruneLog, 30000);                            /* clean up old undo data */
+  setTimeout(dupIgnoreAll, 20000);                        /* .mpdignore for .duplicates folders from earlier versions */
   sysInfo.start();                                        /* measure CPU load ("System" page) */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
   if (process.env.MOODTAGS !== '0' && appConfig().MOODTAGS !== false) {

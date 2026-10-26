@@ -7,7 +7,7 @@ var path = require('path');
 var LOSSLESS = ['flac', 'wav', 'aiff', 'aif', 'alac', 'ape', 'wv', 'tta', 'tak'];
 var DSD      = ['dsf', 'dff', 'dsd'];
 var LOSSY    = ['mp3', 'mp2', 'aac', 'ogg', 'oga', 'opus', 'wma'];
-var TRASH    = '.duplicates';                 /* hidden folder per drive: MPD skips names starting with a dot */
+var TRASH    = '.duplicates';                 /* folder per drive; MPD reads it unless .mpdignore names it (ignoreLine) */
 
 var EXTRA_RE = /\s*[(\[][^)\]]*(remaster|deluxe|edition|expanded|anniversary|bonus|reissue|re-issue|version|mono|stereo|hi-?res|\d+\s*-?\s*bit|khz|special|collector|legacy|definitive)[^)\]]*[)\]]/gi;
 var DASH_RE  = /\s+[-–]\s+[^-–]*(remaster|deluxe|edition|anniversary|version)[^-–]*$/i;
@@ -25,6 +25,14 @@ function driveOf(dir) {
 function trashPath(dir) {
   var drive = driveOf(dir);
   return drive + '/' + TRASH + '/' + String(dir).slice(drive.length + 1);
+}
+
+/* .mpdignore in the drive folder: MPD then leaves .duplicates out of the library. Returns the new content, or null if
+   the line is already there */
+function ignoreLine(text) {
+  text = String(text || '');
+  if (text.split(/\r?\n/).some(function(l){ return l.trim() === TRASH; })) return null;
+  return text + (text && !/\n$/.test(text) ? '\n' : '') + TRASH + '\n';
 }
 
 function most(list) {
@@ -117,4 +125,4 @@ function find(songs, artistKey) {
   });
 }
 
-module.exports = {find: find, albumKey: albumKey, quality: quality, driveOf: driveOf, trashPath: trashPath, TRASH: TRASH};
+module.exports = {find: find, albumKey: albumKey, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, TRASH: TRASH};
