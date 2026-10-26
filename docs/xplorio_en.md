@@ -10,7 +10,7 @@ you curious.
 scroll through endless lists, it takes you on a journey of discovery through your own music.
 
 <p align="center">
-  <img src="bilder/display-ipad.jpg" width="720" alt="Xplorio on the iPad: cover, album info and synced lyrics">
+  <img src="bilder/en/display-ipad.jpg" width="720" alt="Xplorio on the iPad: cover, album info and synced lyrics">
 </p>
 
 ## You know what you want to hear?
@@ -35,8 +35,8 @@ Or tap a mood, an energy level, a style or a decade: *Dreamy*, *High energy*, *S
 matching albums from your collection, and one tap on the dice plays 25 random tracks from them.
 
 <p align="center">
-  <img src="bilder/entdecken.jpg" width="240" alt="Discover">
-  <img src="bilder/album.jpg" width="240" alt="Album with rating">
+  <img src="bilder/en/entdecken.jpg" width="240" alt="Discover">
+  <img src="bilder/en/album.jpg" width="240" alt="Album with rating">
 </p>
 
 ## Looking for music for exactly this moment?
@@ -49,8 +49,8 @@ And when the mix is over? With the optional **AutoDJ**, the journey simply conti
 just playing.
 
 <p align="center">
-  <img src="bilder/mix-auswahl.jpg" width="240" alt="Mood Mix: selection">
-  <img src="bilder/mix-vorschau.jpg" width="240" alt="Mood Mix: preview">
+  <img src="bilder/en/mix-auswahl.jpg" width="240" alt="Mood Mix: selection">
+  <img src="bilder/en/mix-vorschau.jpg" width="240" alt="Mood Mix: preview">
 </p>
 
 ## Like what's playing right now?
@@ -65,9 +65,9 @@ Meanwhile the **lyrics** scroll along in sync, the colours adapt to the cover, a
 what's playing.
 
 <p align="center">
-  <img src="bilder/wiedergabe.jpg" width="200" alt="Now playing">
-  <img src="bilder/lyrics.jpg" width="200" alt="Lyrics">
-  <img src="bilder/info.jpg" width="200" alt="Info">
+  <img src="bilder/en/wiedergabe.jpg" width="200" alt="Now playing">
+  <img src="bilder/en/lyrics.jpg" width="200" alt="Lyrics">
+  <img src="bilder/en/info.jpg" width="200" alt="Info">
 </p>
 
 ## Your music, your story
@@ -80,8 +80,8 @@ With a heart for artists, stars for albums and a thumb for single tracks, you te
 don't want to hear no longer shows up in random mixes.
 
 <p align="center">
-  <img src="bilder/statistik.jpg" width="240" alt="Statistics">
-  <img src="bilder/rueckblick.jpg" width="240" alt="Year in review">
+  <img src="bilder/en/statistik.jpg" width="240" alt="Statistics">
+  <img src="bilder/en/rueckblick.jpg" width="240" alt="Year in review">
 </p>
 
 ## Good data, good discoveries
@@ -100,7 +100,7 @@ On your phone in your hand, on the iPad as a stage next to the hi-fi, on the TV 
 lyrics. Light or dark, in English or German. And the familiar Volumio interface is always just a tap away.
 
 <p align="center">
-  <img src="bilder/display-desktop.jpg" width="720" alt="Display layout on the desktop">
+  <img src="bilder/en/display-desktop.jpg" width="720" alt="Display layout on the desktop">
 </p>
 
 ## Try it
