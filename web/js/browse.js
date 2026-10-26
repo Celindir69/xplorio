@@ -19,7 +19,7 @@ function browseItems(j) {
 var STREAM_TIMEOUT_MS = 12000;    /* TIDAL/Qobuz sometimes stop answering (session timeout in Volumio) */
 
 function browseGet(uri) {
-  var p = fetch('/api/v1/browse?uri=' + encodeURIComponent(uri)).then(function(r){ return r.json(); });
+  var p = fetch('/api/v1/browse?uri=' + volumioArg(uri)).then(function(r){ return r.json(); });
   var svc = streamOf(uri);
   if (!svc) return p;
   return withTimeout(p, STREAM_TIMEOUT_MS).catch(function(err){
@@ -56,7 +56,7 @@ function streamArtistItems(svc, j) {
 /* search for an artist at a service; only a hit with exactly the same name counts */
 function streamFindArtist(svc, name) {
   if (!svc.on || Date.now() < svc.downUntil) return Promise.resolve(null);
-  return withTimeout(fetch('/api/v1/search?query=' + encodeURIComponent(name)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
+  return withTimeout(fetch('/api/v1/search?query=' + volumioArg(name)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
     var hit = null;
     streamArtistItems(svc, j).forEach(function(it){
       if (!hit && (it.title || '').toLowerCase() === name.toLowerCase()) hit = it;
@@ -155,7 +155,7 @@ function localExtraTitles(artist, albumTitles) {
 }
 
 function localSearchTitles(artist, have, me) {
-  return fetch('/api/v1/search?query=' + encodeURIComponent(artist)).then(function(r){ return r.json(); }).then(function(j){
+  return fetch('/api/v1/search?query=' + volumioArg(artist)).then(function(r){ return r.json(); }).then(function(j){
     var seen = {};
     return browseItems(j).filter(function(it){
       if (it.type !== 'song' || it.service !== 'mpd' || !it.uri || seen[it.uri]) return false;
@@ -297,7 +297,7 @@ function browseArtist(e, seq) {
     return;
   }
   var isStream = !!streamOf(e.uri || '');
-  browseGet(e.uri || ('artists://' + e.artist)).then(function(j){
+  browseGet(e.uri || artistUri(e.artist)).then(function(j){
     if (seq !== browseSeq) return;
     var seenUri = {};
     var all = browseItems(j);
@@ -320,11 +320,11 @@ function browseArtist(e, seq) {
 
     if (!isStream) {                                  /* play everything by the artist (albums and single tracks) */
       browseBody.appendChild(playRow(T('browse.playAll'), '', function(){
-        browsePlay({uri:'artists://' + e.artist, service:'mpd', type:'folder', title:e.artist});
+        browsePlay({uri:artistUri(e.artist), service:'mpd', type:'folder', title:e.artist});
       }, [rateArtistHeart(e.artist),                   /* favorite artist (rating.js) */
           randomMixButton({artist: e.artist}),         /* 25 random tracks by the artist (discover.js) */
           tagArtistButton(e.artist),                   /* edit the tags of all of the artist's local tracks */
-          queueAddButton([{uri:'artists://' + e.artist, service:'mpd', type:'folder', title:e.artist}], 0)]));
+          queueAddButton([{uri:artistUri(e.artist), service:'mpd', type:'folder', title:e.artist}], 0)]));
     }
 
     /* Tabs "Albums & tracks", "Discover" (discover.js; for a service "Discover locally": from the own collection)
@@ -389,13 +389,13 @@ function browseArtist(e, seq) {
 /* ---------- An album's tracks ---------- */
 /* From now playing only artist and album are known: the address is in the artist's album list */
 function resolveAlbumUri(artist, album) {
-  return browseGet('artists://' + artist).then(function(j){
+  return browseGet(artistUri(artist)).then(function(j){
     var hit = null;
     browseItems(j).forEach(function(it){
       if (!hit && it.type === 'folder' && it.uri && (it.title || '').toLowerCase() === album.toLowerCase()) hit = it;
     });
-    return hit ? hit.uri : 'albums://' + artist + '/' + album;
-  }).catch(function(){ return 'albums://' + artist + '/' + album; });
+    return hit ? hit.uri : albumUri(artist, album);
+  }).catch(function(){ return albumUri(artist, album); });
 }
 
 /* Search for an album at the service (service track in the player): same title, if several, the one by the same artist;
@@ -404,7 +404,7 @@ function streamFindAlbum(svc, artist, album) {
   if (!svc || !svc.on) return Promise.resolve(null);
   function bare(s) { return String(s || '').toLowerCase().replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').trim(); }
   var want = bare(album), who = bare(artist);
-  return withTimeout(fetch('/api/v1/search?query=' + encodeURIComponent(album)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
+  return withTimeout(fetch('/api/v1/search?query=' + volumioArg(album)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var found = streamSplitSearch(lists, album).stream[svc.id].albums.filter(function(it){ return bare(it.title || it.name) === want; });
     var best = found.filter(function(it){ return !it.artist || bare(it.artist) === who; })[0] || found[0];
