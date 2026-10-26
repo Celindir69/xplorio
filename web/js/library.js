@@ -93,7 +93,7 @@ function plTileNext() {
   if (plTileBusy || !plTileQueue.length) return;
   var job = plTileQueue.shift();
   plTileBusy = true;
-  fetch('/api/v1/browse?uri=' + encodeURIComponent(job.uri)).then(function(r){ return r.json(); }).then(function(j){
+  fetch('/api/v1/browse?uri=' + volumioArg(job.uri)).then(function(r){ return r.json(); }).then(function(j){
     var tracks = browseItems(j).filter(function(it){ return it.uri && !/^folder/.test(it.type || ''); });
     var artists = plTileArtists(tracks);
     plTileCache(job.uri, artists);
@@ -169,7 +169,7 @@ function loadMyRadio() {
   hint.className = 'plHint'; hint.textContent = T('pl.loading');
   radioPanel.appendChild(hint);
 
-  fetch('/api/v1/browse?uri=' + encodeURIComponent('radio/favourites'))
+  fetch('/api/v1/browse?uri=' + volumioArg('radio/favourites'))
     .then(function(r){ return r.json(); })
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
@@ -294,7 +294,7 @@ function doSearch(q) {
   var seq = ++searchSeq;
   searchMessage(T('search.searching'));
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
-  withTimeout(fetch('/api/v1/search?query=' + encodeURIComponent(q)).then(function(r){ return r.json(); }), SEARCH_TIMEOUT_MS)
+  withTimeout(fetch('/api/v1/search?query=' + volumioArg(q)).then(function(r){ return r.json(); }), SEARCH_TIMEOUT_MS)
     .then(function(j){
       clearTimeout(slow);
       if (seq !== searchSeq) return;

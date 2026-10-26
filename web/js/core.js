@@ -261,6 +261,13 @@ function seekToMs(ms) {
 }
 
 
+/* query value for Volumio's REST API: it decodes uri and query once more than the web server already did,
+   so a single encoding breaks on a % in a name ("100% Rock") */
+function volumioArg(s) { return encodeURIComponent(encodeURIComponent(s)); }
+/* artists:// and albums:// addresses carry their parts encoded, as Volumio itself builds them */
+function artistUri(artist) { return 'artists://' + encodeURIComponent(artist); }
+function albumUri(artist, album) { return 'albums://' + encodeURIComponent(artist) + '/' + encodeURIComponent(album); }
+
 /* wait at most ms milliseconds for an answer (Volumio/TIDAL sometimes hangs, session timeout) */
 function withTimeout(p, ms) {
   return new Promise(function(resolve, reject){
@@ -329,7 +336,7 @@ function ask(payload) {
 }
 
 function askDiscography(artist) {
-  var url = '/api/v1/browse?uri=' + encodeURIComponent('artists://' + artist);
+  var url = '/api/v1/browse?uri=' + volumioArg(artistUri(artist));
   return fetch(url).then(function(r){ return r.json(); }).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var out = [];
@@ -358,7 +365,7 @@ function loadSimilarArtists(artist) {
       similarAllCache[artist] = names;
       if (!names.length) { similarCache[artist] = []; return []; }
       var checks = names.map(function(name){
-        return fetch('/api/v1/browse?uri=' + encodeURIComponent('artists://' + name))
+        return fetch('/api/v1/browse?uri=' + volumioArg(artistUri(name)))
           .then(function(r){ return r.json(); })
           .then(function(j){
             var lists = (j && j.navigation && j.navigation.lists) || [];
@@ -375,7 +382,7 @@ function loadSimilarArtists(artist) {
 }
 
 function playArtistByName(name) {
-  fetch('/api/v1/search?query=' + encodeURIComponent(name))
+  fetch('/api/v1/search?query=' + volumioArg(name))
     .then(function(r){ return r.json(); })
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
