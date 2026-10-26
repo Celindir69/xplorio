@@ -42,8 +42,8 @@ fake.listen(0, function(){
   var base = 'http://127.0.0.1:' + fake.address().port;
   process.env.LASTFM_URL = base;
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lfm-'));
-  fs.writeFileSync(path.join(dir, 'config.js'), 'window.APP_CONFIG = {LASTFM_KEY: "", LASTFM_SECRET: ""};');
-  fs.writeFileSync(path.join(dir, 'config.local.js'), 'window.APP_CONFIG.LASTFM_KEY = "KEY"; window.APP_CONFIG.LASTFM_SECRET = "GEHEIM";');
+  fs.writeFileSync(path.join(dir, 'config.js'), 'window.APP_CONFIG = {};');
+  fs.mkdirSync(path.join(dir, 'data')); fs.writeFileSync(path.join(dir, 'data', 'keys.json'), JSON.stringify({LASTFM_KEY: 'KEY', LASTFM_SECRET: 'GEHEIM'}));
   process.env.APP_CONFIG_DIR = dir;
   process.env.TAGS_LOG = path.join(dir, 'data', 'changes.jsonl');
   var lastfm = require('../tags/lastfm.js');

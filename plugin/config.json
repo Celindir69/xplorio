@@ -1,0 +1,5 @@
+{
+	"port": {"type": "number", "value": 4040},
+	"tagService": {"type": "boolean", "value": true},
+	"rotelBridge": {"type": "boolean", "value": false}
+}

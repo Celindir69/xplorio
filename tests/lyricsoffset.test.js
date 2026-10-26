@@ -28,8 +28,18 @@ svc.listen(0, function(){
               assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(dir, 'data', 'lyrics-offsets.json'), 'utf8')), {});
               assert.strictEqual(c4, 400);
             });
-            console.log(n + ' tests');
-            svc.close();
+            var many = {};
+            for (var i = 0; i < 10000; i++) many['a|' + i] = 100;
+            fs.writeFileSync(path.join(dir, 'data', 'lyrics-offsets.json'), JSON.stringify(many));
+            req('POST', '/lyricsoffset', {key: 'new|one', ms: 200}, function(c5){
+              req('POST', '/lyricsoffset', {key: 'a|5', ms: 300}, function(c6){
+                t('full: no new entries, existing ones can still change', function(){
+                  assert.strictEqual(c5, 400); assert.strictEqual(c6, 200);
+                });
+                console.log(n + ' tests');
+                svc.close();
+              });
+            });
           });
         });
       });

@@ -30,7 +30,7 @@ var body = document.getElementById('lyricsText');
 var area = document.getElementById('overlayLyrics').querySelector('.overlayBody');
 
 var socket = io();
-socket.on('connect', function(){ console.log('Socket connected'); socket.emit('getUiSettings'); });
+socket.on('connect', function(){ socket.emit('getUiSettings'); });
 /* Language of the Volumio UI: the app adopts it (i18n.js) unless ?lang= or LANGUAGE say otherwise.
    Volumio delivers info texts only in this language; if LANG differs, ask() fetches the texts itself first (infotext.js). */
 var volumioLang = langStored().slice(0, 2);
@@ -208,16 +208,14 @@ var searchData  = streamEmptySearch();
 var searchCat   = 'artists';
 var searchQuery = '';
 
-var LASTFM_KEY = (window.APP_CONFIG && window.APP_CONFIG.LASTFM_KEY) || '';   /* only a fallback when the tag service is missing */
-
 /* The UI's Last.fm requests go through the tag service (GET /lastfmapi): the key stays on the player.
-   Without the tag service (or without a key there) directly with LASTFM_KEY from config.local.js, if present.
+   Without the tag service (or without a key there) no Last.fm requests.
    -> Promise {key, fetch}; empty key = no Last.fm requests */
 var LFM_API = 'https://ws.audioscrobbler.com/2.0/';
 var lastfmReady = null;
 function lastfmAccess() {
   if (lastfmReady) return lastfmReady;
-  var direct = {key: LASTFM_KEY, fetch: fetch.bind(window)};
+  var direct = {key: '', fetch: fetch.bind(window)};
   if (typeof TAGS === 'undefined') return Promise.resolve(direct);
   lastfmReady = withTimeout(fetch(TAGS + '/health'), 4000).then(function(r){ return r.json(); }).then(function(h){
     if (!h || !h.lastfm) return direct;

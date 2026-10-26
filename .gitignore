@@ -2,3 +2,4 @@ web/config.local.js
 __pycache__/
 *.pyc
 web/build.js
+build/

@@ -132,13 +132,36 @@ svc.server.listen(0, function(){
           t('GET /moodtags reports the audio analysis status', function(){
             assert.strictEqual(JSON.parse(e).audio.tracks, 3);
           });
+          withPassword();
+        });
+      });
+    });
+  });
+  req.end(body);
+  }
+  /* password for the services set: the upload only with it */
+  function post(pw, cb) {
+    var h = {'Content-Type': 'application/x-ndjson'};
+    if (pw) h['X-Xplorio-Password'] = pw;
+    var r = http.request({port: port, method: 'POST', path: '/essentia', headers: h}, function(res){
+      var d = ''; res.on('data', function(c){ d += c; }); res.on('end', function(){ cb(JSON.parse(d)); });
+    });
+    r.end(rows.slice(0, 2).join('\n') + '\n');
+  }
+  function withPassword() {
+    new (require('../tags/adminpass.js').Auth)(path.join(dir, 'svc')).setPassword('geheim1');
+    post('', function(j1){
+      post('falsch', function(j2){
+        post('geheim1', function(j3){
+          t('with a password: refused without or with a wrong one, accepted with it', function(){
+            assert.strictEqual(j1.error, 'auth'); assert.strictEqual(j2.error, 'auth');
+            assert.strictEqual(j3.ok, true); assert.strictEqual(j3.tracks, 2);
+          });
           svc.server.close();
           console.log(n + ' checks passed');
           process.exit(0);
         });
       });
     });
-  });
-  req.end(body);
   }
 });

@@ -7,6 +7,9 @@ var plays  = require('./plays.js');
 var albums = require('./albums.js');
 
 var LOCAL_RE = /^(INTERNAL|USB|NAS)\//;
+var MAX_PER_KIND = 50000;      /* ratings per kind (artists, albums, tracks): more are refused, changing and deleting still works */
+var MAX_TEXT = 300;            /* names stored along with the rating */
+function cut(x) { return String(x || '').slice(0, MAX_TEXT); }
 
 /* Volumio URI -> file relative to the music library ("USB/…"), else '' */
 function fileOf(uri) {
@@ -49,12 +52,13 @@ Store.prototype.get = function(q) {
 /* b: {kind: 'artist'|'album'|'track', v, name | uri, ar, al, ti}; v 0 deletes. Returns the valid value or null. */
 Store.prototype.set = function(b, now) {
   var kind = b.kind, v = Math.round(Number(b.v) || 0), key, list, rec;
-  if (kind === 'artist') { key = artistKey(b.name); list = 'artists'; if (v < 0 || v > 1) return null; rec = {n: String(b.name)}; }
-  else if (kind === 'album') { key = albumKey(b.uri); list = 'albums'; if (v < 0 || v > 5) return null; rec = {al: String(b.al || ''), ar: String(b.ar || '')}; }
-  else if (kind === 'track') { key = trackKey(b.uri); list = 'tracks'; if (v !== 0 && v !== -1) return null; rec = {ar: String(b.ar || ''), ti: String(b.ti || '')}; }
+  if (kind === 'artist') { key = artistKey(b.name); list = 'artists'; if (v < 0 || v > 1) return null; rec = {n: cut(b.name)}; }
+  else if (kind === 'album') { key = albumKey(b.uri); list = 'albums'; if (v < 0 || v > 5) return null; rec = {al: cut(b.al), ar: cut(b.ar)}; }
+  else if (kind === 'track') { key = trackKey(b.uri); list = 'tracks'; if (v !== 0 && v !== -1) return null; rec = {ar: cut(b.ar), ti: cut(b.ti)}; }
   else return null;
-  if (!key) return null;
+  if (!key || key.length > 1000) return null;
   var d = this.load();
+  if (v && !Object.prototype.hasOwnProperty.call(d[list], key) && Object.keys(d[list]).length >= MAX_PER_KIND) return null;
   this.rev++;
   if (!v) delete d[list][key];
   else { rec.v = v; rec.t = now || Math.floor(Date.now() / 1000); d[list][key] = rec; }
@@ -69,4 +73,4 @@ Store.prototype.disliked = function() {
   return out;
 };
 
-module.exports = {Store: Store, fileOf: fileOf, artistKey: artistKey, albumKey: albumKey, trackKey: trackKey};
+module.exports = {MAX_PER_KIND: MAX_PER_KIND, Store: Store, fileOf: fileOf, artistKey: artistKey, albumKey: albumKey, trackKey: trackKey};

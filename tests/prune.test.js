@@ -44,5 +44,26 @@ t('image store: oldest files are removed when over the limit', function(){
   assert.strictEqual(left.length, 10);
   assert.ok(left.indexOf('0.jpg') < 0 && left.indexOf('1.jpg') < 0 && left.indexOf('11.jpg') >= 0);
 });
-console.log(n + ' tests passed');
-process.exit(0);
+t('image store: also at most maxBytes together, oldest first', function(){
+  var d = path.join(dir, 'bytes');
+  fs.mkdirSync(d);
+  for (var k = 0; k < 5; k++) {
+    fs.writeFileSync(path.join(d, k + '.jpg'), Buffer.alloc(1000));
+    var tm = new Date(Date.now() - (20 - k) * 60000); fs.utimesSync(path.join(d, k + '.jpg'), tm, tm);
+  }
+  new artistimg.Store(d, {max: 100, maxBytes: 3000});
+  assert.deepStrictEqual(fs.readdirSync(d).sort(), ['2.jpg', '3.jpg', '4.jpg']);
+});
+setTimeout(function(){
+  var s = new artistimg.Store(path.join(dir, 'queue2'), {lookup: function(){ /* never answers */ }, queueMax: 3}), got = [];
+  for (var k = 0; k < 8; k++) s.get('artist ' + k, function(e){ got.push(e); });
+  setTimeout(function(){
+    t('image store: lookups beyond the queue answer busy', function(){
+      assert.strictEqual(s.running, 2);                  /* PARALLEL */
+      assert.strictEqual(s.queue.length, 3);
+      assert.deepStrictEqual(got, ['busy', 'busy', 'busy']);
+    });
+    console.log(n + ' tests passed');
+    process.exit(0);
+  }, 300);
+}, 0);

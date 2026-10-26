@@ -12,6 +12,10 @@ var VOLUMIO_PAGES = [
 
 ];
 
+/* on Xplorio's own web server (server/xplorio-server.js, port 4040 or another one) "/" is Xplorio itself: Volumio's
+   pages then come from Volumio's own address (port 80, or 3000) */
+var VOLUMIO_ORIGIN = ['', '80', '443', '3000'].indexOf(location.port) < 0 ? location.protocol + '//' + location.hostname : '';
+
 var overlayVolumio   = document.getElementById('overlayVolumio');
 var volumioTabBar    = document.getElementById('volumioTabBar');
 var volumioPanel     = document.getElementById('volumioPanel');
@@ -44,8 +48,8 @@ function showVolumioPage(i) {
     f.id = 'volumioFrame';
     volumioPanel.appendChild(f);
   }
-  f.src = pg.path;
-  openVolumioTab.href = pg.path;
+  f.src = VOLUMIO_ORIGIN + pg.path;
+  openVolumioTab.href = VOLUMIO_ORIGIN + pg.path;
   openVolumioTab.style.display = '';
 }
 
