@@ -108,6 +108,7 @@ function el(ui, id) {
   var all = []; ui.sections.forEach(function(s){ all = all.concat(s.content || []); });
   return all.filter(function(c){ return c.id === id; })[0];
 }
+function sec(ui, id) { return ui.sections.filter(function(s){ return s.id === id; })[0]; }
 function sudo() { return calls.filter(function(c){ return /^\/usr\/bin\/sudo/.test(c); }).map(function(c){ return c.replace('/usr/bin/sudo -n /bin/systemctl ', ''); }); }
 function env(u) { return fs.readFileSync(path.join(RUN, u + '.env'), 'utf8'); }
 var kf = path.join(DATA, 'data/keys.json');
@@ -191,6 +192,7 @@ plug.onStart().then(function(){
     assert.strictEqual(el(ui, 'lastfmKey').label, 'Last.fm API-Key (gespeichert)');
     assert.strictEqual(el(ui, 'lastfmSecret').label, 'Last.fm Shared Secret (nicht eingetragen)');
     assert.ok(/noch keins gesetzt/.test(el(ui, 'password').label));
+    assert.ok(/autodj-plugin/.test(sec(ui, 'section_features').description));      /* AutoDJ not installed: hint */
     assert.ok(JSON.stringify(ui).indexOf('oldkey1') < 0);
     assert.ok(/Noch kein Passwort/.test(el(ui, 'password').doc) && !el(ui, 'passwordOld') && !el(ui, 'tagsRoot'));
     ui.sections.slice(1).forEach(function(s){
@@ -260,9 +262,11 @@ plug.onStart().then(function(){
     plug.saveKeys({LASTFM_KEY: '', LASTFM_SECRET: 'sec1'});
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1'});
   });
+  process.env.XPLORIO_AUTODJ_DIR = T;                               /* AutoDJ installed from here on */
   return plug.getUIConfig();
 }).then(function(ui2){
   t('settings page shows "saved" for Last.fm and the password, never the values; delete removes both', function(){
+    assert.ok(!/autodj-plugin/.test(sec(ui2, 'section_features').description));
     assert.ok(el(ui2, 'passwordOld') && /Neues Passwort/.test(el(ui2, 'password').label));
     assert.ok(/Gespeichert/.test(el(ui2, 'lastfmKey').doc) && /Gespeichert/.test(el(ui2, 'lastfmSecret').doc));
     assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('anders') < 0);

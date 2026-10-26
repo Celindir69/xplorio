@@ -19,6 +19,7 @@
 		"THEME_DARK": "Immer dunkel",
 		"SECTION_FEATURES": "Funktionen",
 		"SECTION_FEATURES_DOC": "Einzelne Funktionen ein- oder ausschalten.",
+		"AUTODJ_HINT": "Endlos-Wiedergabe (∞ auf der Wiederholen-Taste) gibt es mit dem separaten Plugin „AutoDJ - Continuous Play“: github.com/Celindir69/autodj-plugin",
 		"HISTORY": "Verlauf",
 		"HISTORY_DOC": "Der Tag-Dienst merkt sich gespielte Titel (Verlauf, Statistik, Entdecken).",
 		"RELEASEDATES": "Erscheinungstage",

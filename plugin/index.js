@@ -20,6 +20,8 @@ var APP    = path.join(__dirname, 'app');            /* the interface and the se
 var DATA   = process.env.XPLORIO_DATA || '/data/xplorio';
 var RUN  = process.env.XPLORIO_RUN || '/tmp/xplorio';             /* settings of the services (EnvironmentFile) */
 var MUSIC = process.env.XPLORIO_MUSIC || '/mnt';
+/* the separate AutoDJ plugin (Celindir69/autodj-plugin): Xplorio only points to it on the settings page */
+function autodjInstalled() { return fs.existsSync(process.env.XPLORIO_AUTODJ_DIR || '/data/plugins/miscellanea/volumio_autodj'); }
 /* the services: systemd unit, switch on the page (the web server always runs) */
 var SERVICES = [
   {unit: 'xplorio-web',   id: null},
@@ -179,6 +181,10 @@ ControllerXplorio.prototype.getUIConfig = function() {
       for (var i = 0; i < ui.sections.length; i++)
         for (var j = 0; j < (ui.sections[i].content || []).length; j++) if (ui.sections[i].content[j].id === id) return ui.sections[i].content[j];
       return {};
+    }
+    if (!autodjInstalled()) {
+      var feat = ui.sections.filter(function(sec){ return sec.id === 'section_features'; })[0];
+      if (feat) feat.description = [feat.description, self.str('AUTODJ_HINT')].filter(Boolean).join(' ');
     }
     el('port').value = self.port();
     ['tagService', 'rotelBridge'].forEach(function(id){ el(id).value = !!self.config.get(id); });

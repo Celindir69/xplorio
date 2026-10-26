@@ -26,14 +26,6 @@ t('normalization: Volumio setting before mpd.conf, unknown without either', func
   assert.strictEqual(pb.normalization(files), null);
 });
 
-t('AutoDJ: not installed = null, else automatic leveling and crossfade', function(){
-  assert.strictEqual(pb.autodjInfo({autodj: f('kein.json')}), null);
-  var p = f('adj.json', JSON.stringify({autoReplayGain: {type: 'boolean', value: true}, autoCrossfadeSeconds: {type: 'string', value: '6'}}));
-  assert.deepStrictEqual(pb.autodjInfo({autodj: p}), {replayGain: true, crossfade: 6});
-  p = f('adj2.json', JSON.stringify({autoReplayGain: {value: false}, autoCrossfadeSeconds: {value: ''}}));
-  assert.deepStrictEqual(pb.autodjInfo({autodj: p}), {replayGain: false, crossfade: 0});
-});
-
 var sent = [], state = {xfade: '0', mode: 'off'};
 function mpd(cmd, cb) {
   sent.push(cmd);
@@ -44,11 +36,11 @@ function mpd(cmd, cb) {
   if ((m = /^replay_gain_mode (\w+)$/.exec(cmd))) { state.mode = m[1]; return cb(null, {}); }
   cb(new Error('ACK unknown'));
 }
-var files = {mpdConf: f('nichts2.conf'), volumioMpd: f('fehlt2.json'), autodj: f('fehlt3.json')};
+var files = {mpdConf: f('nichts2.conf'), volumioMpd: f('fehlt2.json')};
 var ctl = new pb.Playback({mpd: mpd, files: files});
 
 t('read: MPD omits xfade at 0', function(){
-  ctl.read(function(r){ assert.deepStrictEqual(r, {ok: true, crossfade: 0, replaygain: 'off', normalization: null, autodj: null}); });
+  ctl.read(function(r){ assert.deepStrictEqual(r, {ok: true, crossfade: 0, replaygain: 'off', normalization: null}); });
 });
 t('set: commands to MPD, response with the new state', function(){
   sent = [];

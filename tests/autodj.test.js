@@ -25,4 +25,11 @@ t('display: ∞ only with AutoDJ on and repeat off', function(){
   assert.strictEqual(a.repeatShown('off', READY), 'off');
   assert.strictEqual(a.repeatShown('off', {avail: false, enabled: true, ready: true}), 'off');
 });
+t('endpoint answer: no plugin, current plugin, plugin without the automatic-mode fields', function(){
+  assert.deepStrictEqual(a.autodjState(undefined), NONE);
+  assert.deepStrictEqual(a.autodjState({enabled: true, ready: true, replayGain: true, crossfade: 6}),
+                         {avail: true, enabled: true, ready: true, replayGain: true, crossfade: 6});
+  assert.deepStrictEqual(a.autodjState({enabled: false, ready: false}),
+                         {avail: true, enabled: false, ready: false, replayGain: null, crossfade: null});
+});
 console.log(n + ' checks');

@@ -473,7 +473,7 @@ If TIDAL is not logged in, do not set up the watchdog.
 
 ## Endless play (AutoDJ)
 
-With the [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (version 1.1 or later), the repeat button gets a fourth state: off → all → one → ∞. With ∞, repeat is off and AutoDJ is on; it appends similar tracks whenever the queue is about to run out. The next tap turns AutoDJ off again. If it is switched in Volumio, the button shows that too (within 30 seconds). Without the plugin, or without a Last.fm key in the plugin settings, the button keeps its three states.
+With the [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (version 1.1 or later), the repeat button gets a fourth state: off → all → one → ∞. With ∞, repeat is off and AutoDJ is on; it appends similar tracks whenever the queue is about to run out. The next tap turns AutoDJ off again. If it is switched in Volumio, the button shows that too (within 30 seconds). Without the plugin, or without a Last.fm key in the plugin settings, the button keeps its three states. AutoDJ is deliberately a separate plugin and not built into Xplorio; Xplorio only talks to it through its REST endpoint. If it is missing, Xplorio's settings page points to it under "Features". Showing AutoDJ's automatic mode on the "Playback" page needs an AutoDJ version that reports it through the endpoint.
 
 ## Volumio 2
 

@@ -4,6 +4,15 @@
    Classic script, shared global scope; load order see xplorio.html. */
 var autodj = {avail: false, enabled: false, ready: false};
 
+/* answer of the endpoint -> state; replayGain/crossfade (automatic mode, shown on the "Playback" page) are null
+   with plugin versions that do not report them yet */
+function autodjState(d) {
+  if (!d || typeof d.enabled !== 'boolean') return {avail: false, enabled: false, ready: false};
+  return {avail: true, enabled: d.enabled, ready: d.ready !== false,
+          replayGain: typeof d.replayGain === 'boolean' ? d.replayGain : null,
+          crossfade: typeof d.crossfade === 'number' ? Math.max(0, d.crossfade) : null};
+}
+
 /* displayed state: AutoDJ on and repeat off = ∞ */
 function repeatShown(mode, adj) { return (mode === 'off' && adj.avail && adj.enabled) ? 'inf' : mode; }
 
@@ -28,9 +37,7 @@ function autodjCall(data) {
     body: JSON.stringify({endpoint: 'autodj', data: data || {}})
   }), 5000).then(function(r){ return r.json(); })
     .then(function(j){
-      var d = j && j.data;
-      if (!d || typeof d.enabled !== 'boolean') throw new Error('no AutoDJ');
-      autodj = {avail: true, enabled: d.enabled, ready: d.ready !== false};
+      autodj = autodjState(j && j.data);
     })
     .catch(function(){ autodj = {avail: false, enabled: false, ready: false}; })
     .then(function(){
@@ -40,7 +47,7 @@ function autodjCall(data) {
     });
 }
 
-if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext};
+if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext, autodjState: autodjState};
 else {
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) autodjCall(); });
   setTimeout(function(){ autodjCall(); }, 0);                               /* after all scripts have loaded */

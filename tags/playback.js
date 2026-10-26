@@ -1,14 +1,14 @@
 /* "Playback" page (gear menu): crossfade and ReplayGain directly in MPD, plus, for display, Volumio's
-   normalization (volume_normalization, in the MPD configuration) and the automatic mode of the AutoDJ plugin.
+   normalization (volume_normalization, in the MPD configuration). The AutoDJ plugin's automatic mode comes from its
+   own REST endpoint (web/js/autodj.js), not from its files.
    MPD sets crossfade and ReplayGain mode at runtime (without restart). Node 8, ES5 only.
-   opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd, autodj} (tests) */
+   opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd} (tests) */
 var fs = require('fs');
 
 var MODES = ['off', 'track', 'album', 'auto'], MAX_XFADE = 30;
 var FILES = {
   mpdConf: '/etc/mpd.conf',
-  volumioMpd: '/data/configuration/music_service/mpd/config.json',
-  autodj: '/data/configuration/miscellanea/volumio_autodj/config.json'
+  volumioMpd: '/data/configuration/music_service/mpd/config.json'
 };
 
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return null; } }
@@ -28,14 +28,6 @@ function normalization(files) {
   try { conf = fs.readFileSync(files.mpdConf, 'utf8'); } catch (e) { return null; }
   var m = /^\s*volume_normalization\s+"?(\w+)"?/m.exec(conf);
   return m ? yes(m[1]) : false;
-}
-
-/* AutoDJ plugin: installed? automatic leveling and crossfade on? */
-function autodjInfo(files) {
-  var j = readJson(files.autodj);
-  if (!j) return null;
-  var xf = parseInt(cfgValue(j, 'autoCrossfadeSeconds'), 10);
-  return {replayGain: yes(cfgValue(j, 'autoReplayGain')), crossfade: xf > 0 ? xf : 0};
 }
 
 /* validate input -> MPD commands; error code for invalid values */
@@ -65,7 +57,7 @@ Playback.prototype.read = function(cb) {
     if (err) return cb({ok: false, error: 'mpd'});
     self.mpd('replay_gain_status', function(e2, rg){
       cb({ok: true, crossfade: parseInt(st.xfade, 10) || 0, replaygain: !e2 && rg.replay_gain_mode || 'off',
-          normalization: normalization(self.files), autodj: autodjInfo(self.files)});
+          normalization: normalization(self.files)});
     });
   });
 };
@@ -82,4 +74,4 @@ Playback.prototype.set = function(body, cb) {
   })(0);
 };
 
-module.exports = {Playback: Playback, commands: commands, normalization: normalization, autodjInfo: autodjInfo, MODES: MODES, MAX_XFADE: MAX_XFADE};
+module.exports = {Playback: Playback, commands: commands, normalization: normalization, MODES: MODES, MAX_XFADE: MAX_XFADE};
