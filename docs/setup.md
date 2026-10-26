@@ -28,7 +28,8 @@ sudo xplorio-deploy                  # install or update main; with a branch: su
 
 `xplorio-deploy` puts the plugin together with `tools/make-plugin.sh` (plugin files from `plugin/`, interface and services in
 `app/`) and installs it through Volumio's own interface, the same way as Volumio's plugin page. `volumio plugin install`
-hangs on some Volumio 2 devices (e.g. MX-Stream). The first time, switch the plugin on in Volumio afterwards. The menu shows
+hangs on some Volumio 2 devices (e.g. MX-Stream). The first time, switch the plugin on in Volumio afterwards;
+after an update `xplorio-deploy` restarts Volumio so the new version takes effect at once (playback stops briefly). The menu shows
 the installed version (branch, commit and date) at the bottom below the logo and name.
 
 Xplorio is served entirely by the player: when it can't be reached (for example away from the home network), the browser shows its error page and the home-screen web app simply stays black. From outside, it only works through a VPN into the home network. After an update the browser loads the new files by itself.

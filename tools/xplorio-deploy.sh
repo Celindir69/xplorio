@@ -103,14 +103,15 @@ echo "Xplorio plugin ($BRANCH): $how through Volumio …"
 if ! sudo -u volumio "$NODE" /tmp/plugins/xplorio-install.js $how xplorio.zip; then
   rm -f /tmp/plugins/xplorio-install.js
   [ $how = update ] || die "installing failed (log: sudo journalctl -u volumio -n 100)"
-  # fallback: copy the new files into the plugin folder (settings and node_modules stay) and restart Volumio
-  echo "Updating through Volumio failed: copying the files into $PLUGIN_DIR and restarting Volumio"
+  # fallback: copy the new files into the plugin folder (settings and node_modules stay), restart below
+  echo "Updating through Volumio failed: copying the files into $PLUGIN_DIR"
   sleep 5                                                    # Volumio cleans up its plugin folders after a failure
   mkdir -p "$PLUGIN_DIR" && cp -R "$TMP/plugin/xplorio/." "$PLUGIN_DIR/" || die "copying failed"
   (cd "$PLUGIN_DIR" && sh install.sh >/dev/null) || echo "install.sh reported an error"
   chown -R volumio:volumio "$PLUGIN_DIR" 2>/dev/null || true
-  systemctl restart volumio
 fi
 rm -f /tmp/plugins/xplorio-install.js /tmp/plugins/xplorio.zip
+# Volumio keeps the plugin's old code in memory after an update: only a restart loads the new version
+if [ $how = update ]; then echo "Restarting Volumio so the new version takes effect …"; systemctl restart volumio; fi
 [ $how = install ] && echo "Now switch the plugin on in Volumio: Plugins > Installed plugins > Xplorio."
 echo "Xplorio then runs at http://$(hostname -I 2>/dev/null | cut -d' ' -f1):4040/ (port in the plugin settings)."
