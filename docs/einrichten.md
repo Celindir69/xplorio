@@ -8,6 +8,7 @@ Volumio 2 anders ist, steht unter [Volumio 2](#volumio-2).
 
 ## Installieren
 Anmerkung: Derzeit noch nicht im Plugin-Store verfügbar. 
+
 Im Plugin-Store von Volumio: Plugins > Plugins suchen > Xplorio > Installieren, danach unter Installierte Plugins
 einschalten. Xplorio ist dann unter `http://<player>:4040/` erreichbar; der Knopf „Xplorio öffnen“ auf der
 Einstellungsseite führt dorthin.
