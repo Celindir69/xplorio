@@ -605,7 +605,10 @@ Mit dem Plugin [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (ab 
 Wiederholen-Knopf einen vierten Zustand: aus → alle → einer → ∞. Bei ∞ ist Wiederholen aus und AutoDJ an; es hängt
 ähnliche Titel an, sobald die Warteschlange zur Neige geht. Der nächste Tipp schaltet AutoDJ wieder aus. Auch in
 Volumio umgeschaltet zeigt der Knopf den Zustand (spätestens nach 30 s). Ohne Plugin oder ohne Last.fm-Key in den
-Plugin-Einstellungen bleibt es bei drei Zuständen.
+Plugin-Einstellungen bleibt es bei drei Zuständen. AutoDJ ist bewusst ein eigenes Plugin und nicht in Xplorio
+eingebaut; Xplorio spricht es nur über dessen REST-Schnittstelle an. Fehlt es, weist die Einstellungsseite von Xplorio
+unter „Funktionen“ darauf hin. Die Anzeige der AutoDJ-Automatik auf der Seite „Wiedergabe“ braucht eine
+AutoDJ-Version, die sie über die Schnittstelle meldet.
 
 ## Volumio 2
 Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf Volumio 2 (z. B. MX-Stream) läuft das Plugin

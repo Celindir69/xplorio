@@ -115,13 +115,13 @@ function pbRender() {
   nm.appendChild(link);
   grid.appendChild(nm);
 
-  /* AutoDJ: better turn off the plugin's automatic mode when set here */
-  if (d.autodj) {
-    var ad = sysCard(T('pb.autodj'), 'syWide'), auto = [];
-    if (d.autodj.replayGain) auto.push(T('pb.autodjRg'));
-    if (d.autodj.crossfade) auto.push(T('pb.autodjXf', {s: d.autodj.crossfade}));
+  /* AutoDJ (state from its endpoint, autodj.js): better turn off the plugin's automatic mode when set here */
+  if (autodj.avail) {
+    var ad = sysCard(T('pb.autodj'), 'syWide'), auto = [], known = autodj.replayGain !== null && autodj.crossfade !== null;
+    if (autodj.replayGain) auto.push(T('pb.autodjRg'));
+    if (autodj.crossfade) auto.push(T('pb.autodjXf', {s: autodj.crossfade}));
     ad.appendChild(histEl('div', 'syNote', T('pb.autodjNote')));
-    ad.appendChild(histEl('div', 'syNote' + (auto.length ? ' syWarn' : ''),
+    if (known) ad.appendChild(histEl('div', 'syNote' + (auto.length ? ' syWarn' : ''),
       auto.length ? T('pb.autodjOn', {list: auto.join(', ')}) : T('pb.autodjOff')));
     grid.appendChild(ad);
   }

@@ -19,6 +19,7 @@
 		"THEME_DARK": "Always dark",
 		"SECTION_FEATURES": "Features",
 		"SECTION_FEATURES_DOC": "Switch individual features on or off.",
+		"AUTODJ_HINT": "Endless playback (∞ on the repeat button) comes with the separate plugin \"AutoDJ - Continuous Play\": github.com/Celindir69/autodj-plugin",
 		"HISTORY": "History",
 		"HISTORY_DOC": "The tag service records played tracks (history, statistics, Discover).",
 		"RELEASEDATES": "Release dates",
