@@ -367,7 +367,7 @@ def compact(out, done, seen_roots, present, prune=False):
         for o in keep:
             f.write(json.dumps(o, ensure_ascii=False) + '\n')
     os.replace(out + '.neu', out)
-    return len(keep)
+    return len(keep), sum(1 for o in keep if not o.get('err'))
 
 
 def player_state(base):
@@ -664,8 +664,7 @@ def main():
         for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
             if not os.path.exists(q):
                 del done[q]
-        kept = compact(a.out, done, roots, present, a.prune)
-        ok = sum(1 for o in done.values() if not o.get('err'))
+        kept, ok = compact(a.out, done, roots, present, a.prune)
         print('Done: %d entries in %s, %d of them analysed.' % (kept, a.out, ok))
 
     if a.upload:
