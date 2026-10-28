@@ -2,7 +2,7 @@
    Classic script, shared global scope; load order see xplorio.html. */
 /* ---------- Repeat / Random ---------- */
 function updateCtrlUI() {
-  var shown = repeatShown(stRepeatMode, autodj);                 /* ∞ = AutoDJ (autodj.js) */
+  var shown = repeatShown(stRepeatMode, endless());              /* ∞ = AutoDJ or Continuous Play (autodj.js) */
   cRepeat.className = shown + (curRadio ? ' disabled' : '');
   repeatBadge.textContent = {all: 'ALL', one: '1', inf: '∞'}[shown] || '';
   cRandom.className = (stRandom ? 'on' : '') + (curRadio ? ' disabled' : '');
@@ -10,10 +10,11 @@ function updateCtrlUI() {
 
 cRepeat.addEventListener('click', function(){
   if (curRadio) return;
-  var nx = repeatNext(repeatShown(stRepeatMode, autodj), autodj);
+  var e = endless();
+  var nx = repeatNext(repeatShown(stRepeatMode, e), e);
   if (nx.repeat) socket.emit('setRepeat', nx.repeat);
   stRepeatMode = nx.mode === 'inf' ? 'off' : nx.mode;
-  if (nx.autodj !== null) { autodj.enabled = nx.autodj; autodjCall({enabled: nx.autodj}); }
+  if (nx.autodj !== null) endlessSet(nx.autodj);
   updateCtrlUI();
 });
 
