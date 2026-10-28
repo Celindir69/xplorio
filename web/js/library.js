@@ -248,6 +248,60 @@ var SEARCH_SLOW_MS = 5000;  /* then the note "Waiting for TIDAL/Qobuz" */
 var SEARCH_TIMEOUT_MS = 20000;
 var searchSuggest = null;   /* {q, items: [{kind, name, ar}]} "Did you mean …?" from the tag service, only without local hits */
 
+/* "Best matches" from MyVolumio's SuperSearch (Premium only, Volumio 4): a ranked list of tracks from all sources,
+   only over the websocket. Volumio answers several times, each time with the whole list so far (done after ~2 s).
+   Asked only when Volumio reports Infinity Playback as available (volumioInfinity, autodj.js): without Premium the
+   handler has nothing to call. Shown above the normal results, which stay complete. */
+var SUPER_MAX = 8;
+var SUPER_WAIT_MS = 15000;
+var superHits = [], superSeq = 0, superUntil = 0, searchShownSeq = 0;
+function superSearchStart(q, seq) {
+  superHits = [];
+  superSeq = seq;
+  if (typeof volumioInfinity === 'undefined' || !volumioInfinity.avail) return;
+  superUntil = Date.now() + SUPER_WAIT_MS;
+  socket.emit('superSearch', {value: q});
+}
+socket.on('pushBrowseLibrary', function(d){
+  var nav = d && d.navigation;
+  if (!nav || !nav.isSearchResult || superSeq !== searchSeq || Date.now() > superUntil) return;
+  var items = [];
+  (nav.lists || []).forEach(function(l){ (l.items || []).forEach(function(it){ if (it && it.uri && it.type === 'song') items.push(it); }); });
+  superHits = items;
+  if (searchShownSeq === searchSeq) renderSearchResults();
+});
+/* source of a hit: null = local (mpd), else the entry in STREAMS; undefined = a service Xplorio does not know */
+function superSource(it) {
+  if (!it.service || it.service === 'mpd') return null;
+  return STREAMS.filter(function(s){ return s.key.test(it.service); })[0];
+}
+/* hits of the sources ticked next to the heading */
+function superVisible() {
+  return superHits.filter(function(it){
+    var src = superSource(it);
+    return src === null ? searchShowLocal : (src ? src.show : true);
+  }).slice(0, SUPER_MAX);
+}
+function superRow(it) {
+  var row = document.createElement('div');
+  row.className = 'sRow';
+  var img = document.createElement('img');
+  img.className = 'sCover';
+  if (it.albumart) img.src = artUrl(it.albumart);
+  var meta = document.createElement('div');
+  meta.className = 'sMeta';
+  var ti = document.createElement('div');
+  ti.className = 'sTitle'; ti.textContent = it.title || '';
+  var sub = document.createElement('div');
+  sub.className = 'sSub';
+  var src = superSource(it);
+  sub.textContent = [it.artist || '', src === null ? T('search.local') : (src ? src.name : it.service)].filter(Boolean).join(' · ');
+  meta.appendChild(ti); meta.appendChild(sub);
+  row.appendChild(img); row.appendChild(meta);
+  row.addEventListener('click', function(){ playSearchItem(it, 'song'); closeAllOverlays(); });
+  return row;
+}
+
 function searchMessage(text) {
   while (searchResults.firstChild) searchResults.removeChild(searchResults.firstChild);
   var hint = document.createElement('div');
@@ -293,13 +347,14 @@ function doSearch(q) {
   searchSuggest = null;
   var seq = ++searchSeq;
   searchMessage(T('search.searching'));
+  superSearchStart(q, seq);
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
   withTimeout(fetch('/api/v1/search?query=' + volumioArg(q)).then(function(r){ return r.json(); }), SEARCH_TIMEOUT_MS)
     .then(function(j){
       clearTimeout(slow);
       if (seq !== searchSeq) return;
       searchData = streamSplitSearch((j && j.navigation && j.navigation.lists) || [], q);
-
+      searchShownSeq = seq;
       renderSearchResults();
       searchSuggestAsk(q, seq);
     }).catch(function(){
@@ -355,8 +410,9 @@ function renderSearchResults() {
   var parts = streamsOn().filter(function(s){ return s.show; }).map(function(s){
     return {s: s, list: (searchData.stream && searchData.stream[s.id] && searchData.stream[s.id][searchCat]) || []};
   }).filter(function(p){ return p.list.length; });
+  var supers = searchQuery && superSeq === searchSeq ? superVisible() : [];
 
-  if (!list.length && !parts.length) {
+  if (!list.length && !parts.length && !supers.length) {
     if (!searchQuery && typeof discoverShow === 'function' && discoverShow()) return;     /* Discover (discover.js) */
     var hint = document.createElement('div');
     hint.className = 'sHint';
@@ -365,6 +421,13 @@ function renderSearchResults() {
                      : (searchQuery ? T('search.noResults') : T('search.minChars'));
     searchResults.appendChild(hint);
     return;
+  }
+
+  if (supers.length) {
+    var bh = document.createElement('div');
+    bh.className = 'infoSection'; bh.textContent = T('search.best');
+    searchResults.appendChild(bh);
+    supers.forEach(function(it){ searchResults.appendChild(superRow(it)); });
   }
 
   if (list.length) {
@@ -391,8 +454,8 @@ function renderSearchResults() {
   searchResults.appendChild(hint);
 }
 
-function playSearchItem(it) {
-  var type = searchCat === 'songs' ? 'song' : 'folder';
+function playSearchItem(it, type) {
+  type = type || (searchCat === 'songs' ? 'song' : 'folder');
   if (queueForInput([{uri: it.uri, service: it.service || 'mpd', type: type, title: it.title || it.name || '', artist: it.artist || '', album: it.album || ''}])) return;
   fetch('/api/v1/replaceAndPlay', {
     method:'POST', headers:{'Content-Type':'application/json'},

@@ -646,6 +646,8 @@ langRegister('it', 'Italiano', {
   'queue.error': 'Impossibile caricare la coda. Volumio è raggiungibile?',
 
   'search.local': 'Locale',
+
+  'search.best': 'Risultati migliori',
   'search.minChars': 'Inserisci almeno 2 caratteri e tocca Vai',
   'search.noAnswer': 'Nessuna risposta da Volumio. Riprova.',
   'search.noAnswerStreams': 'Nessuna risposta da Volumio ({services}?). Riprova.',

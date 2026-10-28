@@ -647,6 +647,8 @@ langRegister('fr', 'Français', {
   'queue.error': 'Impossible de charger la file d\'attente. Volumio est-il joignable ?',
 
   'search.local': 'Local',
+
+  'search.best': 'Meilleurs résultats',
   'search.minChars': 'Saisis au moins 2 caractères et touche OK',
   'search.noAnswer': 'Pas de réponse de Volumio. Réessaie.',
   'search.noAnswerStreams': 'Pas de réponse de Volumio ({services} ?). Réessaie.',

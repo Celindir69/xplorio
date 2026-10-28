@@ -1,6 +1,7 @@
-/* Endless playback via the AutoDJ plugin (Celindir69/autodj-plugin, REST endpoint "autodj"): fourth state ∞ on the
-   repeat button (off → all → one → ∞). AutoDJ pauses while repeat is on, so the states are mutually
-   exclusive. Without the plugin or without a Last.fm key in the plugin, there are only three states.
+/* Endless playback: fourth state ∞ on the repeat button (off → all → one → ∞), via the AutoDJ plugin
+   (Celindir69/autodj-plugin, REST endpoint "autodj") or, without it, MyVolumio's Continuous Play (Infinity Playback,
+   Premium). AutoDJ pauses while repeat is on, so the states are mutually exclusive. With neither (or AutoDJ without
+   a Last.fm key) there are only three states.
    Classic script, shared global scope; load order see xplorio.html. */
 var autodj = {avail: false, enabled: false, ready: false};
 
@@ -47,8 +48,42 @@ function autodjCall(data) {
     });
 }
 
-if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext, autodjState: autodjState};
+/* MyVolumio's Infinity Playback ("Continuous Play", Premium, Volumio 4) over the websocket:
+   pushInfinityPlayback {available, enabled}; without Premium or on older Volumio there is no answer */
+var volumioInfinity = {avail: false, enabled: false};
+function infinityState(d) {
+  return (d && d.available === true) ? {avail: true, enabled: d.enabled === true} : {avail: false, enabled: false};
+}
+
+/* which one ∞ switches: AutoDJ when installed (installing it is a deliberate choice), else Continuous Play;
+   same shape as autodjState plus kind 'autodj' | 'infinity' | null */
+function endlessState(adj, inf) {
+  if (adj.avail) return {avail: true, enabled: adj.enabled, ready: adj.ready, kind: 'autodj'};
+  if (inf.avail) return {avail: true, enabled: inf.enabled, ready: true, kind: 'infinity'};
+  return {avail: false, enabled: false, ready: false, kind: null};
+}
+function endless() { return endlessState(autodj, volumioInfinity); }
+/* switch the active one; turning AutoDJ on also turns Continuous Play off, or both would add tracks */
+function endlessSet(on) {
+  var e = endless();
+  if (e.kind === 'autodj') {
+    autodj.enabled = on;
+    autodjCall({enabled: on});
+    if (on && volumioInfinity.enabled) socket.emit('setInfinityPlayback', {enabled: false});
+  } else if (e.kind === 'infinity') {
+    volumioInfinity.enabled = on;
+    socket.emit('setInfinityPlayback', {enabled: on});
+  }
+}
+
+if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext, autodjState: autodjState, infinityState: infinityState, endlessState: endlessState};
 else {
+  socket.on('pushInfinityPlayback', function(d){
+    volumioInfinity = infinityState(d);
+    if (typeof updateCtrlUI === 'function') updateCtrlUI();
+  });
+  socket.on('connect', function(){ socket.emit('getInfinityPlayback'); });
+  if (socket.connected) socket.emit('getInfinityPlayback');
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) autodjCall(); });
   setTimeout(function(){ autodjCall(); }, 0);                               /* after all scripts have loaded */
 }

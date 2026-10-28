@@ -646,6 +646,8 @@ langRegister('de', 'Deutsch', {
   'queue.error': 'Die Warteschlange ließ sich nicht laden. Ist Volumio erreichbar?',
 
   'search.local': 'Lokal',
+
+  'search.best': 'Beste Treffer',
   'search.minChars': 'Mind. 2 Zeichen eingeben und Los tippen',
   'search.noAnswer': 'Keine Antwort von Volumio. Bitte erneut versuchen.',
   'search.noAnswerStreams': 'Keine Antwort von Volumio ({services}?). Bitte erneut versuchen.',

@@ -32,4 +32,20 @@ t('endpoint answer: no plugin, current plugin, plugin without the automatic-mode
   assert.deepStrictEqual(a.autodjState({enabled: false, ready: false}),
                          {avail: true, enabled: false, ready: false, replayGain: null, crossfade: null});
 });
+t('Infinity Playback (MyVolumio): available only with available:true', function(){
+  var NO = {avail: false, enabled: false};
+  assert.deepStrictEqual(a.infinityState(undefined), NO);
+  assert.deepStrictEqual(a.infinityState({available: false, enabled: true}), NO);
+  assert.deepStrictEqual(a.infinityState({available: true, enabled: true}), {avail: true, enabled: true});
+  assert.deepStrictEqual(a.infinityState({available: true, enabled: false}), {avail: true, enabled: false});
+});
+t('∞ uses AutoDJ when installed, else Continuous Play', function(){
+  var ADJ = {avail: true, enabled: false, ready: true}, NOADJ = {avail: false, enabled: false, ready: false};
+  var INF = {avail: true, enabled: true}, NOINF = {avail: false, enabled: false};
+  assert.strictEqual(a.endlessState(ADJ, INF).kind, 'autodj');
+  assert.strictEqual(a.endlessState(ADJ, INF).enabled, false);
+  assert.deepStrictEqual(a.endlessState(NOADJ, INF), {avail: true, enabled: true, ready: true, kind: 'infinity'});
+  assert.deepStrictEqual(a.endlessState(NOADJ, NOINF), {avail: false, enabled: false, ready: false, kind: null});
+  assert.strictEqual(a.repeatShown('off', a.endlessState(NOADJ, INF)), 'inf');
+});
 console.log(n + ' checks');

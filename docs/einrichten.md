@@ -300,6 +300,10 @@ für „Metalica“. Akzente, Groß- und Kleinschreibung, ein „The“ am Anfan
 Rolle, kleine Tippfehler werden verziehen. Ein Tipp auf den Vorschlag sucht danach. Titelnamen werden nicht verglichen;
 die Streamingdienste haben ihre eigene, fehlertolerante Suche.
 
+**Beste Treffer (MyVolumio Premium).** Ist MyVolumio Premium aktiv (Volumio 4), zeigt die Suche oben bis zu acht Titel
+aus Volumios SuperSearch: eine nach Relevanz sortierte Auswahl aus allen Quellen, mit der Quelle neben dem Interpreten.
+Darunter folgen die Ergebnisse wie bisher. Die Häkchen für Lokal und die Streamingdienste gelten auch hier.
+
 **Entdecken:** Solange in „Suchen & Entdecken“ nichts eingegeben ist, zeigt die Seite passend zum Reiter Künstler, Alben
 oder Titel mehrere Reihen zum Wischen: **Zufällige Entdeckungen** (bevorzugt, was lange nicht oder nie lief; ↻ zieht
 neu), **Vor einem Jahr gehört** (um dieses Datum vor einem Jahr, sonst vor 2, 3 … Jahren), **Lange nicht gehört**
@@ -624,7 +628,7 @@ echo '*/10 * * * * root /data/xplorio/tools/tidal-watchdog.sh' | sudo tee /etc/c
 Prüft alle 10 Minuten, ob TIDAL antwortet, und startet Volumio sonst neu (höchstens einmal je Stunde). Protokoll:
 `/var/log/tidal-watchdog.log`. Ist TIDAL nicht angemeldet, den Wächter nicht einrichten.
 
-## Endlos-Wiedergabe (AutoDJ)
+## Endlos-Wiedergabe (AutoDJ oder Continuous Play)
 Mit dem Plugin [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (ab Version 1.1) bekommt der
 Wiederholen-Knopf einen vierten Zustand: aus → alle → einer → ∞. Bei ∞ ist Wiederholen aus und AutoDJ an; es hängt
 ähnliche Titel an, sobald die Warteschlange zur Neige geht. Der nächste Tipp schaltet AutoDJ wieder aus. Auch in
@@ -633,6 +637,11 @@ Plugin-Einstellungen bleibt es bei drei Zuständen. AutoDJ ist bewusst ein eigen
 eingebaut; Xplorio spricht es nur über dessen REST-Schnittstelle an. Fehlt es, weist die Einstellungsseite von Xplorio
 unter „Funktionen“ darauf hin. Die Anzeige der AutoDJ-Automatik auf der Seite „Wiedergabe“ braucht eine
 AutoDJ-Version, die sie über die Schnittstelle meldet.
+
+Ohne AutoDJ schaltet ∞ das Continuous Play von MyVolumio Premium (Volumio 4), falls vorhanden. Sind beide da, hat
+AutoDJ Vorrang, und beim Einschalten von ∞ schaltet Xplorio Continuous Play aus, damit nicht beide Titel anhängen.
+Wer stattdessen Continuous Play über ∞ nutzen will, deaktiviert das AutoDJ-Plugin in Volumio unter „Installierte
+Plugins“.
 
 ## Volumio 2
 Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf Volumio 2 (z. B. MX-Stream) läuft das Plugin
