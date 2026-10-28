@@ -509,13 +509,15 @@
     #rightPane { flex:1 1 auto; min-width:0; display:flex;
       flex-direction:column; justify-content:center;
       gap:1.5vh; padding:2vh 0; }
-    #meta { margin-bottom:0; text-align:left; padding:0; }
+    #meta { margin-bottom:0; text-align:left; padding:0; width:100%; }   /* as wide as the seek bar */
     #mTitle  { font-size:calc(3.8 * var(--vw)); }
     #mArtist { font-size:calc(3 * var(--vw)); }
     #mAlbum  { font-size:calc(2.5 * var(--vw)); }
     #mTech   { font-size:calc(2.2 * var(--vw)); }
     #mGenre  { font-size:calc(2.2 * var(--vw)); }
     #mTechRow { justify-content:flex-start; }
+    html:not(.stage) #mTechRow { flex-wrap:nowrap; }   /* pen stays on the line (next to the text) */
+    html:not(.stage) #mTech { min-width:0; }   /* if too narrow, the text wraps, not the pen */
     .qBadge { font-size:calc(1.9 * var(--vw)); }
     #seekWrap { width:100%; margin-bottom:0; }
     #ctrl { margin-bottom:0; gap:calc(4 * var(--vw)); justify-content:center; width:100%; }
