@@ -648,6 +648,8 @@ langRegister('en', 'English', {
   'queue.error': 'Could not load the queue. Is Volumio reachable?',
 
   'search.local': 'Local',
+
+  'search.best': 'Best matches',
   'search.minChars': 'Enter at least 2 characters and tap Go',
   'search.noAnswer': 'No response from Volumio. Please try again.',
   'search.noAnswerStreams': 'No response from Volumio ({services}?). Please try again.',

@@ -646,6 +646,8 @@ langRegister('es', 'Español', {
   'queue.error': 'No se pudo cargar la cola. ¿Está disponible Volumio?',
 
   'search.local': 'Local',
+
+  'search.best': 'Mejores resultados',
   'search.minChars': 'Escribe al menos 2 caracteres y toca Buscar',
   'search.noAnswer': 'Volumio no responde. Inténtalo de nuevo.',
   'search.noAnswerStreams': 'Volumio no responde ({services}?). Inténtalo de nuevo.',

@@ -32,4 +32,11 @@ t('endpoint answer: no plugin, current plugin, plugin without the automatic-mode
   assert.deepStrictEqual(a.autodjState({enabled: false, ready: false}),
                          {avail: true, enabled: false, ready: false, replayGain: null, crossfade: null});
 });
+t('Infinity Playback (MyVolumio): available only with available:true', function(){
+  var NO = {avail: false, enabled: false};
+  assert.deepStrictEqual(a.infinityState(undefined), NO);
+  assert.deepStrictEqual(a.infinityState({available: false, enabled: true}), NO);
+  assert.deepStrictEqual(a.infinityState({available: true, enabled: true}), {avail: true, enabled: true});
+  assert.deepStrictEqual(a.infinityState({available: true, enabled: false}), {avail: true, enabled: false});
+});
 console.log(n + ' checks');

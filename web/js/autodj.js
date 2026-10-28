@@ -47,8 +47,21 @@ function autodjCall(data) {
     });
 }
 
-if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext, autodjState: autodjState};
+/* MyVolumio's Infinity Playback ("Continuous Play", Premium, Volumio 4) over the websocket:
+   pushInfinityPlayback {available, enabled}; without Premium or on older Volumio there is no answer */
+var volumioInfinity = {avail: false, enabled: false};
+function infinityState(d) {
+  return (d && d.available === true) ? {avail: true, enabled: d.enabled === true} : {avail: false, enabled: false};
+}
+
+if (typeof module !== 'undefined') module.exports = {repeatShown: repeatShown, repeatNext: repeatNext, autodjState: autodjState, infinityState: infinityState};
 else {
+  socket.on('pushInfinityPlayback', function(d){
+    volumioInfinity = infinityState(d);
+    if (typeof updateCtrlUI === 'function') updateCtrlUI();
+  });
+  socket.on('connect', function(){ socket.emit('getInfinityPlayback'); });
+  if (socket.connected) socket.emit('getInfinityPlayback');
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) autodjCall(); });
   setTimeout(function(){ autodjCall(); }, 0);                               /* after all scripts have loaded */
 }

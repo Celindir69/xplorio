@@ -300,6 +300,10 @@ für „Metalica“. Akzente, Groß- und Kleinschreibung, ein „The“ am Anfan
 Rolle, kleine Tippfehler werden verziehen. Ein Tipp auf den Vorschlag sucht danach. Titelnamen werden nicht verglichen;
 die Streamingdienste haben ihre eigene, fehlertolerante Suche.
 
+**Beste Treffer (MyVolumio Premium).** Ist MyVolumio Premium aktiv (Volumio 4), zeigt die Suche oben bis zu acht Titel
+aus Volumios SuperSearch: eine nach Relevanz sortierte Auswahl aus allen Quellen, mit der Quelle neben dem Interpreten.
+Darunter folgen die Ergebnisse wie bisher. Die Häkchen für Lokal und die Streamingdienste gelten auch hier.
+
 **Entdecken:** Solange in „Suchen & Entdecken“ nichts eingegeben ist, zeigt die Seite passend zum Reiter Künstler, Alben
 oder Titel mehrere Reihen zum Wischen: **Zufällige Entdeckungen** (bevorzugt, was lange nicht oder nie lief; ↻ zieht
 neu), **Vor einem Jahr gehört** (um dieses Datum vor einem Jahr, sonst vor 2, 3 … Jahren), **Lange nicht gehört**
