@@ -72,3 +72,9 @@ function classifyQuality(st, cfg) {
   if (kind === 'lossy' && kbps) tech.push(kbps + ' kbps');
   return { kind: kind, label: label, tech: tech };
 }
+
+/* ReplayGain in the tech line: -6.53 -> "−6.5 dB", 1.2 -> "+1.2 dB", 0 -> "0.0 dB" */
+function qGainText(db) {
+  var v = Math.round(db * 10) / 10;
+  return (v > 0 ? '+' : v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(1) + ' dB';
+}

@@ -1306,6 +1306,14 @@ var playback = require('./playback.js');
 var playCtl = new playback.Playback({mpd: function(cmd, cb){ libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT, timeout: 5000}, cmd, cb); }});
 function doPlaybackGet(query, cb) { playCtl.read(function(r){ cb(r.ok ? 200 : 503, r); }); }
 function doPlaybackSet(body, cb) { playCtl.set(body, cb); }
+/* GET /replaygain?uri=: gain MPD applies to this file (player view), {ok, mode, gain: {mode, db} | null} */
+function doReplayGain(query, cb) {
+  var r = resolveUri(query.uri);
+  if (!r || r.missing) return cb(200, {ok: true, mode: null, gain: null});
+  playCtl.gain(function(done){
+    runPy({op: 'replaygain', path: r.full}, function(p){ done(p.ok ? null : new Error(p.error), p); });
+  }, function(o){ cb(o.ok ? 200 : 503, o); });
+}
 
 function doSysinfo(query, res) {
   sysInfo.report(query.full === '1', function(r){ send(res, 200, r); });
@@ -1587,6 +1595,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/stationlogo') return doStationLogo(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/playback') return doPlaybackGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/replaygain') return doReplayGain(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/sysinfo') return doSysinfo(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/services') return doServices(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/artistimage') return doArtistImage(url.parse(req.url, true).query, res);

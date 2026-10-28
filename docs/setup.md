@@ -239,6 +239,9 @@ Settings → Playback options. If the AutoDJ plugin is installed, the page shows
 levelling is on: if you set both here, switch it off in the plugin, otherwise AutoDJ changes the values at the next fresh
 mix. Whether Volumio resets crossfade and the ReplayGain mode after a restart has not been checked yet.
 
+With ReplayGain on, the player shows the gain MPD applies to the current track next to the file format (e.g. "−6.5 dB");
+the tooltip says whether it is the track or the album value. Files without ReplayGain tags show nothing.
+
 **ReplayGain tags with rsgain (optional):** If the tags are missing, [rsgain](https://github.com/complexlogic/rsgain)
 adds them to the files afterwards; the audio itself stays unchanged. Like the audio analysis, it runs on a Mac or PC, not
 on the player. If the music is on the player, connect its share with write access.

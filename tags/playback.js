@@ -74,4 +74,30 @@ Playback.prototype.set = function(body, cb) {
   })(0);
 };
 
-module.exports = {Playback: Playback, commands: commands, normalization: normalization, MODES: MODES, MAX_XFADE: MAX_XFADE};
+/* gain MPD applies to a track: mode from replay_gain_status, random from status, rg {track, album} in dB from the file.
+   MPD takes the other value if the wanted one is missing; "auto" = track in shuffle, otherwise album. null = none */
+function applied(mode, random, rg) {
+  if (!rg || mode === 'off' || !mode) return null;
+  if (mode === 'auto') mode = random === '1' ? 'track' : 'album';
+  var first = mode === 'album' ? rg.album : rg.track, other = mode === 'album' ? rg.track : rg.album;
+  if (typeof first === 'number') return {mode: mode, db: first};
+  if (typeof other === 'number') return {mode: mode === 'album' ? 'track' : 'album', db: other};
+  return null;
+}
+
+/* player view: gain for the current file; readFile(cb(err, {track, album})) reads the tags */
+Playback.prototype.gain = function(readFile, cb) {
+  var self = this;
+  this.mpd('replay_gain_status', function(err, rg){
+    if (err) return cb({ok: false, error: 'mpd'});
+    var mode = rg.replay_gain_mode || 'off';
+    if (mode === 'off') return cb({ok: true, mode: 'off', gain: null});
+    self.mpd('status', function(e2, st){
+      readFile(function(e3, tags){
+        cb({ok: true, mode: mode, gain: e3 ? null : applied(mode, !e2 && st.random, tags)});
+      });
+    });
+  });
+};
+
+module.exports = {Playback: Playback, applied: applied, commands: commands, normalization: normalization, MODES: MODES, MAX_XFADE: MAX_XFADE};

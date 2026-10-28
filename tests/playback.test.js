@@ -54,4 +54,20 @@ t('set: commands to MPD, response with the new state', function(){
 t('no MPD: error instead of values', function(){
   new pb.Playback({mpd: function(c, cb){ cb(new Error('gone')); }, files: files}).read(function(r){ assert.deepStrictEqual(r, {ok: false, error: 'mpd'}); });
 });
+t('applied gain: mode, fallback to the other value, auto by shuffle', function(){
+  var both = {track: -6.5, album: -4}, onlyTrack = {track: -6.5, album: null};
+  assert.deepStrictEqual(pb.applied('track', '0', both), {mode: 'track', db: -6.5});
+  assert.deepStrictEqual(pb.applied('album', '0', both), {mode: 'album', db: -4});
+  assert.deepStrictEqual(pb.applied('album', '0', onlyTrack), {mode: 'track', db: -6.5});
+  assert.deepStrictEqual(pb.applied('auto', '1', both), {mode: 'track', db: -6.5});
+  assert.deepStrictEqual(pb.applied('auto', '0', both), {mode: 'album', db: -4});
+  assert.strictEqual(pb.applied('off', '0', both), null);
+  assert.strictEqual(pb.applied('track', '0', {track: null, album: null}), null);
+});
+t('gain for the player view: mode from MPD, values from the file', function(){
+  state.mode = 'album';
+  ctl.gain(function(cb){ cb(null, {track: -6.5, album: -4}); }, function(r){ assert.deepStrictEqual(r, {ok: true, mode: 'album', gain: {mode: 'album', db: -4}}); });
+  state.mode = 'off';
+  ctl.gain(function(){ throw new Error('not read when off'); }, function(r){ assert.strictEqual(r.gain, null); });
+});
 console.log(n + ' checks');
