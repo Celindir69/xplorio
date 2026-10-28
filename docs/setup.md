@@ -231,7 +231,7 @@ sudo systemctl restart xplorio-tags
 The group only allows reading the journal.
 
 ### Playback
-In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
+In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 60 seconds, and **volume levelling**
 (ReplayGain) with Off, Track, Album or Automatic (like Track in shuffle, otherwise like Album). The Tag Service switches both
 directly in MPD, without a restart; ReplayGain only affects files with ReplayGain tags. Volumio's own normalization
 (`volume_normalization`, levels even without tags but changes the dynamics) is only shown; change it in Volumio under

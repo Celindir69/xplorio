@@ -77,12 +77,12 @@ function pbRender() {
     pbSet({crossfade: v === 'on' ? pbLastXfade() : 0});
   }));
   var inp = histEl('input', 'pbNum');
-  inp.type = 'number'; inp.min = 1; inp.max = 30; inp.step = 1; inp.inputMode = 'numeric';
+  inp.type = 'number'; inp.min = 1; inp.max = 60; inp.step = 1; inp.inputMode = 'numeric';
   inp.value = on ? d.crossfade : pbLastXfade();
   inp.setAttribute('aria-label', T('pb.seconds'));
   inp.addEventListener('change', function(){
     var v = String(inp.value).trim();
-    if (!/^\d+$/.test(v) || +v < 1 || +v > 30) { pbMsg = T('pb.xfadeBad'); return pbRender(); }
+    if (!/^\d+$/.test(v) || +v < 1 || +v > 60) { pbMsg = T('pb.xfadeBad'); return pbRender(); }
     pbLastXfade(+v);
     if (on) pbSet({crossfade: +v}); else { pbMsg = ''; pbRender(); }
   });

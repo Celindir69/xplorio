@@ -5,7 +5,7 @@
    opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd} (tests) */
 var fs = require('fs');
 
-var MODES = ['off', 'track', 'album', 'auto'], MAX_XFADE = 30;
+var MODES = ['off', 'track', 'album', 'auto'], MAX_XFADE = 60;
 var FILES = {
   mpdConf: '/etc/mpd.conf',
   volumioMpd: '/data/configuration/music_service/mpd/config.json'

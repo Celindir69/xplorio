@@ -316,7 +316,7 @@ langRegister('fr', 'Français', {
   'pb.off': 'Désactivé',
   'pb.seconds': 'secondes',
   'pb.xfade': 'Transitions (fondu enchaîné)',
-  'pb.xfadeBad': 'Saisis un nombre entier de 1 à 30 secondes.',
+  'pb.xfadeBad': 'Saisis un nombre entier de 1 à 60 secondes.',
   'pb.xfadeNote': 'Fond la fin d\'un titre dans le début du suivant. Mieux vaut le désactiver pour les albums sans blanc entre les titres (live, classique, mix DJ).',
   'pb.rg': 'Égalisation du volume (ReplayGain)',
   'pb.rg.off': 'Désactivée',

@@ -315,7 +315,7 @@ langRegister('de', 'Deutsch', {
   'pb.off': 'Aus',
   'pb.seconds': 'Sekunden',
   'pb.xfade': 'Übergänge (Crossfade)',
-  'pb.xfadeBad': 'Bitte eine ganze Zahl von 1 bis 30 Sekunden eingeben.',
+  'pb.xfadeBad': 'Bitte eine ganze Zahl von 1 bis 60 Sekunden eingeben.',
   'pb.xfadeNote': 'Blendet das Ende eines Titels in den Anfang des nächsten über. Bei Alben ohne Pausen zwischen den Titeln (Live, Klassik, DJ-Mixe) besser aus.',
   'pb.rg': 'Lautstärke angleichen (ReplayGain)',
   'pb.rg.off': 'Aus',
