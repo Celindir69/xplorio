@@ -227,7 +227,8 @@ function stats(list, range, now, tz, genreOf) {
   var bkeys = [], idx = {};
   function bucket(k) { if (!(k in idx)) { idx[k] = bkeys.length; bkeys.push(k); } }
   var nowL = local(now, tz);
-  if (res.unit === 'day') for (var i = 29; i >= 0; i--) bucket(dayKey(local(now - i * DAY, tz)));
+  /* days counted back in the local calendar: "now - i days" would hit the same date twice around a clock change */
+  if (res.unit === 'day') for (var i = 29; i >= 0; i--) bucket(dayKey(new Date(Date.UTC(nowL.getUTCFullYear(), nowL.getUTCMonth(), nowL.getUTCDate() - i))));
   else if (res.unit === 'month') {
     for (i = 11; i >= 0; i--) bucket(monthKey(new Date(Date.UTC(nowL.getUTCFullYear(), nowL.getUTCMonth() - i, 1))));
   } else if (part.length) {
