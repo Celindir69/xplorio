@@ -315,7 +315,7 @@ langRegister('es', 'Español', {
   'pb.off': 'Desactivado',
   'pb.seconds': 'segundos',
   'pb.xfade': 'Transiciones (crossfade)',
-  'pb.xfadeBad': 'Introduce un número entero de 1 a 30 segundos.',
+  'pb.xfadeBad': 'Introduce un número entero de 1 a 60 segundos.',
   'pb.xfadeNote': 'Funde el final de una canción con el principio de la siguiente. Mejor desactivado para álbumes sin pausas entre canciones (directos, clásica, sesiones de DJ).',
   'pb.rg': 'Nivelación de volumen (ReplayGain)',
   'pb.rg.off': 'Desactivada',

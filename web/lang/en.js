@@ -317,7 +317,7 @@ langRegister('en', 'English', {
   'pb.off': 'Off',
   'pb.seconds': 'seconds',
   'pb.xfade': 'Transitions (crossfade)',
-  'pb.xfadeBad': 'Please enter a whole number from 1 to 30 seconds.',
+  'pb.xfadeBad': 'Please enter a whole number from 1 to 60 seconds.',
   'pb.xfadeNote': 'Fades the end of a track into the start of the next. Better off for albums without gaps between tracks (live, classical, DJ mixes).',
   'pb.rg': 'Volume levelling (ReplayGain)',
   'pb.rg.off': 'Off',

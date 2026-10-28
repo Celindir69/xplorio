@@ -6,10 +6,11 @@ function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'playback-'));
 function f(name, text) { var p = path.join(dir, name); if (text !== undefined) fs.writeFileSync(p, text); return p; }
 
-t('input: crossfade as whole seconds 0–30, ReplayGain only known modes', function(){
+t('input: crossfade as whole seconds 0–60, ReplayGain only known modes', function(){
   assert.deepStrictEqual(pb.commands({crossfade: 5}).cmds, ['crossfade 5']);
   assert.deepStrictEqual(pb.commands({crossfade: '0', replaygain: 'album'}).cmds, ['crossfade 0', 'replay_gain_mode album']);
-  ['-1', '2.5', 'abc', 31, '5; kill'].forEach(function(x){ assert.strictEqual(pb.commands({crossfade: x}).error, 'crossfade', x); });
+  ['-1', '2.5', 'abc', 61, '5; kill'].forEach(function(x){ assert.strictEqual(pb.commands({crossfade: x}).error, 'crossfade', x); });
+  assert.deepStrictEqual(pb.commands({crossfade: 60}).cmds, ['crossfade 60']);
   assert.strictEqual(pb.commands({replaygain: 'loud'}).error, 'replaygain');
   assert.strictEqual(pb.commands({}).error, 'leer');
 });

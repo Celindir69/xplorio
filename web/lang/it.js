@@ -315,7 +315,7 @@ langRegister('it', 'Italiano', {
   'pb.off': 'Off',
   'pb.seconds': 'secondi',
   'pb.xfade': 'Transizioni (crossfade)',
-  'pb.xfadeBad': 'Inserisci un numero intero da 1 a 30 secondi.',
+  'pb.xfadeBad': 'Inserisci un numero intero da 1 a 60 secondi.',
   'pb.xfadeNote': 'Sfuma la fine di un brano nell\'inizio del successivo. Meglio disattivarlo per gli album senza pause tra i brani (live, classica, DJ mix).',
   'pb.rg': 'Livellamento del volume (ReplayGain)',
   'pb.rg.off': 'Off',

@@ -264,7 +264,7 @@ sudo systemctl restart xplorio-tags
 Die Gruppe erlaubt nur das Lesen des Journals.
 
 ### Wiedergabe
-Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 30 Sekunden, und **Lautstärke angleichen**
+Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 60 Sekunden, und **Lautstärke angleichen**
 (ReplayGain) mit Aus, Titel, Album oder Automatisch. Beides stellt der Tag-Dienst direkt in MPD um, ohne Neustart;
 ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. **Automatisch** entscheidet bei jedem Titel neu: Stammt der Titel davor
 oder danach in der Warteschlange vom selben Album, gilt der Album-Wert, sonst (Mixe, einzelne Titel, Zufallswiedergabe) der

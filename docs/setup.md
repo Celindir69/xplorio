@@ -231,7 +231,7 @@ sudo systemctl restart xplorio-tags
 The group only allows reading the journal.
 
 ### Playback
-In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
+In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 60 seconds, and **volume levelling**
 (ReplayGain) with Off, Track, Album or Automatic. The Tag Service switches both directly in MPD, without a restart;
 ReplayGain only affects files with ReplayGain tags. **Automatic** decides again for each track: if the track before or after
 it in the queue is from the same album, album gain applies, otherwise (mixes, single tracks, shuffle) track gain. MPD's own
