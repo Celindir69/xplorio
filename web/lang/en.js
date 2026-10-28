@@ -327,7 +327,7 @@ langRegister('en', 'English', {
   'pb.rgNote.off': 'All tracks play as loud as they were mastered.',
   'pb.rgNote.track': 'Every track is brought to the same loudness; quiet pieces on an album get louder.',
   'pb.rgNote.album': 'Albums are levelled against each other; differences within an album are kept.',
-  'pb.rgNote.auto': 'Like "Track" in shuffle, otherwise like "Album".',
+  'pb.rgNote.auto': 'Like "Album" while an album plays in order; like "Track" for mixes and shuffle. Xplorio decides again for each track.',
   'pb.rgTags': 'Only affects files with ReplayGain tags; streams and files without tags stay unchanged.',
   'pb.norm': "Volumio's normalization",
   'pb.normState': 'Normalization',

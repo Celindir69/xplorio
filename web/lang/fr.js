@@ -326,7 +326,7 @@ langRegister('fr', 'Français', {
   'pb.rgNote.off': 'Tous les titres sont lus au volume de leur mastering.',
   'pb.rgNote.track': 'Chaque titre est ramené au même volume ; les morceaux calmes d\'un album deviennent plus forts.',
   'pb.rgNote.album': 'Les albums sont égalisés entre eux ; les différences au sein d\'un album sont conservées.',
-  'pb.rgNote.auto': 'Comme « Titre » en lecture aléatoire, sinon comme « Album ».',
+  'pb.rgNote.auto': 'Comme « Album » quand un album est lu dans l’ordre ; comme « Titre » pour les mix et la lecture aléatoire. Xplorio décide à chaque titre.',
   'pb.rgTags': 'S\'applique uniquement aux fichiers avec des tags ReplayGain ; les flux et fichiers sans tags restent inchangés.',
   'pb.norm': "Normalisation de Volumio",
   'pb.normState': 'Normalisation',

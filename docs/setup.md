@@ -232,8 +232,11 @@ The group only allows reading the journal.
 
 ### Playback
 In the menu under "Playback": **crossfade** on or off, with a duration of 1 to 30 seconds, and **volume levelling**
-(ReplayGain) with Off, Track, Album or Automatic (like Track in shuffle, otherwise like Album). The Tag Service switches both
-directly in MPD, without a restart; ReplayGain only affects files with ReplayGain tags. Volumio's own normalization
+(ReplayGain) with Off, Track, Album or Automatic. The Tag Service switches both directly in MPD, without a restart;
+ReplayGain only affects files with ReplayGain tags. **Automatic** decides again for each track: if the track before or after
+it in the queue is from the same album, album gain applies, otherwise (mixes, single tracks, shuffle) track gain. MPD's own
+"auto" only looks at the shuffle switch and plays mixes in order with album gain. If Volumio is set to "auto", Xplorio takes
+that over as well; if something else (such as AutoDJ) sets a fixed mode, the automatic ends. Volumio's own normalization
 (`volume_normalization`, levels even without tags but changes the dynamics) is only shown; change it in Volumio under
 Settings → Playback options. If the AutoDJ plugin is installed, the page shows whether its automation for crossfade and
 levelling is on: if you set both here, switch it off in the plugin, otherwise AutoDJ changes the values at the next fresh
