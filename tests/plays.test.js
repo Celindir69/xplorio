@@ -109,6 +109,11 @@ t('statistics: totals, days, time of day and weekday in local time', function(){
   assert.strictEqual(s.hours[13], 1, '11:00 UTC = 13:00 summer time');
   assert.strictEqual(s.tracks, 5); assert.strictEqual(s.artists, 3);
   assert.strictEqual(s.weekdays[0], 3, 'Monday 5 Oct'); assert.strictEqual(s.weekdays[1], 1, 'Tuesday 6 Oct');
+  /* late evening after the change back to winter time: 30 different days, none twice */
+  var late = Date.UTC(2026, 9, 28, 22, 0) / 1000;          /* 23:00 local, winter time */
+  var b = plays.stats([], 'd30', late, {w: 60, s: 120}).buckets.map(function(x){ return x.k; });
+  assert.strictEqual(b.length, 30);
+  assert.strictEqual(b[0], '2026-09-29'); assert.strictEqual(b[29], '2026-10-28');
   var all = plays.stats(list, 'all', NOW, {w: 60, s: 120});
   assert.deepStrictEqual(all.buckets.map(function(b){ return b.k; }), ['2025', '2026']);
   assert.strictEqual(plays.stats(list, 'm12', NOW, {w: 60, s: 120}).buckets.length, 12);
