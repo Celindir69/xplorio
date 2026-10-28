@@ -44,6 +44,7 @@ function pbSet(body) {
   return tagPostJson('/playback', body).then(function(r){
     if (seq !== pbSeq) return;
     if (r && r.ok) pbData = r; else pbMsg = T('pb.error');
+    if (body.replaygain !== undefined && typeof rgRefresh === 'function') rgRefresh();
     pbRender();
   }).catch(function(){ if (seq === pbSeq) { pbMsg = T('pb.error'); pbRender(); } });
 }
