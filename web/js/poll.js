@@ -21,6 +21,11 @@ function rgFetch(st) {
   ask();
   setTimeout(function(){ if (rgState.uri === uri) ask(); }, 3000);
 }
+/* mode changed on the Playback page: hide the value at once and ask again (off -> no value) */
+function rgRefresh() {
+  rgState = {uri: null, gain: null};
+  if (qualityState) paintQuality(qualityState);
+}
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
