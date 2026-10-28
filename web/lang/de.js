@@ -317,6 +317,7 @@ langRegister('de', 'Deutsch', {
   'pb.xfade': 'Übergänge (Crossfade)',
   'pb.xfadeBad': 'Bitte eine ganze Zahl von 1 bis 60 Sekunden eingeben.',
   'pb.xfadeNote': 'Blendet das Ende eines Titels in den Anfang des nächsten über. Bei Alben ohne Pausen zwischen den Titeln (Live, Klassik, DJ-Mixe) besser aus.',
+  'pb.xfadeAutoNote': 'Innerhalb eines Albums ohne Überblendung, beim Wechsel zu einem anderen Album und in Mixen mit. Xplorio entscheidet bei jedem Übergang neu.',
   'pb.rg': 'Lautstärke angleichen (ReplayGain)',
   'pb.rg.off': 'Aus',
   'pb.rg.track': 'Titel',

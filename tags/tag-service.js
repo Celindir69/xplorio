@@ -1306,8 +1306,10 @@ var playback = require('./playback.js');
 function mpdOne(cmd, cb) { libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT, timeout: 5000}, cmd, cb); }
 var rgauto = require('./rgauto.js');                    /* ReplayGain "Automatic": album or track gain depending on the queue */
 var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne,
-  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, onChange); }});
-var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto});
+  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); }); }});
+var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
+var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
+var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
 function doPlaybackGet(query, cb) { playCtl.read(function(r){ cb(r.ok ? 200 : 503, r); }); }
 function doPlaybackSet(body, cb) { playCtl.set(body, cb); }
 /* GET /replaygain?uri=: gain MPD applies to this file (player view), {ok, mode, gain: {mode, db} | null} */

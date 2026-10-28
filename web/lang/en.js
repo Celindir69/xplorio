@@ -319,6 +319,7 @@ langRegister('en', 'English', {
   'pb.xfade': 'Transitions (crossfade)',
   'pb.xfadeBad': 'Please enter a whole number from 1 to 60 seconds.',
   'pb.xfadeNote': 'Fades the end of a track into the start of the next. Better off for albums without gaps between tracks (live, classical, DJ mixes).',
+  'pb.xfadeAutoNote': 'No crossfade within an album; crossfade when moving to another album and in mixes. Xplorio decides again at each transition.',
   'pb.rg': 'Volume levelling (ReplayGain)',
   'pb.rg.off': 'Off',
   'pb.rg.track': 'Track',

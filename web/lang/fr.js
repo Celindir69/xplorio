@@ -318,6 +318,7 @@ langRegister('fr', 'Français', {
   'pb.xfade': 'Transitions (fondu enchaîné)',
   'pb.xfadeBad': 'Saisis un nombre entier de 1 à 60 secondes.',
   'pb.xfadeNote': 'Fond la fin d\'un titre dans le début du suivant. Mieux vaut le désactiver pour les albums sans blanc entre les titres (live, classique, mix DJ).',
+  'pb.xfadeAutoNote': 'Pas de fondu à l’intérieur d’un album ; fondu au passage à un autre album et dans les mix. Xplorio décide à chaque transition.',
   'pb.rg': 'Égalisation du volume (ReplayGain)',
   'pb.rg.off': 'Désactivée',
   'pb.rg.track': 'Titre',

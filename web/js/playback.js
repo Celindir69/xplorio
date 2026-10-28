@@ -71,28 +71,31 @@ function pbRender() {
     return;
   }
 
-  /* crossfade: on/off and seconds */
-  var xf = sysCard(T('pb.xfade'), 'syWide'), on = d.crossfade > 0;
+  /* crossfade: off/on/automatic and seconds (automatic: off inside an album, on for mixes; the tag service switches) */
+  var xf = sysCard(T('pb.xfade'), 'syWide'), auto = !!d.crossfadeAuto, on = auto || d.crossfade > 0;
+  var secs = auto && d.crossfadeSeconds ? d.crossfadeSeconds : d.crossfade > 0 ? d.crossfade : pbLastXfade();
   var row = histEl('div', 'pbRow');
-  row.appendChild(pbChips([['off', T('pb.off')], ['on', T('pb.on')]], on ? 'on' : 'off', function(v){
-    pbSet({crossfade: v === 'on' ? pbLastXfade() : 0});
+  row.appendChild(pbChips([['off', T('pb.off')], ['on', T('pb.on')], ['auto', T('pb.rg.auto')]], auto ? 'auto' : on ? 'on' : 'off', function(v){
+    if (v === 'auto') pbSet({crossfade: secs, crossfadeAuto: true});
+    else pbSet({crossfade: v === 'on' ? secs : 0});
   }));
   var inp = histEl('input', 'pbNum');
   inp.type = 'number'; inp.min = 1; inp.max = 60; inp.step = 1; inp.inputMode = 'numeric';
-  inp.value = on ? d.crossfade : pbLastXfade();
+  inp.value = secs;
   inp.setAttribute('aria-label', T('pb.seconds'));
   inp.addEventListener('change', function(){
     var v = String(inp.value).trim();
     if (!/^\d+$/.test(v) || +v < 1 || +v > 60) { pbMsg = T('pb.xfadeBad'); return pbRender(); }
     pbLastXfade(+v);
-    if (on) pbSet({crossfade: +v}); else { pbMsg = ''; pbRender(); }
+    if (auto) pbSet({crossfade: +v, crossfadeAuto: true});
+    else if (on) pbSet({crossfade: +v}); else { pbMsg = ''; pbRender(); }
   });
   inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') inp.blur(); });
   row.appendChild(inp);
   row.appendChild(histEl('span', 'sySub', T('pb.seconds')));
   xf.appendChild(row);
   if (pbMsg === T('pb.xfadeBad')) xf.appendChild(histEl('div', 'syNote syWarn', pbMsg));   /* right at the input field */
-  xf.appendChild(histEl('div', 'syNote', T('pb.xfadeNote')));
+  xf.appendChild(histEl('div', 'syNote', T(auto ? 'pb.xfadeAutoNote' : 'pb.xfadeNote')));
   grid.appendChild(xf);
 
   /* ReplayGain */
