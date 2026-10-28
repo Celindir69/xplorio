@@ -265,8 +265,12 @@ Die Gruppe erlaubt nur das Lesen des Journals.
 
 ### Wiedergabe
 Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 30 Sekunden, und **Lautstärke angleichen**
-(ReplayGain) mit Aus, Titel, Album oder Automatisch (bei Zufallswiedergabe wie Titel, sonst wie Album). Beides stellt der
-Tag-Dienst direkt in MPD um, ohne Neustart; ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. Volumios eigene
+(ReplayGain) mit Aus, Titel, Album oder Automatisch. Beides stellt der Tag-Dienst direkt in MPD um, ohne Neustart;
+ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. **Automatisch** entscheidet bei jedem Titel neu: Stammt der Titel davor
+oder danach in der Warteschlange vom selben Album, gilt der Album-Wert, sonst (Mixe, einzelne Titel, Zufallswiedergabe) der
+Titel-Wert. MPDs eigenes „auto“ schaut nur auf den Zufallsschalter und spielt Mixe in normaler Reihenfolge mit Album-Wert.
+Steht Volumio auf „auto“, übernimmt Xplorio das ebenfalls; stellt jemand anderes (etwa AutoDJ) einen festen Modus ein,
+endet die Automatik. Volumios eigene
 Normalisierung (`volume_normalization`, gleicht auch ohne Tags an, verändert aber die Dynamik) zeigt die Seite nur an;
 umgestellt wird sie in Volumio unter Einstellungen → Wiedergabe-Optionen. Ist das AutoDJ-Plugin installiert, zeigt die Seite,
 ob dessen Automatik für Crossfade und Angleichen an ist: Wer beides hier einstellt, sollte sie im Plugin ausschalten, sonst
