@@ -44,4 +44,9 @@ cases.forEach(function(c){
 // M4A configurable as unknown
 var r = classifyQuality({trackType:'m4a', samplerate:'44.1 kHz', bitdepth:'16 bit'}, {M4A_LOSSLESS:false});
 assert.strictEqual(r.kind, ''); console.log('ok   M4A_LOSSLESS=false  ->  (no badge)');
+assert.strictEqual(qGainText(-6.53), '\u22126.5 dB');
+assert.strictEqual(qGainText(1.2), '+1.2 dB');
+assert.strictEqual(qGainText(0.04), '0.0 dB');
+console.log('ok   ReplayGain text with sign');
 process.exit(fail ? 1 : 0);
+

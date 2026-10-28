@@ -14,6 +14,9 @@ Cover (embedded front cover):
       replaces the front cover with the image file; without "image" it is removed. With "backup" the old cover
       is first saved to <backup>.jpg/.png. Response: {"ok":true, "changed":true, "backup":"<file>"|null}
 
+ReplayGain values (for the player view, read only):
+  {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null}  (gain in dB)
+
 Several jobs in one call (saves the Python startup per file, important with many files):
   {"op":"batch", "jobs":[{...}, {...}]}  -> {"ok":true, "results":[{...}, {...}]}  (one response per job as above)
 """
@@ -141,6 +144,36 @@ def read_tags(audio, kind):
         if com:
             out['comment'] = join(com[0].text)
     return out
+
+
+def gain_of(v):
+    """'-6.53 dB' -> -6.53; None if not a number"""
+    try:
+        return round(float(txt(v).strip().split()[0].replace(',', '.')), 2)
+    except (ValueError, IndexError):
+        return None
+
+
+def read_replaygain(audio, kind):
+    """REPLAYGAIN_TRACK_GAIN / _ALBUM_GAIN: Vorbis comment, MP4 freeform atom or ID3 TXXX (any case)"""
+    found = {}
+    tags = audio.tags
+    if tags is None:
+        return {'track': None, 'album': None}
+    if kind == 'flac':
+        for k, v in tags.items():
+            found[k.lower()] = v[0] if isinstance(v, list) and v else v
+    elif kind == 'm4a':
+        for k, v in tags.items():
+            if k.startswith('----:'):
+                val = v[0] if isinstance(v, list) and v else v
+                found[k.split(':')[-1].lower()] = val.decode('utf-8', 'replace') if isinstance(val, bytes) else val
+    else:
+        for fr in tags.getall('TXXX'):
+            if fr.text:
+                found[txt(fr.desc).lower()] = fr.text[0]
+    return {'track': gain_of(found.get('replaygain_track_gain', '')),
+            'album': gain_of(found.get('replaygain_album_gain', ''))}
 
 
 def write_tags(audio, kind, new):
@@ -286,7 +319,7 @@ def cover_job(job, path, kind, audio):
 def run_job(job):
     path = job.get('path')
     op = job.get('op')
-    if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set'):
+    if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set', 'replaygain'):
         fail('invalid job')
     if PY2 and isinstance(path, text_type):
         path = path.encode('utf-8')
@@ -299,6 +332,8 @@ def run_job(job):
         audio = open_file(path, kind)
         if op.startswith('cover_'):
             return cover_job(job, path, kind, audio)
+        if op == 'replaygain':
+            return dict(read_replaygain(audio, kind), ok=True)
         before = read_tags(audio, kind)
         if op == 'read':
             return {'ok': True, 'format': kind, 'tags': before}

@@ -2,6 +2,25 @@
    Classic script, shared global scope; see xplorio.html for load order. */
 /* ---------- Poll ---------- */
 var qualityState = null;
+/* ReplayGain of the current file (tag service /replaygain): asked when the track changes and once more shortly after,
+   because the "Automatic" mode may switch between album and track right at the change */
+var rgState = {uri: null, gain: null};
+function rgFetch(st) {
+  if (st.uri === rgState.uri) return;
+  rgState = {uri: st.uri, gain: null};
+  if (typeof TAGS === 'undefined' || typeof isLocalTrack !== 'function' || !isLocalTrack(st)) return;
+  var uri = st.uri;
+  function ask() {
+    withTimeout(fetch(TAGS + '/replaygain?uri=' + encodeURIComponent(uri)), 8000).then(function(r){ return r.json(); })
+      .then(function(j){
+        if (rgState.uri !== uri) return;
+        rgState.gain = j && j.gain && typeof j.gain.db === 'number' ? j.gain : null;
+        if (qualityState && qualityState.uri === uri) paintQuality(qualityState);
+      }).catch(function(){ /* no tag service: no value */ });
+  }
+  ask();
+  setTimeout(function(){ if (rgState.uri === uri) ask(); }, 3000);
+}
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
@@ -9,7 +28,11 @@ function paintQuality(st) {
   if (inp) { mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
   var q = classifyQuality(st, window.APP_CONFIG);
-  mTech.textContent = q.tech.join('  ·  ');
+  rgFetch(st);
+  var tech = q.tech.slice();
+  if (rgState.uri === st.uri && rgState.gain) tech.push(qGainText(rgState.gain.db));
+  mTech.textContent = tech.join('  ·  ');
+  mTech.title = rgState.uri === st.uri && rgState.gain ? 'ReplayGain (' + T('pb.rg.' + rgState.gain.mode) + ')' : '';
   mBadge.textContent = q.label;
   mBadge.className = 'qBadge' + (q.kind ? ' ' + q.kind : '');
 }

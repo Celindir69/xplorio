@@ -277,6 +277,9 @@ ob dessen Automatik für Crossfade und Angleichen an ist: Wer beides hier einste
 stellt AutoDJ die Werte beim nächsten neuen Mix um. Ob Volumio Crossfade und ReplayGain-Modus nach einem Neustart
 zurücksetzt, ist noch nicht geprüft.
 
+Ist ReplayGain an, zeigt der Player neben dem Dateiformat den Wert, den MPD gerade auf den Titel anwendet (etwa „−6.5 dB“);
+der Tooltip sagt, ob es der Titel- oder der Album-Wert ist. Ohne ReplayGain-Tags in der Datei bleibt die Anzeige leer.
+
 **ReplayGain-Tags mit rsgain (optional):** Fehlen die Tags, schreibt sie [rsgain](https://github.com/complexlogic/rsgain)
 nachträglich in die Dateien; der Ton selbst bleibt unverändert. Wie die Audio-Analyse läuft es auf dem Mac oder PC, nicht
 auf dem Player. Liegt die Musik auf dem Player, die Freigabe mit Schreibrechten verbinden.
