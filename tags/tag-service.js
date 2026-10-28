@@ -1303,7 +1303,11 @@ var sysinfo = require('./sysinfo.js');
 var sysInfo = new sysinfo.Sysinfo({file: path.join(DATA_DIR, 'sysinfo.json')});
 /* GET /playback: crossfade, ReplayGain, normalization, AutoDJ automation; POST /playback {crossfade?, replaygain?} */
 var playback = require('./playback.js');
-var playCtl = new playback.Playback({mpd: function(cmd, cb){ libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT, timeout: 5000}, cmd, cb); }});
+function mpdOne(cmd, cb) { libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT, timeout: 5000}, cmd, cb); }
+var rgauto = require('./rgauto.js');                    /* ReplayGain "Automatic": album or track gain depending on the queue */
+var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne,
+  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, onChange); }});
+var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto});
 function doPlaybackGet(query, cb) { playCtl.read(function(r){ cb(r.ok ? 200 : 503, r); }); }
 function doPlaybackSet(body, cb) { playCtl.set(body, cb); }
 
@@ -1630,6 +1634,7 @@ if (require.main === module) {
   setTimeout(pruneLog, 30000);                            /* clean up old undo data */
   setTimeout(dupMigrate, 20000);                          /* duplicates folder of earlier versions: new name, .mpdignore */
   sysInfo.start();                                        /* measure CPU load ("System" page) */
+  rgAuto.start();                                         /* follows the queue via MPD idle */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
   if (process.env.MOODTAGS !== '0' && appConfig().MOODTAGS !== false) {
     moodCollector.start();

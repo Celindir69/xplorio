@@ -325,7 +325,7 @@ langRegister('es', 'Español', {
   'pb.rgNote.off': 'Todas las canciones suenan tan fuerte como se masterizaron.',
   'pb.rgNote.track': 'Cada canción se lleva al mismo volumen; las piezas suaves de un álbum suenan más fuerte.',
   'pb.rgNote.album': 'Los álbumes se nivelan entre sí; se mantienen las diferencias dentro de un álbum.',
-  'pb.rgNote.auto': 'Como "Canción" en aleatorio; si no, como "Álbum".',
+  'pb.rgNote.auto': 'Como "Álbum" mientras suena un álbum en orden; como "Canción" en mezclas y en aleatorio. Xplorio decide de nuevo en cada canción.',
   'pb.rgTags': 'Solo afecta a archivos con etiquetas ReplayGain; las emisiones y los archivos sin etiquetas no cambian.',
   'pb.norm': 'Normalización de Volumio',
   'pb.normState': 'Normalización',

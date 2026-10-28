@@ -325,7 +325,7 @@ langRegister('it', 'Italiano', {
   'pb.rgNote.off': 'Tutti i brani suonano al volume del loro mastering.',
   'pb.rgNote.track': 'Ogni brano viene portato alla stessa intensità; i pezzi più bassi di un album diventano più forti.',
   'pb.rgNote.album': 'Gli album vengono livellati tra loro; le differenze all\'interno di un album restano.',
-  'pb.rgNote.auto': 'Come “Brano” in riproduzione casuale, altrimenti come “Album”.',
+  'pb.rgNote.auto': 'Come “Album” mentre un album suona in ordine; come “Brano” per i mix e la riproduzione casuale. Xplorio decide di nuovo a ogni brano.',
   'pb.rgTags': 'Agisce solo sui file con tag ReplayGain; stream e file senza tag restano invariati.',
   'pb.norm': 'Normalizzazione di Volumio',
   'pb.normState': 'Normalizzazione',

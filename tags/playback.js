@@ -2,7 +2,8 @@
    normalization (volume_normalization, in the MPD configuration). The AutoDJ plugin's automatic mode comes from its
    own REST endpoint (web/js/autodj.js), not from its files.
    MPD sets crossfade and ReplayGain mode at runtime (without restart). Node 8, ES5 only.
-   opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd} (tests) */
+   "Automatic" ReplayGain is Xplorio's own (rgauto.js): album or track gain depending on the queue.
+   opts: mpd(cmd, cb(err, fields)), files: {mpdConf, volumioMpd} (tests), rg: RgAuto (optional) */
 var fs = require('fs');
 
 var MODES = ['off', 'track', 'album', 'auto'], MAX_XFADE = 60;
@@ -49,6 +50,7 @@ function Playback(opts) {
   opts = opts || {};
   this.mpd = opts.mpd;
   this.files = opts.files || FILES;
+  this.rg = opts.rg || null;
 }
 
 Playback.prototype.read = function(cb) {
@@ -56,7 +58,8 @@ Playback.prototype.read = function(cb) {
   this.mpd('status', function(err, st){
     if (err) return cb({ok: false, error: 'mpd'});
     self.mpd('replay_gain_status', function(e2, rg){
-      cb({ok: true, crossfade: parseInt(st.xfade, 10) || 0, replaygain: !e2 && rg.replay_gain_mode || 'off',
+      var mode = self.rg && self.rg.on ? 'auto' : (!e2 && rg.replay_gain_mode || 'off');
+      cb({ok: true, crossfade: parseInt(st.xfade, 10) || 0, replaygain: mode,
           normalization: normalization(self.files)});
     });
   });
@@ -65,9 +68,14 @@ Playback.prototype.read = function(cb) {
 Playback.prototype.set = function(body, cb) {
   var self = this, c = commands(body || {});
   if (c.error) return cb(400, {ok: false, error: c.error});
+  /* "auto" is not passed to MPD, rgauto.js sets album or track itself */
+  var cmds = this.rg ? c.cmds.filter(function(x){ return x !== 'replay_gain_mode auto'; }) : c.cmds;
   (function next(i){
-    if (i >= c.cmds.length) return self.read(function(r){ cb(200, r); });
-    self.mpd(c.cmds[i], function(err){
+    if (i >= cmds.length) {
+      if (!self.rg || body.replaygain === undefined) return self.read(function(r){ cb(200, r); });
+      return self.rg.choose(body.replaygain, function(){ self.read(function(r){ cb(200, r); }); });
+    }
+    self.mpd(cmds[i], function(err){
       if (err) return cb(200, {ok: false, error: 'mpd'});
       next(i + 1);
     });

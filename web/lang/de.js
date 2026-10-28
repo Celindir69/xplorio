@@ -325,7 +325,7 @@ langRegister('de', 'Deutsch', {
   'pb.rgNote.off': 'Alle Titel spielen so laut, wie sie gemastert sind.',
   'pb.rgNote.track': 'Jeder Titel wird auf dieselbe Lautheit gebracht; leise Stücke eines Albums werden lauter.',
   'pb.rgNote.album': 'Alben werden aneinander angeglichen, innerhalb eines Albums bleiben die Unterschiede erhalten.',
-  'pb.rgNote.auto': 'Bei Zufallswiedergabe wie „Titel“, sonst wie „Album“.',
+  'pb.rgNote.auto': 'Läuft ein Album am Stück, wie „Album“; bei Mixen und Zufallswiedergabe wie „Titel“. Xplorio entscheidet bei jedem Titel neu.',
   'pb.rgTags': 'Wirkt nur bei Dateien mit ReplayGain-Tags; Streams und Dateien ohne Tags bleiben unverändert.',
   'pb.norm': 'Volumios Normalisierung',
   'pb.normState': 'Normalisierung',
