@@ -36,7 +36,14 @@ function paintQuality(st) {
   rgFetch(st);
   var tech = q.tech.slice();
   if (rgState.uri === st.uri && rgState.gain) tech.push(qGainText(rgState.gain.db));
-  mTech.textContent = tech.join('  ·  ');
+  /* each value unbreakable, a line break only after a "·": "−8.6 dB" never splits */
+  mTech.textContent = '';
+  tech.forEach(function(v, i){
+    if (i) mTech.appendChild(document.createTextNode('\u00a0· '));
+    var it = document.createElement('span');
+    it.className = 'techItem'; it.textContent = v;
+    mTech.appendChild(it);
+  });
   mTech.title = rgState.uri === st.uri && rgState.gain ? 'ReplayGain (' + T('pb.rg.' + rgState.gain.mode) + ')' : '';
   mBadge.textContent = q.label;
   mBadge.className = 'qBadge' + (q.kind ? ' ' + q.kind : '');
