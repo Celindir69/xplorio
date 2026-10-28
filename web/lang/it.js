@@ -317,6 +317,7 @@ langRegister('it', 'Italiano', {
   'pb.xfade': 'Transizioni (crossfade)',
   'pb.xfadeBad': 'Inserisci un numero intero da 1 a 60 secondi.',
   'pb.xfadeNote': 'Sfuma la fine di un brano nell\'inizio del successivo. Meglio disattivarlo per gli album senza pause tra i brani (live, classica, DJ mix).',
+  'pb.xfadeAutoNote': 'Nessuna dissolvenza all’interno di un album; dissolvenza passando a un altro album e nei mix. Xplorio decide di nuovo a ogni passaggio.',
   'pb.rg': 'Livellamento del volume (ReplayGain)',
   'pb.rg.off': 'Off',
   'pb.rg.track': 'Brano',

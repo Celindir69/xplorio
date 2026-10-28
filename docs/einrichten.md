@@ -264,9 +264,10 @@ sudo systemctl restart xplorio-tags
 Die Gruppe erlaubt nur das Lesen des Journals.
 
 ### Wiedergabe
-Im Menü unter „Wiedergabe“: **Crossfade** an oder aus, mit einer Dauer von 1 bis 60 Sekunden, und **Lautstärke angleichen**
+Im Menü unter „Wiedergabe“: **Crossfade** an, aus oder automatisch, mit einer Dauer von 1 bis 60 Sekunden, und **Lautstärke angleichen**
 (ReplayGain) mit Aus, Titel, Album oder Automatisch. Beides stellt der Tag-Dienst direkt in MPD um, ohne Neustart;
-ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. **Automatisch** entscheidet bei jedem Titel neu: Stammt der Titel davor
+ReplayGain wirkt nur bei Dateien mit ReplayGain-Tags. **Crossfade automatisch** blendet innerhalb eines Albums nicht über, beim Wechsel zu einem anderen Album und in Mixen schon
+(auch bei Zufallswiedergabe, maßgeblich ist der tatsächlich nächste Titel). **ReplayGain automatisch** entscheidet bei jedem Titel neu: Stammt der Titel davor
 oder danach in der Warteschlange vom selben Album, gilt der Album-Wert, sonst (Mixe, einzelne Titel, Zufallswiedergabe) der
 Titel-Wert. MPDs eigenes „auto“ schaut nur auf den Zufallsschalter und spielt Mixe in normaler Reihenfolge mit Album-Wert.
 Steht Volumio auf „auto“, übernimmt Xplorio das ebenfalls; stellt jemand anderes (etwa AutoDJ) einen festen Modus ein,

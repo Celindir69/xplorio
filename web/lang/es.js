@@ -317,6 +317,7 @@ langRegister('es', 'Español', {
   'pb.xfade': 'Transiciones (crossfade)',
   'pb.xfadeBad': 'Introduce un número entero de 1 a 60 segundos.',
   'pb.xfadeNote': 'Funde el final de una canción con el principio de la siguiente. Mejor desactivado para álbumes sin pausas entre canciones (directos, clásica, sesiones de DJ).',
+  'pb.xfadeAutoNote': 'Sin fundido dentro de un álbum; con fundido al pasar a otro álbum y en mezclas. Xplorio decide de nuevo en cada transición.',
   'pb.rg': 'Nivelación de volumen (ReplayGain)',
   'pb.rg.off': 'Desactivada',
   'pb.rg.track': 'Canción',

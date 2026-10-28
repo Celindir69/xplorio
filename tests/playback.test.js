@@ -41,7 +41,7 @@ var files = {mpdConf: f('nichts2.conf'), volumioMpd: f('fehlt2.json')};
 var ctl = new pb.Playback({mpd: mpd, files: files});
 
 t('read: MPD omits xfade at 0', function(){
-  ctl.read(function(r){ assert.deepStrictEqual(r, {ok: true, crossfade: 0, replaygain: 'off', normalization: null}); });
+  ctl.read(function(r){ assert.deepStrictEqual(r, {ok: true, crossfade: 0, replaygain: 'off', crossfadeAuto: false, crossfadeSeconds: null, normalization: null}); });
 });
 t('set: commands to MPD, response with the new state', function(){
   sent = [];
