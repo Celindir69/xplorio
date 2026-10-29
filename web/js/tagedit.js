@@ -850,12 +850,22 @@ function artistCount() {
   tagStatus.textContent = n ? T('tag.bulk.willChange', {n: n}) : T('tag.bulk.noneSelected');
 }
 
+/* saving in chunks still running: leaving the page (reload, closing the tab) would stop it halfway, so the browser asks first.
+   Closing the overlay is fine, saving goes on in the background */
+var tagWriting = 0;
+window.addEventListener('beforeunload', function(ev){
+  if (!tagWriting) return;
+  ev.preventDefault();
+  ev.returnValue = '';
+});
+
 /* write in chunks (shared ID for undo), have MPD rescan only once at the end */
 function artistSave() {
   var items = artistSelected();
   if (!items.length) return;
   var batch = Date.now().toString(36), changed = [], errs = [];
   tagSave.disabled = true; artUi.preview.disabled = true;
+  tagWriting++;
   tagInChunks(items, TAG_WRITE_CHUNK, function(part, done){
     tagStatus.textContent = T('tag.savingProgress', {done: langNum(Math.min(done, items.length)), total: langNum(items.length)});
     return tagPostRetry('/write', {items: part.map(function(it){ return {uri: it.uri, tags: it.tags}; }), batch: batch, scan: false})
@@ -885,7 +895,7 @@ function artistSave() {
     tagStatus.textContent = (e instanceof TypeError ? T('tag.serviceDown') : T('tag.error', {error: e.message})) +
       (changed.length ? T('tag.alreadyChanged', {n: changed.length}) : '');
     if (changed.length) tagPost('/scan', {uris: changed}).catch(function(){});
-  });
+  }).then(function(){ tagWriting--; });
 }
 
 /* after changes, reload the view as soon as MPD has rescanned the files */
