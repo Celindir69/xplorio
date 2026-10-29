@@ -35,6 +35,7 @@
   #mArtist.link:active, #mAlbum.link:active { opacity:1; }
   #mTech   { font-size:calc(3 * var(--vw)); opacity:.45; letter-spacing:.06em; }
   #mTech .techItem { white-space:nowrap; }
+  #mTech .techGain { cursor:pointer; }
   #mGenre  { font-size:calc(3 * var(--vw)); opacity:.45; margin-top:calc(1.2 * var(--vw)); min-height:1.3em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #mGenre span { cursor:pointer; }
   #mGenre span:hover, #mGenre span:active { opacity:.8; }
