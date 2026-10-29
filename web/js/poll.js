@@ -5,9 +5,11 @@ var qualityState = null;
 /* ReplayGain of the current file (tag service /replaygain): asked when the track changes and once more shortly after,
    because the "Automatic" mode may switch between album and track right at the change */
 var rgState = {uri: null, gain: null};
+var rgPicked = false;           /* label "ReplayGain (mode):" shown before the value: tap, or mouse over it (as in the history charts) */
 function rgFetch(st) {
   if (st.uri === rgState.uri) return;
   rgState = {uri: st.uri, gain: null};
+  rgPicked = false;
   if (typeof TAGS === 'undefined' || typeof isLocalTrack !== 'function' || !isLocalTrack(st)) return;
   var uri = st.uri;
   function ask() {
@@ -29,27 +31,37 @@ function rgRefresh() {
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
-  if (st.trackType === 'input') { mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* large icon instead of cover */
-  if (inp) { mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
+  if (st.trackType === 'input') { mTech.dataset.key = ''; mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* large icon instead of cover */
+  if (inp) { mTech.dataset.key = ''; mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
   var q = classifyQuality(st, window.APP_CONFIG);
   rgFetch(st);
   var tech = q.tech.slice();
-  if (rgState.uri === st.uri && rgState.gain) tech.push(qGainText(rgState.gain.db));
+  var gain = rgState.uri === st.uri && rgState.gain;
+  if (gain) tech.push((rgPicked ? 'ReplayGain (' + T('pb.rg.' + gain.mode) + '): ' : '') + qGainText(gain.db));
   /* each value unbreakable, a line break only after a "·": "−8.6 dB" never splits */
-  mTech.textContent = '';
-  tech.forEach(function(v, i){
-    if (i) mTech.appendChild(document.createTextNode('\u00a0· '));
-    var it = document.createElement('span');
-    it.className = 'techItem'; it.textContent = v;
-    mTech.appendChild(it);
-  });
-  mTech.title = rgState.uri === st.uri && rgState.gain ? 'ReplayGain (' + T('pb.rg.' + rgState.gain.mode) + ')' : '';
+  var key = tech.join('|') + (gain ? '|rg' : '');
+  if (mTech.dataset.key !== key) {
+    mTech.dataset.key = key;
+    mTech.textContent = '';
+    tech.forEach(function(v, i){
+      if (i) mTech.appendChild(document.createTextNode('\u00a0· '));
+      var it = document.createElement('span');
+      it.className = 'techItem' + (gain && i === tech.length - 1 ? ' techGain' : ''); it.textContent = v;
+      mTech.appendChild(it);
+    });
+  }
   mBadge.textContent = q.label;
   mBadge.className = 'qBadge' + (q.kind ? ' ' + q.kind : '');
 }
-/* touch devices show no title tooltip: tapping the line shows the same text as a message */
-mTech.addEventListener('click', function(){ if (mTech.title) showToast(mTech.title); });
+function rgPick(on) {
+  if (rgPicked === on) return;
+  rgPicked = on;
+  if (qualityState) paintQuality(qualityState);
+}
+mTech.addEventListener('click', function(e){ if (e.target.closest('.techGain')) rgPick(!rgPicked); });
+mTech.addEventListener('pointerover', function(e){ if (e.pointerType === 'mouse' && e.target.closest('.techGain')) rgPick(true); });   /* touch: tap only */
+mTech.addEventListener('pointerout', function(e){ if (e.pointerType === 'mouse' && e.target.closest('.techGain')) rgPick(false); });
 
 /* Web radio: if the player shows a station logo (address from Volumio), report it to the tag service for the station list.
    The station list knows the name (radioNames in library.js); once per station and address */
