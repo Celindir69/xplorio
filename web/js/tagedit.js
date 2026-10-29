@@ -511,8 +511,11 @@ var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
 var TAG_CHUNK = 100;                                 /* files per request to the tag service */
+var TAG_WRITE_CHUNK = 20;                            /* files per write request: rewriting m4a on a NAS is slow, and
+                                                        Safari gives up on a request that stays silent for about a minute */
+var TAG_RETRY = [5000, 15000, 30000];                /* waits before repeating a request after a network error */
 
-var artName = '', artFiles = [], artErrors = 0;      /* artFiles: [{uri, tags}] */
+var artName = '', artFiles = [], artBad = [];         /* artFiles: [{uri, tags}]; artBad: unreadable [{uri, error}] */
 var artSeq = 0;                                       /* discards answers for a previously opened editor */
 var artUi = null;                                     /* input elements of the view */
 var artChanges = [];                                  /* preview: [{from, to, tags:{field:value}, files:[f], check}] */
@@ -579,10 +582,24 @@ function tagInChunks(list, size, fn) {
   return step();
 }
 
+/* tagPost, but repeat it after a network error (screen locked, Wi-Fi gone, tag service restarting).
+   Safe for /write: files already written come back as unchanged, and the change log keeps them under the same batch */
+function tagPostRetry(route, body) {
+  var n = 0;
+  function attempt() {
+    return tagPost(route, body).catch(function(e){
+      if (!(e instanceof TypeError) || n >= TAG_RETRY.length) throw e;
+      tagStatus.textContent = T('tag.retrying');
+      return new Promise(function(ok){ setTimeout(ok, TAG_RETRY[n++]); }).then(attempt);
+    }).then(function(res){ if (res && n) res.retried = true; return res; });
+  }
+  return attempt();
+}
+
 function tagBulkStart(heading) {
   tagMode = 'artist';
   var seq = ++artSeq;
-  artFiles = []; artErrors = 0; artChanges = []; artUi = null;
+  artFiles = []; artBad = []; artChanges = []; artUi = null;
   document.getElementById('tagTitle').textContent = heading;
   tagBatch = null; tagUndo.style.display = 'none'; tagSave.disabled = true; tagSave.textContent = T('tag.save');
   tagStatus.textContent = '';
@@ -604,7 +621,7 @@ function tagBulkLoad(seq, uris) {
     return tagPost('/read', {uris: part}).then(function(r){
       if (!r.ok) throw new Error(r.error || T('tag.readFailed'));
       r.items.forEach(function(it){
-        if (it.ok) artFiles.push({uri: it.uri, tags: it.tags || {}}); else artErrors++;
+        if (it.ok) artFiles.push({uri: it.uri, tags: it.tags || {}}); else artBad.push({uri: it.uri, error: it.error || ''});
       });
     });
   }).then(function(){ if (seq === artSeq) artistRender(); });
@@ -632,6 +649,40 @@ function openBulkEditor(uris, heading, preset) {
   tagBulkLoad(seq, uris).catch(function(e){ tagBulkFail(seq, e); });
 }
 
+/* readable reason for a file the tag service could not read (its errors are short English texts) */
+var TAG_EXT_RE = /\.(m4a|mp4|m4b|flac|mp3|dsf)$/i;   /* same list as EXT_RE in tags/tag-service.js */
+function tagWhy(uri, error) {
+  var ext = (String(uri).match(/\.([^.\/]+)$/) || [])[1];
+  if (!TAG_EXT_RE.test(uri)) return T('tag.why.format', {ext: ext ? '.' + ext.toLowerCase() : '?'});
+  if (error === 'file not found') return T('tag.why.missing');
+  if (error === 'path not allowed') return T('tag.why.path');
+  if (/permission denied|EACCES|EPERM/i.test(error)) return T('tag.why.perm');
+  if (/timeout/i.test(error)) return T('tag.why.timeout');
+  return T('tag.why.broken', {error: error || '?'});
+}
+
+/* collapsible list of the unreadable files with folder, file name and reason */
+function tagBadList(bad) {
+  var box = document.createElement('details');
+  box.className = 'tagBad';
+  var sum = document.createElement('summary');
+  sum.textContent = T('tag.bulk.showUnreadable');
+  box.appendChild(sum);
+  bad.forEach(function(f){
+    var row = document.createElement('div');
+    row.className = 'tagRow err';
+    var name = document.createElement('div');
+    name.className = 'tagBadName';
+    name.textContent = String(f.uri).split('/').slice(-2).join(' / ');
+    name.title = f.uri;
+    var why = document.createElement('div');
+    why.textContent = tagWhy(f.uri, f.error);
+    row.appendChild(name); row.appendChild(why);
+    box.appendChild(row);
+  });
+  return box;
+}
+
 function artistRender() {
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
   var albums = {};
@@ -640,8 +691,9 @@ function artistRender() {
   var info = document.createElement('div');
   info.className = 'tagInfo';
   info.textContent = T('tag.bulk.info', {tracks: T('tag.bulk.tracks', {n: artFiles.length}), albums: T('tag.bulk.albums', {n: n})}) +
-    (artErrors ? T('tag.bulk.unreadable', {n: artErrors}) : '');
+    (artBad.length ? T('tag.bulk.unreadable', {n: artBad.length}) : '');
   tagBody.appendChild(info);
+  if (artBad.length) tagBody.appendChild(tagBadList(artBad));
 
   var ui = artUi = {
     field: tagSelect(TAG_BULK_FIELDS, artUi ? artUi.field.value : 'artist'),
@@ -804,14 +856,15 @@ function artistSave() {
   if (!items.length) return;
   var batch = Date.now().toString(36), changed = [], errs = [];
   tagSave.disabled = true; artUi.preview.disabled = true;
-  tagInChunks(items, TAG_CHUNK, function(part, done){
+  tagInChunks(items, TAG_WRITE_CHUNK, function(part, done){
     tagStatus.textContent = T('tag.savingProgress', {done: langNum(Math.min(done, items.length)), total: langNum(items.length)});
-    return tagPost('/write', {items: part.map(function(it){ return {uri: it.uri, tags: it.tags}; }), batch: batch, scan: false})
+    return tagPostRetry('/write', {items: part.map(function(it){ return {uri: it.uri, tags: it.tags}; }), batch: batch, scan: false})
       .then(function(res){
         if (!res.ok) throw new Error(res.error || T('tag.writeFailed'));
         res.items.forEach(function(r, k){
           var it = part[k];
           if (!r.ok) { errs.push(r.error); return; }
+          if (!r.changed && res.retried) changed.push(it.uri);   /* may have been written by the lost first attempt */
           if (r.changed) { changed.push(it.uri); Object.keys(r.after || {}).forEach(function(f){ it.file.tags[f] = r.after[f]; }); }
         });
       });

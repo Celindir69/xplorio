@@ -379,6 +379,10 @@
   .tagSectionAa > span { opacity:.5; }
   .tagSectionAa .tagAa { font-size:calc(3.4 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(2 * var(--vw)); }
   .tagInfo { font-size:calc(3.4 * var(--vw)); opacity:.65; margin-bottom:calc(4 * var(--vw)); }
+  .tagBad { margin:calc(-2 * var(--vw)) 0 calc(4 * var(--vw)) 0; }
+  .tagBad > summary { font-size:calc(3.4 * var(--vw)); color:var(--err); cursor:pointer; margin-bottom:calc(2 * var(--vw)); }
+  .tagBad .tagRow { flex-direction:column; gap:calc(.5 * var(--vw)); }
+  .tagBadName { color:var(--fg); opacity:.8; overflow-wrap:anywhere; }
   .tagBtn { background:rgba(var(--fg-rgb),.15); border:1px solid rgba(var(--fg-rgb),.25); border-radius:calc(3 * var(--vw));
     color:var(--fg); font-family:inherit; font-size:calc(3.8 * var(--vw)); padding:calc(2.2 * var(--vw)) calc(4 * var(--vw));
     cursor:pointer; -webkit-appearance:none; margin:calc(1 * var(--vw)) 0 calc(4 * var(--vw)) 0; }
