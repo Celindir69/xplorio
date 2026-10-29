@@ -82,6 +82,25 @@ t('same top genre alone is not enough: a shared style is needed', function(){
   together.build(prep({plays: hist}), {rnd: together.seeded('s'), n: 10}).forEach(function(m){ assert.ok(m.why.style, m.key); });
 });
 
+t('similarity per part: genre cannot outweigh style and mood; tempo and energy must be close', function(){
+  function art(ge, st, mo, bpm, en) {
+    var p = {s: {}, m: {}, g: {}};
+    p.g['g:' + ge] = 1; p.s['s:' + st] = 1; p.m['m:' + mo] = 1;
+    return {parts: p, bpm: bpm, en: en};
+  }
+  var tripHop = art('electronic', 'trip hop', 'melancholic', 90, 2);
+  var techno = art('electronic', 'techno', 'energetic', 128, 4);
+  var downtempo = art('pop', 'trip hop', 'melancholic', 92, 2);
+  assert.ok(together.sim(tripHop, downtempo) > together.sim(tripHop, techno), 'same style and mood beats same genre');
+  assert.ok(together.sim(tripHop, techno) < 0.15, 'genre alone (plus a little tempo): far below the bar');
+  assert.ok(Math.abs(together.bpmDist(90, 180)) < 1e-9, 'double tempo counts as the same');
+  assert.ok(together.bpmDist(90, 120) > 0.15);
+  assert.strictEqual(together.paceOk(tripHop, techno), false);
+  assert.strictEqual(together.paceOk(tripHop, downtempo), true);
+  assert.strictEqual(together.paceOk(tripHop, art('pop', 'trip hop', 'melancholic', 90, 4)), false, 'energy two steps apart');
+  assert.strictEqual(together.paceOk(tripHop, art('pop', 'trip hop', 'melancholic', null, null)), true, 'unknown counts as close');
+});
+
 t('Last.fm lists the partner: noted as reason', function(){
   var sim = {a: {b: true, c: true, d: true}};
   var out = together.build(prep({plays: hist}), {rnd: together.seeded('y'), similar: sim});

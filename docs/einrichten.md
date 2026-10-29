@@ -364,7 +364,9 @@ fehlt die Reihe.
 oder drei Künstlern der eigenen Sammlung, die musikalisch zusammenpassen. Ausgangspunkt ist ein Künstler, den man oft
 hört oder mit Herz markiert hat; dazu kommen Künstler mit ähnlichem Klang (Genre, Stimmung, Stil und Energie aus den
 Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Dasselbe Obergenre allein genügt nicht: Die Künstler
-müssen einen Stil gemeinsam haben (etwa „Trip Hop“, nicht nur „Electronic“), oder Last.fm nennt sie als ähnlich. Nennt Last.fm einen davon als ähnlichen Künstler,
+müssen einen Stil gemeinsam haben (etwa „Trip Hop“, nicht nur „Electronic“), oder Last.fm nennt sie als ähnlich. Die Ähnlichkeit
+wird in Teilen bewertet: Stile 45 %, Stimmungen 25 %, Tempo und Energie 20 %, Genre 10 %. Mittleres Tempo (halbes oder
+doppeltes zählt als gleich) darf höchstens rund 15 % auseinanderliegen, die mittlere Energie höchstens eine Stufe. Nennt Last.fm einen davon als ähnlichen Künstler,
 zählt das mit (nur mit Last.fm-Key), seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
 Künstler und was sie verbindet. Ein Tipp öffnet die Vorschau: etwa 25 Titel, rund 40 % Lieblingstitel (oft gehört,
 Favorit oder Album mit 4–5 Sternen) und der Rest selten oder nie gehört (nie Gehörtes ist mit „neu“ markiert); die Künstler wechseln sich ab,
