@@ -363,13 +363,15 @@ fehlt die Reihe.
 **Passt zusammen** (nur mit Tag-Dienst): Im Reiter „Künstler“ beim Entdecken und auf der Begrüßung stehen Mixe aus zwei
 oder drei Künstlern der eigenen Sammlung, die musikalisch zusammenpassen. Ausgangspunkt ist ein Künstler, den man oft
 hört oder mit Herz markiert hat; dazu kommen Künstler mit ähnlichem Klang (Genre, Stimmung, Stil und Energie aus den
-Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Nennt Last.fm einen davon als ähnlichen Künstler,
+Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Dasselbe Obergenre allein genügt nicht: Die Künstler
+müssen einen Stil gemeinsam haben (etwa „Trip Hop“, nicht nur „Electronic“), oder Last.fm nennt sie als ähnlich. Nennt Last.fm einen davon als ähnlichen Künstler,
 zählt das mit (nur mit Last.fm-Key), seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
 Künstler und was sie verbindet. Ein Tipp öffnet die Vorschau: etwa 25 Titel, rund 40 % Lieblingstitel (oft gehört,
 Favorit oder Album mit 4–5 Sternen) und der Rest selten oder nie gehört (nie Gehörtes ist mit „neu“ markiert); die Künstler wechseln sich ab,
 Energie und Tempo gehen sanft ineinander über. „Mix abspielen“ ersetzt die Warteschlange, der Würfel zieht einen neuen
 Mix, + hängt ihn an. Die Mixe bleiben den ganzen Tag gleich, ↻ würfelt neue. Der Tag-Dienst merkt sich die gezeigten
-Paarungen sieben Tage in `/data/xplorio/data/together.json`, damit sie sich nicht gleich wiederholen. Nicht dabei:
+Paarungen sieben Tage in `/data/xplorio/data/together.json`, damit sie sich nicht gleich wiederholen; reichen die neuen
+Paarungen nicht für sechs Kacheln, füllt er mit Paarungen der letzten Tage auf. Nicht dabei:
 „Verschiedene“, Künstler mit weniger als sechs Titeln, Titel mit „mag ich nicht“ und Alben mit 1–2 Sternen.
 
 **Entdecken auf der Künstlerseite:** Die Künstlerseite hat drei Reiter: „Alben & Titel“, „Entdecken“ und „Hintergrund“

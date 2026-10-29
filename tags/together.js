@@ -1,7 +1,8 @@
 /* Goes together: mixes of 2–3 artists from one's own collection that fit well together musically.
    The anchor is an artist one listens to often or has marked with a heart; plus 1–2 artists with a similar sound profile
    (genre, moods, styles, energy from the mood tags, as for the gems in gems.js); Last.fm "similar artists"
-   count extra, less often heard ones get a small head start. One mix: about 25 tracks, around 40 % favorite tracks
+   count extra, less often heard ones get a small head start. The same top genre alone is not enough: the artists must
+   share a style (subgenre, e.g. "trip hop" rather than "electronic"), or Last.fm must list them as similar. One mix: about 25 tracks, around 40 % favorite tracks
    (often heard, favorite, album with 4–5 stars) and 60 % rarely or never heard; "don't like" and albums with
    1–2 stars stay out. The artists alternate, energy and tempo blend smoothly.
    Works on the prepared state from gems.prepare. Node 8, ES5 only. */
@@ -13,6 +14,7 @@ var MIN_SIM = 0.3;               /* minimum sound similarity (cosine) for a pair
 var TOP_SHARE = 0.15;            /* … and among the most similar 15 % of all pairs in the collection */
 var SAMPLE = 4000;               /* this many pairs are enough to estimate that threshold */
 var LFM_BONUS = 0.15;            /* Last.fm lists the artist as similar */
+var STYLE_MIN = 0.08;            /* shared style: weight in the (unit) profile of both artists at least this */
 var RARE_BONUS = 0.1;            /* partner is heard much less often than the anchor */
 var THIRD_CHANCE = 0.6;          /* how often a third artist is added if one fits */
 var SIZE = 25;                   /* tracks per mix */
@@ -79,6 +81,17 @@ function threshold(p) {
   return Math.max(MIN_SIM, sims[Math.min(sims.length - 1, Math.floor(sims.length * TOP_SHARE))]);
 }
 
+/* strongest style all members share: weight of the weakest member, 0 = none in common */
+function sharedStyle(members) {
+  var best = 0;
+  Object.keys(members[0].v).forEach(function(k){
+    if (k.charAt(0) !== 's') return;
+    var w = Math.min.apply(null, members.map(function(a){ return a.v[k] || 0; }));
+    if (w > best) best = w;
+  });
+  return best;
+}
+
 /* weight as anchor: heart or good rating and how often heard; 0 = never heard and not liked */
 function anchorWeight(a) { return (a.liked ? 3 : 0) + Math.log(1 + a.plays); }
 
@@ -122,8 +135,15 @@ function build(g, opts) {
   function score(a, b) {
     var s = cos(a.v, b.v), l = lf(a, b);
     if (s < min && !(l && s >= Math.max(min - LFM_BONUS, MIN_SIM))) return 0;
+    if (!l && sharedStyle([a, b]) < STYLE_MIN) return 0;          /* the same top genre alone is not enough */
     return s + (l ? LFM_BONUS : 0) + (b.plays * 3 < a.plays ? RARE_BONUS : 0);
   }
+  /* first pairings not shown in the last days; if that gives fewer than n, fill up with ones shown before */
+  pass(avoid);
+  if (out.length < n) pass({});
+  return out;
+
+  function pass(skip) {
   for (var i = 0; i < anc.length && out.length < n; i++) {
     var a = anc[i];
     if (used[a.ak]) continue;
@@ -136,18 +156,18 @@ function build(g, opts) {
       if (rnd() < THIRD_CHANCE) {
         var third = cand.filter(function(c){ return c !== a && c !== b && !used[c.ak]; })
           .map(function(c){ return {c: c, s: Math.min(score(a, c), score(b, c))}; })
-          .filter(function(x){ return x.s > 0; }).sort(function(x, y){ return y.s - x.s; })[0];
+          .filter(function(x){ return x.s > 0 && (lf(a, x.c) || sharedStyle([a, b, x.c]) >= STYLE_MIN); }).sort(function(x, y){ return y.s - x.s; })[0];
         if (third) members.push(third.c);
       }
       var key = members.map(function(m){ return m.ak; }).sort().join('+');
-      if (avoid[key]) continue;
+      if (skip[key]) continue;
       members.forEach(function(m){ used[m.ak] = true; });
       out.push({key: key, artists: members.map(function(m){ return {ar: m.ar, n: m.tracks.length}; }),
                 why: why(g, members, members.slice(1).some(function(m){ return lf(a, m); }))});
       break;
     }
   }
-  return out;
+  }
 }
 
 /* favorite track: often heard, Volumio favorite or album with 4–5 stars */
@@ -216,4 +236,4 @@ function mix(g, names, opts) {
   });
 }
 
-module.exports = {build: build, mix: mix, anchors: anchors, pool: pool, seeded: seeded, MIXES: MIXES, SIZE: SIZE};
+module.exports = {build: build, mix: mix, anchors: anchors, pool: pool, seeded: seeded, sharedStyle: sharedStyle, MIXES: MIXES, SIZE: SIZE};

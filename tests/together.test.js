@@ -60,10 +60,26 @@ t('same day, same selection', function(){
   assert.deepStrictEqual(a, b);
 });
 
-t('recently shown is skipped', function(){
+t('recently shown comes only to fill up, after the new ones', function(){
   var g = prep({plays: hist}), avoid = {};
-  together.build(g, {rnd: together.seeded('x')}).forEach(function(m){ avoid[m.key] = true; });
-  together.build(g, {rnd: together.seeded('x'), avoid: avoid}).forEach(function(m){ assert.ok(!avoid[m.key], m.key); });
+  var first = together.build(g, {rnd: together.seeded('x')});
+  avoid[first[0].key] = true;
+  var again = together.build(g, {rnd: together.seeded('x'), avoid: avoid});
+  assert.strictEqual(again.length, first.length, 'still as many tiles');
+  var at = again.map(function(m){ return m.key; }).indexOf(first[0].key);
+  again.forEach(function(m, i){ if (!avoid[m.key]) assert.ok(at < 0 || i < at, 'new ones first'); });
+  first.forEach(function(m){ avoid[m.key] = true; });
+  assert.ok(together.build(g, {rnd: together.seeded('x'), avoid: avoid}).length > 0, 'all shown already: filled from the last days');
+});
+
+t('same top genre alone is not enough: a shared style is needed', function(){
+  var E = {v: {'g:electronic': 0.59, 'm:melancholic': 0.59, 's:trip hop': 0.47, 'e:2': 0.29}};
+  var F = {v: {'g:electronic': 0.59, 'm:melancholic': 0.59, 's:techno': 0.47, 'e:2': 0.29}};
+  var G = {v: {'g:electronic': 0.6, 's:trip hop': 0.2, 's:downtempo': 0.4, 'm:relaxed': 0.67}};
+  assert.strictEqual(together.sharedStyle([E, F]), 0, 'electronic + mood, but no shared style');
+  assert.strictEqual(together.sharedStyle([E, G]), 0.2);
+  assert.strictEqual(together.sharedStyle([E, G, F]), 0);
+  together.build(prep({plays: hist}), {rnd: together.seeded('s'), n: 10}).forEach(function(m){ assert.ok(m.why.style, m.key); });
 });
 
 t('Last.fm lists the partner: noted as reason', function(){
