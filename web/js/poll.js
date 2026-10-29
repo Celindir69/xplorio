@@ -48,6 +48,8 @@ function paintQuality(st) {
   mBadge.textContent = q.label;
   mBadge.className = 'qBadge' + (q.kind ? ' ' + q.kind : '');
 }
+/* touch devices show no title tooltip: tapping the line shows the same text as a message */
+mTech.addEventListener('click', function(){ if (mTech.title) showToast(mTech.title); });
 
 /* Web radio: if the player shows a station logo (address from Volumio), report it to the tag service for the station list.
    The station list knows the name (radioNames in library.js); once per station and address */
