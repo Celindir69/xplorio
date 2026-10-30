@@ -507,7 +507,7 @@ function tagCoverSection(good) {
 
 /* ---------- Bulk editing (all tracks of an artist or an album) ---------- */
 var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag.field.albumartist')], ['album', T('tag.field.album')],
-                       ['title', T('tag.field.title')], ['genre', T('tag.field.genre')], ['composer', T('tag.field.composer')]];
+                       ['title', T('tag.field.title')], ['genre', T('tag.field.genre')], ['date', T('tag.field.year')], ['composer', T('tag.field.composer')]];
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
 var TAG_CHUNK = 100;                                 /* files per request to the tag service */
