@@ -96,8 +96,12 @@ ControllerXplorio.prototype.onStart = function() {
     if (s.id) return go();
     portFree(port, function(free){                                  /* web server: is the port taken by something else? */
       if (free) return go();
-      self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
-      failed = 'port ' + port + ' in use'; next();
+      /* Volumio restarted on its own: our web server kept running and holds the port itself, so restart it */
+      self.exec('/bin/systemctl', ['is-active', '--quiet', s.unit + '.service'], function(err){
+        if (!err) return go();
+        self.toast('error', self.str('PORT_BUSY').replace('{port}', port));
+        failed = 'port ' + port + ' in use'; next();
+      });
     });
   })();
   return defer.promise;

@@ -88,7 +88,7 @@ t('uninstall.sh: caches and runtime files go, the user\'s data stays', function(
 });
 
 var Plugin = require(path.join(P, 'index.js'));
-var toasts = [], calls = [], failing = {};
+var toasts = [], calls = [], failing = {}, active = {};
 function makePlugin() {
   var p = new Plugin({coreCommand: {
       pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); }},
@@ -99,6 +99,7 @@ function makePlugin() {
   /* /usr/bin/sudo -n /bin/systemctl <action> <unit> */
   p.exec = function(cmd, args, cb){
     calls.push([cmd].concat(args).join(' '));
+    if (args[0] === 'is-active') return setImmediate(function(){ cb(active[args[2]] ? null : new Error('inactive')); });   /* /bin/systemctl is-active --quiet <unit> */
     setImmediate(function(){ cb(failing[args[3]] ? new Error('failed') : null); });
   };
   return p;
@@ -171,6 +172,16 @@ plug.onStart().then(function(){
       assert.ok(/Port \d+ ist belegt/.test(toasts.pop()[1]));
       assert.ok(sudo().indexOf('restart xplorio-web.service') < 0);
     });
+    /* Volumio restarted alone: the port is held by our own web server, which is still running */
+    active['xplorio-web.service'] = true; calls = [];
+    return new Promise(function(res){ plug.onStart().then(function(){ res('started'); }, function(e){ res(e.message); }); });
+  }).then(function(r){
+    t('start: port held by the own running web server (Volumio restarted alone), it is restarted, no message', function(){
+      assert.strictEqual(r, 'started');
+      assert.ok(sudo().indexOf('restart xplorio-web.service') >= 0);
+      assert.ok(!toasts.length || !/belegt/.test(toasts[toasts.length - 1][1]));
+    });
+    delete active['xplorio-web.service'];
     blocker.close();
   });
 }).then(function(){
