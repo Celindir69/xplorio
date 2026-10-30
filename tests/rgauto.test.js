@@ -98,4 +98,37 @@ t('Playback page: "Automatic" goes to rgauto, not to MPD; other modes switch it 
     assert.strictEqual(x.rg.on, false);
   });
 });
+/* Volumio 2: MPD holds only the current track (consume on), the album is in Volumio's queue */
+function vol(album, file) { return {uri: 'mnt/USB/' + file, album: album, artist: 'X'}; }
+var V = [vol('Secret Fires', 'SF/01.flac'), vol('Secret Fires', 'SF/02.flac'), vol('Secret Fires', 'SF/03.flac'), vol('Hits', 'H/01.flac')];
+function makeQ(name, q) {
+  var r = new rga.RgAuto({file: path.join(dir, name), mpd: mpd, idle: function(){ return function(){}; },
+                          queue: function(cb){ q.fail ? cb(new Error('down')) : cb(null, q); }});
+  r.save(true);
+  return r;
+}
+
+t('Volumio queue: album gain although MPD only holds the current track (no album artist)', function(){
+  reset([{file: 'USB/SF/02.flac', album: 'Secret Fires', albumartist: ''}], 0, 'track');
+  makeQ('vq1.json', {pos: 1, random: false, items: V}).check();
+  assert.strictEqual(mpdState.mode, 'album');
+});
+
+t('Volumio queue: track gain at the change into a mix, with Volumio shuffle, and for another folder with the same title', function(){
+  reset([{file: 'USB/H/01.flac'}], 0, 'album');
+  makeQ('vq2.json', {pos: 3, random: false, items: V}).check();
+  assert.strictEqual(mpdState.mode, 'track');
+  reset([{file: 'USB/SF/02.flac'}], 0, 'album');
+  makeQ('vq3.json', {pos: 1, random: true, items: V}).check();
+  assert.strictEqual(mpdState.mode, 'track', 'shuffle');
+  reset([{file: 'x'}], 0, 'album');
+  makeQ('vq4.json', {pos: 0, random: false, items: [vol('Best Of', 'A/01.flac'), vol('Best Of', 'B/01.flac')]}).check();
+  assert.strictEqual(mpdState.mode, 'track', 'same title, other folder');
+});
+
+t('Volumio queue unavailable: MPD queue as before', function(){
+  reset([A, A2], 0, 'track');
+  makeQ('vq5.json', {fail: true}).check();
+  assert.strictEqual(mpdState.mode, 'album');
+});
 console.log(n + ' checks');

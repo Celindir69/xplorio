@@ -1,10 +1,13 @@
 /* ReplayGain "Automatic" (Playback page): album gain while an album plays in order, track gain for mixes.
    MPD's own "auto" only looks at the shuffle switch, so a mix in a queue in order would play with album gain.
    Here the current track decides: album gain if its neighbour before or after in the queue is from the same album
-   (and shuffle is off), otherwise track gain. MPD reports every change (idle), the mode is switched at runtime.
+   (and shuffle is off), otherwise track gain. The queue is Volumio's (opts.queue): Volumio 2 hands MPD only the
+   current track (plus the next one shortly before the end, consume on), so MPD's own queue has no neighbours;
+   without opts.queue, or if Volumio does not answer, MPD's queue is used. MPD reports every change (idle), the mode is switched at runtime.
    Taken over: Volumio or MPD set to "auto" (e.g. Volumio's playback options). Ended: another mode set here or
    elsewhere (e.g. AutoDJ's automatic mode). The choice is kept in replaygain.json. Node 8, ES5 only.
-   opts: file, mpd(cmd, cb(err, fields)), idle(onChange) -> stop() (both replaceable for tests) */
+   opts: file, mpd(cmd, cb(err, fields)), idle(onChange) -> stop(),
+         queue(cb(err, {pos, random, items})) optional: Volumio's queue (all replaceable for tests) */
 var fs  = require('fs');
 var net = require('net');
 
@@ -12,6 +15,14 @@ var net = require('net');
 function albumKey(s) {
   if (!s || !s.album) return '';
   return String(s.album).toLowerCase() + '\0' + String(s.albumartist || '').toLowerCase();
+}
+
+/* entry of Volumio's queue -> like an MPD entry; Volumio has no album artist there, the folder stands in for it
+   (a compilation has one folder but many artists) */
+function fromVolumio(it) {
+  if (!it) return null;
+  var uri = String(it.uri || '');
+  return {file: uri, album: it.album || '', albumartist: it.album ? uri.replace(/\/[^\/]*$/, '') : ''};
 }
 
 /* status: MPD status; prev, cur, next: queue entries (or null) -> 'album' | 'track' | null (nothing playing) */
@@ -51,6 +62,7 @@ function RgAuto(opts) {
   this.file = opts.file;
   this.mpd = opts.mpd;
   this.idle = opts.idle;
+  this.queue = opts.queue || null;
   this.on = false;
   this.mine = null;              /* mode last set here: a different one comes from elsewhere */
   this.busy = false; this.again = false;
@@ -59,7 +71,12 @@ function RgAuto(opts) {
 
 RgAuto.prototype.start = function() {
   var self = this;
-  this.stop = this.idle(function(){ self.check(); });
+  var later = null;
+  this.stop = this.idle(function(){
+    self.check();
+    /* Volumio updates its state a moment after MPD: look again so a track change is judged by the new position */
+    if (self.queue) { clearTimeout(later); later = setTimeout(function(){ self.check(); }, 2500); if (later.unref) later.unref(); }
+  });
 };
 
 RgAuto.prototype.save = function(on) {
@@ -93,27 +110,35 @@ RgAuto.prototype.check = function(cb) {
     if (now === 'auto') { if (!self.on) self.save(true); self.mine = null; }
     else if (self.on && self.mine && now !== self.mine) { self.save(false); return done(); }
     if (!self.on) return done();
-    self.mpd('status', function(e2, st){
-      if (e2 || st.song === undefined) return done();
-      var pos = parseInt(st.song, 10), len = parseInt(st.playlistlength, 10) || 0;
-      function entry(p, next) {
-        if (p < 0 || p >= len) return next(null);
-        self.mpd('playlistinfo ' + p, function(e3, s){ next(e3 ? null : s); });
-      }
-      entry(pos, function(cur){
-        entry(pos - 1, function(prev){
-          entry(pos + 1, function(nxt){
-            var want = pick(st, prev, cur, nxt);
-            if (!want || want === now) { if (want) self.mine = want; return done(); }
-            self.mpd('replay_gain_mode ' + want, function(e4){
-              if (!e4) self.mine = want;
-              done();
-            });
+    function apply(want) {
+      if (!want || want === now) { if (want) self.mine = want; return done(); }
+      self.mpd('replay_gain_mode ' + want, function(e4){
+        if (!e4) self.mine = want;
+        done();
+      });
+    }
+    function fromMpd() {
+      self.mpd('status', function(e2, st){
+        if (e2 || st.song === undefined) return done();
+        var pos = parseInt(st.song, 10), len = parseInt(st.playlistlength, 10) || 0;
+        function entry(p, next) {
+          if (p < 0 || p >= len) return next(null);
+          self.mpd('playlistinfo ' + p, function(e3, s){ next(e3 ? null : s); });
+        }
+        entry(pos, function(cur){
+          entry(pos - 1, function(prev){
+            entry(pos + 1, function(nxt){ apply(pick(st, prev, cur, nxt)); });
           });
         });
       });
+    }
+    if (!self.queue) return fromMpd();
+    self.queue(function(eq, q){
+      if (eq || !q || !q.items || !(q.pos >= 0) || !q.items[q.pos]) return fromMpd();
+      var it = q.items;
+      apply(pick({random: q.random ? '1' : '0'}, fromVolumio(it[q.pos - 1]), fromVolumio(it[q.pos]), fromVolumio(it[q.pos + 1])));
     });
   });
 };
 
-module.exports = {RgAuto: RgAuto, pick: pick, albumKey: albumKey, mpdIdle: mpdIdle};
+module.exports = {RgAuto: RgAuto, pick: pick, albumKey: albumKey, fromVolumio: fromVolumio, mpdIdle: mpdIdle};
