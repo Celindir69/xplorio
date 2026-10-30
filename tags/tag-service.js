@@ -589,13 +589,14 @@ var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, functio
 var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); }, function(e){ lfm.nowPlaying(e); });
 var recording = false;
 
-function playerState(cb) {
+function playerState(cb) { volumioGet('/api/v1/getState', 1024 * 1024, cb); }
+function volumioGet(route, max, cb) {
   var done = false;
   function finish(e, st) { if (!done) { done = true; cb(e, st); } }
-  var req = http.get(VOLUMIO_URL + '/api/v1/getState', function(res){
+  var req = http.get(VOLUMIO_URL + route, function(res){
     var data = '';
     res.setEncoding('utf8');
-    res.on('data', function(d){ data += d; if (data.length > 1024 * 1024) { req.abort(); finish(new Error('response too large')); } });
+    res.on('data', function(d){ data += d; if (data.length > max) { req.abort(); finish(new Error('response too large')); } });
     res.on('aborted', function(){ finish(new Error('aborted')); });
     res.on('end', function(){ try { finish(null, JSON.parse(data)); } catch (e) { finish(e); } });
   });
@@ -1305,7 +1306,17 @@ var sysInfo = new sysinfo.Sysinfo({file: path.join(DATA_DIR, 'sysinfo.json')});
 var playback = require('./playback.js');
 function mpdOne(cmd, cb) { libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT, timeout: 5000}, cmd, cb); }
 var rgauto = require('./rgauto.js');                    /* ReplayGain "Automatic": album or track gain depending on the queue */
-var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne,
+/* Volumio's queue and position for "Automatic" (Volumio 2 gives MPD only the current track) */
+function volumioQueue(cb) {
+  playerState(function(e, st){
+    if (e || !st || typeof st.position !== 'number') return cb(e || new Error('no position'));
+    volumioGet('/api/v1/getQueue', 16 * 1024 * 1024, function(e2, q){
+      if (e2 || !q || !Array.isArray(q.queue)) return cb(e2 || new Error('no queue'));
+      cb(null, {pos: st.position, random: !!st.random, items: q.queue});
+    });
+  });
+}
+var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne, queue: volumioQueue,
   idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); }); }});
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
