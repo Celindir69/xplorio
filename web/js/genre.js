@@ -18,11 +18,16 @@ function genreSearch() {
     if (!r || !r.ok) { searchResults.appendChild(browseNote(r && r.building ? T('disc.building') : T('genre.none'))); return; }
     if (!list.length && !(r.subs || []).length) { searchResults.appendChild(browseNote(q ? T('search.noResults') : T('genre.none'))); return; }
     if (!q) {
-      if (list.length > GENRE_RANDOM) searchResults.appendChild(genreRandomShelf(list));
-      if (list.length > GENRE_RANDOM) searchResults.appendChild(browseHeading(T('genre.allHead')));
       var grid = histEl('div', 'gGrid');
       list.forEach(function(g){ grid.appendChild(genreTile(g)); });
       searchResults.appendChild(grid);
+      /* random row only if the genres do not all fit on the screen (measurable once laid out) */
+      setTimeout(function(){
+        if (seq !== genreSeq || !grid.parentNode || list.length <= GENRE_RANDOM) return;
+        if (searchResults.scrollHeight <= searchResults.clientHeight + 2) return;
+        searchResults.insertBefore(genreRandomShelf(list), grid);
+        searchResults.insertBefore(browseHeading(T('genre.allHead')), grid);
+      }, 0);
       return;
     }
     list.forEach(function(g){
@@ -53,7 +58,8 @@ function genreSearch() {
   });
 }
 
-/* "Random genres" row above the overview, ↻ redraws (only if there are more genres than fit in the row) */
+/* "Random genres" row above the overview, ↻ redraws (only if there are more genres than fit in the row and the
+   overview does not fit on the screen) */
 var GENRE_RANDOM = 12;
 function genreRandomShelf(list) {
   var sec = histEl('div', 'dSec'), head = browseHeading(T('disc.shelf.randomGenres')), row = histEl('div', 'dRow');
