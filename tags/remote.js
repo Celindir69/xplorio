@@ -109,4 +109,20 @@ function rangeAnswer(range) {
   return {status: 206, headers: head, limit: end - start + 1};
 }
 
-module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer};
+/* Cushion for the live stream: hold back the first ms of music (counted from the first data, so a paused player does
+   not count), then pass everything on at once. The browser then starts with a few seconds in its buffer, which
+   absorbs MPD's own timing when no sound card sets it ("only this device"). push(chunk, now) -> chunks to send now */
+function cushion(ms) {
+  var held = [], start = 0, open = !(ms > 0);
+  return {push: function(c, now){
+    if (open) return [c];
+    if (!start) start = now;
+    held.push(c);
+    if (now - start < ms) return [];
+    open = true;
+    var out = held; held = [];
+    return out;
+  }};
+}
+
+module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer, cushion: cushion};

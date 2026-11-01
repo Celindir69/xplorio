@@ -1,6 +1,6 @@
 /* Playback on this device: not in the docs. Only if MPD has a stream output ("httpd", added by hand) a headphones
-   button appears top right; a tap switches lokal (amplifier) -> remote (only devices) -> both -> lokal.
-   Also with ?player=remote|both|lokal.
+   button appears top right; a tap switches between lokal (amplifier) and remote (only devices). "both" (amplifier and
+   devices) is left out on purpose (rarely wanted); set from elsewhere (?player=both) it is still shown, a tap ends it.
    The mode belongs to the player (MPD's outputs) and every open Xplorio follows it (GET /remote, every 10 s and when
    it comes back to the foreground). Sound comes only from devices that chose it themselves (remembered per device);
    others show the mode dimmed, and a tap there joins in without changing the mode.
@@ -44,7 +44,7 @@ function remoteTap() {
     remoteApply(remoteMode);
     return;
   }
-  remoteSet(remoteMode === 'lokal' ? 'remote' : remoteMode === 'remote' ? 'both' : 'lokal');
+  remoteSet(remoteMode === 'lokal' ? 'remote' : 'lokal');
 }
 
 function remoteApply(mode) {
@@ -81,6 +81,21 @@ function remoteHide() { remoteMode = 'lokal'; remoteListen = false; remoteStop()
 
 function remotePlaying() { return remoteMode !== 'lokal' && remoteListen; }
 
+/* How far this device's sound lags behind the player, in ms (0 if it is not listening): the live stream's newest data
+   is "now", so it is what the browser holds ahead of what it plays (the stream cushion plus its own buffer).
+   Smoothed, measured at most twice a second. Synced lyrics follow it (lyrics.js) */
+var remoteDelay = {ms: 0, at: 0};
+function remoteDelayMs() {
+  if (!remotePlaying() || !remoteAudio || remoteAudio.paused || !remoteAudio.buffered || !remoteAudio.buffered.length) return 0;
+  var now = Date.now();
+  if (now - remoteDelay.at >= 500) {
+    var b = remoteAudio.buffered, ahead = (b.end(b.length - 1) - remoteAudio.currentTime) * 1000;
+    if (ahead >= 0 && ahead < 30000) remoteDelay.ms = remoteDelay.ms ? remoteDelay.ms * 0.8 + ahead * 0.2 : ahead;
+    remoteDelay.at = now;
+  }
+  return remoteDelay.ms;
+}
+
 function remoteStart() {
   if (!remoteAudio) {
     remoteAudio = new Audio();
@@ -100,6 +115,7 @@ function remoteStart() {
   });
 }
 function remoteStop() {
+  remoteDelay = {ms: 0, at: 0};                                /* next connection: measure anew */
   if (!remoteAudio || !remoteAudio.src) return;
   remoteAudio.pause();
   remoteAudio.removeAttribute('src');
