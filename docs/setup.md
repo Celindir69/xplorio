@@ -153,6 +153,11 @@ Non-Music, Children's, Brass & Military).
 - *Merge genres:* a table in `tags/genres.js` maps existing genre tags (e.g. "Trip-Hop", "TripHop", "Klassik", "Hörspiel")
   to a top category, as well as the Discogs sub-styles from the audio analysis. For ambiguous names ("Indie": Rock or Pop)
   the audio analysis decides. Identical changes are shown in one row.
+- *Genre contradicts the audio analysis:* albums with a clear genre tag (e.g. "Hard Rock") with at least three analysed
+  tracks, where the analysis gives the tag's category at most 20 % and another one at least 60 % (e.g. "Tag: Hard Rock →
+  Electronic (80% by audio, Rock 10%)"). One row per album; such albums are not listed under "Merge genres" as well.
+  "Fits" remembers the album for good (`genre-ok.json` in the data folder, valid as long as the album keeps this genre tag);
+  these albums are listed folded at the end and can be brought back there with "Check again".
 
 The pencil opens the batch editor with the suggestion; nothing is written until you save, and Undo works as usual. Next to every genre field in the Tag Editor a "Main genre" menu offers the 15 top categories; custom values can still be typed. The
 sub-styles ("Trip Hop", "Downtempo") are not written to the files but stay in the Tag Service: `GET /genres?dir=<folder>`

@@ -107,4 +107,23 @@ t('genre choice in the tag editor = Discogs main genres', function(){
   assert.deepStrictEqual(Function('return ' + m[1])(), g.TOPS);
 });
 
+t('contradiction: clear tag, analysis elsewhere -> own list, not in merge; otherwise not', function(){
+  function al(dir, tag, styles, k) {
+    var songs = [], audio = [];
+    for (var i = 0; i < (k || 4); i++) { songs.push({genre: tag}); audio.push(A(styles)); }
+    return {dir: dir, name: dir, artist: 'X', files: songs.map(function(_, j){ return {uri: dir + '/' + j}; }), songs: songs, audio: audio};
+  }
+  var r = g.check([
+    al('a', 'Hard Rock', [['Electronic---Trip Hop', 0.8], ['Rock---Hard Rock', 0.1], ['Pop---Ballad', 0.1]]),   /* contradiction */
+    al('b', 'Rock', [['Rock---Hard Rock', 0.5], ['Electronic---Trip Hop', 0.5]]),                               /* rock share too high */
+    al('c', 'Rock', [['Electronic---Trip Hop', 0.55], ['Pop---Ballad', 0.45]]),                                 /* nothing at 60 % */
+    al('d', 'Rock', [['Electronic---Trip Hop', 0.9], ['Rock---Hard Rock', 0.1]], 2),                            /* too few tracks */
+    al('e', 'Pop/Rock', [['Electronic---Trip Hop', 0.9], ['Rock---Hard Rock', 0.1]])                            /* ambiguous: merge */
+  ]);
+  assert.deepStrictEqual(r.conflict.map(function(c){ return [c.dir, c.tag, c.tagTop, c.genre, c.share, c.tagShare]; }),
+    [['a', 'Hard Rock', 'Rock', 'Electronic', 0.8, 0.1]]);
+  assert.ok(!r.merge.some(function(m){ return m.albums.some(function(x){ return x.dir === 'a'; }); }));
+  assert.ok(r.merge.some(function(m){ return m.albums.some(function(x){ return x.dir === 'e'; }); }));
+});
+
 console.log(n + ' checks passed');

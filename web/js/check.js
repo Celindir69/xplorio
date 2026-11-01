@@ -17,8 +17,11 @@ var CHECK_CATS = [
   {key: 'releaseDate', name: T('check.cat.releaseDate'), hint: T('check.cat.releaseDateHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
   {key: 'genreMissing', name: T('check.cat.genreMissing'), hint: T('check.cat.genreMissingHint')},
-  {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')}
+  {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
+  {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
+var checkGenreOk = {};                                   /* dir -> genre tag marked "fits" (tag service genre-ok.json) */
+function checkIsOk(it) { return Object.prototype.hasOwnProperty.call(checkGenreOk, it.dir) && checkGenreOk[it.dir] === it.tag; }
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
 function checkFmtDate(ms) {
@@ -109,11 +112,13 @@ function checkRender(res) {
   checkBody.appendChild(head);
   checkBody.appendChild(checkDbRow());
   if (!r) { checkMoodSection(); checkBody.scrollTop = keepScroll; return; }
+  if (res.genreOk) checkGenreOk = res.genreOk;
   if (checkDoneAt !== r.at) { checkDone = {}; checkDoneAt = r.at; }
   Object.keys(r.done || {}).forEach(function(k){ checkDone[k] = 1; });
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
+    if (cat.key === 'genreConflict') list = list.filter(function(it){ return !checkIsOk(it); });   /* "fits" ones at the end */
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
     row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
     row.querySelector('.ckName').textContent = cat.name;
@@ -273,6 +278,7 @@ function checkFill(box, cat, list) {
     var end = Math.min(list.length, shown + CHECK_PAGE);
     for (; shown < end; shown++) {
       if (cat.key === 'genreMerge') box.insertBefore(checkGenreGroupRow(cat.key, list[shown]), moreRow);
+      else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
       else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
@@ -285,6 +291,53 @@ function checkFill(box, cat, list) {
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
   more();
+  if (cat.key === 'genreConflict') checkConflictOk(box);
+}
+
+/* ---------- Genre contradicts the audio analysis ---------- */
+/* "Rock → Electronic (80 % by audio) · Trip Hop, Downtempo"; pen: editor with the genre filled in, "Fits": never again */
+function checkConflictRow(it, ok) {
+  var sub = T('check.conflict.sub', {tag: it.tag, genre: it.genre, p: Math.round(it.share * 100), q: Math.round(it.tagShare * 100), top: it.tagTop}) +
+            (it.subs && it.subs.length ? ' · ' + it.subs.join(', ') : '');
+  var row = checkRow('genreConflict|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), sub, function(){
+    openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'genre', value: it.genre});
+  });
+  var b = document.createElement('button');
+  b.className = 'ckBtn ckOkBtn';
+  b.textContent = ok ? T('check.conflict.undo') : T('check.conflict.ok');
+  b.title = ok ? T('check.conflict.undoHint') : T('check.conflict.okHint');
+  b.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    b.disabled = true;
+    tagPost('/genreok', {dir: it.dir, tag: it.tag, ok: !ok}).then(function(r){
+      if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
+      if (ok) delete checkGenreOk[it.dir]; else checkGenreOk[it.dir] = it.tag;
+      if (checkShown && checkShown.res) checkRender(checkShown.res);
+    }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
+  });
+  row.insertBefore(b, row.lastChild);
+  return row;
+}
+/* at the end of the list: the ones marked "fits", folded */
+var checkOkOpen = false;
+function checkConflictOk(box) {
+  var all = (checkShown && checkShown.res && checkShown.res.result && checkShown.res.result.genreConflict) || [];
+  var ok = all.filter(checkIsOk);
+  if (!ok.length) return;
+  var head = document.createElement('div');
+  head.className = 'ckOkHead' + (checkOkOpen ? ' open' : '');
+  head.innerHTML = '<span></span>' + CHECK_CHEVRON;
+  head.firstChild.textContent = T('check.conflict.okList', {n: checkNum(ok.length)});
+  var list = document.createElement('div');
+  list.className = 'ckOkList';
+  list.style.display = checkOkOpen ? '' : 'none';
+  ok.forEach(function(it){ list.appendChild(checkConflictRow(it, true)); });
+  head.addEventListener('click', function(){
+    checkOkOpen = !checkOkOpen;
+    head.classList.toggle('open', checkOkOpen);
+    list.style.display = checkOkOpen ? '' : 'none';
+  });
+  box.appendChild(head); box.appendChild(list);
 }
 
 /* Edited entries stay greyed out, even after closing, until the next check */

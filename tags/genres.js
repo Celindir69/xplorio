@@ -6,6 +6,9 @@
 var TOPS = ['Blues', 'Brass & Military', "Children's", 'Classical', 'Electronic', 'Folk, World, & Country', 'Funk / Soul',
             'Hip Hop', 'Jazz', 'Latin', 'Non-Music', 'Pop', 'Reggae', 'Rock', 'Stage & Screen'];
 var MIN_SHARE = 0.25;            /* audio alone: the strongest top category needs at least this share */
+/* contradiction: one clear genre tag, but the analysis gives its category at most CONFLICT_TAG and another at least
+   CONFLICT_OTHER, with at least CONFLICT_TRACKS analyzed tracks */
+var CONFLICT_TAG = 0.2, CONFLICT_OTHER = 0.6, CONFLICT_TRACKS = 3;
 
 /* key for genre names: no accents, lower case, & = and, letters and digits only ("Hip-Hop" = "hiphop") */
 function genreKey(s) {
@@ -127,10 +130,10 @@ function suggest(values, audio, subs) {
 function round(x) { return Math.round(x * 100) / 100; }
 
 /* check evaluation. albums: [{dir, name, artist, files, songs:[{genre}], audio:[entries]}]
-   -> {missing: [...], merge: [...], styles: {dir: {genre, subs}}} */
+   -> {missing: [...], merge: [...], conflict: [...], styles: {dir: {genre, subs}}}; an album in conflict is not in merge */
 function check(albums) {
   var subs = learnStyles([].concat.apply([], albums.map(function(a){ return a.audio; })));
-  var missing = [], groups = {}, styles = {};
+  var missing = [], groups = {}, styles = {}, conflict = [];
   albums.forEach(function(a){
     var values = {}, empty = 0;
     a.songs.forEach(function(s){ var g = String(s.genre || '').trim(); if (g) values[g] = (values[g] || 0) + 1; else empty++; });
@@ -140,6 +143,12 @@ function check(albums) {
     var base = {dir: a.dir, name: a.name, artist: a.artist, count: a.files.length, files: a.files,
                 genre: sg ? sg.genre : null, how: sg ? sg.how : null, share: sg ? sg.share : null, subs: audio ? audio.subs : []};
     if (!names.length) { missing.push(base); return; }
+    var c = names.length === 1 && conflictOf(names[0], audio, subs);
+    if (c) {
+      conflict.push({dir: a.dir, name: a.name, artist: a.artist, count: a.files.length, files: a.files, tag: names[0], tagTop: c.tagTop,
+                     tagShare: c.tagShare, genre: c.genre, share: c.share, subs: audio.subs});
+      return;
+    }
     if (!sg || (names.length === 1 && !empty && names[0] === sg.genre)) return;
     var from = names.sort().join(' / ') + (empty ? ' / –' : '');
     var key = from + '\n' + sg.genre;
@@ -151,7 +160,17 @@ function check(albums) {
   var merge = Object.keys(groups).map(function(k){ return groups[k]; })
     .sort(function(a, b){ return b.albums.length - a.albums.length || a.from.localeCompare(b.from); });
   missing.sort(function(a, b){ return (b.genre ? 1 : 0) - (a.genre ? 1 : 0) || a.dir.localeCompare(b.dir); });
-  return {missing: missing, merge: merge, styles: styles};
+  conflict.sort(function(a, b){ return b.share - a.share || a.dir.localeCompare(b.dir); });
+  return {missing: missing, merge: merge, conflict: conflict, styles: styles};
+}
+
+/* one genre tag against the audio analysis -> {tagTop, tagShare, genre, share} or null */
+function conflictOf(tag, audio, subs) {
+  var tops = topsOf(tag, subs);
+  if (tops.length !== 1 || !audio || audio.tracks < CONFLICT_TRACKS) return null;
+  var top = audio.order[0], have = audio.share[tops[0]] || 0, best = audio.share[top] || 0;
+  if (top === tops[0] || have > CONFLICT_TAG || best < CONFLICT_OTHER) return null;
+  return {tagTop: tops[0], tagShare: round(have), genre: top, share: round(best)};
 }
 
 /* ---------- substyles per album (genre page, search) ---------- */

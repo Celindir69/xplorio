@@ -235,8 +235,20 @@ else {
                                     var ck = JSON.parse(fs.readFileSync(ckFile, 'utf8'));
                                     assert.deepStrictEqual(ck.done, {'noCover|USB/A': 1}); assert.strictEqual(ck.at, 1);
                                   });
-                                  s2.close();
-                                  artistTracks(done);
+                                  post(port, '/genreok', {dir: 'USB/A', tag: 'Rock', ok: true}, function(g1){
+                                  post(port, '/genreok', {dir: 'USB/B', tag: 'Pop', ok: true}, function(g2){
+                                  post(port, '/genreok', {dir: 'USB/B', tag: 'Pop', ok: false}, function(g3){
+                                  post(port, '/genreok', {tag: 'Pop', ok: true}, function(g4){
+                                    t('service: genre contradictions marked "fits" are remembered, and can be taken back', function(){
+                                      assert.ok(g1.ok && g2.ok && g3.ok); assert.strictEqual(g4.ok, false);
+                                      assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(root, 'log', 'genre-ok.json'), 'utf8')), {'USB/A': 'Rock'});
+                                    });
+                                    s2.close();
+                                    artistTracks(done);
+                                  });
+                                  });
+                                  });
+                                  });
                                 });
                               });
                               });
