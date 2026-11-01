@@ -401,6 +401,14 @@ wann zuletzt (aus dem Verlauf; Titel ohne Pause über drei Stunden zählen als e
 Künstler höchstens eins, mit Würfel für einen Zufallsmix daraus und aus dem Album selbst), Stimmung, Energie und Stile des Albums, Jahr, Jahrzehnt
 und Genre sowie weitere Alben des Künstlers. „Hintergrund“ zeigt den Albumtext und darunter die Mitwirkenden.
 
+**Albumversionen** (Tag-Dienst): Liegt ein Album in mehreren Ordnern (z. B. FLAC 24/96, CD-Rip und MP3), öffnet die
+Albumseite zuerst eine Zwischenebene: statt „Abspielen“ steht dort „Beste abspielen“ (die Version in bester Qualität),
+statt „Titel“ der Reiter „Versionen“; „Entdecken“ und „Hintergrund“ bleiben. Jede Version zeigt ihren Albumnamen, das
+Qualitätsabzeichen wie im Player (Hi-Res, Lossless, DSD, Lossy) mit Abtastrate, Bittiefe und Dateiart, Zahl der Titel,
+Spielzeit und Pfad; die beste ist markiert. Antippen öffnet die Version mit ihren Titeln, der Pfeil zurück führt wieder zur
+Auswahl. Zusammengefasst wird wie bei den [doppelten Alben](#bibliothek-prüfen) (gleicher Album-Künstler und Albumname,
+Zusätze wie „(Deluxe Edition)“ zählen nicht). Bewertungen und Verlauf gelten weiter je Version.
+
 Bei Künstlern und Alben vom Streamingdienst heißt der Reiter „Lokal entdecken“ und sucht in der eigenen Sammlung: ähnliche
 Künstler über Last.fm, beim Album das gleichnamige Album in der Sammlung oder, falls es dort fehlt, das Profil des Künstlers.
 

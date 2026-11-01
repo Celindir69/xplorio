@@ -672,11 +672,12 @@ function doPlays(query, cb) {
    when MPD's database has changed (checked at most once a minute, just a short "stats"). */
 var albums = require('./albums.js');
 var genres = require('./genres.js');
+var versions = require('./versions.js');
 var ALBUMS_FILE = path.join(DATA_DIR, 'albums.json');
 var albumIdx = null, albumBuilding = false, albumSoonUntil = 0, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
 var ALBUMS_CHECK_MS = 60000;                             /* ask MPD at most this often whether the database has changed */
 var ALBUMS_AFTER_SCAN_MS = 90000;                        /* after our own scan: update the album list once MPD and Volumio are done */
-var ALBUMS_VERSION = 8;                                  /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date */
+var ALBUMS_VERSION = 9;                                  /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions */
 var TRACKS_FILE = path.join(DATA_DIR, 'library-tracks.json');   /* [[artist, title, file, seconds, album, album genre], …] */
 
 function albumsEnsure(cb) {
@@ -692,7 +693,7 @@ function albumsEnsure(cb) {
     libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT}, function(e2, songs){
       albumBuilding = false;
       if (!e2 && songs.length) {
-        albumIdx = {v: ALBUMS_VERSION, db: stamp || null, at: Date.now(), list: albums.fromSongs(songs)};
+        albumIdx = {v: ALBUMS_VERSION, db: stamp || null, at: Date.now(), list: albums.fromSongs(songs), versions: versions.build(songs, libcheck.artistKey)};
         try { fs.writeFileSync(ALBUMS_FILE, JSON.stringify(albumIdx)); } catch (x) { /* next time */ }
         var ge = {};                                     /* album genre (most common in the folder) for each track */
         albumIdx.list.forEach(function(a){ if (a.ge) ge[a.dir] = a.ge; });
@@ -746,6 +747,22 @@ function genreSubsIdx(list) {
   }
   return genreSubs.idx;
 }
+/* GET /versions?u=<folder or Volumio address>&al=&ar= -> {ok, versions: [{dir, al, ext, bits, rate, codec, tracks, seconds, best, y}]}
+   (tags/versions.js); empty if the album exists only once */
+var versionsIdx = null;
+function versionsAnswer(list, query) {
+  var groups = (albumIdx && albumIdx.versions) || [];
+  if (!versionsIdx || versionsIdx.groups !== groups) {
+    var years = {};
+    list.forEach(function(a){ if (a.y) years[a.dir] = a.y; });
+    versionsIdx = {groups: groups, find: versions.index(groups, libcheck.artistKey), year: function(d){ return years[d] || 0; }};
+  }
+  var g = versionsIdx.find(query.u, String(query.al || ''), String(query.ar || ''));
+  if (!g) return {ok: true, versions: []};
+  var r = versions.answer(g, versionsIdx.year);
+  r.ok = true;
+  return r;
+}
 function doGenreLib(route, query, cb) {
   albumsEnsure(function(list){
     if (!list) return cb(200, {ok: false, building: true});
@@ -763,6 +780,7 @@ function doGenreLib(route, query, cb) {
       pr.ok = true;
       return cb(200, pr);
     }
+    if (route === '/versions') return cb(200, versionsAnswer(list, query));
     if (route === '/genrealbums') {
       var idx = genreSubsIdx(list);
       var al = albums.genreAlbums(list, query.g);
@@ -1619,7 +1637,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/coversearch') return doCoverSearch(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/scan')    return doScanGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/check')   return doCheckGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
-  if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
+  if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/versions', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
     return doGenreLib(route, url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/genres')  return doGenres(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);

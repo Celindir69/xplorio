@@ -1171,3 +1171,9 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .syLogFilter { display:block; width:100%; box-sizing:border-box; margin-top:calc(2 * var(--vw)); }
 .syLogLogin { display:inline-flex; vertical-align:middle; margin-left:4px; }
 @media (min-width:700px) { .syLog { font-size:12px; padding:10px 12px; } }
+
+/* album versions (browse.js versionsLayer): quality badge as in the player, path small below */
+#browseBody .verRow .sSub { white-space:normal; }
+#browseBody .verQ .qBadge { font-size:.72em; padding:.4em .55em .22em; border-radius:.35em; margin-right:.6em; vertical-align:.12em; }
+#browseBody .verBest { color:var(--gold); }
+#browseBody .verPath { font-size:.85em; opacity:.45; overflow-wrap:anywhere; }

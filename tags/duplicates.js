@@ -48,18 +48,22 @@ function most(list) {
 }
 function kHz(rate) { var k = rate / 1000; return String(Math.round(k * 10) / 10); }
 
-/* songs of one version -> {format: 'FLAC 24/96', rank, bits, rate} */
+/* songs of one version -> {format: 'FLAC 24/96', rank, bits, rate, ext, codec}; codec only for m4a: 'aac' (MPD reports
+   float samples, "44100:f:2") or 'alac' */
 function quality(songs) {
   var ext = most(songs.map(function(s){ var m = /\.([a-z0-9]+)$/i.exec(s.file); return m ? m[1].toLowerCase() : ''; }));
   var fmt = most(songs.map(function(s){ return s.format || ''; })).split(':');
   var dsd = /^dsd(\d+)/i.exec(fmt[0] || '');
   var rate = parseInt(fmt[0], 10) || 0, bits = parseInt(fmt[1], 10) || 0;
-  if (DSD.indexOf(ext) >= 0 || dsd) return {format: 'DSD' + (dsd ? dsd[1] : ''), rank: 3, bits: 1, rate: dsd ? dsd[1] * 44100 : 0};
+  if (DSD.indexOf(ext) >= 0 || dsd) return {format: 'DSD' + (dsd ? dsd[1] : ''), rank: 3, bits: 1, rate: dsd ? dsd[1] * 44100 : 0, ext: ext};
   if (LOSSLESS.indexOf(ext) >= 0) {
-    return {format: ext.toUpperCase() + (bits && rate ? ' ' + bits + '/' + kHz(rate) : ''), rank: 2, bits: bits, rate: rate};
+    return {format: ext.toUpperCase() + (bits && rate ? ' ' + bits + '/' + kHz(rate) : ''), rank: 2, bits: bits, rate: rate, ext: ext};
   }
-  if (ext === 'm4a' || ext === 'mp4') return {format: ext.toUpperCase(), rank: 1.5, bits: 0, rate: rate};   /* ALAC or AAC */
-  return {format: (ext || '?').toUpperCase(), rank: LOSSY.indexOf(ext) >= 0 ? 1 : 0, bits: 0, rate: rate};
+  if (ext === 'm4a' || ext === 'mp4') {                                     /* ALAC or AAC */
+    var codec = fmt[1] === 'f' ? 'aac' : bits ? 'alac' : '';
+    return {format: ext.toUpperCase(), rank: codec === 'alac' ? 2 : codec === 'aac' ? 1 : 1.5, bits: codec === 'alac' ? bits : 0, rate: rate, ext: ext, codec: codec};
+  }
+  return {format: (ext || '?').toUpperCase(), rank: LOSSY.indexOf(ext) >= 0 ? 1 : 0, bits: 0, rate: rate, ext: ext};
 }
 
 /* better first: lossless before lossy, then bit depth, sample rate, more tracks, longer */
@@ -68,7 +72,8 @@ function better(a, b) {
 }
 
 /* songs: [{file, artist, albumartist, album, disc, format, time}] as from libcheck.mpdWalk; artistKey from libcheck.
-   -> [{name, artist, versions: [{dirs, format, tracks, seconds, keep, drive}]}], sorted by artist and album */
+   -> [{name, artist, versions: [{dirs, format, tracks, seconds, keep, drive, name, ext, bits, rate, codec}]}], sorted by artist and
+   album; name of a version: its own album tag (e.g. with "(Deluxe Edition)") */
 function find(songs, artistKey) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
@@ -118,12 +123,13 @@ function find(songs, artistKey) {
     if (versions.length < 2) return;
     versions = versions.map(function(v){
       var q = quality(v.songs);
-      return {dirs: v.dirs.sort(), format: q.format, rank: q.rank, bits: q.bits, rate: q.rate, tracks: v.songs.length,
+      return {dirs: v.dirs.sort(), format: q.format, rank: q.rank, bits: q.bits, rate: q.rate, ext: q.ext, codec: q.codec || '', tracks: v.songs.length,
               seconds: v.songs.reduce(function(n, s){ return n + (parseFloat(s.time) || 0); }, 0), drive: driveOf(v.dirs[0]),
               name: v.name, artist: v.artist};
     }).sort(better);
     out.push({name: versions[0].name, artist: versions[0].artist, versions: versions.map(function(v, i){
-      return {dirs: v.dirs, format: v.format, tracks: v.tracks, seconds: Math.round(v.seconds), keep: i === 0, drive: v.drive};
+      return {dirs: v.dirs, format: v.format, tracks: v.tracks, seconds: Math.round(v.seconds), keep: i === 0, drive: v.drive,
+              name: v.name, ext: v.ext, bits: v.bits, rate: v.rate, codec: v.codec};
     })});
   });
   return out.sort(function(a, b){
@@ -131,4 +137,6 @@ function find(songs, artistKey) {
   });
 }
 
-module.exports = {find: find, albumKey: albumKey, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, isTrash: isTrash, TRASH: TRASH, OLD_TRASH: OLD_TRASH};
+function isVA(name) { return !name || VA_RE.test(String(name).trim()); }
+
+module.exports = {find: find, albumKey: albumKey, isVA: isVA, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, isTrash: isTrash, TRASH: TRASH, OLD_TRASH: OLD_TRASH};
