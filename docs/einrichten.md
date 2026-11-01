@@ -409,7 +409,9 @@ Spielzeit und Pfad; die beste ist markiert. Antippen öffnet die Version mit ihr
 Auswahl. Zusammengefasst wird wie bei den [doppelten Alben](#bibliothek-prüfen) (gleicher Album-Künstler und Albumname,
 Zusätze wie „(Deluxe Edition)“ zählen nicht). Bewertungen und Verlauf gelten weiter je Version. In Albenlisten (Künstlerseite,
 Suche, Genre, Jahr, Jahrzehnt) steht ein solches Album nur einmal, mit einem Stapel-Symbol und der Zahl der Versionen
-hinter dem Titel; gezeigt wird die beste Version, die in der Liste vorkommt.
+hinter dem Titel; gezeigt wird die beste Version, die in der Liste vorkommt. In Mixen (Würfel, Ähnliche, Stimmungsmix,
+„Zusammen“) spielt je Album nur eine Version: die mit den meisten Sternen, ohne Sterne die in bester Qualität. Titel, die
+es nur in einer anderen Version gibt (Bonustitel), bleiben im Mix.
 
 Bei Künstlern und Alben vom Streamingdienst heißt der Reiter „Lokal entdecken“ und sucht in der eigenen Sammlung: ähnliche
 Künstler über Last.fm, beim Album das gleichnamige Album in der Sammlung oder, falls es dort fehlt, das Profil des Künstlers.

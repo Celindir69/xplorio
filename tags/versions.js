@@ -69,4 +69,27 @@ function copy(a, n) { var o = {}; for (var k in a) o[k] = a[k]; o.nv = n; return
 /* for /albumgenre: [best folder, number of versions, place of this folder (0 = best)] or 0 if the album exists once */
 function mark(g, dir) { return g ? [g.v[0].dir, g.v.length, rankOf(g, dir)] : 0; }
 
-module.exports = {build: build, index: index, answer: answer, collapse: collapse, mark: mark};
+/* For mixes: tracks of the other versions -> {file: true}. Per album the version with the most stars counts (starsOf(dir)),
+   without stars the best quality. Tracks of other versions are left out if the counting version has a track of the same
+   title (titleKey, e.g. duplicates.albumKey: additions like "(2011 Remaster)" do not count); bonus tracks stay.
+   tracks: [[artist, title, file, …]] as in library-tracks.json */
+function excluded(groups, tracks, starsOf, titleKey) {
+  var out = {};
+  if (!groups.length) return out;
+  var byDir = {};
+  groups.forEach(function(g){ g.v.forEach(function(v){ byDir[v.dir] = []; }); });
+  (tracks || []).forEach(function(t){ var d = albums.albumDir(t[2]); if (byDir[d]) byDir[d].push(t); });
+  groups.forEach(function(g){
+    var pick = 0, most = 0;
+    g.v.forEach(function(v, i){ var s = starsOf(v.dir) || 0; if (s > most) { most = s; pick = i; } });
+    var have = {};
+    byDir[g.v[pick].dir].forEach(function(t){ have[titleKey(t[1])] = true; });
+    g.v.forEach(function(v, i){
+      if (i === pick) return;
+      byDir[v.dir].forEach(function(t){ if (have[titleKey(t[1])]) out[t[2]] = true; });
+    });
+  });
+  return out;
+}
+
+module.exports = {build: build, index: index, answer: answer, collapse: collapse, mark: mark, excluded: excluded};
