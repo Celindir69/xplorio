@@ -739,7 +739,9 @@ var genreSubs = null;
 function genreSubsIdx(list) {
   var tl = libTracksLoad() || [], st = audioStore.status();
   if (!genreSubs || genreSubs.list !== list || genreSubs.tl !== tl || genreSubs.at !== st.at) {
-    genreSubs = {list: list, tl: tl, at: st.at, idx: st.tracks ? genres.subsIndex(list, tl, function(ar, ti, al){ return audioStore.get(ar, ti, al); }, albums.albumDir) : {}};
+    var shares = {};
+    genreSubs = {list: list, tl: tl, at: st.at, shares: shares,
+                 idx: st.tracks ? genres.subsIndex(list, tl, function(ar, ti, al){ return audioStore.get(ar, ti, al); }, albums.albumDir, shares) : {}};
   }
   return genreSubs.idx;
 }
@@ -763,7 +765,7 @@ function doGenreLib(route, query, cb) {
     if (route === '/genrealbums') {
       var idx = genreSubsIdx(list);
       var al = albums.genreAlbums(list, query.g);
-      al.forEach(function(a){ if (idx[a.dir]) a.st = idx[a.dir]; });
+      al.forEach(function(a){ if (idx[a.dir]) { a.st = idx[a.dir]; a.sp = genreSubs.shares[a.dir]; } });   /* substyles and their share in % */
       return cb(200, {ok: true, albums: al, subs: genres.subList(list, idx, query.g)});
     }
     q = [];

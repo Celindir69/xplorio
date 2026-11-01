@@ -189,6 +189,7 @@ langRegister('en', 'English', {
   'genre.all': 'All',
   'genre.allHead': 'All genres',
   'genre.noAlbums': 'No albums in this genre.',
+  'genre.styleShare': '{s} {p}%',
   'genre.none': 'No genres yet: the albums have no genre tags (menu “Check library”, “Albums without genre”).',
   'genre.offline': 'Tag service not reachable.',
   'genre.subsHint': 'Styles from the audio analysis. Albums without an analysis are under “All”.',
