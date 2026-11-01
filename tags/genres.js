@@ -153,7 +153,7 @@ function check(albums) {
     var from = names.sort().join(' / ') + (empty ? ' / –' : '');
     var key = from + '\n' + sg.genre;
     var g = groups[key] || (groups[key] = {from: from, genre: sg.genre, albums: [], count: 0, files: []});
-    g.albums.push({dir: a.dir, name: a.name, artist: a.artist, how: sg.how});
+    g.albums.push({dir: a.dir, name: a.name, artist: a.artist, how: sg.how, count: a.files.length});
     g.count += a.files.length;
     g.files = g.files.concat(a.files);
   });

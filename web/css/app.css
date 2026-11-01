@@ -399,6 +399,14 @@
   .tagHint { font-size:calc(3 * var(--vw)); opacity:.5; margin-top:calc(1.2 * var(--vw)); line-height:1.35; }
   .tagChange.unsure .tagChangeSub { color:var(--warn); opacity:.9; }
   .tagChangeSub { font-size:calc(3 * var(--vw)); opacity:.45; margin-top:calc(.5 * var(--vw)); }
+  .tagAlbToggle { font-size:calc(3 * var(--vw)); opacity:.7; margin-top:calc(1 * var(--vw)); cursor:pointer; }
+  .tagAlbums { padding:0 0 calc(2 * var(--vw)) calc(7.5 * var(--vw)); border-bottom:1px solid rgba(var(--fg-rgb),.08); }
+  .tagAlb { display:flex; align-items:flex-start; gap:calc(2.5 * var(--vw)); padding:calc(1.2 * var(--vw)) 0; }
+  .tagAlb input { margin-top:calc(.5 * var(--vw)); width:calc(4 * var(--vw)); height:calc(4 * var(--vw)); flex:0 0 auto; }
+  .tagAlb.off .tagAlbName { opacity:.4; text-decoration:line-through; }
+  .tagAlbText { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+  .tagAlbName { font-size:calc(3.3 * var(--vw)); cursor:pointer; }
+  .tagAlbTracks { font-size:calc(3 * var(--vw)); opacity:.55; padding:calc(.5 * var(--vw)) 0 0 calc(2 * var(--vw)); }
   #tagFoot { flex:0 0 auto; display:flex; align-items:center; gap:calc(3 * var(--vw));
     padding:calc(3 * var(--vw)) calc(5 * var(--vw)) max(env(safe-area-inset-bottom,16px),16px) calc(5 * var(--vw));
     border-top:1px solid rgba(var(--fg-rgb),.15); }
@@ -1190,3 +1198,6 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .ckGenreRow .sTitle, .ckGenreRow .sSub { white-space:normal; overflow-wrap:anywhere; }
 .ckGenreBtns { display:flex; flex-wrap:wrap; gap:calc(1.5 * var(--vw)); margin-top:calc(1.5 * var(--vw)); }
 .ckList .ckGenreBtns .ckOkBtn { margin-left:0; }
+.ckAlbToggle { font-size:calc(3 * var(--vw)); opacity:.7; margin-top:calc(1 * var(--vw)); cursor:pointer; }
+.ckAlbFold { font-size:calc(3 * var(--vw)); opacity:.6; padding:calc(.8 * var(--vw)) 0 0 calc(3 * var(--vw)); overflow-wrap:anywhere; }
+.ckAlbFold div { padding:calc(.4 * var(--vw)) 0; }
