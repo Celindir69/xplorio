@@ -409,7 +409,8 @@ Grenzen hinaus aufgefüllt. Nie derselbe Künstler direkt hintereinander; „mag
 (Prüfung höchstens einmal pro Minute; nach Tag-Änderungen gut eine Minute nach dem Scan von selbst).
 
 **Genres:** Der vierte Suchreiter (nur mit Tag-Dienst) zeigt ohne Eingabe Kacheln aller Genres, mit Eingabe die passenden.
-Bei mehr als zwölf Genres steht darüber die Reihe „Zufällige Genres“; ↻ zieht sie neu.
+Passen nicht alle Genres auf den Bildschirm (und sind es mehr als zwölf), steht darüber die Reihe „Zufällige Genres“;
+↻ zieht sie neu.
 Ein Tipp öffnet die Genre-Seite: Gibt es [Audio-Analysen](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc), zuerst Kacheln
 der Stilrichtungen (Discogs-Unterstile, z. B. „Trip Hop“ unter Electronic) mit „Alle“ davor, sonst gleich alle Alben des
 Genres, nach Künstler sortiert. Je Album zählen bis zu drei Unterstile seines Genres, gemittelt über die analysierten Titel;
