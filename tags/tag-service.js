@@ -727,7 +727,7 @@ var moodCollector = new moodtags.Collector({
    GET /albumgenre?q=[[uri, album, artist], …] -> {ok, genres:[…], years:[…]} (empty = unknown). building: album list still being built.
    GET /decades -> {ok, decades:[{d, n, dir, al, ar}]}; GET /decadealbums?d=1990 -> {ok, albums:[{dir, al, ar, y}]} (year from the Date tag).
    GET /yearalbums?y=1984 -> {ok, albums}; GET /decadeprofile?d=1980 -> {ok, n, artists, moods, styles, decades} (Discover).
-   /albumgenre also returns years:[…] (0 = unknown).
+   /albumgenre also returns years:[…] (0 = unknown), with st=1 styles:[…] (strongest style of the album, '' = none).
    Substyles come from the audio analysis (tools/essentia), per album within its genre */
 var albumYear = null;
 function albumGenreFn() {
@@ -770,9 +770,11 @@ function doGenreLib(route, query, cb) {
     try { q = JSON.parse(String(query.q || '[]')); } catch (e) { return cb(400, {ok: false, error: 'invalid q'}); }
     if (!Array.isArray(q) || q.length > 500) return cb(400, {ok: false, error: 'invalid q'});
     var fn = albumGenreFn();
-    if (!albumYear || albumYear.list !== list) albumYear = {list: list, fn: albums.yearIndex(list)};
+    if (!albumYear || albumYear.list !== list) albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list)};
     var es = q.map(function(x){ x = Array.isArray(x) ? x : []; return {u: String(x[0] || ''), al: String(x[1] || ''), ar: String(x[2] || '')}; });
-    cb(200, {ok: true, genres: es.map(fn), years: es.map(albumYear.fn)});
+    var subs = query.st === '1' ? genreSubsIdx(list) : null;   /* strongest style of the album (player view) */
+    cb(200, {ok: true, genres: es.map(fn), years: es.map(albumYear.fn),
+             styles: subs ? es.map(function(e){ var d = albumYear.dir(e); return (d && subs[d] && subs[d][0]) || ''; }) : undefined});
   });
 }
 

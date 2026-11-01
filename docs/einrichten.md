@@ -416,7 +416,8 @@ Genres, nach Künstler sortiert. Je Album zählen bis zu drei Unterstile seines 
 Alben ohne Analyse stehen nur unter „Alle“. Die Suche findet auch Unterstile. Als Genre eines Albums gilt sein
 häufigstes Genre-Tag (aus der Albenliste). Auf der Albumseite stehen Künstler, Album und Genre untereinander; Künstler und
 Genre öffnen ihre Seite. In Albumlisten steht das Genre klein vor dem Stift, in der Player-Ansicht klein unter der
-Qualitätsangabe (ein Tipp öffnet die Genre-Seite). Genre-Tags vereinheitlichen und ergänzen hilft
+Qualitätsangabe, mit dem stärksten Stil des Albums in Klammern, z. B. „Rock (Hard Rock)“ (ein Tipp öffnet die
+Genre-Seite, auf den Stil die Alben dieses Stils). Genre-Tags vereinheitlichen und ergänzen hilft
 [Bibliothek prüfen](#bibliothek-prüfen).
 Künstlerfotos holt der Tag-Dienst einmal von Deezer und speichert sie unter `/data/xplorio/data/artists/`
 (Last.fm liefert keine mehr); ohne Foto erscheint Volumios Künstler-Symbol.

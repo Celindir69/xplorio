@@ -35,6 +35,12 @@ t('genre for history entries: via folder or album+artist', function(){
   assert.strictEqual(g({al: '85555', ar: 'SPLIFF'}), 'NDW');
   assert.strictEqual(g({al: 'Bravo Hits', ar: 'Falco'}), '');
 });
+t('album folder for the player view (strongest style): via folder or album+artist', function(){
+  var d = albums.dirIndex(list);
+  assert.strictEqual(d({u: 'music-library/USB/Spliff/85555/02.flac', al: 'x', ar: 'y'}), 'USB/Spliff/85555');
+  assert.strictEqual(d({al: '85555', ar: 'SPLIFF'}), 'USB/Spliff/85555');
+  assert.strictEqual(d({u: 'http://radio', al: 'Unknown', ar: 'y'}), '');
+});
 t('top genres in the review: multiple genres counted separately, case merged', function(){
   var pl = require('../tags/plays.js');
   var y = pl.year([{t: NOW, ar: 'a', ti: '1', al: 'x'}, {t: NOW + 1, ar: 'a', ti: '2', al: 'y'}, {t: NOW + 2, ar: 'a', ti: '3', al: 'z'}],

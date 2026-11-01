@@ -266,9 +266,10 @@ function genreOpen(g) {
   browseRender();
 }
 
-/* look up genre and year for albums: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' or 0 = unknown) */
-function albumInfoLookup(items) {
-  var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; })};
+/* look up genre and year for albums: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' or 0 = unknown);
+   withStyle: also styles: [...] (strongest style of the album from the audio analysis, '' = none) */
+function albumInfoLookup(items, withStyle) {
+  var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; }), styles: items.map(function(){ return ''; })};
   if (!genreReady || !items.length) return Promise.resolve(none);
   var q = items.map(function(it){ return [it.uri || '', it.album || '', it.artist || '']; });
   /* in chunks: a long address would otherwise exceed the service's header limit (about 8 kB), and everything silently goes missing */
@@ -280,11 +281,13 @@ function albumInfoLookup(items) {
   });
   if (cur.length) parts.push(cur);
   return Promise.all(parts.map(function(part){
-    return tagGetJson('/albumgenre?q=' + encodeURIComponent(JSON.stringify(part))).then(function(r){
-      return {genres: (r && r.genres) || part.map(function(){ return ''; }), years: (r && r.years) || part.map(function(){ return 0; })};
-    }).catch(function(){ return {genres: part.map(function(){ return ''; }), years: part.map(function(){ return 0; })}; });
+    var empty = function(v){ return part.map(function(){ return v; }); };
+    return tagGetJson('/albumgenre?q=' + encodeURIComponent(JSON.stringify(part)) + (withStyle ? '&st=1' : '')).then(function(r){
+      return {genres: (r && r.genres) || empty(''), years: (r && r.years) || empty(0), styles: (r && r.styles) || empty('')};
+    }).catch(function(){ return {genres: empty(''), years: empty(0), styles: empty('')}; });
   })).then(function(rs){
-    return {genres: [].concat.apply([], rs.map(function(r){ return r.genres; })), years: [].concat.apply([], rs.map(function(r){ return r.years; }))};
+    function all(k) { return [].concat.apply([], rs.map(function(r){ return r[k]; })); }
+    return {genres: all('genres'), years: all('years'), styles: all('styles')};
   });
 }
 function genreLookup(items) { return albumInfoLookup(items).then(function(r){ return r.genres; }); }
@@ -300,21 +303,26 @@ function yearFromAnywhere(y) {
   else openBrowse({kind: 'year', year: y});
 }
 
-/* Now playing: year after the album and genre in small print below the quality info (local; a tap opens the genre page);
+/* Now playing: year after the album and genre in small print below the quality info, with the album's strongest style
+   in brackets, e.g. "Rock (Hard Rock)" (local; a tap opens the genre page, on the style that style);
    key prevents a late result from landing on the next track */
 var playerYearKey = '', mGenre = document.getElementById('mGenre');
 function playerYear(uri, album, artist) {
   var key = playerYearKey = uri + '|' + album + '|' + artist;
   if (mGenre) mGenre.textContent = '';
   if (!album || !uri || streamOf(uri)) return;
-  albumInfoLookup([{uri: uri, album: album, artist: artist}]).then(function(r){
+  albumInfoLookup([{uri: uri, album: album, artist: artist}], true).then(function(r){
     if (key !== playerYearKey) return;
     if (r.years[0]) mAlbum.appendChild(yearSpan(r.years[0]));
-    var g = r.genres[0];
+    var g = r.genres[0], s = r.styles[0];
     if (!g || !mGenre) return;
     var el = histEl('span', '', g);
     el.addEventListener('click', function(ev){ ev.stopPropagation(); genreFromAnywhere(g); });
     mGenre.appendChild(el);
+    if (!s) return;
+    var st = histEl('span', '', ' (' + s + ')');
+    st.addEventListener('click', function(ev){ ev.stopPropagation(); genreFromAnywhere(g, s); });
+    mGenre.appendChild(st);
   });
 }
 
@@ -340,9 +348,10 @@ function genreDecorate(rows, seq) {
 }
 
 /* open the genre page from the search or from the browser */
-function genreFromAnywhere(g) {
-  if (overlayBrowse.classList.contains('on')) genreOpen(g);
-  else openBrowse({kind: 'genre', genre: g});
+function genreFromAnywhere(g, sub) {
+  var e = sub ? {kind: 'genre', genre: g, sub: sub} : {kind: 'genre', genre: g};
+  if (overlayBrowse.classList.contains('on')) { browseStack.push(e); browseRender(); }
+  else openBrowse(e);
 }
 
 whenTags(function(){
