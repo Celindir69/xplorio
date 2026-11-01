@@ -1692,8 +1692,10 @@ function doStream(req, res) {
     var up = http.get({host: '127.0.0.1', port: f.stream.port, path: '/'}, function(u){
       if (closed) return u.destroy();
       res.writeHead(a.status, a.headers);
-      if (!left) { remoteListeners++; u.on('close', function(){ remoteListeners--; remoteLastListen = Date.now(); }); }
+      remoteListeners++;                                 /* every connection counts: Safari asks "bytes=0-" for the live stream too */
+      u.on('close', function(){ remoteListeners--; remoteLastListen = Date.now(); });
       u.on('data', function(c){
+        remoteLastListen = Date.now();
         if (left) {
           if (c.length > left) c = c.slice(0, left);
           left -= c.length;
@@ -1702,7 +1704,6 @@ function doStream(req, res) {
           return;
         }
         res.write(c);
-        remoteLastListen = Date.now();
       });
       u.on('end', function(){ res.end(); });
     });

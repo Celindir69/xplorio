@@ -50,7 +50,15 @@ function remoteApply(mode) {
 function remoteHide() { remoteMode = 'lokal'; remoteStop(); if (remoteIcon) remoteIcon.style.display = 'none'; }
 
 function remoteStart() {
-  if (!remoteAudio) remoteAudio = new Audio();
+  if (!remoteAudio) {
+    remoteAudio = new Audio();
+    var again = function(){                                    /* connection lost (network, app switch): connect anew */
+      if (remoteMode === 'lokal' || !remoteWant || !remoteAudio.src) return;
+      setTimeout(function(){ if (remoteMode !== 'lokal' && remoteWant) { remoteAudio.removeAttribute('src'); remoteStart(); } }, 2000);
+    };
+    remoteAudio.addEventListener('ended', again);
+    remoteAudio.addEventListener('error', again);
+  }
   if (!remoteAudio.paused && remoteAudio.src) return;
   remoteAudio.src = TAGS + '/stream?t=' + Date.now();          /* live: always connect anew, so it does not lag behind */
   var p = remoteAudio.play();
@@ -76,6 +84,16 @@ function remoteSync(st) {
 document.addEventListener('click', function(){
   if (remoteMode !== 'lokal' && remoteWant && (!remoteAudio || remoteAudio.paused)) { if (remoteAudio) remoteAudio.removeAttribute('src'); remoteStart(); }
 }, true);
+
+/* back in the foreground: take over a change made meanwhile (safety switch, another device) */
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden || !remoteIcon || remoteIcon.style.display === 'none') return;
+  tagGetJson('/remote').then(function(r){
+    if (!r || !r.ok || !r.available) return;
+    if (r.mode === 'lokal' && remoteMode !== 'lokal') { remoteStore('lokal'); remoteApply('lokal'); }
+    else if (remoteMode !== 'lokal' && remoteWant && (!remoteAudio || remoteAudio.paused)) remoteStart();
+  }).catch(function(){});
+});
 
 /* start: symbol only with a stream output; explicit ?player=, else the remembered choice (the safety switch may have reset it) */
 (function(){
