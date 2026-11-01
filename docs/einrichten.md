@@ -169,7 +169,7 @@ lassen sich weiter eintippen. Die Unterstile („Trip Hop“, „Downtempo“) k
 Klassik, Soundtracks und Hörspiele erkennt das Modell schwächer.
 
 **Doppelte Alben:** Ordner mit gleichem Album-Künstler und gleichem Albumnamen. Groß-/Kleinschreibung, Akzente, „The“
-und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Edition]“ oder „- 2009 Remaster“ auch nicht;
+und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Edition]“, „- 2009 Remaster“, „[HD]“, „(SACD)“ oder „[24-96]“ auch nicht;
 Zusammenstellungen werden nur nach dem Albumnamen verglichen. Ordner eines Albums, die nach CDs getrennt nebeneinander
 liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je Fassung stehen Format, Auflösung, Zahl der
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
