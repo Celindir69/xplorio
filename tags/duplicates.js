@@ -10,7 +10,9 @@ var LOSSY    = ['mp3', 'mp2', 'aac', 'ogg', 'oga', 'opus', 'wma'];
 var TRASH    = 'Xplorio Duplicates';          /* folder per drive, visible over SMB; .mpdignore keeps it out of MPD (ignoreLine) */
 var OLD_TRASH = '.duplicates';                /* name in earlier versions: renamed at the start (tag service) */
 
-var EXTRA_RE = /\s*[(\[][^)\]]*(remaster|deluxe|edition|expanded|anniversary|bonus|reissue|re-issue|version|mono|stereo|hi-?res|\d+\s*-?\s*bit|khz|special|collector|legacy|definitive)[^)\]]*[)\]]/gi;
+var EXTRA_RE = /\s*[(\[][^)\]]*(remaster|deluxe|edition|expanded|anniversary|bonus|reissue|re-issue|version|mono|stereo|hi-?res|\d+\s*-?\s*bit|khz|special|collector|legacy|definitive|audiophile|\b(hd|hdcd|hdtracks|sacd|shm(-?cd)?|xrcd|uhqcd|blu-?spec|mfsl|mofi|dsd\d*|flac|vinyl|japan(ese)?)\b|\b(16|24|32)\s*[-\/]\s*(44|48|88|96|176|192|352|384)(\.\d+)?\b)[^)\]]*[)\]]/gi;
+/* additions that do not make another album: remaster, edition, … and medium or quality markers such as [HD], (SACD),
+   [24-96], [MFSL] */
 var DASH_RE  = /\s+[-–]\s+[^-–]*(remaster|deluxe|edition|anniversary|version)[^-–]*$/i;
 var VA_RE    = /^(various|various artists|va|v\.a\.|verschiedene|verschiedene interpreten|sampler)$/i;
 var DISC_RE  = /^(cd|disc|disk|disco|disque|side)\s*[-_.]?\s*\d+\b/i;

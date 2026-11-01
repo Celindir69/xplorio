@@ -160,7 +160,7 @@ returns the top category and sub-styles of an album (as of the last check), with
 The model is weaker at recognising classical music, soundtracks and radio plays.
 
 **Duplicate albums:** folders with the same album artist and album name. Case, accents, “The” and punctuation do not
-count, nor do additions such as “(Remastered)”, “[Deluxe Edition]” or “- 2009 Remaster”; compilations are compared by
+count, nor do additions such as “(Remastered)”, “[Deluxe Edition]”, “- 2009 Remaster”, “[HD]”, “(SACD)” or “[24-96]”; compilations are compared by
 album name only. Folders of one album split by disc next to each other (CD1, CD2 or different disc numbers) count as one
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
 (lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
