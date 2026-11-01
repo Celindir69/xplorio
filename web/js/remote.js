@@ -1,6 +1,6 @@
 /* Playback on this device: not in the docs. Only if MPD has a stream output ("httpd", added by hand) a headphones
-   button appears top right; a tap switches lokal (amplifier) -> remote (only devices) -> both -> lokal.
-   Also with ?player=remote|both|lokal.
+   button appears top right; a tap switches between lokal (amplifier) and remote (only devices). "both" (amplifier and
+   devices) is left out on purpose (rarely wanted); set from elsewhere (?player=both) it is still shown, a tap ends it.
    The mode belongs to the player (MPD's outputs) and every open Xplorio follows it (GET /remote, every 10 s and when
    it comes back to the foreground). Sound comes only from devices that chose it themselves (remembered per device);
    others show the mode dimmed, and a tap there joins in without changing the mode.
@@ -44,7 +44,7 @@ function remoteTap() {
     remoteApply(remoteMode);
     return;
   }
-  remoteSet(remoteMode === 'lokal' ? 'remote' : remoteMode === 'remote' ? 'both' : 'lokal');
+  remoteSet(remoteMode === 'lokal' ? 'remote' : 'lokal');
 }
 
 function remoteApply(mode) {
