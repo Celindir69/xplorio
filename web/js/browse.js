@@ -530,6 +530,16 @@ function albumVersions(e, uri) {
   }).catch(function(){ return null; });
 }
 
+/* stack symbol with the number of versions, after the album title in lists */
+var VERSION_SVG = '<svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>';
+function versionStack(n) {
+  var el = histEl('span', 'verStack');
+  el.innerHTML = VERSION_SVG;
+  el.appendChild(document.createTextNode(String(n)));
+  el.title = T('browse.versionCount', {n: n});
+  return el;
+}
+
 /* quality of a version like in the player (quality.js): badge (Hi-Res, Lossless, DSD64, Lossy) and tech line */
 function versionQuality(v) {
   var r = v.rate || 0;

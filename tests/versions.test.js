@@ -44,4 +44,20 @@ t('quality: m4a with float samples is AAC, with bit depth ALAC', function(){
   assert.strictEqual(dup.quality([{file: 'a.m4a', format: '44100:16:2'}]).codec, 'alac');
 });
 
+t('collapse: one entry per album, the best one in the list at the place of the first, with the number of versions', function(){
+  var find = ver.index(ver.build(songs, lc.artistKey), lc.artistKey);
+  var list = [{dir: 'USB/S/Gaye/WGO m4a', al: "What's Going On"}, {dir: 'USB/S/Gaye/Lets Get It On', al: "Let's Get It On"},
+              {dir: 'INTERNAL/mp3/Gaye/Whats Going On', al: "What's Going On"}];
+  var r = ver.collapse(list, find);
+  assert.deepStrictEqual(r.map(function(a){ return [a.dir, a.nv]; }), [['INTERNAL/mp3/Gaye/Whats Going On', 3], ['USB/S/Gaye/Lets Get It On', undefined]]);
+  assert.strictEqual(list[2].nv, undefined);                 /* the album list itself stays unchanged */
+});
+
+t('mark: best folder, number of versions, place', function(){
+  var g = ver.build(songs, lc.artistKey)[0];
+  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO Deluxe/CD2'), ['USB/S/Gaye/WGO Deluxe', 3, 0]);
+  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO m4a'), ['USB/S/Gaye/WGO Deluxe', 3, 2]);
+  assert.strictEqual(ver.mark(null, 'x'), 0);
+});
+
 console.log(n + ' tests passed');
