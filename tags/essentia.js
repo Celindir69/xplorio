@@ -38,6 +38,7 @@ function Entry(o, intern) {
   var st = (Array.isArray(o.styles) ? o.styles : []).filter(function(x){ return x && x[0] && +x[1] >= STYLES_MIN; });
   if (st.length > STYLES_MAX) st = st.sort(function(a, b){ return b[1] - a[1]; }).slice(0, STYLES_MAX);
   this.styles = st.map(function(x){ return [intern(String(x[0])), +x[1]]; });
+  this.nomix = o.nomix === 1 || o.nomix === true;           /* NoMix in the comment tag (nomix.js) */
   this._c = null;                                           /* classify cache */
 }
 

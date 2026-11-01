@@ -162,6 +162,28 @@ def read_tags(path):
         return '', '', ''
 
 
+def has_nomix(path):
+    """NoMix anywhere in the comment tag (any case): the player never puts the track into a mix.
+    Vorbis COMMENT/DESCRIPTION, MP4 \xa9cmt, ID3 COMM (also in DSF)."""
+    try:
+        import mutagen
+        f = mutagen.File(path)
+        if f is None or f.tags is None:
+            return False
+        t = f.tags
+        texts = []
+        if hasattr(t, 'getall'):                       # ID3
+            for fr in t.getall('COMM') + [x for x in t.getall('TXXX') if str(x.desc).lower() == 'comment']:
+                texts.extend(str(x) for x in fr.text)
+        else:
+            for k, v in t.items():
+                if k.lower() in ('comment', 'description', '\xa9cmt'):
+                    texts.extend(str(x) for x in (v if isinstance(v, list) else [v]))
+        return any('nomix' in x.lower() for x in texts)
+    except Exception:
+        return False
+
+
 # ---------- Analysis (per worker process) ----------
 
 W = {}
@@ -255,6 +277,8 @@ def analyse_file(rec, path, use_ffmpeg=False):
         rec['err'] = 'no artist/title tags'
         return rec
     rec.update({'ar': ar, 'ti': ti, 'al': al})
+    if has_nomix(path):
+        rec['nomix'] = 1
     lim = W.get('max_minutes') or 0
     if lim:
         ln = length_of(path)                           # the whole file is loaded: very long recordings blow the memory

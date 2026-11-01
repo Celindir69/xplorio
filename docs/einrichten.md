@@ -349,6 +349,14 @@ Der Daumen legt den Titel in die Volumio-Favoriten, und vorhandene Favoriten zei
 „mag ich nicht“ speichert der Tag-Dienst in `/data/xplorio/data/ratings.json`. Titel mit „mag ich nicht“ lassen
 Würfel, Mood Mix und die Titel-Reihen beim Entdecken aus.
 
+**NoMix** (nur mit Tag-Dienst): Steht `NoMix` irgendwo im Kommentar eines Titels (Groß-/Kleinschreibung egal), kommt er in
+keinen Mix (Würfel, Mood Mix, ähnliche Titel, „Passt zusammen“; nicht in die Titel von AutoDJ), unabhängig von der Bewertung; beim Entdecken und in
+Alben bleibt er. Setzen lässt es sich pro Titel im Tag-Editor oder fürs ganze Album in der Massenbearbeitung (Feld
+„Kommentar“; „Setzen“ ersetzt dabei den bisherigen Kommentar). MPD liefert den Kommentar nicht mit, deshalb erfährt der
+Tag-Dienst davon auf zwei Wegen: Was über Xplorio geschrieben wird, merkt er sich sofort (`nomix.json`); Kommentare aus
+anderen Programmen liest die [Audio-Analyse](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc) beim nächsten
+Lauf mit (die geänderte Datei wird dabei neu analysiert).
+
 **Versteckte Perlen** (nur mit Tag-Dienst): Beim Entdecken zeigt die Reihe unter den Zufälligen Entdeckungen Künstler,
 Alben oder Titel aus der Mediathek, die nie oder kaum gelaufen sind (Künstler und Alben höchstens zweimal, Titel
 höchstens einmal) und zum eigenen Geschmack passen. Den Geschmack bilden Künstler mit Herz, Alben mit 4 oder 5 Sternen,
