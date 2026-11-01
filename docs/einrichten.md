@@ -164,9 +164,13 @@ Non-Music, Children's, Brass & Military).
 - *Genre widerspricht der Audio-Analyse:* Alben mit eindeutigem Genre-Tag (z. B. „Hard Rock“), bei denen mindestens drei
   Titel analysiert sind und die Analyse der Kategorie des Tags höchstens 20 %, einer anderen mindestens 60 % zuordnet
   (z. B. „Tag: Hard Rock → Electronic (80 % laut Audio, Rock 10 %)“). Eine Zeile je Album; solche Alben stehen nicht
-  zusätzlich unter „Genres zusammenfassen“. „Passt“ merkt sich das Album dauerhaft (`genre-ok.json` im Datenordner,
-  gilt, solange das Album dieses Genre-Tag hat); diese Alben stehen zugeklappt am Ende der Liste und lassen sich dort mit
-  „Wieder prüfen“ zurückholen.
+  zusätzlich unter „Genres zusammenfassen“.
+
+In beiden Genre-Listen stehen unter jeder Zeile zwei Knöpfe: „Übernehmen“ schreibt den Vorschlag sofort in die Dateien
+(danach „Rückgängig“; gescannt wird beim Schließen der Prüfung), „Behalten“ lässt das bisherige Tag und schlägt die
+Änderung nicht mehr vor (`genre-ok.json` im Datenordner; bei Widersprüchen je Album, solange es dieses Tag hat, beim
+Zusammenfassen je Änderung, z. B. „Hard Rock → Rock“). Behaltene stehen zugeklappt am Ende der Liste und lassen sich dort
+mit „Wieder vorschlagen“ zurückholen.
 
 Der Stift öffnet die Mehrfachbearbeitung mit dem Vorschlag; geschrieben wird erst mit Speichern, Rückgängig geht wie
 gewohnt. Neben jedem Genre-Feld im Tag-Editor steht eine Auswahl „Hauptgenre“ mit den 15 Oberkategorien; eigene Werte

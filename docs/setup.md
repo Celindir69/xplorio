@@ -156,8 +156,11 @@ Non-Music, Children's, Brass & Military).
 - *Genre contradicts the audio analysis:* albums with a clear genre tag (e.g. "Hard Rock") with at least three analysed
   tracks, where the analysis gives the tag's category at most 20 % and another one at least 60 % (e.g. "Tag: Hard Rock →
   Electronic (80% by audio, Rock 10%)"). One row per album; such albums are not listed under "Merge genres" as well.
-  "Fits" remembers the album for good (`genre-ok.json` in the data folder, valid as long as the album keeps this genre tag);
-  these albums are listed folded at the end and can be brought back there with "Check again".
+
+In both genre lists each row has two buttons: "Apply" writes the suggestion into the files right away (then "Undo"; the
+scan follows when the check is closed), "Keep" leaves the current tag and no longer suggests the change (`genre-ok.json` in
+the data folder; for contradictions per album as long as it keeps this tag, for merging per change, e.g. "Hard Rock →
+Rock"). Kept entries are listed folded at the end and can be brought back there with "Suggest again".
 
 The pencil opens the batch editor with the suggestion; nothing is written until you save, and Undo works as usual. Next to every genre field in the Tag Editor a "Main genre" menu offers the 15 top categories; custom values can still be typed. The
 sub-styles ("Trip Hop", "Downtempo") are not written to the files but stay in the Tag Service: `GET /genres?dir=<folder>`
