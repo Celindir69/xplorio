@@ -142,7 +142,7 @@ langRegister('de', 'Deutsch', {
   'remote.mode.lokal': 'Wiedergabe: Anlage',
   'remote.mode.remote': 'Wiedergabe: nur dieses Gerät',
   'remote.none': 'Kein Stream-Ausgang in MPD eingerichtet',
-  'remote.tap': 'Einmal tippen, um den Ton auf diesem Gerät zu starten',
+  'remote.tap': 'Ton auf diesem Gerät unterbrochen. Tippe irgendwo in Xplorio, um weiterzuhören.',
   'scan.updating': 'Bibliothek wird eingelesen. Der Player kann so lange langsamer reagieren.',
   'scan.building': 'Albenliste wird neu aufgebaut. Der Player kann so lange langsamer reagieren.',
   'check.runCovers': 'Prüfe eingebettete Cover… {done} von {total}',

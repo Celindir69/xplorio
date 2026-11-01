@@ -143,7 +143,7 @@ langRegister('fr', 'Français', {
   'remote.mode.lokal': 'Lecture : chaîne',
   'remote.mode.remote': 'Lecture : cet appareil seulement',
   'remote.none': 'Aucune sortie stream configurée dans MPD',
-  'remote.tap': 'Touchez une fois pour lancer le son sur cet appareil',
+  'remote.tap': 'Son interrompu sur cet appareil. Touchez n’importe où dans Xplorio pour continuer l’écoute.',
   'scan.updating': 'Lecture de la bibliothèque. Le lecteur peut réagir plus lentement en attendant.',
   'scan.building': 'Reconstruction de la liste des albums. Le lecteur peut réagir plus lentement en attendant.',
   'check.runCovers': 'Vérification des pochettes intégrées… {done} sur {total}',

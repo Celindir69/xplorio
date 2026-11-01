@@ -1,5 +1,5 @@
-/* Playback on this device: not in the docs. Only if MPD has a stream output ("httpd", added by hand) a phone symbol
-   appears in the quality line; a tap switches lokal (amplifier) -> remote (only here) -> both -> lokal. Also with
+/* Playback on this device: not in the docs. Only if MPD has a stream output ("httpd", added by hand) a headphones button
+   appears top right; a tap switches lokal (amplifier) -> remote (only here) -> both -> lokal. Also with
    ?player=remote|both|lokal. The device remembers its choice.
    Needs a stream output ("httpd") in MPD's configuration, added by hand; the tag service passes it on
    (GET /stream, tags/remote.js) and switches MPD's outputs (POST /remote). Operation stays as usual: this only
@@ -7,7 +7,7 @@
    Classic script, shared global scope; load order see xplorio.html. */
 var REMOTE_KEY = 'xplorioPlayer';
 var remoteMode = 'lokal', remoteAudio = null, remoteIcon = null, remoteWant = false, remoteHinted = false;
-var REMOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M16 1H8C6.34 1 5 2.34 5 4v16c0 1.66 1.34 3 3 3h8c1.66 0 3-1.34 3-3V4c0-1.66-1.34-3-3-3zm-2 20h-4v-1h4v1zm3.25-3H6.75V4h10.5v14z"/></svg>';
+var REMOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/></svg>';   /* headphones */
 
 function remoteStored() { try { return localStorage.getItem(REMOTE_KEY) || ''; } catch (e) { return ''; } }
 function remoteStore(m) {
@@ -38,10 +38,11 @@ function remoteApply(mode) {
       ev.stopPropagation();
       remoteSet(remoteMode === 'lokal' ? 'remote' : remoteMode === 'remote' ? 'both' : 'lokal');
     });
-    var row = document.getElementById('mTechRow');
-    if (row) row.appendChild(remoteIcon);
+    var anchor = document.getElementById('btnRemote'), bar = document.getElementById('topRight');   /* top right, next to the remote control */
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(remoteIcon, anchor.nextSibling);
+    else if (bar) bar.insertBefore(remoteIcon, bar.firstChild);
   }
-  remoteIcon.className = 'remoteIcon ' + mode;
+  remoteIcon.className = 'topBtn remoteIcon ' + mode;
   remoteIcon.title = T('remote.mode.' + mode) + ' · ' + T('remote.next');
   if (mode === 'lokal') remoteStop();
   else if (remoteWant) remoteStart();
@@ -59,6 +60,7 @@ function remoteStart() {
     };
     remoteAudio.addEventListener('ended', again);
     remoteAudio.addEventListener('error', again);
+    remoteAudio.addEventListener('playing', function(){ remoteHinted = false; });   /* next interruption: hint again */
   }
   if (!remoteAudio.paused && remoteAudio.src) return;
   remoteAudio.src = TAGS + '/stream?t=' + Date.now();          /* live: always connect anew, so it does not lag behind */

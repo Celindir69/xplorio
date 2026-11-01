@@ -142,7 +142,7 @@ langRegister('es', 'Español', {
   'remote.mode.lokal': 'Reproducción: equipo',
   'remote.mode.remote': 'Reproducción: solo este dispositivo',
   'remote.none': 'No hay salida de stream configurada en MPD',
-  'remote.tap': 'Toca una vez para iniciar el sonido en este dispositivo',
+  'remote.tap': 'Sonido en este dispositivo interrumpido. Toca en cualquier lugar de Xplorio para seguir escuchando.',
   'scan.updating': 'Leyendo la biblioteca. Mientras tanto, el reproductor puede responder más despacio.',
   'scan.building': 'Reconstruyendo la lista de álbumes. Mientras tanto, el reproductor puede responder más despacio.',
   'check.runCovers': 'Comprobando portadas incrustadas… {done} de {total}',

@@ -142,7 +142,7 @@ langRegister('it', 'Italiano', {
   'remote.mode.lokal': 'Riproduzione: impianto',
   'remote.mode.remote': 'Riproduzione: solo questo dispositivo',
   'remote.none': 'Nessuna uscita stream configurata in MPD',
-  'remote.tap': 'Tocca una volta per avviare l’audio su questo dispositivo',
+  'remote.tap': 'Audio interrotto su questo dispositivo. Tocca un punto qualsiasi di Xplorio per continuare ad ascoltare.',
   'scan.updating': 'Lettura della libreria in corso. Nel frattempo il lettore può rispondere più lentamente.',
   'scan.building': "Ricostruzione dell'elenco degli album in corso. Nel frattempo il lettore può rispondere più lentamente.",
   'check.runCovers': 'Controllo copertine incorporate… {done} di {total}',
