@@ -187,6 +187,7 @@ langRegister('es', 'Español', {
   'genre.all': 'Todos',
   'genre.allHead': 'Todos los géneros',
   'genre.noAlbums': 'No hay álbumes en este género.',
+  'genre.styleShare': '{s} {p} %',
   'genre.none': 'Aún no hay géneros: los álbumes no tienen etiquetas de género (menú “Revisar biblioteca”, “Álbumes sin género”).',
   'genre.offline': 'Servicio de etiquetas no disponible.',
   'genre.subsHint': 'Estilos del análisis de audio. Los álbumes sin análisis están en “Todos”.',

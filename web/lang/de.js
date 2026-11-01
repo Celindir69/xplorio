@@ -187,6 +187,7 @@ langRegister('de', 'Deutsch', {
   'genre.all': 'Alle',
   'genre.allHead': 'Alle Genres',
   'genre.noAlbums': 'Keine Alben in diesem Genre.',
+  'genre.styleShare': '{s} {p} %',
   'genre.none': 'Noch keine Genres: Die Alben haben keine Genre-Tags (Menü „Bibliothek prüfen“, „Alben ohne Genre“).',
   'genre.offline': 'Tag-Dienst nicht erreichbar.',
   'genre.subsHint': 'Stilrichtungen aus der Audio-Analyse. Alben ohne Analyse findest du unter „Alle“.',

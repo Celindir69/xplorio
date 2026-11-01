@@ -187,6 +187,7 @@ langRegister('it', 'Italiano', {
   'genre.all': 'Tutti',
   'genre.allHead': 'Tutti i generi',
   'genre.noAlbums': 'Nessun album in questo genere.',
+  'genre.styleShare': '{s} {p}%',
   'genre.none': 'Ancora nessun genere: gli album non hanno tag di genere (menu “Controlla libreria”, “Album senza genere”).',
   'genre.offline': 'Servizio tag non raggiungibile.',
   'genre.subsHint': 'Stili dall\'analisi audio. Gli album senza analisi si trovano in “Tutti”.',
