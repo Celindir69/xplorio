@@ -160,7 +160,7 @@ def read_replaygain(audio, kind):
     found = {}
     tags = audio.tags
     if tags is None:
-        return {'track': None, 'album': None}
+        return {'track': None, 'album': None, 'mqa': None}
     if kind == 'flac':
         for k, v in tags.items():
             found[k.lower()] = v[0] if isinstance(v, list) and v else v

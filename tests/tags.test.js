@@ -103,7 +103,7 @@ else {
   });
 
   t('tags.py: ReplayGain values from TXXX (any case), none without tags', function(){
-    assert.deepStrictEqual(run({op: 'replaygain', path: dsf}), {ok: true, track: null, album: null});
+    assert.deepStrictEqual(run({op: 'replaygain', path: dsf}), {ok: true, track: null, album: null, mqa: null});
     var set = 'import sys\nsys.path.insert(0, %v)\nfrom mutagen.dsf import DSF\nfrom mutagen.id3 import TXXX\n' +
       'a = DSF(%s)\na.tags.add(TXXX(encoding=3, desc="replaygain_track_gain", text=["-6.53 dB"]))\n' +
       'a.tags.add(TXXX(encoding=3, desc="REPLAYGAIN_ALBUM_GAIN", text=["+1.20 dB"]))\na.save()\n';
