@@ -245,7 +245,8 @@ function lyrCenter(el, animate) {
 function updateSyncedLyrics() {
   if (!lyricLines.length || document.hidden) return;
 
-  var pos = (Number(window.currentSeekMs) || 0) - lyrOffset;
+  var pos = (Number(window.currentSeekMs) || 0) - lyrOffset
+    - (typeof remoteDelayMs === 'function' ? remoteDelayMs() : 0);   /* listening on this device: its sound comes later (remote.js) */
   var active = -1;
 
   for (var i = 0; i < lyricLines.length; i++) {

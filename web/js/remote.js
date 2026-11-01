@@ -81,6 +81,21 @@ function remoteHide() { remoteMode = 'lokal'; remoteListen = false; remoteStop()
 
 function remotePlaying() { return remoteMode !== 'lokal' && remoteListen; }
 
+/* How far this device's sound lags behind the player, in ms (0 if it is not listening): the live stream's newest data
+   is "now", so it is what the browser holds ahead of what it plays (the stream cushion plus its own buffer).
+   Smoothed, measured at most twice a second. Synced lyrics follow it (lyrics.js) */
+var remoteDelay = {ms: 0, at: 0};
+function remoteDelayMs() {
+  if (!remotePlaying() || !remoteAudio || remoteAudio.paused || !remoteAudio.buffered || !remoteAudio.buffered.length) return 0;
+  var now = Date.now();
+  if (now - remoteDelay.at >= 500) {
+    var b = remoteAudio.buffered, ahead = (b.end(b.length - 1) - remoteAudio.currentTime) * 1000;
+    if (ahead >= 0 && ahead < 30000) remoteDelay.ms = remoteDelay.ms ? remoteDelay.ms * 0.8 + ahead * 0.2 : ahead;
+    remoteDelay.at = now;
+  }
+  return remoteDelay.ms;
+}
+
 function remoteStart() {
   if (!remoteAudio) {
     remoteAudio = new Audio();
@@ -100,6 +115,7 @@ function remoteStart() {
   });
 }
 function remoteStop() {
+  remoteDelay = {ms: 0, at: 0};                                /* next connection: measure anew */
   if (!remoteAudio || !remoteAudio.src) return;
   remoteAudio.pause();
   remoteAudio.removeAttribute('src');
