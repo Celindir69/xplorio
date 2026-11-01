@@ -436,7 +436,29 @@ function doGenres(query, cb) {
 function doCheckGet(query, cb) {
   var last = readCheck();
   var same = last && query && query.have && String(last.at) === String(query.have);
-  cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last});
+  cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, genreOk: genreOkLoad()});
+}
+
+/* Genre contradicts the audio analysis, but is right: POST /genreok {dir, tag, ok} remembers it for good (genre-ok.json,
+   {dir: tag}); it counts only as long as the album still has this tag. ok false takes it back. */
+var GENRE_OK_FILE = path.join(DATA_DIR, 'genre-ok.json'), genreOk = null;
+var GENRE_OK_MAX = 20000;
+function genreOkLoad() {
+  if (!genreOk) { try { genreOk = JSON.parse(fs.readFileSync(GENRE_OK_FILE, 'utf8')); } catch (e) { genreOk = {}; } }
+  if (!genreOk || typeof genreOk !== 'object' || Array.isArray(genreOk)) genreOk = {};
+  return genreOk;
+}
+function doGenreOk(body, cb) {
+  var dir = body && body.dir, tag = body && body.tag;
+  if (typeof dir !== 'string' || !dir || dir.length > 1000 || typeof tag !== 'string' || tag.length > 300) return cb(400, {ok: false, error: 'dir or tag missing'});
+  var m = genreOkLoad();
+  if (body.ok) {
+    if (!Object.prototype.hasOwnProperty.call(m, dir) && Object.keys(m).length >= GENRE_OK_MAX) return cb(400, {ok: false, error: 'too many'});
+    m[dir] = tag;
+  } else delete m[dir];
+  try { fs.writeFileSync(GENRE_OK_FILE + '.neu', JSON.stringify(m)); fs.renameSync(GENRE_OK_FILE + '.neu', GENRE_OK_FILE); }
+  catch (e) { return cb(500, {ok: false, error: e.message}); }
+  cb(200, {ok: true});
 }
 
 /* POST /checkdone {key}: remember an entry as handled (stays greyed out) until the next check.
@@ -1693,7 +1715,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1701,7 +1723,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

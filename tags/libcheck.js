@@ -149,7 +149,7 @@ function analyze(songs, hasCover, audioOf) {
                     audio: audioOf ? list.map(audioOf).filter(Boolean) : []});
   });
   var gc = genres.check(forGenres);
-  res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreStyles = gc.styles;
+  res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreConflict = gc.conflict; res.genreStyles = gc.styles;
   res.duplicates = duplicates.find(songs, artistKey);
 
   /* spellings: artist and album artist, grouped by artistKey */

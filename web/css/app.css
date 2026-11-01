@@ -1179,3 +1179,11 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 #browseBody .verPath { font-size:.85em; opacity:.45; overflow-wrap:anywhere; }
 .verStack { display:inline-flex; align-items:center; gap:.15em; margin-left:.45em; font-size:.72em; opacity:.6; vertical-align:.08em; white-space:nowrap; }
 .verStack svg { width:1.15em; height:1.15em; fill:currentColor; }
+
+/* Check library: genre contradicts the audio analysis ("Fits" button, folded list of those marked) */
+.ckList .ckOkBtn { font-size:calc(3 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(3 * var(--vw)); margin-left:calc(2 * var(--vw)); }
+.ckOkHead { display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-size:calc(3.2 * var(--vw)); opacity:.6;
+  padding:calc(3 * var(--vw)) 0 calc(1.5 * var(--vw)); border-top:1px solid rgba(var(--fg-rgb),.1); margin-top:calc(1.5 * var(--vw)); }
+.ckOkHead svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); fill:var(--fg); transition:transform .2s; }
+.ckOkHead.open svg { transform:rotate(90deg); }
+.ckOkList .sRow { opacity:.7; }
