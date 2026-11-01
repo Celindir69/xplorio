@@ -146,7 +146,7 @@ langRegister('en', 'English', {
   'remote.mode.lokal': 'Playback: system',
   'remote.mode.remote': 'Playback: this device only',
   'remote.none': 'No stream output set up in MPD',
-  'remote.tap': 'Sound on this device interrupted. Tap anywhere in Xplorio to keep listening.',
+  'remote.tap': 'Playback interrupted. Press play to continue.',
   'scan.updating': 'Reading the library. The player may respond more slowly until it is done.',
   'scan.building': 'Rebuilding the album list. The player may respond more slowly until it is done.',
   'check.runCovers': 'Checking embedded covers… {done} of {total}',

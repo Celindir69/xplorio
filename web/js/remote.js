@@ -11,7 +11,7 @@
 var REMOTE_KEY = 'xplorioPlayer';
 var REMOTE_CHECK_MS = 10000;
 var remoteMode = 'lokal', remoteListen = false, remoteAudio = null, remoteIcon = null, remoteWant = false, remoteHinted = false;
-var remoteCheckAt = 0;
+var remoteCheckAt = 0, remoteHold = 0;            /* after pausing: ignore "play" reports still on their way */
 var REMOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/></svg>';   /* headphones */
 
 function remoteStored() { try { return localStorage.getItem(REMOTE_KEY) || ''; } catch (e) { return ''; } }
@@ -31,6 +31,7 @@ function remoteSet(mode, quiet) {
     }
     remoteListen = mode !== 'lokal';
     remoteStore(remoteListen);
+    if (!quiet && remoteInterrupt(T('remote.mode.' + mode))) quiet = true;
     remoteApply(mode);
     if (!quiet) showToast(T('remote.mode.' + mode));
   }).catch(function(){ if (!quiet) showToast(T('remote.failed')); });
@@ -38,8 +39,9 @@ function remoteSet(mode, quiet) {
 
 function remoteTap() {
   if (remoteMode !== 'lokal' && !remoteListen) {                /* running on another device: join in */
-    remoteListen = true; remoteStore(true); remoteApply(remoteMode);
-    showToast(T('remote.mode.' + remoteMode));
+    remoteListen = true; remoteStore(true);
+    if (!remoteInterrupt(T('remote.mode.' + remoteMode))) showToast(T('remote.mode.' + remoteMode));
+    remoteApply(remoteMode);
     return;
   }
   remoteSet(remoteMode === 'lokal' ? 'remote' : remoteMode === 'remote' ? 'both' : 'lokal');
@@ -65,6 +67,16 @@ function remoteApply(mode) {
   if (typeof rotelInputRepaint === 'function') rotelInputRepaint();   /* other input on the amplifier: matters only with the amplifier */
 }
 
+/* pause the player, so that Play (a tap, which iOS needs for sound) continues with the new output; true if it was playing */
+function remoteInterrupt(lead) {
+  if (!remoteWant) return false;
+  remoteWant = false; remoteHold = Date.now() + 4000;
+  remoteStop();
+  if (typeof cmd === 'function') cmd('pause');
+  showToast((lead ? lead + '. ' : '') + T('remote.tap'));
+  return true;
+}
+
 function remoteHide() { remoteMode = 'lokal'; remoteListen = false; remoteStop(); if (remoteIcon) remoteIcon.style.display = 'none'; }
 
 function remotePlaying() { return remoteMode !== 'lokal' && remoteListen; }
@@ -83,8 +95,8 @@ function remoteStart() {
   if (!remoteAudio.paused && remoteAudio.src) return;
   remoteAudio.src = TAGS + '/stream?t=' + Date.now();          /* live: always connect anew, so it does not lag behind */
   var p = remoteAudio.play();
-  if (p && p.catch) p.catch(function(){
-    if (!remoteHinted) { remoteHinted = true; showToast(T('remote.tap')); }   /* iOS: needs a tap first */
+  if (p && p.catch) p.catch(function(){                         /* iOS: sound only after a tap -> pause, Play continues */
+    if (!remoteHinted) { remoteHinted = true; remoteInterrupt(''); }
   });
 }
 function remoteStop() {
@@ -108,15 +120,19 @@ function remoteCheck(now) {
 
 /* called with every player state (poll.js) */
 function remoteSync(st) {
-  remoteWant = st.status === 'play';
+  remoteWant = st.status === 'play' && Date.now() > remoteHold;
   remoteCheck(false);
   if (!remotePlaying()) return;
   if (remoteWant) remoteStart(); else remoteStop();
 }
 
-/* first tap: start the sound within the tap, iOS allows it only then */
-document.addEventListener('click', function(){
-  if (remotePlaying() && remoteWant && (!remoteAudio || remoteAudio.paused)) { if (remoteAudio) remoteAudio.removeAttribute('src'); remoteStart(); }
+/* Play: start the sound here within the tap, iOS allows it only then (the stream waits until the player sends) */
+document.addEventListener('click', function(ev){
+  if (!remotePlaying() || !ev.target || !ev.target.closest || !ev.target.closest('#cPlay')) return;
+  if (remoteWant) return;                                      /* playing: this tap pauses, poll stops the sound */
+  remoteWant = true; remoteHold = 0;
+  if (remoteAudio) remoteAudio.removeAttribute('src');
+  remoteStart();
 }, true);
 
 /* back in the foreground: take over a change made meanwhile, reconnect if needed */
