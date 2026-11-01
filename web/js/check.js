@@ -20,8 +20,7 @@ var CHECK_CATS = [
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
-var checkGenreOk = {};                                   /* dir -> genre tag marked "fits" (tag service genre-ok.json) */
-function checkIsOk(it) { return Object.prototype.hasOwnProperty.call(checkGenreOk, it.dir) && checkGenreOk[it.dir] === it.tag; }
+var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
 function checkFmtDate(ms) {
@@ -118,7 +117,7 @@ function checkRender(res) {
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
-    if (cat.key === 'genreConflict') list = list.filter(function(it){ return !checkIsOk(it); });   /* "fits" ones at the end */
+    if (cat.key === 'genreConflict' || cat.key === 'genreMerge') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
     row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
     row.querySelector('.ckName').textContent = cat.name;
@@ -291,51 +290,113 @@ function checkFill(box, cat, list) {
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
   more();
-  if (cat.key === 'genreConflict') checkConflictOk(box);
+  if (cat.key === 'genreConflict' || cat.key === 'genreMerge') checkKeptSection(box, cat.key);
 }
 
-/* ---------- Genre contradicts the audio analysis ---------- */
-/* "Rock → Electronic (80 % by audio) · Trip Hop, Downtempo"; pen: editor with the genre filled in, "Fits": never again */
-function checkConflictRow(it, ok) {
+/* ---------- Genre suggestions with buttons: "Apply" writes the suggestion, "Keep" leaves the tag for good ---------- */
+/* Kept entries (tag service genre-ok.json, {key: value}): contradiction per album {folder: genre tag}, merging per change
+   {"merge|<previous>|<genre>": genre}; they count as long as the album keeps the tag, and are listed folded at the end */
+function checkKeepOf(cat, it) {
+  return cat === 'genreMerge' ? {k: 'merge|' + it.from + '|' + it.genre, v: it.genre} : {k: it.dir, v: it.tag};
+}
+function checkIsKept(cat, it) {
+  var o = checkKeepOf(cat, it);
+  return Object.prototype.hasOwnProperty.call(checkGenreOk, o.k) && checkGenreOk[o.k] === o.v;
+}
+
+/* "Rock → Electronic (80 % by audio) · Trip Hop, Downtempo"; pen: editor with the genre filled in */
+function checkConflictRow(it, kept) {
   var sub = T('check.conflict.sub', {tag: it.tag, genre: it.genre, p: Math.round(it.share * 100), q: Math.round(it.tagShare * 100), top: it.tagTop}) +
             (it.subs && it.subs.length ? ' · ' + it.subs.join(', ') : '');
   var row = checkRow('genreConflict|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), sub, function(){
     openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'genre', value: it.genre});
   });
-  var b = document.createElement('button');
-  b.className = 'ckBtn ckOkBtn';
-  b.textContent = ok ? T('check.conflict.undo') : T('check.conflict.ok');
-  b.title = ok ? T('check.conflict.undoHint') : T('check.conflict.okHint');
-  b.addEventListener('click', function(ev){
-    ev.stopPropagation();
-    b.disabled = true;
-    tagPost('/genreok', {dir: it.dir, tag: it.tag, ok: !ok}).then(function(r){
-      if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
-      if (ok) delete checkGenreOk[it.dir]; else checkGenreOk[it.dir] = it.tag;
-      if (checkShown && checkShown.res) checkRender(checkShown.res);
-    }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
-  });
-  row.insertBefore(b, row.lastChild);
+  checkGenreButtons(row, 'genreConflict', 'genreConflict|' + it.dir, it, it.files, kept);
   return row;
 }
-/* at the end of the list: the ones marked "fits", folded */
-var checkOkOpen = false;
-function checkConflictOk(box) {
-  var all = (checkShown && checkShown.res && checkShown.res.result && checkShown.res.result.genreConflict) || [];
-  var ok = all.filter(checkIsOk);
-  if (!ok.length) return;
+
+/* buttons before the pen: "Apply" (then "Undo") and "Keep"; kept entries: "Check again" */
+function checkGenreButtons(row, cat, doneKey, it, files, kept) {
+  var box = document.createElement('div');
+  box.className = 'ckGenreBtns';
+  function btn(label, hint, fn) {
+    var b = document.createElement('button');
+    b.className = 'ckBtn ckOkBtn';
+    b.textContent = label; b.title = hint;
+    b.addEventListener('click', function(ev){ ev.stopPropagation(); b.disabled = true; fn(b); });
+    box.appendChild(b);
+    return b;
+  }
+  function keep(on, b) {
+    var o = checkKeepOf(cat, it);
+    tagPost('/genreok', {dir: o.k, tag: o.v, ok: on}).then(function(r){
+      if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
+      if (on) checkGenreOk[o.k] = o.v; else delete checkGenreOk[o.k];
+      if (checkShown && checkShown.res) checkRender(checkShown.res);
+    }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
+  }
+  if (kept) btn(T('check.conflict.undoKeep'), T('check.conflict.undoKeepHint'), function(b){ keep(false, b); });
+  else {
+    btn(T('check.conflict.apply'), T('check.conflict.applyHint', {genre: it.genre}), function(b){
+      checkApplyGenre(files, it.genre, b).then(function(batch){
+        row.classList.add('done'); checkMarkDone(doneKey);
+        while (box.firstChild) box.removeChild(box.firstChild);
+        if (batch) btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
+          tagPost('/undo', {batch: batch}).then(function(r){
+            if (!r || !r.ok) throw new Error((r && r.error) || 'undo');
+            row.classList.remove('done');
+            u.textContent = T('check.conflict.undone');
+            showToast(T('check.conflict.undone'));
+          }).catch(function(e){ u.disabled = false; showToast(T('tag.error', {error: e.message})); });
+        });
+      }).catch(function(){ b.disabled = false; });
+    });
+    btn(T('check.conflict.keep'), T('check.conflict.keepHint'), function(b){ keep(true, b); });
+  }
+  row.classList.add('ckGenreRow');
+  row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
+}
+
+/* write the genre into all files of the entry, in chunks with one undo ID; the scan follows when the check is closed */
+function checkApplyGenre(files, genre, b) {
+  var uris = files.map(function(f){ return f.uri; }), batch = Date.now().toString(36), changed = [], errs = [];
+  b.textContent = T('tag.saving');
+  tagWriting++;
+  return tagInChunks(uris, TAG_WRITE_CHUNK, function(part){
+    return tagPostRetry('/write', {items: part.map(function(u){ return {uri: u, tags: {genre: genre}}; }), batch: batch, scan: false})
+      .then(function(res){
+        if (!res.ok) throw new Error(res.error || T('tag.writeFailed'));
+        res.items.forEach(function(r, k){ if (!r.ok) errs.push(r.error); else if (r.changed || res.retried) changed.push(part[k]); });
+      });
+  }).then(function(){
+    if (changed.length) tagPost('/scan', {uris: changed}).catch(function(){});
+    showToast(T('tag.filesChanged', {n: changed.length}) + (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0]}) : ''));
+    return changed.length ? batch : null;
+  }).catch(function(e){
+    showToast(T('tag.error', {error: e.message}) + (changed.length ? T('tag.alreadyChanged', {n: changed.length}) : ''));
+    b.textContent = T('check.conflict.apply');
+    throw e;
+  }).then(function(r){ tagWriting--; return r; }, function(e){ tagWriting--; throw e; });
+}
+
+/* at the end of the list: the kept ones, folded */
+var checkOkOpen = {};
+function checkKeptSection(box, cat) {
+  var all = (checkShown && checkShown.res && checkShown.res.result && checkShown.res.result[cat]) || [];
+  var kept = all.filter(function(it){ return checkIsKept(cat, it); });
+  if (!kept.length) return;
   var head = document.createElement('div');
-  head.className = 'ckOkHead' + (checkOkOpen ? ' open' : '');
+  head.className = 'ckOkHead' + (checkOkOpen[cat] ? ' open' : '');
   head.innerHTML = '<span></span>' + CHECK_CHEVRON;
-  head.firstChild.textContent = T('check.conflict.okList', {n: checkNum(ok.length)});
+  head.firstChild.textContent = T('check.conflict.okList', {n: checkNum(kept.length)});
   var list = document.createElement('div');
   list.className = 'ckOkList';
-  list.style.display = checkOkOpen ? '' : 'none';
-  ok.forEach(function(it){ list.appendChild(checkConflictRow(it, true)); });
+  list.style.display = checkOkOpen[cat] ? '' : 'none';
+  kept.forEach(function(it){ list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : checkConflictRow(it, true)); });
   head.addEventListener('click', function(){
-    checkOkOpen = !checkOkOpen;
-    head.classList.toggle('open', checkOkOpen);
-    list.style.display = checkOkOpen ? '' : 'none';
+    checkOkOpen[cat] = !checkOkOpen[cat];
+    head.classList.toggle('open', checkOkOpen[cat]);
+    list.style.display = checkOkOpen[cat] ? '' : 'none';
   });
   box.appendChild(head); box.appendChild(list);
 }
@@ -388,14 +449,16 @@ function checkGenreAlbumRow(key, it) {
 }
 
 /* same change "previous -> top category" for several albums = one row; the pen opens all their tracks */
-function checkGenreGroupRow(key, g) {
+function checkGenreGroupRow(key, g, kept) {
   var names = g.albums.slice(0, 3).map(function(a){ return a.name; }).join(', ') + (g.albums.length > 3 ? ' …' : '');
   var audio = g.albums.some(function(a){ return a.how !== 'table'; });
-  return checkRow(key + '|' + g.from + '|' + g.genre, g.from.replace(/ \/ –$/, ' / ' + T('check.genre.empty')) + ' → ' + g.genre,
+  var row = checkRow(key + '|' + g.from + '|' + g.genre, g.from.replace(/ \/ –$/, ' / ' + T('check.genre.empty')) + ' → ' + g.genre,
     T('check.genre.groupSub', {albums: T('check.genre.albums', {n: g.albums.length}), n: g.count}) +
     (audio ? ' · ' + T('check.genre.withAudio') : '') + ' · ' + names, function(){
     openBulkEditor(g.files.map(function(f){ return f.uri; }), g.from + ' → ' + g.genre, {field: 'genre', value: g.genre});
   });
+  checkGenreButtons(row, key, key + '|' + g.from + '|' + g.genre, g, g.files, kept);
+  return row;
 }
 
 function checkSpellingRow(v, i, group) {

@@ -1187,3 +1187,6 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .ckOkHead svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); fill:var(--fg); transition:transform .2s; }
 .ckOkHead.open svg { transform:rotate(90deg); }
 .ckOkList .sRow { opacity:.7; }
+.ckGenreRow .sTitle, .ckGenreRow .sSub { white-space:normal; overflow-wrap:anywhere; }
+.ckGenreBtns { display:flex; flex-wrap:wrap; gap:calc(1.5 * var(--vw)); margin-top:calc(1.5 * var(--vw)); }
+.ckList .ckGenreBtns .ckOkBtn { margin-left:0; }
