@@ -77,6 +77,17 @@ t('substyles per album within its genre', function(){
   assert.deepStrictEqual(g.albumSubs([A([['Rock---Punk', 0.9]])], ['Jazz']), []);
 });
 
+t('substyle shares in percent (album list on the genre page)', function(){
+  /* track 1: Trip Hop 0.5/0.8, Downtempo 0.3/0.8; track 2: Trip Hop 0.6/0.7, Ambient 0.1/0.7 */
+  assert.deepStrictEqual(g.albumSubShares([A([['Electronic---Trip Hop', 0.5], ['Electronic---Downtempo', 0.3]]),
+                                           A([['Electronic---Trip Hop', 0.6], ['Electronic---Ambient', 0.1]])], ['Electronic']),
+    [{s: 'Trip Hop', p: 74}, {s: 'Downtempo', p: 19}]);
+  var list = [{dir: 'M/A', ge: 'Rock'}], shares = {};
+  g.subsIndex(list, [['X', '1', 'M/A/1.flac', 0, 'A']], function(){ return A([['Rock---Hard Rock', 0.7], ['Rock---Heavy Metal', 0.2]]); },
+              function(f){ return f.replace(/\/[^\/]*$/, ''); }, shares);
+  assert.deepStrictEqual(shares, {'M/A': [78, 22]});
+});
+
 t('substyle index and tiles, search across all genres', function(){
   var list = [{dir: 'M/A', al: 'A', ar: 'X', ge: 'Electronic'}, {dir: 'M/B', al: 'B', ar: 'Y', ge: 'electronic'},
               {dir: 'M/C', al: 'C', ar: 'Z', ge: 'Rock'}, {dir: 'M/D', al: 'D', ar: 'Z', ge: 'Rock'}];
