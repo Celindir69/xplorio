@@ -463,7 +463,10 @@ function browseAlbum(e, seq) {
     }
     head.appendChild(img); head.appendChild(meta);
     browseBody.appendChild(head);
-    if (vers) return versionsLayer(e, seq, vers, who);      /* several versions: choose one first */
+    if (vers) {                                              /* several versions: choose one first, name without "[HD]" etc. */
+      if (vers.name) { e.album = vers.name; ti.textContent = vers.name; browseTitle.textContent = vers.name; }   /* also for Discover and Background */
+      return versionsLayer(e, seq, vers.versions, who);
+    }
     var localTracks = tracks.filter(isLocalTrack);
     var play = playRow(T('browse.play'), playRowSub(tracks, function(t){ return t.duration; }), function(){
       browsePlay({uri:e.uri, service:info.service || e.service || 'mpd', type:'folder', title:e.album, artist:e.artist});
@@ -520,13 +523,13 @@ function browseAlbum(e, seq) {
 
 /* ---------- Album versions ---------- */
 /* The same album in several folders (tag service GET /versions, tags/versions.js) -> [{dir, al, ext, bits, rate, codec,
-   tracks, seconds, best, y}], best quality first; null if there is only one or the tag service does not answer.
+   tracks, seconds, best, y}], best quality first, in {name (without additions), versions}; null if there is only one or the tag service does not answer.
    e.version: opened from the versions list, then the album itself. */
 function albumVersions(e, uri) {
   if (e.version || typeof TAGS === 'undefined' || streamOf(uri) || (e.stream && !e.uri)) return Promise.resolve(null);
   var q = '/versions?u=' + encodeURIComponent(histRel(uri || '')) + '&al=' + encodeURIComponent(e.album || '') + '&ar=' + encodeURIComponent(e.artist || '');
   return withTimeout(tagGetJson(q), 4000).then(function(r){
-    return r && r.ok && Array.isArray(r.versions) && r.versions.length > 1 ? r.versions : null;
+    return r && r.ok && Array.isArray(r.versions) && r.versions.length > 1 ? r : null;
   }).catch(function(){ return null; });
 }
 

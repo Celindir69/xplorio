@@ -128,7 +128,7 @@ function genreAlbumPage(list, into, noHead, match) {
     var row = histEl('div', 'sRow' + (a.al === curAlbum ? ' cur' : ''));
     row.appendChild(histImg(art));
     var meta = histEl('div', 'sMeta');
-    var ti = histEl('div', 'sTitle', a.al);
+    var ti = histEl('div', 'sTitle', a.nv > 1 && a.bn ? a.bn : a.al);   /* several versions: name without "[HD]" etc. */
     if (a.nv > 1) ti.appendChild(versionStack(a.nv));
     if (a.y) ti.appendChild(yearSpan(a.y));
     meta.appendChild(ti);
@@ -355,6 +355,7 @@ function genreDecorate(rows, seq) {
           if (had && had.place <= v[2]) { x.row.style.display = 'none'; return; }
           if (had) had.row.style.display = 'none';
           seen[v[0]] = {row: x.row, place: v[2]};
+          if (v[3] && ti.firstChild && ti.firstChild.nodeType === 3) ti.firstChild.nodeValue = v[3];   /* name without "[HD]" etc. */
           ti.appendChild(versionStack(v[1]));
         }
         if (y && ti) ti.appendChild(yearSpan(y));          /* year after the album title */

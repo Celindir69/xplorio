@@ -5,11 +5,11 @@
 var duplicates = require('./duplicates.js');
 var albums = require('./albums.js');
 
-/* songs as from libcheck.mpdWalk -> [{n, a, v: [{dir, dirs, al, ext, bits, rate, codec, tracks, seconds}]}], best version first;
+/* songs as from libcheck.mpdWalk -> [{n: album name without additions, a, v: [{dir, dirs, al, ext, bits, rate, codec, tracks, seconds}]}], best version first;
    dir: the album folder (disc folders: their parent, as in albums.albumDir) */
 function build(songs, artistKey) {
   return duplicates.find(songs, artistKey).map(function(g){
-    return {n: g.name, a: g.artist, v: g.versions.map(function(v){
+    return {n: duplicates.bareName(g.name), a: g.artist, v: g.versions.map(function(v){
       var dir = albums.albumDir(v.dirs[0] + '/x');
       return {dir: dir, dirs: v.dirs, al: v.name, ext: v.ext, bits: v.bits, rate: v.rate, codec: v.codec, tracks: v.tracks, seconds: v.seconds};
     })};
@@ -48,15 +48,16 @@ function answer(g, yearOf) {
 }
 
 /* album list [{dir, al, ar, …}] -> the same list with one entry per album: of several versions the best one that is in the
-   list stays (at the place of the first), with nv = number of versions in the collection; find from index() */
+   list stays (at the place of the first), with nv = number of versions in the collection and bn = name without additions;
+   find from index() */
 function collapse(list, find) {
   var kept = [], at = {};
   list.forEach(function(a){
     var g = find(a.dir);
     if (!g) return kept.push(a);
     var rank = rankOf(g, a.dir), key = g.v[0].dir, k = at[key];
-    if (!k) { var c = copy(a, g.v.length); at[key] = {i: kept.length, rank: rank}; return kept.push(c); }
-    if (rank < k.rank) { kept[k.i] = copy(a, g.v.length); k.rank = rank; }
+    if (!k) { var c = copy(a, g); at[key] = {i: kept.length, rank: rank}; return kept.push(c); }
+    if (rank < k.rank) { kept[k.i] = copy(a, g); k.rank = rank; }
   });
   return kept;
 }
@@ -64,10 +65,11 @@ function rankOf(g, dir) {
   for (var i = 0; i < g.v.length; i++) if (g.v[i].dir === dir || g.v[i].dirs.indexOf(dir) >= 0) return i;
   return g.v.length;
 }
-function copy(a, n) { var o = {}; for (var k in a) o[k] = a[k]; o.nv = n; return o; }
+function copy(a, g) { var o = {}; for (var k in a) o[k] = a[k]; o.nv = g.v.length; o.bn = g.n; return o; }
 
-/* for /albumgenre: [best folder, number of versions, place of this folder (0 = best)] or 0 if the album exists once */
-function mark(g, dir) { return g ? [g.v[0].dir, g.v.length, rankOf(g, dir)] : 0; }
+/* for /albumgenre: [best folder, number of versions, place of this folder (0 = best), name without additions] or 0 if the
+   album exists once */
+function mark(g, dir) { return g ? [g.v[0].dir, g.v.length, rankOf(g, dir), g.n] : 0; }
 
 /* For mixes: tracks of the other versions -> {file: true}. Per album the version with the most stars counts (starsOf(dir)),
    without stars the best quality. Tracks of other versions are left out if the counting version has a track of the same

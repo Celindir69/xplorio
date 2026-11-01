@@ -408,8 +408,8 @@ Qualitätsabzeichen wie im Player (Hi-Res, Lossless, DSD, Lossy) mit Abtastrate,
 Spielzeit und Pfad; die beste ist markiert. Antippen öffnet die Version mit ihren Titeln, der Pfeil zurück führt wieder zur
 Auswahl. Zusammengefasst wird wie bei den [doppelten Alben](#bibliothek-prüfen) (gleicher Album-Künstler und Albumname,
 Zusätze wie „(Deluxe Edition)“ zählen nicht). Bewertungen und Verlauf gelten weiter je Version. In Albenlisten (Künstlerseite,
-Suche, Genre, Jahr, Jahrzehnt) steht ein solches Album nur einmal, mit einem Stapel-Symbol und der Zahl der Versionen
-hinter dem Titel; gezeigt wird die beste Version, die in der Liste vorkommt. In Mixen (Würfel, Ähnliche, Stimmungsmix,
+Suche, Genre, Jahr, Jahrzehnt) steht ein solches Album nur einmal, unter dem Namen ohne Zusätze (aus „Abbey Road [HD]“ wird
+„Abbey Road“), mit einem Stapel-Symbol und der Zahl der Versionen hinter dem Titel; gezeigt wird die beste Version, die in der Liste vorkommt. In Mixen (Würfel, Ähnliche, Stimmungsmix,
 „Zusammen“) spielt je Album nur eine Version: die mit den meisten Sternen, ohne Sterne die in bester Qualität. Titel, die
 es nur in einer anderen Version gibt (Bonustitel), bleiben im Mix.
 
