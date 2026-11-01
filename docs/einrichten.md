@@ -166,7 +166,8 @@ Non-Music, Children's, Brass & Military).
   (z. B. „Tag: Hard Rock → Electronic (80 % laut Audio, Rock 10 %)“). Eine Zeile je Album; solche Alben stehen nicht
   zusätzlich unter „Genres zusammenfassen“.
 
-In beiden Genre-Listen stehen unter jeder Zeile zwei Knöpfe: „Übernehmen“ schreibt den Vorschlag sofort in die Dateien
+In allen drei Genre-Listen stehen unter jeder Zeile zwei Knöpfe (bei „Genre fehlt“ „Übernehmen“ nur mit Vorschlag;
+„Behalten“ heißt dort: bleibt ohne Genre): „Übernehmen“ schreibt den Vorschlag sofort in die Dateien
 (danach „Rückgängig“; gescannt wird beim Schließen der Prüfung), „Behalten“ lässt das bisherige Tag und schlägt die
 Änderung nicht mehr vor (`genre-ok.json` im Datenordner; bei Widersprüchen je Album, solange es dieses Tag hat, beim
 Zusammenfassen je Änderung, z. B. „Hard Rock → Rock“). Behaltene stehen zugeklappt am Ende der Liste und lassen sich dort
