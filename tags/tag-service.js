@@ -1648,6 +1648,78 @@ function doLastfmApi(query, cb) {
   });
 }
 
+/* ---------- Playback on this device (hidden: ?player=remote|both|lokal, tags/remote.js) ---------- */
+/* GET /remote -> {ok, available, mode}; POST /remote {mode}: switch MPD's outputs; GET /stream: MPD's stream output for
+   the browser (Safari needs answers to range requests). If the amplifier output is off and nobody has listened for
+   REMOTE_IDLE_MS, the outputs go back to "lokal" by themselves, so the system is never left silent. */
+var remote = require('./remote.js');
+var MPD_CONF = process.env.MPD_CONF || '/etc/mpd.conf';
+var REMOTE_IDLE_MS = 60000;
+var remoteListeners = 0, remoteLastListen = Date.now();
+function remoteState(cb) {
+  var conf = [];
+  try { conf = remote.confOutputs(fs.readFileSync(MPD_CONF, 'utf8')); } catch (e) { /* not readable: plugin field only */ }
+  remote.mpd(MPD_HOST, MPD_PORT, ['outputs'], function(err, lines){
+    if (err) return cb(err);
+    cb(null, remote.find(remote.parseOutputs(lines), conf));
+  });
+}
+function doRemoteGet(cb) {
+  remoteState(function(err, f){
+    if (err) return cb(200, {ok: false, error: err.message});
+    cb(200, {ok: true, available: !!f, mode: f ? remote.modeOf(f) : 'lokal', listeners: remoteListeners});
+  });
+}
+function doRemoteSet(body, cb) {
+  var mode = body && body.mode;
+  if (['lokal', 'remote', 'both'].indexOf(mode) < 0) return cb(400, {ok: false, error: 'invalid mode'});
+  remoteState(function(err, f){
+    if (err) return cb(200, {ok: false, error: err.message});
+    if (!f) return cb(200, {ok: false, available: false, error: 'no stream output in MPD'});
+    var cmds = remote.commands(f, mode);
+    if (!cmds) return cb(200, {ok: false, available: true, error: 'no amplifier output'});
+    remoteLastListen = Date.now();                       /* time to connect before the safety check counts */
+    remote.mpd(MPD_HOST, MPD_PORT, cmds, function(e2){
+      if (e2) return cb(200, {ok: false, error: e2.message});
+      cb(200, {ok: true, available: true, mode: mode});
+    });
+  });
+}
+function doStream(req, res) {
+  remoteState(function(err, f){
+    if (err || !f) { res.writeHead(404, {'Cache-Control': 'no-store'}); return res.end(); }
+    var a = remote.rangeAnswer(req.headers.range), left = a.limit, closed = false;
+    var up = http.get({host: '127.0.0.1', port: f.stream.port, path: '/'}, function(u){
+      if (closed) return u.destroy();
+      res.writeHead(a.status, a.headers);
+      if (!left) { remoteListeners++; u.on('close', function(){ remoteListeners--; remoteLastListen = Date.now(); }); }
+      u.on('data', function(c){
+        if (left) {
+          if (c.length > left) c = c.slice(0, left);
+          left -= c.length;
+          res.write(c);
+          if (!left) { res.end(); u.destroy(); }
+          return;
+        }
+        res.write(c);
+        remoteLastListen = Date.now();
+      });
+      u.on('end', function(){ res.end(); });
+    });
+    up.on('error', function(){ if (!res.headersSent) res.writeHead(502, {'Cache-Control': 'no-store'}); res.end(); });
+    req.on('close', function(){ closed = true; up.abort(); });
+  });
+}
+setInterval(function(){                                  /* safety: amplifier off and nobody listening -> back to "lokal" */
+  if (remoteListeners > 0 || Date.now() - remoteLastListen < REMOTE_IDLE_MS) return;
+  remoteState(function(err, f){
+    if (err || !f || remote.modeOf(f) !== 'remote') return;
+    console.log('playback on device: nobody listening, amplifier output back on');
+    var cmds = remote.commands(f, 'lokal');
+    if (cmds) remote.mpd(MPD_HOST, MPD_PORT, cmds, function(){});
+  });
+}, 15000).unref();
+
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -1678,6 +1750,8 @@ function handle(req, res) {
   res.xplorioOrigin = g.origin;
   var route = req.url.split('?')[0];
   if (req.method === 'OPTIONS') return send(res, 204, {});
+  if (req.method === 'GET' && route === '/stream')  return doStream(req, res);
+  if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!keys.lastfm().key});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });
@@ -1715,7 +1789,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1723,7 +1797,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });
