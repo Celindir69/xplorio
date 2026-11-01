@@ -28,12 +28,30 @@ function rgRefresh() {
   rgState = {uri: null, gain: null};
   if (qualityState) paintQuality(qualityState);
 }
+/* MQA: only the file's tags tell (GET /mqa from the tag service); once per file */
+var mqaCache = {}, mqaPending = {};
+function mqaAttach(st) {
+  var type = String(st.fileFormat || st.trackType || '').toLowerCase();
+  if (type !== 'flac' || typeof TAGS === 'undefined' || typeof isLocalTrack !== 'function' || !isLocalTrack(st)) return;
+  var uri = st.uri;
+  if (mqaCache.hasOwnProperty(uri)) { st.fileMqa = mqaCache[uri]; return; }
+  if (mqaPending[uri]) return;
+  mqaPending[uri] = true;
+  withTimeout(fetch(TAGS + '/mqa?uri=' + encodeURIComponent(uri)), 8000).then(function(r){ return r.json(); })
+    .then(function(j){
+      delete mqaPending[uri];
+      if (!j || !j.ok) return;
+      mqaCache[uri] = j.mqa || null;
+      if (qualityState && qualityState.uri === uri) paintQuality(qualityState);
+    }).catch(function(){ delete mqaPending[uri]; });
+}
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
   if (st.trackType === 'input') { mTech.dataset.key = ''; mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* large icon instead of cover */
   if (inp) { mTech.dataset.key = ''; mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
+  mqaAttach(st);
   var q = classifyQuality(st, window.APP_CONFIG);
   rgFetch(st);
   var tech = q.tech.slice();

@@ -29,6 +29,8 @@ function qDsdName(hz) {
 /* cfg: { M4A_LOSSLESS: true } – m4a can be ALAC (lossless) or AAC (lossy), getState does not tell.
    If st.fileCodec is set (mp4probe.js), the info from the file applies: {codec:'alac'|'aac', bits}; false = not
    determinable (then M4A_LOSSLESS); undefined = probe still running (then no badge, only the tech line). */
+/* 192000 -> "192 kHz", 88200 -> "88.2 kHz" */
+function qRateText(hz) { return (Math.round(hz / 100) / 10) + ' kHz'; }
 function classifyQuality(st, cfg) {
   cfg = cfg || {};
   st = st || {};
@@ -59,6 +61,7 @@ function classifyQuality(st, cfg) {
     lossless = (kbps && kbps < 400) ? false : true;     /* e.g. AAC 96/320 kbps = lossy */
   }
 
+  if (!kind && lossless === true && st.fileMqa) { kind = 'mqa'; label = 'MQA'; }   /* FLAC with MQA tags (poll.js mqaFetch) */
   if (!kind) {
     if (lossless === true)  { kind = (bits > 16 || rate > 48000) ? 'hires' : 'lossless'; label = (kind === 'hires') ? 'Hi-Res' : 'Lossless'; }
     else if (lossless === false) { kind = 'lossy'; label = 'Lossy'; }
@@ -70,6 +73,7 @@ function classifyQuality(st, cfg) {
   else if (st.bitdepth && kind !== 'lossy') tech.push(st.bitdepth);
   if (fmt) tech.push(fmt);
   if (kind === 'lossy' && kbps) tech.push(kbps + ' kbps');
+  if (kind === 'mqa' && st.fileMqa.orig) tech.push('Original ' + qRateText(st.fileMqa.orig));
   return { kind: kind, label: label, tech: tech };
 }
 

@@ -43,7 +43,7 @@
   .qBadge { display:none; font-size:calc(2.5 * var(--vw)); font-weight:700; letter-spacing:.06em; line-height:1;
     padding:.46em .7em .24em; border-radius:calc(1.2 * var(--vw));   /* capitals: text visually centered */
     border:1px solid currentColor; text-transform:uppercase; white-space:nowrap; opacity:.9; }
-  .qBadge.hires, .qBadge.dsd { display:inline-block; color:var(--gold); }
+  .qBadge.hires, .qBadge.dsd, .qBadge.mqa { display:inline-block; color:var(--gold); }
   .qBadge.lossless { display:inline-block; color:var(--fg); }
   .qBadge.lossy, .qBadge.radio { display:inline-block; color:var(--fg); opacity:.5; }
 
