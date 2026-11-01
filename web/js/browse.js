@@ -418,7 +418,8 @@ function browseAlbum(e, seq) {
     : (svc ? streamFindAlbum(svc, e.artist, e.album) : Promise.resolve(null)).then(function(u){
         return u || resolveAlbumUri(e.artist, e.album);    /* not found at the service: own collection */
       }).then(function(u){ e.uri = u; return u; });
-  ready.then(browseGet).then(function(j){
+  ready.then(function(u){ return Promise.all([browseGet(u), albumVersions(e, u)]); }).then(function(res){
+    var j = res[0], vers = res[1];
     if (seq !== browseSeq) return;
     var info = (j && j.navigation && j.navigation.info) || {};
     var tracks = browseItems(j).filter(function(it){ return it.uri && !/^folder/.test(it.type || ''); });
@@ -462,6 +463,7 @@ function browseAlbum(e, seq) {
     }
     head.appendChild(img); head.appendChild(meta);
     browseBody.appendChild(head);
+    if (vers) return versionsLayer(e, seq, vers, who);      /* several versions: choose one first */
     var localTracks = tracks.filter(isLocalTrack);
     var play = playRow(T('browse.play'), playRowSub(tracks, function(t){ return t.duration; }), function(){
       browsePlay({uri:e.uri, service:info.service || e.service || 'mpd', type:'folder', title:e.album, artist:e.artist});
@@ -513,6 +515,64 @@ function browseAlbum(e, seq) {
     if (seq !== browseSeq) return;
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
     browseBody.appendChild(browseNote(T('browse.loadError')));
+  });
+}
+
+/* ---------- Album versions ---------- */
+/* The same album in several folders (tag service GET /versions, tags/versions.js) -> [{dir, al, ext, bits, rate, codec,
+   tracks, seconds, best, y}], best quality first; null if there is only one or the tag service does not answer.
+   e.version: opened from the versions list, then the album itself. */
+function albumVersions(e, uri) {
+  if (e.version || typeof TAGS === 'undefined' || streamOf(uri) || (e.stream && !e.uri)) return Promise.resolve(null);
+  var q = '/versions?u=' + encodeURIComponent(histRel(uri || '')) + '&al=' + encodeURIComponent(e.album || '') + '&ar=' + encodeURIComponent(e.artist || '');
+  return withTimeout(tagGetJson(q), 4000).then(function(r){
+    return r && r.ok && Array.isArray(r.versions) && r.versions.length > 1 ? r.versions : null;
+  }).catch(function(){ return null; });
+}
+
+/* quality of a version like in the player (quality.js): badge (Hi-Res, Lossless, DSD64, Lossy) and tech line */
+function versionQuality(v) {
+  var r = v.rate || 0;
+  var st = {fileFormat: v.ext || '', samplerate: r >= 1e6 ? (Math.round(r / 1e4) / 100) + ' MHz' : r ? (Math.round(r / 100) / 10) + ' kHz' : '',
+            bitdepth: v.bits > 1 ? v.bits + ' bit' : ''};
+  if (v.ext === 'm4a' || v.ext === 'mp4') st.fileCodec = v.codec ? {codec: v.codec, bits: v.bits || 0} : false;
+  return classifyQuality(st, window.APP_CONFIG);
+}
+
+/* in-between page instead of the tracks: "Play best" and the tab "Versions"; a tap on a version opens it */
+function versionsLayer(e, seq, vers, who) {
+  var best = vers[0], bestItem = {uri: 'music-library/' + best.dir, service: 'mpd', type: 'folder', title: best.al, artist: who};
+  var play = playRow(T('browse.playBest'), T('browse.versionCount', {n: vers.length}), function(){ browsePlay(bestItem); },
+                     [queueAddButton([bestItem], best.tracks)]);
+  play.title = T('browse.playBestHint');
+  browseBody.appendChild(play);
+  var panes = browseTabs(e, [['versions', T('browse.tab.versions')],
+    ['more', T('browse.tab.more'), function(box){
+      discoverAlbum(box, {artist: who, album: e.album, uri: 'music-library/' + best.dir}, function(){ return seq === browseSeq; });
+    }],
+    ['bg', T('browse.tab.bg'), function(box){ backgroundFill(box, e, seq, who, e.album); }]]);
+  var pane = panes.versions;
+  pane.appendChild(listHint(T('browse.hintVersions')));
+  vers.forEach(function(v){
+    var row = histEl('div', 'sRow verRow');
+    var img = histEl('img', 'sCover');
+    img.src = artUrl('/albumart?path=' + encodeURIComponent('/mnt/' + v.dir));
+    var meta = histEl('div', 'sMeta');
+    var ti = histEl('div', 'sTitle', v.al);
+    if (v.y) ti.appendChild(yearSpan(v.y));
+    var q = versionQuality(v), line = histEl('div', 'sSub verQ');
+    if (q.label) line.appendChild(histEl('span', 'qBadge ' + q.kind, q.label));
+    var bits = q.tech.concat([T('browse.trackCount', {n: v.tracks})]);
+    if (v.seconds) bits.push(mixDuration(v.seconds));
+    line.appendChild(document.createTextNode(bits.join(' \u00b7 ')));
+    if (v.best) line.appendChild(histEl('span', 'verBest', ' \u00b7 ' + T('browse.versionBest')));
+    meta.appendChild(ti); meta.appendChild(line); meta.appendChild(histEl('div', 'sSub verPath', v.dir));
+    row.appendChild(img); row.appendChild(meta);
+    row.addEventListener('click', function(){
+      browseStack.push({kind: 'album', artist: who, album: v.al, uri: 'music-library/' + v.dir, version: true});
+      browseRender();
+    });
+    pane.appendChild(row);
   });
 }
 
