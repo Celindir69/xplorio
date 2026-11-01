@@ -161,6 +161,10 @@ var SUB_MAX = 3;
 /* substyles of an album within its top categories tops: shares per track (only styles of these categories),
    averaged over the analyzed tracks -> names, strongest first */
 function albumSubs(entries, tops) {
+  return albumSubShares(entries, tops).map(function(x){ return x.s; });
+}
+/* the same with their share: [{s, p}], p = average share over the album's analysed tracks in percent */
+function albumSubShares(entries, tops) {
   var sub = {}, n = 0;
   entries.forEach(function(o){
     var t = {}, sum = 0;
@@ -175,12 +179,14 @@ function albumSubs(entries, tops) {
   });
   if (!n) return [];
   return Object.keys(sub).sort(function(a, b){ return sub[b] - sub[a] || a.localeCompare(b); })
-    .filter(function(k, i){ return i === 0 || sub[k] / n >= SUB_SHARE; }).slice(0, SUB_MAX);
+    .filter(function(k, i){ return i === 0 || sub[k] / n >= SUB_SHARE; }).slice(0, SUB_MAX)
+    .map(function(k){ return {s: k, p: Math.round(sub[k] / n * 100)}; });
 }
 
 /* substyles of all albums: list = album list [{dir, ge}], tracks = [[artist, title, file, sec., album], …],
-   audioOf(artist, title, album) -> analysis or null, dirOf(file) -> album folder. -> {folder: [substyles]} */
-function subsIndex(list, tracks, audioOf, dirOf) {
+   audioOf(artist, title, album) -> analysis or null, dirOf(file) -> album folder. -> {folder: [substyles]};
+   shares (optional object) gets {folder: [percent per substyle]} */
+function subsIndex(list, tracks, audioOf, dirOf, shares) {
   var byDir = {}, out = {};
   tracks.forEach(function(t){
     var o = audioOf(t[0], t[1], t[4]);
@@ -188,8 +194,10 @@ function subsIndex(list, tracks, audioOf, dirOf) {
   });
   list.forEach(function(a){
     var tops = a.ge && byDir[a.dir] ? topsOf(a.ge) : [];
-    var subs = tops.length ? albumSubs(byDir[a.dir], tops) : [];
-    if (subs.length) out[a.dir] = subs;
+    var subs = tops.length ? albumSubShares(byDir[a.dir], tops) : [];
+    if (!subs.length) return;
+    out[a.dir] = subs.map(function(x){ return x.s; });
+    if (shares) shares[a.dir] = subs.map(function(x){ return x.p; });
   });
   return out;
 }
@@ -212,4 +220,4 @@ function subList(list, idx, g, q) {
 }
 
 module.exports = {TOPS: TOPS, genreKey: genreKey, topsOf: topsOf, learnStyles: learnStyles, audioVote: audioVote,
-                  suggest: suggest, check: check, albumSubs: albumSubs, subsIndex: subsIndex, subList: subList};
+                  suggest: suggest, check: check, albumSubs: albumSubs, albumSubShares: albumSubShares, subsIndex: subsIndex, subList: subList};

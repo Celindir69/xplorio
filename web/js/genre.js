@@ -132,6 +132,9 @@ function genreAlbumPage(list, into, noHead, match) {
     if (a.y) ti.appendChild(yearSpan(a.y));
     meta.appendChild(ti);
     meta.appendChild(histEl('div', 'sSub', histArtistName(a.ar)));
+    if (a.st && a.sp) meta.appendChild(histEl('div', 'sSub', a.st.map(function(s, i){   /* genre page: why the album is listed here */
+      return T('genre.styleShare', {s: s, p: langNum(a.sp[i])});
+    }).join(' · ')));
     row.appendChild(meta);
     var pen = tagAlbumButton({uri: uri, title: a.al, service: 'mpd'});
     if (pen) row.appendChild(pen);
