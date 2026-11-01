@@ -73,6 +73,25 @@ function genreIndex(list) {
   };
 }
 
+/* album folder like genreIndex: via the uri, else album+artist (compilations by album) -> folder or '' */
+function dirIndex(list) {
+  var dirs = {}, byKey = {}, byAlbum = {};
+  list.forEach(function(a){
+    var k = plays.norm(a.al);
+    dirs[a.dir] = true; byKey[k + '|' + plays.norm(a.ar)] = a.dir;
+    if (a.ar === 'Verschiedene') byAlbum[k] = a.dir;
+  });
+  return function(e) {
+    if (e.u && !/^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)\/|spotify:)/i.test(e.u)) {
+      var d = albumDir(e.u.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, ''));
+      if (dirs[d]) return d;
+    }
+    if (!e.al) return '';
+    var k = plays.norm(e.al);
+    return byKey[k + '|' + plays.norm(e.ar)] || byAlbum[k] || '';
+  };
+}
+
 /* year of an album (Date tag) like genreIndex: via the folder, else album+artist -> year or 0 */
 function yearIndex(list) {
   var byDir = {}, byKey = {};
@@ -256,5 +275,5 @@ function freshAlbums(list, now, n, days) {
     .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y, m: a.m}; });
 }
 
-module.exports = {dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
+module.exports = {dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, dirIndex: dirIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
                   artists: artists, lastArtistIndex: lastArtistIndex, lastTrackIndex: lastTrackIndex, pickArtist: pickArtist, pickTrack: pickTrack};
