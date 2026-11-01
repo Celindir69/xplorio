@@ -232,6 +232,7 @@ function poll() {
   if (!volDrag && ROTEL_ON) rotel('/state');  
 withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateFill).then(function(st){
 st = inputApply(st);
+if (typeof remoteSync === 'function') remoteSync(st);         /* playback on this device (remote.js) */
 if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* already playing: play back to normal */
 
 curDur = Number(st.duration) || 0;

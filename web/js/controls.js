@@ -98,6 +98,7 @@ btnRotelPower.addEventListener('click', function(){
   volWrap.className = want ? '' : 'off';
   rotelPowerHold = { want: want, until: Date.now() + 20000 };
   if (want) { sendRotelPower(true); return; }
+  if (typeof remoteMode !== 'undefined' && remoteMode === 'remote') { sendRotelPower(false); return; }   /* only on this device: keeps playing */
   rotelBusy = true;
   stopPlaybackThen(function(){ sendRotelPower(false); rotelBusy = false; });
 });
@@ -128,6 +129,7 @@ function rotelProfLoad() {
 /* {name, icon} of the active foreign input or null (amp off, player input, not yet known) */
 function rotelInput() {
   if (!ROTEL_ON || !rotelProf || !rotelOn || !rotelLinked || !rotelSource) return null;
+  if (typeof remoteMode !== 'undefined' && remoteMode === 'remote') return null;   /* only on this device (remote.js): the amplifier plays no part */
   var src = rotelNorm(rotelSource);
   if (src === rotelNorm(rotelProf.player)) return null;
   var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];

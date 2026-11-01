@@ -1201,3 +1201,10 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .ckAlbToggle { font-size:calc(3 * var(--vw)); opacity:.7; margin-top:calc(1 * var(--vw)); cursor:pointer; }
 .ckAlbFold { font-size:calc(3 * var(--vw)); opacity:.6; padding:calc(.8 * var(--vw)) 0 0 calc(3 * var(--vw)); overflow-wrap:anywhere; }
 .ckAlbFold div { padding:calc(.4 * var(--vw)) 0; }
+/* playback on this device (remote.js): small phone symbol in the quality line, a tap goes back to the amplifier */
+.remoteIcon { position:relative; }
+.remoteIcon.remote, .remoteIcon.both { opacity:1; }
+.remoteIcon.remote svg, .remoteIcon.both svg { fill:var(--accent, var(--fg)); }   /* switched on, like repeat and shuffle */
+.remoteIcon.both::after { content:''; position:absolute; right:2px; top:2px; width:9px; height:9px; border-radius:50%; background:var(--accent, var(--fg)); }
+.remoteIcon.away { opacity:.55; }
+.remoteIcon.away::after { display:none; }
