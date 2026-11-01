@@ -1204,3 +1204,8 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 /* playback on this device (remote.js): small phone symbol in the quality line, a tap goes back to the amplifier */
 .remoteIcon { display:inline-block; margin-left:.6em; cursor:pointer; vertical-align:middle; opacity:.8; }
 .remoteIcon svg { width:1.3em; height:1.3em; fill:var(--gold, currentColor); vertical-align:middle; }
+.remoteIcon { position:relative; }
+.remoteIcon.lokal { opacity:.4; }
+.remoteIcon.lokal svg { fill:currentColor; }
+.remoteIcon.remote, .remoteIcon.both { opacity:1; }
+.remoteIcon.both::after { content:''; position:absolute; right:-.25em; top:-.1em; width:.45em; height:.45em; border-radius:50%; background:var(--gold, currentColor); }

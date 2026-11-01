@@ -137,7 +137,7 @@ langRegister('fr', 'Français', {
   'check.db.running': 'Lecture de la bibliothèque …',
   'check.db.done': 'Bibliothèque lue. La liste des albums sera bientôt reconstruite.',
   'check.db.failed': 'Impossible de lancer la lecture de la bibliothèque.',
-  'remote.back': 'Lecture de retour sur la chaîne',
+  'remote.next': 'Touchez pour changer',
   'remote.failed': 'Échec du changement',
   'remote.mode.both': 'Lecture : chaîne et cet appareil',
   'remote.mode.lokal': 'Lecture : chaîne',

@@ -136,7 +136,7 @@ langRegister('it', 'Italiano', {
   'check.db.running': 'Lettura della libreria …',
   'check.db.done': 'Libreria letta. L\'elenco degli album verrà ricostruito a breve.',
   'check.db.failed': 'Impossibile avviare la lettura della libreria.',
-  'remote.back': 'Riproduzione di nuovo sull’impianto',
+  'remote.next': 'Tocca per cambiare',
   'remote.failed': 'Cambio non riuscito',
   'remote.mode.both': 'Riproduzione: impianto e questo dispositivo',
   'remote.mode.lokal': 'Riproduzione: impianto',
