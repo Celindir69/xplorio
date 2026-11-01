@@ -85,7 +85,7 @@ t('.mpdignore: the duplicates folder added once, other lines stay', function(){
 });
 t('medium and quality markers do not count, year spans and live do', function(){
   function k(x) { return dup.albumKey(x, lc.artistKey); }
-  ['Abbey Road [HD]', 'Abbey Road (SACD)', 'Abbey Road [24-96]', 'Abbey Road [24/192]', 'Abbey Road (MFSL)', 'Abbey Road (SHM-CD)',
+  ['Abbey Road [HD]', 'Abbey Road (SACD)', 'Abbey Road [24-96]', 'Abbey Road [24/192]', 'Abbey Road (MFSL)', 'Abbey Road (MQA)', 'Abbey Road (SHM-CD)',
    'Abbey Road [DSD64]', 'Abbey Road [2007 Remaster]'].forEach(function(x){ assert.strictEqual(k(x), 'abbeyroad', x); });
   assert.notStrictEqual(k('Hits (1965-1970)'), k('Hits (1980-1990)'));
   assert.notStrictEqual(k('Abbey Road (Live)'), 'abbeyroad');

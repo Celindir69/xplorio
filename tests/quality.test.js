@@ -31,6 +31,10 @@ var cases = [
     'lossy', 'Lossy', ['44.1 kHz', 'SPOTIFY', '320 kbps']],
   ['[assumed] unknown type', {trackType:'xyz', samplerate:'44.1 kHz', bitdepth:'16 bit', service:'mpd'},
     '', '', ['44.1 kHz', '16 bit', 'XYZ']],
+  ['[assumed] MQA (FLAC 24/44.1, original 192 kHz)', {trackType:'flac', samplerate:'44.1 kHz', bitdepth:'24 bit', service:'mpd', fileMqa:{orig:192000}},
+    'mqa', 'MQA', ['44.1 kHz', '24 bit', 'FLAC', 'Original 192 kHz']],
+  ['[assumed] MQA without original rate', {trackType:'flac', samplerate:'48 kHz', bitdepth:'24 bit', service:'mpd', fileMqa:{orig:null}},
+    'mqa', 'MQA', ['48 kHz', '24 bit', 'FLAC']],
   ['empty', {}, '', '', []]
 ];
 var fail = 0;

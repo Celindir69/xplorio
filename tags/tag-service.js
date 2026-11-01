@@ -699,7 +699,7 @@ var ALBUMS_FILE = path.join(DATA_DIR, 'albums.json');
 var albumIdx = null, albumBuilding = false, albumSoonUntil = 0, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
 var ALBUMS_CHECK_MS = 60000;                             /* ask MPD at most this often whether the database has changed */
 var ALBUMS_AFTER_SCAN_MS = 90000;                        /* after our own scan: update the album list once MPD and Volumio are done */
-var ALBUMS_VERSION = 11;                                 /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions, 10: more additions ignored, 11: version name without additions */
+var ALBUMS_VERSION = 12;                                 /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions, 10: more additions ignored, 11: version name without additions, 12: MQA as addition */
 var TRACKS_FILE = path.join(DATA_DIR, 'library-tracks.json');   /* [[artist, title, file, seconds, album, album genre], …] */
 
 function albumsEnsure(cb) {
@@ -1411,6 +1411,19 @@ function doReplayGain(query, cb) {
     runPy({op: 'replaygain', path: r.full}, function(p){ done(p.ok ? null : new Error(p.error), p); });
   }, function(o){ cb(o.ok ? 200 : 503, o); });
 }
+/* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; remembered per file */
+var mqaCache = new Map(), MQA_CACHE_MAX = 500;
+function doMqa(query, cb) {
+  var r = resolveUri(query.uri);
+  if (!r || r.missing || !/\.flac$/i.test(r.full)) return cb(200, {ok: true, mqa: null});
+  if (mqaCache.has(r.full)) return cb(200, {ok: true, mqa: mqaCache.get(r.full)});
+  runPy({op: 'replaygain', path: r.full}, function(p){
+    if (!p.ok) return cb(200, {ok: false, mqa: null});
+    if (mqaCache.size >= MQA_CACHE_MAX) mqaCache.delete(mqaCache.keys().next().value);
+    mqaCache.set(r.full, p.mqa || null);
+    cb(200, {ok: true, mqa: p.mqa || null});
+  });
+}
 
 function doSysinfo(query, res) {
   sysInfo.report(query.full === '1', function(r){ send(res, 200, r); });
@@ -1692,6 +1705,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/stationlogo') return doStationLogo(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/playback') return doPlaybackGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/mqa') return doMqa(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/replaygain') return doReplayGain(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/sysinfo') return doSysinfo(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/services') return doServices(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });

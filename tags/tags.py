@@ -15,7 +15,8 @@ Cover (embedded front cover):
       is first saved to <backup>.jpg/.png. Response: {"ok":true, "changed":true, "backup":"<file>"|null}
 
 ReplayGain values (for the player view, read only):
-  {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null}  (gain in dB)
+  {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null, "mqa":{"orig":192000|null}|null}
+                                       (gain in dB; mqa: MQA file per its tags, orig = original sample rate)
 
 Several jobs in one call (saves the Python startup per file, important with many files):
   {"op":"batch", "jobs":[{...}, {...}]}  -> {"ok":true, "results":[{...}, {...}]}  (one response per job as above)
@@ -159,7 +160,7 @@ def read_replaygain(audio, kind):
     found = {}
     tags = audio.tags
     if tags is None:
-        return {'track': None, 'album': None}
+        return {'track': None, 'album': None, 'mqa': None}
     if kind == 'flac':
         for k, v in tags.items():
             found[k.lower()] = v[0] if isinstance(v, list) and v else v
@@ -173,7 +174,23 @@ def read_replaygain(audio, kind):
             if fr.text:
                 found[txt(fr.desc).lower()] = fr.text[0]
     return {'track': gain_of(found.get('replaygain_track_gain', '')),
-            'album': gain_of(found.get('replaygain_album_gain', ''))}
+            'album': gain_of(found.get('replaygain_album_gain', '')),
+            'mqa': mqa_of(found)}
+
+
+def mqa_of(found):
+    """MQA file: its encoder writes MQAENCODER (or ENCODER "MQAEncode ...") and ORIGINALSAMPLERATE"""
+    enc = txt(found.get('mqaencoder', '')) or ''
+    if not enc and 'mqa' not in (txt(found.get('encoder', '')) or '').lower():
+        return None
+    orig = None
+    for k in ('originalsamplerate', 'mqaoriginalsamplerate'):
+        try:
+            orig = int(float(txt(found.get(k, '')).strip()))
+            break
+        except (ValueError, AttributeError):
+            pass
+    return {'orig': orig if orig and orig > 0 else None}
 
 
 def write_tags(audio, kind, new):
