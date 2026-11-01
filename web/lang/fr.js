@@ -188,6 +188,7 @@ langRegister('fr', 'Français', {
   'genre.all': 'Tous',
   'genre.allHead': 'Tous les genres',
   'genre.noAlbums': 'Aucun album dans ce genre.',
+  'genre.styleShare': '{s} {p} %',
   'genre.none': 'Pas encore de genres : les albums n\'ont pas de tags de genre (menu « Vérifier la bibliothèque », « Albums sans genre »).',
   'genre.offline': 'Service de tags injoignable.',
   'genre.subsHint': 'Styles issus de l\'analyse audio. Les albums sans analyse sont sous « Tous ».',
