@@ -351,8 +351,10 @@ Würfel, Mood Mix und die Titel-Reihen beim Entdecken aus.
 
 **NoMix** (nur mit Tag-Dienst): Steht `NoMix` irgendwo im Kommentar eines Titels (Groß-/Kleinschreibung egal), kommt er in
 keinen Mix (Würfel, Mood Mix, ähnliche Titel, „Passt zusammen“; nicht in die Titel von AutoDJ), unabhängig von der Bewertung; beim Entdecken und in
-Alben bleibt er. Setzen lässt es sich pro Titel im Tag-Editor oder fürs ganze Album in der Massenbearbeitung (Feld
-„Kommentar“; „Setzen“ ersetzt dabei den bisherigen Kommentar). MPD liefert den Kommentar nicht mit, deshalb erfährt der
+Alben bleibt er. Am einfachsten setzt es der Knopf „NoMix“ rechts neben dem Kommentarfeld im Tag-Editor: Er hängt „--NoMix“ an
+(nach einem Leerzeichen, falls schon ein Kommentar dasteht), noch einmal getippt nimmt er es wieder heraus. Für ein
+ganzes Album mit unterschiedlichen Kommentaren hängt er es beim Speichern an jeden einzelnen an, die Kommentare bleiben
+erhalten. In der Massenbearbeitung (Feld „Kommentar“) ersetzt „Setzen“ dagegen den bisherigen Kommentar. MPD liefert den Kommentar nicht mit, deshalb erfährt der
 Tag-Dienst davon auf zwei Wegen: Was über Xplorio geschrieben wird, merkt er sich sofort (`nomix.json`); Kommentare aus
 anderen Programmen liest die [Audio-Analyse](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc) beim nächsten
 Lauf mit (die geänderte Datei wird dabei neu analysiert).

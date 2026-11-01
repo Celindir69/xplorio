@@ -375,6 +375,8 @@
   .tagAa { flex:0 0 auto; width:calc(14 * var(--vw)); max-width:64px; text-align:center; text-align-last:center; font-weight:700; }
   .tagSel { width:100%; }
   .tagGenre { width:auto; max-width:calc(34 * var(--vw)); font-weight:400; text-overflow:ellipsis; }
+  .tagNoMix { width:auto; max-width:none; padding:0 calc(2.5 * var(--vw)); font-weight:600; cursor:pointer; color:inherit; font-family:inherit; }
+  .tagNoMix.on { background:var(--accent, rgba(var(--fg-rgb),.4)); border-color:transparent; color:var(--on-accent, #fff); }
   .tagAa option, .tagSel option { color:#111; }
   .tagSectionAa { display:flex; align-items:center; justify-content:space-between; opacity:1; }
   .tagSectionAa > span { opacity:.5; }
