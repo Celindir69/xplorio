@@ -137,6 +137,8 @@ langRegister('de', 'Deutsch', {
   'check.db.done': 'Bibliothek eingelesen. Die Albenliste wird gleich neu aufgebaut.',
   'check.db.failed': 'Einlesen ließ sich nicht starten.',
   'remote.next': 'Tippen zum Umschalten',
+  'remote.away': 'Läuft auf einem anderen Gerät',
+  'remote.join': 'Tippen zum Mithören',
   'remote.failed': 'Umschalten fehlgeschlagen',
   'remote.mode.both': 'Wiedergabe: Anlage und dieses Gerät',
   'remote.mode.lokal': 'Wiedergabe: Anlage',

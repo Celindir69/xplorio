@@ -139,6 +139,8 @@ langRegister('en', 'English', {
   'check.db.done': 'Library read. The album list will be rebuilt shortly.',
   'check.db.failed': 'Could not start reading the library.',
   'remote.next': 'Tap to switch',
+  'remote.away': 'Playing on another device',
+  'remote.join': 'Tap to listen here',
   'remote.failed': 'Switching failed',
   'remote.mode.both': 'Playback: system and this device',
   'remote.mode.lokal': 'Playback: system',

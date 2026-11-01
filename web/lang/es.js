@@ -137,6 +137,8 @@ langRegister('es', 'Español', {
   'check.db.done': 'Biblioteca leída. La lista de álbumes se reconstruirá en breve.',
   'check.db.failed': 'No se pudo iniciar la lectura de la biblioteca.',
   'remote.next': 'Toca para cambiar',
+  'remote.away': 'Sonando en otro dispositivo',
+  'remote.join': 'Toca para escuchar aquí',
   'remote.failed': 'No se pudo cambiar',
   'remote.mode.both': 'Reproducción: equipo y este dispositivo',
   'remote.mode.lokal': 'Reproducción: equipo',

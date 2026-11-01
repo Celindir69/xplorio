@@ -138,6 +138,8 @@ langRegister('fr', 'Français', {
   'check.db.done': 'Bibliothèque lue. La liste des albums sera bientôt reconstruite.',
   'check.db.failed': 'Impossible de lancer la lecture de la bibliothèque.',
   'remote.next': 'Touchez pour changer',
+  'remote.away': 'Lecture sur un autre appareil',
+  'remote.join': 'Touchez pour écouter ici',
   'remote.failed': 'Échec du changement',
   'remote.mode.both': 'Lecture : chaîne et cet appareil',
   'remote.mode.lokal': 'Lecture : chaîne',
