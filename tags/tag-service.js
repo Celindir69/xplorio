@@ -1668,6 +1668,7 @@ function doLastfmApi(query, cb) {
 var remote = require('./remote.js');
 var MPD_CONF = process.env.MPD_CONF || '/etc/mpd.conf';
 var REMOTE_IDLE_MS = 60000;
+var STREAM_CUSHION_MS = 6000;                          /* head start for the browser's buffer (remote.cushion) */
 var remoteListeners = 0, remoteLastListen = Date.now();
 function remoteState(cb) {
   var conf = [];
@@ -1702,21 +1703,22 @@ function doStream(req, res) {
   remoteState(function(err, f){
     if (err || !f) { res.writeHead(404, {'Cache-Control': 'no-store'}); return res.end(); }
     var a = remote.rangeAnswer(req.headers.range), left = a.limit, closed = false;
+    var hold = remote.cushion(!left || left > 1048576 ? STREAM_CUSHION_MS : 0);   /* not for short probes (bytes=0-1) */
     var up = http.get({host: '127.0.0.1', port: f.stream.port, path: '/'}, function(u){
       if (closed) return u.destroy();
       res.writeHead(a.status, a.headers);
       remoteListeners++;                                 /* every connection counts: Safari asks "bytes=0-" for the live stream too */
       u.on('close', function(){ remoteListeners--; remoteLastListen = Date.now(); });
-      u.on('data', function(c){
+      u.on('data', function(chunk){
         remoteLastListen = Date.now();
-        if (left) {
+        hold.push(chunk, Date.now()).forEach(function(c){
+          if (!left) return res.write(c);
+          if (left === -1) return;
           if (c.length > left) c = c.slice(0, left);
           left -= c.length;
           res.write(c);
-          if (!left) { res.end(); u.destroy(); }
-          return;
-        }
-        res.write(c);
+          if (!left) { left = -1; res.end(); u.destroy(); }
+        });
       });
       u.on('end', function(){ res.end(); });
     });

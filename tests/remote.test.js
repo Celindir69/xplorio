@@ -40,4 +40,13 @@ t('ranges: probe "bytes=0-1", open end, no range', function(){
   assert.strictEqual(r.rangeAnswer('').status, 200);
 });
 
+t('cushion: holds the first seconds from the first data, then passes everything on', function(){
+  var c = r.cushion(6000);
+  assert.deepStrictEqual(c.push('a', 1000), []);
+  assert.deepStrictEqual(c.push('b', 4000), []);
+  assert.deepStrictEqual(c.push('c', 7000), ['a', 'b', 'c']);
+  assert.deepStrictEqual(c.push('d', 7100), ['d']);
+  assert.deepStrictEqual(r.cushion(0).push('x', 1), ['x']);
+});
+
 console.log(n + ' checks passed');
