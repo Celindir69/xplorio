@@ -108,7 +108,7 @@ else {
       'a = DSF(%s)\na.tags.add(TXXX(encoding=3, desc="replaygain_track_gain", text=["-6.53 dB"]))\n' +
       'a.tags.add(TXXX(encoding=3, desc="REPLAYGAIN_ALBUM_GAIN", text=["+1.20 dB"]))\na.save()\n';
     cp.spawnSync(py, ['-c', set.replace('%v', JSON.stringify(path.join(__dirname, '..', 'tags', 'vendor'))).replace('%s', JSON.stringify(dsf))]);
-    assert.deepStrictEqual(run({op: 'replaygain', path: dsf}), {ok: true, track: -6.53, album: 1.2});
+    assert.deepStrictEqual(run({op: 'replaygain', path: dsf}), {ok: true, track: -6.53, album: 1.2, mqa: null});
   });
 
   /* cover: small JPEG (only header and filler bytes; mutagen does not check the content) */
