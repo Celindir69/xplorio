@@ -457,8 +457,28 @@ function checkGenreGroupRow(key, g, kept) {
     (audio ? ' · ' + T('check.genre.withAudio') : '') + ' · ' + names, function(){
     openBulkEditor(g.files.map(function(f){ return f.uri; }), g.from + ' → ' + g.genre, {field: 'genre', value: g.genre});
   });
+  checkAlbumFold(row, g.albums);
   checkGenreButtons(row, key, key + '|' + g.from + '|' + g.genre, g, g.files, kept);
   return row;
+}
+
+/* "▸ 12 albums": all albums of a row, folded (Album · Artist (5 tracks)) */
+function checkAlbumFold(row, albums) {
+  var meta = row.querySelector('.sMeta'), list = document.createElement('div'), tog = document.createElement('div');
+  list.className = 'ckAlbFold'; list.style.display = 'none';
+  tog.className = 'ckAlbToggle';
+  function label() { tog.textContent = (list.style.display === 'none' ? '\u25b8 ' : '\u25be ') + T('check.genre.albums', {n: albums.length}); }
+  tog.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    if (!list.firstChild) albums.slice().sort(function(a, b){ return (a.artist || '').localeCompare(b.artist || '') || a.name.localeCompare(b.name); })
+      .forEach(function(a){
+        list.appendChild(histEl('div', '', a.name + (a.artist ? ' · ' + a.artist : '') + (a.count ? ' (' + T('browse.trackCount', {n: a.count}) + ')' : '')));
+      });
+    list.style.display = list.style.display === 'none' ? '' : 'none';
+    label();
+  });
+  label();
+  meta.appendChild(tog); meta.appendChild(list);
 }
 
 function checkSpellingRow(v, i, group) {

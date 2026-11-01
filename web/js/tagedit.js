@@ -866,15 +866,61 @@ function artistPreview() {
     if (sub.textContent) txt.appendChild(sub);
     row.appendChild(g.check); row.appendChild(txt);
     list.appendChild(row);
+    if (g.files.length > 1) artistAlbums(g, txt, list);
   });
   artistCount();
+}
+
+/* fold-out under a change: the albums it affects ("Album · Artist (5 tracks)"), each with a checkbox (unticked albums stay
+   as they are, g.off) and its tracks on a tap */
+function artistAlbums(g, txt, list) {
+  var dirs = {}, order = [];
+  g.files.forEach(function(f){
+    var d = f.uri.replace(/\/[^\/]*$/, '');
+    if (!dirs[d]) { dirs[d] = []; order.push(d); }
+    dirs[d].push(f);
+  });
+  g.off = {};
+  var box = document.createElement('div');
+  box.className = 'tagAlbums';
+  box.style.display = 'none';
+  var tog = document.createElement('div');
+  tog.className = 'tagAlbToggle';
+  function label() { tog.textContent = (box.style.display === 'none' ? '\u25b8 ' : '\u25be ') + T('tag.bulk.albums', {n: order.length}); }
+  tog.addEventListener('click', function(ev){
+    ev.preventDefault(); ev.stopPropagation();          /* inside the <label>: not the change's checkbox */
+    box.style.display = box.style.display === 'none' ? '' : 'none';
+    label();
+  });
+  label();
+  txt.appendChild(tog);
+  order.sort(function(a, b){ return a.localeCompare(b); }).forEach(function(d){
+    var fs = dirs[d], t = fs[0].tags || {};
+    var row = document.createElement('div'); row.className = 'tagAlb';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+    cb.addEventListener('change', function(){ if (cb.checked) delete g.off[d]; else g.off[d] = true; row.classList.toggle('off', !cb.checked); artistCount(); });
+    var name = document.createElement('div'); name.className = 'tagAlbName';
+    name.textContent = (t.album || d.replace(/^.*\//, '')) + ((t.albumartist || t.artist) ? ' · ' + (t.albumartist || t.artist) : '') +
+                       ' (' + T('browse.trackCount', {n: fs.length}) + ')';
+    var tracks = document.createElement('div'); tracks.className = 'tagAlbTracks'; tracks.style.display = 'none';
+    fs.forEach(function(f){ tracks.appendChild(histEl('div', '', (f.tags && f.tags.title) || f.uri.replace(/^.*\//, ''))); });
+    name.addEventListener('click', function(){ tracks.style.display = tracks.style.display === 'none' ? '' : 'none'; });
+    var wrap = document.createElement('div'); wrap.className = 'tagAlbText';
+    wrap.appendChild(name); wrap.appendChild(tracks);
+    row.appendChild(cb); row.appendChild(wrap);
+    box.appendChild(row);
+  });
+  list.appendChild(box);
 }
 
 function artistSelected() {
   var items = [];
   artChanges.forEach(function(g){
     if (!g.check.checked) return;
-    g.files.forEach(function(f){ items.push({uri: f.uri, tags: g.tags, file: f}); });
+    g.files.forEach(function(f){
+      if (g.off && g.off[f.uri.replace(/\/[^\/]*$/, '')]) return;     /* album unticked in the fold-out */
+      items.push({uri: f.uri, tags: g.tags, file: f});
+    });
   });
   return items;
 }
