@@ -47,4 +47,26 @@ function answer(g, yearOf) {
   })};
 }
 
-module.exports = {build: build, index: index, answer: answer};
+/* album list [{dir, al, ar, …}] -> the same list with one entry per album: of several versions the best one that is in the
+   list stays (at the place of the first), with nv = number of versions in the collection; find from index() */
+function collapse(list, find) {
+  var kept = [], at = {};
+  list.forEach(function(a){
+    var g = find(a.dir);
+    if (!g) return kept.push(a);
+    var rank = rankOf(g, a.dir), key = g.v[0].dir, k = at[key];
+    if (!k) { var c = copy(a, g.v.length); at[key] = {i: kept.length, rank: rank}; return kept.push(c); }
+    if (rank < k.rank) { kept[k.i] = copy(a, g.v.length); k.rank = rank; }
+  });
+  return kept;
+}
+function rankOf(g, dir) {
+  for (var i = 0; i < g.v.length; i++) if (g.v[i].dir === dir || g.v[i].dirs.indexOf(dir) >= 0) return i;
+  return g.v.length;
+}
+function copy(a, n) { var o = {}; for (var k in a) o[k] = a[k]; o.nv = n; return o; }
+
+/* for /albumgenre: [best folder, number of versions, place of this folder (0 = best)] or 0 if the album exists once */
+function mark(g, dir) { return g ? [g.v[0].dir, g.v.length, rankOf(g, dir)] : 0; }
+
+module.exports = {build: build, index: index, answer: answer, collapse: collapse, mark: mark};

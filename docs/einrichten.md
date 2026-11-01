@@ -407,7 +407,9 @@ statt „Titel“ der Reiter „Versionen“; „Entdecken“ und „Hintergrund
 Qualitätsabzeichen wie im Player (Hi-Res, Lossless, DSD, Lossy) mit Abtastrate, Bittiefe und Dateiart, Zahl der Titel,
 Spielzeit und Pfad; die beste ist markiert. Antippen öffnet die Version mit ihren Titeln, der Pfeil zurück führt wieder zur
 Auswahl. Zusammengefasst wird wie bei den [doppelten Alben](#bibliothek-prüfen) (gleicher Album-Künstler und Albumname,
-Zusätze wie „(Deluxe Edition)“ zählen nicht). Bewertungen und Verlauf gelten weiter je Version.
+Zusätze wie „(Deluxe Edition)“ zählen nicht). Bewertungen und Verlauf gelten weiter je Version. In Albenlisten (Künstlerseite,
+Suche, Genre, Jahr, Jahrzehnt) steht ein solches Album nur einmal, mit einem Stapel-Symbol und der Zahl der Versionen
+hinter dem Titel; gezeigt wird die beste Version, die in der Liste vorkommt.
 
 Bei Künstlern und Alben vom Streamingdienst heißt der Reiter „Lokal entdecken“ und sucht in der eigenen Sammlung: ähnliche
 Künstler über Last.fm, beim Album das gleichnamige Album in der Sammlung oder, falls es dort fehlt, das Profil des Künstlers.

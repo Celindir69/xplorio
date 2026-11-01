@@ -750,13 +750,20 @@ function genreSubsIdx(list) {
 /* GET /versions?u=<folder or Volumio address>&al=&ar= -> {ok, versions: [{dir, al, ext, bits, rate, codec, tracks, seconds, best, y}]}
    (tags/versions.js); empty if the album exists only once */
 var versionsIdx = null;
-function versionsAnswer(list, query) {
+function versionsFind(list) {
   var groups = (albumIdx && albumIdx.versions) || [];
-  if (!versionsIdx || versionsIdx.groups !== groups) {
+  if (!versionsIdx || versionsIdx.groups !== groups || versionsIdx.list !== list) {
     var years = {};
     list.forEach(function(a){ if (a.y) years[a.dir] = a.y; });
-    versionsIdx = {groups: groups, find: versions.index(groups, libcheck.artistKey), year: function(d){ return years[d] || 0; }};
+    versionsIdx = {groups: groups, list: list, find: versions.index(groups, libcheck.artistKey), year: function(d){ return years[d] || 0; }};
   }
+  return versionsIdx;
+}
+function histRelDir(u) { return /^[a-z]+:\/\//i.test(u || '') ? '' : String(u || '').replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, ''); }
+/* album lists (genre, decade, year): each album once, with the number of versions (nv) */
+function versionsCollapse(list, al) { return versions.collapse(al, versionsFind(list).find); }
+function versionsAnswer(list, query) {
+  versionsFind(list);
   var g = versionsIdx.find(query.u, String(query.al || ''), String(query.ar || ''));
   if (!g) return {ok: true, versions: []};
   var r = versions.answer(g, versionsIdx.year);
@@ -771,8 +778,8 @@ function doGenreLib(route, query, cb) {
       return cb(200, {ok: true, genres: albums.genreList(list, q), subs: q ? genres.subList(list, genreSubsIdx(list), '', q) : []});
     }
     if (route === '/decades') return cb(200, {ok: true, decades: albums.decadeList(list)});
-    if (route === '/decadealbums') return cb(200, {ok: true, albums: albums.decadeAlbums(list, query.d)});
-    if (route === '/yearalbums') return cb(200, {ok: true, albums: albums.yearAlbums(list, query.y)});
+    if (route === '/decadealbums') return cb(200, {ok: true, albums: versionsCollapse(list, albums.decadeAlbums(list, query.d))});
+    if (route === '/yearalbums') return cb(200, {ok: true, albums: versionsCollapse(list, albums.yearAlbums(list, query.y))});
     if (route === '/decadeprofile') {
       var d = parseInt(query.d, 10);
       if (!(d >= 1900 && d < 2100) || d % 10) return cb(400, {ok: false, error: 'invalid d'});
@@ -783,7 +790,7 @@ function doGenreLib(route, query, cb) {
     if (route === '/versions') return cb(200, versionsAnswer(list, query));
     if (route === '/genrealbums') {
       var idx = genreSubsIdx(list);
-      var al = albums.genreAlbums(list, query.g);
+      var al = versionsCollapse(list, albums.genreAlbums(list, query.g));
       al.forEach(function(a){ if (idx[a.dir]) { a.st = idx[a.dir]; a.sp = genreSubs.shares[a.dir]; } });   /* substyles and their share in % */
       return cb(200, {ok: true, albums: al, subs: genres.subList(list, idx, query.g)});
     }
@@ -794,7 +801,9 @@ function doGenreLib(route, query, cb) {
     if (!albumYear || albumYear.list !== list) albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list)};
     var es = q.map(function(x){ x = Array.isArray(x) ? x : []; return {u: String(x[0] || ''), al: String(x[1] || ''), ar: String(x[2] || '')}; });
     var subs = query.st === '1' ? genreSubsIdx(list) : null;   /* strongest style of the album (player view) */
+    var vf = versionsFind(list).find;                 /* album versions: [best folder, number, place of this one] or 0 */
     cb(200, {ok: true, genres: es.map(fn), years: es.map(albumYear.fn),
+             versions: es.map(function(e){ var d = albumYear.dir(e) || histRelDir(e.u); return versions.mark(vf(d, e.al, e.ar), d); }),
              styles: subs ? es.map(function(e){ var d = albumYear.dir(e); return (d && subs[d] && subs[d][0]) || ''; }) : undefined});
   });
 }

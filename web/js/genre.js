@@ -129,6 +129,7 @@ function genreAlbumPage(list, into, noHead, match) {
     row.appendChild(histImg(art));
     var meta = histEl('div', 'sMeta');
     var ti = histEl('div', 'sTitle', a.al);
+    if (a.nv > 1) ti.appendChild(versionStack(a.nv));
     if (a.y) ti.appendChild(yearSpan(a.y));
     meta.appendChild(ti);
     meta.appendChild(histEl('div', 'sSub', histArtistName(a.ar)));
@@ -278,7 +279,8 @@ function genreOpen(g) {
 /* look up genre and year for albums: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' or 0 = unknown);
    withStyle: also styles: [...] (strongest style of the album from the audio analysis, '' = none) */
 function albumInfoLookup(items, withStyle) {
-  var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; }), styles: items.map(function(){ return ''; })};
+  var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; }), styles: items.map(function(){ return ''; }),
+              versions: items.map(function(){ return 0; })};
   if (!genreReady || !items.length) return Promise.resolve(none);
   var q = items.map(function(it){ return [it.uri || '', it.album || '', it.artist || '']; });
   /* in chunks: a long address would otherwise exceed the service's header limit (about 8 kB), and everything silently goes missing */
@@ -292,11 +294,12 @@ function albumInfoLookup(items, withStyle) {
   return Promise.all(parts.map(function(part){
     var empty = function(v){ return part.map(function(){ return v; }); };
     return tagGetJson('/albumgenre?q=' + encodeURIComponent(JSON.stringify(part)) + (withStyle ? '&st=1' : '')).then(function(r){
-      return {genres: (r && r.genres) || empty(''), years: (r && r.years) || empty(0), styles: (r && r.styles) || empty('')};
-    }).catch(function(){ return {genres: empty(''), years: empty(0), styles: empty('')}; });
+      return {genres: (r && r.genres) || empty(''), years: (r && r.years) || empty(0), styles: (r && r.styles) || empty(''),
+              versions: (r && r.versions) || empty(0)};
+    }).catch(function(){ return {genres: empty(''), years: empty(0), styles: empty(''), versions: empty(0)}; });
   })).then(function(rs){
     function all(k) { return [].concat.apply([], rs.map(function(r){ return r[k]; })); }
-    return {genres: all('genres'), years: all('years'), styles: all('styles')};
+    return {genres: all('genres'), years: all('years'), styles: all('styles'), versions: all('versions')};
   });
 }
 function genreLookup(items) { return albumInfoLookup(items).then(function(r){ return r.genres; }); }
@@ -339,13 +342,21 @@ function playerYear(uri, album, artist) {
    rows: [{row, uri, album, artist}] */
 function genreDecorate(rows, seq) {
   rows = rows.filter(function(x){ return x.uri && !streamOf(x.uri); });
+  var seen = {};                                         /* album versions: best folder -> {row, place} of the row shown */
   for (var i = 0; i < rows.length; i += 200) (function(part){
     albumInfoLookup(part).then(function(info){
       if (seq !== undefined && seq !== browseSeq) return;
       part.forEach(function(x, k){
-        var g = info.genres[k], y = info.years[k];
+        var g = info.genres[k], y = info.years[k], v = info.versions[k];
         if (!x.row.parentNode) return;
         var ti = x.row.querySelector('.sTitle');
+        if (v && ti) {                                   /* several versions: shown once, the best one in the list */
+          var had = seen[v[0]];
+          if (had && had.place <= v[2]) { x.row.style.display = 'none'; return; }
+          if (had) had.row.style.display = 'none';
+          seen[v[0]] = {row: x.row, place: v[2]};
+          ti.appendChild(versionStack(v[1]));
+        }
         if (y && ti) ti.appendChild(yearSpan(y));          /* year after the album title */
         if (!g) return;
         var el = histEl('div', 'bGenre', g);
