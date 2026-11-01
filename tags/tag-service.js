@@ -294,6 +294,7 @@ function writeItems(items, batch, scan, cb) {
       r.uri = it.uri;
       if (r.ok && r.changed) {
         changedRel.push(paths[k].rel);
+        if (r.after && r.after.comment !== undefined) nomixStore.noteComment(paths[k].rel, r.after.comment);   /* NoMix */
         if (!logEntry({batch: batch, time: new Date().toISOString(), uri: it.uri, before: r.before, after: r.after})) r.logWarning = true;
       }
       results[at[k]] = r;
@@ -881,7 +882,7 @@ function doAlbumProfile(query, cb) {
 var similar = require('./similar.js');
 function doSimilar(query, cb) {
   albumsEnsure();
-  var idx = moodmix.index(moodCollector), bad = ratingStore.disliked();
+  var idx = moodmix.index(moodCollector), bad = mixExcluded();
   var seed = similar.seedOf(idx, {f: relUri(query.file), ar: String(query.artist || ''), ti: String(query.title || ''), al: String(query.album || '')},
     function(ar, ti, al){ return moodCollector.moodOf(ar, ti, al); });
   if (!seed) return cb(200, {ok: false, nodata: true, items: []});
@@ -911,7 +912,7 @@ function mixYearsOf(list) {
 function doMoodmix(query, cb) {
   albumsEnsure();                                        /* keeps library-tracks.json (with genre) and albums.json current */
   var c = moodmix.parse(query), yrs = mixYearsOf(albumIdx && albumIdx.list);   /* do not wait: no years until the first album list exists */
-  var bad = ratingStore.disliked();
+  var bad = mixExcluded();
   c.skip = function(it){ return !!bad[ratings.trackKey(it.f)]; };
   c.yearOf = function(it){ return yrs.by[albums.albumDir(relUri(it.f) || it.f)] || 0; };
   if (query.count) { var r = moodmix.count(moodCollector, c); r.ok = true; r.years = yrs.span; return cb(200, r); }
@@ -1148,13 +1149,21 @@ function doTogetherMix(query, cb) {
   gemsReady(function(g){
     if (!g) return cb(200, {ok: false, building: albumBuilding, items: []});
     var rnd = query.shuffle === '1' ? Math.random : together.seeded(day + '|' + names.map(plays.norm).sort().join('+'));
-    cb(200, {ok: true, items: together.mix(g, names, {rnd: rnd, bad: ratingStore.disliked()})});
+    cb(200, {ok: true, items: together.mix(g, names, {rnd: rnd, bad: mixExcluded()})});
   });
 }
 
 /* ---------- Ratings (ratings.js) ---------- */
 /* POST /ratings {artist, album, tracks: [uri, …]} -> {ok, artist, album, tracks}; POST /rate {kind, v, name | uri, ar, al, ti} */
 var ratingStore = new ratings.Store(path.join(DATA_DIR, 'ratings.json'));
+/* never in a mix: "don't like" and NoMix in the comment (nomix.js); cached until ratings, list, tracks or analysis change */
+var nomix = require('./nomix.js'), nomixStore = new nomix.Store(path.join(DATA_DIR, 'nomix.json')), mixEx = null;
+function mixExcluded() {
+  var tl = libTracksLoad() || [], stamp = ratingStore.rev + ':' + nomixStore.rev + ':' + audioStore.status().at;
+  if (!mixEx || mixEx.tl !== tl || mixEx.stamp !== stamp)
+    mixEx = {tl: tl, stamp: stamp, map: nomixStore.excluded(ratingStore.disliked(), tl, function(ar, ti, al){ return audioStore.get(ar, ti, al); })};
+  return mixEx.map;
+}
 function doRatings(body, cb) {
   if (Array.isArray(body.tracks) && body.tracks.length > MAX_ITEMS) return cb(400, {ok: false, error: 'too many tracks'});
   var out = ratingStore.get(body);
@@ -1176,8 +1185,8 @@ function doRandomMix(body, cb) {
   albumsEnsure(function(list){
     var tl = libTracksLoad();
     if (!tl || !tl.length) return cb(200, {ok: false, building: albumBuilding, items: []});
-    var n = Math.min(parseInt(body.n, 10) || 25, 100), bad = ratingStore.disliked();
-    tl = tl.filter(function(t){ return !bad[t[2]]; });                 /* never "don't like" in the dice mix */
+    var n = Math.min(parseInt(body.n, 10) || 25, 100), bad = mixExcluded();
+    tl = tl.filter(function(t){ return !bad[t[2]]; });                 /* never "don't like" or NoMix in the dice mix */
     function send(picked) {
       cb(200, {ok: true, items: picked.map(function(t){ return {f: t[2], ar: t[0], ti: t[1], al: t[4] || '', d: t[3] || 0}; })});
     }

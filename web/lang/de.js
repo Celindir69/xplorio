@@ -726,6 +726,8 @@ langRegister('de', 'Deutsch', {
   'tag.field.artist': 'Künstler',
   'tag.field.composer': 'Komponist',
   'tag.field.comment': 'Kommentar',
+  'tag.nomixHint': 'Hängt „--NoMix“ an den Kommentar an (noch einmal tippen nimmt es heraus): Der Titel kommt dann in keinen Mix',
+  'tag.nomixMixed': 'Unterschiedlich – beim Speichern wird an jeden Kommentar „--NoMix“ angehängt',
   'tag.field.disc': 'CD',
   'tag.field.genre': 'Genre',
   'tag.field.title': 'Titel',

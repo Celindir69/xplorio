@@ -234,7 +234,7 @@ function tagRender(files, items) {
     var inp = tagInput(same ? vals[0] : '', fd[0] === 'comment' ? 'tagMulti' : '');
     if (!same) inp.placeholder = T('tag.mixed');
     tagCommon[fd[0]] = {input: inp, mixed: !same};
-    var aa = fd[0] === 'date' || fd[0] === 'disc' || fd[0] === 'comment' ? null : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
+    var aa = fd[0] === 'date' || fd[0] === 'disc' ? null : fd[0] === 'comment' ? tagNoMixButton(tagCommon.comment) : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
     if (fd[0] === 'genre') { var both = document.createDocumentFragment(); both.appendChild(tagGenreMenu(inp)); both.appendChild(aa); aa = both; }
     tagBody.appendChild(tagField(fd[1], inp, aa));
   });
@@ -274,7 +274,7 @@ function tagRender(files, items) {
 }
 
 function tagCollect() {
-  var common = {};
+  var common = {}, nm = tagCommon.comment && tagCommon.comment.mixed && tagCommon.comment.nomix;
   Object.keys(tagCommon).forEach(function(k){
     var c = tagCommon[k], v = c.input.value;
     if (c.input.getAttribute('data-dirty') !== '1') return;
@@ -284,8 +284,42 @@ function tagCollect() {
   return tagFiles.filter(function(f){ return f.ok; }).map(function(f){
     var t = {title: f.titleIn.value, track: f.trackIn.value};
     Object.keys(common).forEach(function(k){ t[k] = common[k]; });
+    if (nm && common.comment === undefined) t.comment = noMixAdd(f.tags.comment);   /* different comments: each keeps its own */
     return {uri: f.uri, tags: t};
   });
+}
+
+/* NoMix (tags/nomix.js): the track never goes into a mix. "--NoMix" is appended to the comment, after a space if there is one */
+var NOMIX_RE = /\s*[-\u2013\u2014]*\s*nomix/ig;
+function noMixHas(s) { return /nomix/i.test(String(s || '')); }
+function noMixAdd(s) { s = String(s || ''); return noMixHas(s) ? s : (s.replace(/\s+$/, '') ? s.replace(/\s+$/, '') + ' --NoMix' : '--NoMix'); }
+function noMixDel(s) { return String(s || '').replace(NOMIX_RE, '').trim(); }
+/* button right of the comment field: appends "--NoMix" or takes it out again; with different comments (several files)
+   it is appended to each one on saving, so the individual comments stay */
+function tagNoMixButton(c) {
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tagAa tagNoMix';
+  b.textContent = 'NoMix';
+  b.title = T('tag.nomixHint');
+  var mixedPh = c.input.placeholder;
+  function paint() {
+    var on = c.mixed && c.input.value === '' ? !!c.nomix : noMixHas(c.input.value);
+    b.classList.toggle('on', on);
+    if (c.mixed) c.input.placeholder = c.nomix && c.input.value === '' ? T('tag.nomixMixed') : mixedPh;
+  }
+  b.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    if (c.mixed && c.input.value === '') c.nomix = !c.nomix;
+    else {
+      c.input.value = noMixHas(c.input.value) ? noMixDel(c.input.value) : noMixAdd(c.input.value);
+      c.input.setAttribute('data-dirty', '1');
+    }
+    paint();
+  });
+  c.input.addEventListener('input', paint);
+  paint();
+  return b;
 }
 
 /* ---------- Cover ---------- */
@@ -507,7 +541,8 @@ function tagCoverSection(good) {
 
 /* ---------- Bulk editing (all tracks of an artist or an album) ---------- */
 var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag.field.albumartist')], ['album', T('tag.field.album')],
-                       ['title', T('tag.field.title')], ['genre', T('tag.field.genre')], ['date', T('tag.field.year')], ['composer', T('tag.field.composer')]];
+                       ['title', T('tag.field.title')], ['genre', T('tag.field.genre')], ['date', T('tag.field.year')], ['composer', T('tag.field.composer')],
+                       ['comment', T('tag.field.comment')]];                 /* comment: e.g. NoMix (nomix.js) */
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
 var TAG_CHUNK = 100;                                 /* files per request to the tag service */

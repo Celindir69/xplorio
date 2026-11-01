@@ -728,6 +728,8 @@ langRegister('en', 'English', {
   'tag.field.artist': 'Artist',
   'tag.field.composer': 'Composer',
   'tag.field.comment': 'Comment',
+  'tag.nomixHint': 'Appends “--NoMix” to the comment (tap again to remove it): the track then goes into no mix',
+  'tag.nomixMixed': 'Various – on saving, “--NoMix” is appended to each comment',
   'tag.field.disc': 'Disc',
   'tag.field.genre': 'Genre',
   'tag.field.title': 'Title',

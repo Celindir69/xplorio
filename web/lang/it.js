@@ -726,6 +726,8 @@ langRegister('it', 'Italiano', {
   'tag.field.artist': 'Artista',
   'tag.field.composer': 'Compositore',
   'tag.field.comment': 'Commento',
+  'tag.nomixHint': 'Aggiunge «--NoMix» al commento (tocca di nuovo per toglierlo): il brano non entra più in nessun mix',
+  'tag.nomixMixed': 'Vari – al salvataggio «--NoMix» viene aggiunto a ogni commento',
   'tag.field.disc': 'Disco',
   'tag.field.genre': 'Genere',
   'tag.field.title': 'Titolo',
