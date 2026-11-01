@@ -139,6 +139,11 @@ function find(songs, artistKey) {
   });
 }
 
+/* album name without additions, as shown for an album with several versions: "Abbey Road [HD]" -> "Abbey Road" */
+function bareName(name) {
+  var b = String(name || '').replace(EXTRA_RE, '').replace(DASH_RE, '').trim();
+  return b || String(name || '');
+}
 function isVA(name) { return !name || VA_RE.test(String(name).trim()); }
 
-module.exports = {find: find, albumKey: albumKey, isVA: isVA, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, isTrash: isTrash, TRASH: TRASH, OLD_TRASH: OLD_TRASH};
+module.exports = {find: find, albumKey: albumKey, bareName: bareName, isVA: isVA, quality: quality, driveOf: driveOf, trashPath: trashPath, ignoreLine: ignoreLine, isTrash: isTrash, TRASH: TRASH, OLD_TRASH: OLD_TRASH};

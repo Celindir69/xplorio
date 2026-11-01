@@ -55,8 +55,8 @@ t('collapse: one entry per album, the best one in the list at the place of the f
 
 t('mark: best folder, number of versions, place', function(){
   var g = ver.build(songs, lc.artistKey)[0];
-  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO Deluxe/CD2'), ['USB/S/Gaye/WGO Deluxe', 3, 0]);
-  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO m4a'), ['USB/S/Gaye/WGO Deluxe', 3, 2]);
+  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO Deluxe/CD2'), ['USB/S/Gaye/WGO Deluxe', 3, 0, "What's Going On"]);
+  assert.deepStrictEqual(ver.mark(g, 'USB/S/Gaye/WGO m4a'), ['USB/S/Gaye/WGO Deluxe', 3, 2, "What's Going On"]);
   assert.strictEqual(ver.mark(null, 'x'), 0);
 });
 
@@ -76,6 +76,18 @@ t('excluded: most stars counts, else best quality; bonus tracks of other version
   assert.deepStrictEqual(Object.keys(ver.excluded(groups, tl, function(d){ return d === 'INTERNAL/mp3/Gaye/Whats Going On' ? 4 : d === 'USB/S/Gaye/WGO m4a' ? 2 : 0; }, key)).sort(),
     ['USB/S/Gaye/WGO Deluxe/CD1/01.flac', 'USB/S/Gaye/WGO m4a/01.m4a']);
   assert.deepStrictEqual(ver.excluded([], tl, function(){ return 0; }, key), {});
+});
+
+t('name without additions for the group, in collapsed lists and marks', function(){
+  var g = ver.build([
+    S('USB/S/a/1.flac', {artist: 'Queen', album: 'A Night at the Opera [HD]', format: '96000:24:2'}),
+    S('USB/S/b/1.dsf', {artist: 'Queen', album: 'A Night at the Opera (SACD)'})
+  ], lc.artistKey);
+  assert.strictEqual(g[0].n, 'A Night at the Opera');
+  var find = ver.index(g, lc.artistKey);
+  assert.strictEqual(ver.collapse([{dir: 'USB/S/a', al: 'A Night at the Opera [HD]'}], find)[0].bn, 'A Night at the Opera');
+  assert.strictEqual(ver.mark(g[0], 'USB/S/a')[3], 'A Night at the Opera');
+  assert.strictEqual(dup.bareName('[Deluxe]'), '[Deluxe]');
 });
 
 console.log(n + ' tests passed');
