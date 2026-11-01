@@ -1185,11 +1185,26 @@ function doTogetherMix(query, cb) {
 var ratingStore = new ratings.Store(path.join(DATA_DIR, 'ratings.json'));
 /* never in a mix: "don't like" and NoMix in the comment (nomix.js); cached until ratings, list, tracks or analysis change */
 var nomix = require('./nomix.js'), nomixStore = new nomix.Store(path.join(DATA_DIR, 'nomix.json')), mixEx = null;
+/* album versions: only the version with the most stars (else the best quality) plays in a mix (versions.js) */
 function mixExcluded() {
   var tl = libTracksLoad() || [], stamp = ratingStore.rev + ':' + nomixStore.rev + ':' + audioStore.status().at;
-  if (!mixEx || mixEx.tl !== tl || mixEx.stamp !== stamp)
-    mixEx = {tl: tl, stamp: stamp, map: nomixStore.excluded(ratingStore.disliked(), tl, function(ar, ti, al){ return audioStore.get(ar, ti, al); })};
+  var vg = (albumIdx && albumIdx.versions) || [];
+  if (!mixEx || mixEx.tl !== tl || mixEx.stamp !== stamp || mixEx.vg !== vg) {
+    var map = nomixStore.excluded(ratingStore.disliked(), tl, function(ar, ti, al){ return audioStore.get(ar, ti, al); });
+    var rated = ratingStore.load().albums;
+    var ver = versions.excluded(vg, tl, function(dir){ var r = Object.prototype.hasOwnProperty.call(rated, dir) && rated[dir]; return r ? r.v : 0; },
+                                function(ti){ return duplicates.albumKey(ti, libcheck.artistKey); });
+    var all = {};
+    Object.keys(map).forEach(function(f){ all[f] = true; });
+    Object.keys(ver).forEach(function(f){ all[f] = true; });
+    mixEx = {tl: tl, stamp: stamp, vg: vg, map: all, base: map};
+  }
   return mixEx.map;
+}
+/* the same without the album versions (e.g. a mix from given album folders) */
+function mixExcludedBase() {
+  mixExcluded();
+  return mixEx.base;
 }
 function doRatings(body, cb) {
   if (Array.isArray(body.tracks) && body.tracks.length > MAX_ITEMS) return cb(400, {ok: false, error: 'too many tracks'});
@@ -1212,8 +1227,11 @@ function doRandomMix(body, cb) {
   albumsEnsure(function(list){
     var tl = libTracksLoad();
     if (!tl || !tl.length) return cb(200, {ok: false, building: albumBuilding, items: []});
-    var n = Math.min(parseInt(body.n, 10) || 25, 100), bad = mixExcluded();
-    tl = tl.filter(function(t){ return !bad[t[2]]; });                 /* never "don't like" or NoMix in the dice mix */
+    var n = Math.min(parseInt(body.n, 10) || 25, 100), bad = mixExcluded(), base = mixExcludedBase(), asked = {};
+    [].concat(body.dirs || []).slice(0, 5000).forEach(function(d){ asked[String(d)] = true; });
+    tl = tl.filter(function(t){                                        /* never "don't like" or NoMix in the dice mix */
+      return !bad[t[2]] || (!base[t[2]] && asked[albums.albumDir(t[2])]);   /* another album version asked for by its folder */
+    });
     function send(picked) {
       cb(200, {ok: true, items: picked.map(function(t){ return {f: t[2], ar: t[0], ti: t[1], al: t[4] || '', d: t[3] || 0}; })});
     }

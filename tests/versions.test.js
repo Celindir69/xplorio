@@ -60,4 +60,22 @@ t('mark: best folder, number of versions, place', function(){
   assert.strictEqual(ver.mark(null, 'x'), 0);
 });
 
+t('excluded: most stars counts, else best quality; bonus tracks of other versions stay', function(){
+  var groups = ver.build(songs, lc.artistKey);
+  var tl = [['Marvin Gaye', "What's Going On", 'USB/S/Gaye/WGO Deluxe/CD1/01.flac'],
+            ['Marvin Gaye', "What's Going On (Live)", 'USB/S/Gaye/WGO Deluxe/CD2/01.flac'],
+            ['Marvin Gaye', "What's Going On (2003 Remaster)", 'INTERNAL/mp3/Gaye/Whats Going On/01.mp3'],
+            ['Marvin Gaye', 'Mercy Mercy Me', 'INTERNAL/mp3/Gaye/Whats Going On/02.mp3'],
+            ['Marvin Gaye', "What's Going On", 'USB/S/Gaye/WGO m4a/01.m4a'],
+            ['Marvin Gaye', "Let's Get It On", 'USB/S/Gaye/Lets Get It On/01.flac']];
+  function key(ti) { return dup.albumKey(ti, lc.artistKey); }
+  /* no stars: the FLAC version counts; "Mercy Mercy Me" exists only as MP3 */
+  assert.deepStrictEqual(Object.keys(ver.excluded(groups, tl, function(){ return 0; }, key)).sort(),
+    ['INTERNAL/mp3/Gaye/Whats Going On/01.mp3', 'USB/S/Gaye/WGO m4a/01.m4a']);
+  /* 4 stars on the MP3: it counts, the FLAC track of the same title is left out, the live track stays */
+  assert.deepStrictEqual(Object.keys(ver.excluded(groups, tl, function(d){ return d === 'INTERNAL/mp3/Gaye/Whats Going On' ? 4 : d === 'USB/S/Gaye/WGO m4a' ? 2 : 0; }, key)).sort(),
+    ['USB/S/Gaye/WGO Deluxe/CD1/01.flac', 'USB/S/Gaye/WGO m4a/01.m4a']);
+  assert.deepStrictEqual(ver.excluded([], tl, function(){ return 0; }, key), {});
+});
+
 console.log(n + ' tests passed');
