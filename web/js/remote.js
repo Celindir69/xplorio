@@ -45,6 +45,7 @@ function remoteApply(mode) {
   remoteIcon.title = T('remote.mode.' + mode) + ' · ' + T('remote.next');
   if (mode === 'lokal') remoteStop();
   else if (remoteWant) remoteStart();
+  if (typeof rotelInputRepaint === 'function') rotelInputRepaint();   /* other input on the amplifier: matters only with the amplifier */
 }
 
 function remoteHide() { remoteMode = 'lokal'; remoteStop(); if (remoteIcon) remoteIcon.style.display = 'none'; }
