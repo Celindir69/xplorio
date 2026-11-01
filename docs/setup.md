@@ -157,7 +157,7 @@ Non-Music, Children's, Brass & Military).
   tracks, where the analysis gives the tag's category at most 20 % and another one at least 60 % (e.g. "Tag: Hard Rock →
   Electronic (80% by audio, Rock 10%)"). One row per album; such albums are not listed under "Merge genres" as well.
 
-In both genre lists each row has two buttons: "Apply" writes the suggestion into the files right away (then "Undo"; the
+In all three genre lists each row has two buttons (under "Genre missing" "Apply" only with a suggestion; "Keep" there means: stays without a genre): "Apply" writes the suggestion into the files right away (then "Undo"; the
 scan follows when the check is closed), "Keep" leaves the current tag and no longer suggests the change (`genre-ok.json` in
 the data folder; for contradictions per album as long as it keeps this tag, for merging per change, e.g. "Hard Rock →
 Rock"). Kept entries are listed folded at the end and can be brought back there with "Suggest again".

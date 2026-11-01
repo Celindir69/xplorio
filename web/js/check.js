@@ -117,7 +117,7 @@ function checkRender(res) {
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
-    if (cat.key === 'genreConflict' || cat.key === 'genreMerge') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
+    if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
     row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
     row.querySelector('.ckName').textContent = cat.name;
@@ -290,14 +290,16 @@ function checkFill(box, cat, list) {
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
   more();
-  if (cat.key === 'genreConflict' || cat.key === 'genreMerge') checkKeptSection(box, cat.key);
+  if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') checkKeptSection(box, cat.key);
 }
 
 /* ---------- Genre suggestions with buttons: "Apply" writes the suggestion, "Keep" leaves the tag for good ---------- */
 /* Kept entries (tag service genre-ok.json, {key: value}): contradiction per album {folder: genre tag}, merging per change
    {"merge|<previous>|<genre>": genre}; they count as long as the album keeps the tag, and are listed folded at the end */
 function checkKeepOf(cat, it) {
-  return cat === 'genreMerge' ? {k: 'merge|' + it.from + '|' + it.genre, v: it.genre} : {k: it.dir, v: it.tag};
+  if (cat === 'genreMerge') return {k: 'merge|' + it.from + '|' + it.genre, v: it.genre};
+  if (cat === 'genreMissing') return {k: 'missing|' + it.dir, v: ''};            /* stays without a genre */
+  return {k: it.dir, v: it.tag};
 }
 function checkIsKept(cat, it) {
   var o = checkKeepOf(cat, it);
@@ -337,7 +339,7 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
   }
   if (kept) btn(T('check.conflict.undoKeep'), T('check.conflict.undoKeepHint'), function(b){ keep(false, b); });
   else {
-    btn(T('check.conflict.apply'), T('check.conflict.applyHint', {genre: it.genre}), function(b){
+    if (it.genre) btn(T('check.conflict.apply'), T('check.conflict.applyHint', {genre: it.genre}), function(b){
       checkApplyGenre(files, it.genre, b).then(function(batch){
         row.classList.add('done'); checkMarkDone(doneKey);
         while (box.firstChild) box.removeChild(box.firstChild);
@@ -351,7 +353,7 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
         });
       }).catch(function(){ b.disabled = false; });
     });
-    btn(T('check.conflict.keep'), T('check.conflict.keepHint'), function(b){ keep(true, b); });
+    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
   row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
@@ -392,7 +394,9 @@ function checkKeptSection(box, cat) {
   var list = document.createElement('div');
   list.className = 'ckOkList';
   list.style.display = checkOkOpen[cat] ? '' : 'none';
-  kept.forEach(function(it){ list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : checkConflictRow(it, true)); });
+  kept.forEach(function(it){
+    list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
+  });
   head.addEventListener('click', function(){
     checkOkOpen[cat] = !checkOkOpen[cat];
     head.classList.toggle('open', checkOkOpen[cat]);
@@ -442,10 +446,12 @@ function checkGenreText(it) {
   return T('check.genre.suggest', {genre: it.genre}) + ' ' + why + (it.subs && it.subs.length ? ' · ' + it.subs.join(', ') : '');
 }
 
-function checkGenreAlbumRow(key, it) {
-  return checkRow(key + '|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), checkGenreText(it), function(){
+function checkGenreAlbumRow(key, it, kept) {
+  var row = checkRow(key + '|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), checkGenreText(it), function(){
     openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'genre', value: it.genre || ''});
   });
+  checkGenreButtons(row, key, key + '|' + it.dir, it, it.files, kept);
+  return row;
 }
 
 /* same change "previous -> top category" for several albums = one row; the pen opens all their tracks */
