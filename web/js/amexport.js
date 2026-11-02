@@ -1,5 +1,5 @@
-/* Hidden test: hand the queue to Apple Music on iOS. Not in the docs. Switched on once with ?amexport=1
-   (off with ?amexport=0); then a button sits in the queue's header. From the current track on (at most
+/* Hidden: hand the queue to Apple Music on iOS. Not in the docs. Switched on per device with ?amexport=1
+   (off with ?amexport=0), or for all devices with window.APP_CONFIG.AM_EXPORT = true in /data/xplorio/config.local.js; then a button sits in the queue's header. From the current track on (at most
    AM_MAX), the tag service finds each track in Apple Music (POST /applemusic, iTunes search; no match: dropped)
    and Xplorio opens the iOS shortcut "Xplorio-Mix" with one line "artist title" per track (search term) in Apple's spelling.
    Classic script, shared global scope; load order see xplorio.html. */
@@ -10,8 +10,9 @@ var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V
   var m = /[?&]amexport=([01])\b/.exec(location.search);
   try {
     if (m) { if (m[1] === '1') localStorage.setItem(AM_KEY, '1'); else localStorage.removeItem(AM_KEY); }
-    if (localStorage.getItem(AM_KEY) !== '1') return;
-  } catch (e) { return; }
+    var on = localStorage.getItem(AM_KEY) === '1';
+  } catch (e) { on = false; }
+  if (!on && !(window.APP_CONFIG && window.APP_CONFIG.AM_EXPORT === true)) return;
   if (typeof TAGS === 'undefined') return;
   var head = document.querySelector('#overlayQueue .overlayHead'), close = document.getElementById('closeQueue');
   if (!head) return;
