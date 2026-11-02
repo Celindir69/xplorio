@@ -3,7 +3,7 @@
    AM_MAX), the tag service finds each track in Apple Music (POST /applemusic, iTunes search; no match: dropped)
    and Xplorio opens the iOS shortcut "Xplorio-Mix" with one line "artist title" per track (search term) in Apple's spelling.
    Classic script, shared global scope; load order see xplorio.html. */
-var AM_KEY = 'xplorioAmExport', AM_MAX = 25, AM_SHORTCUT = 'Xplorio-Mix';
+var AM_KEY = 'xplorioAmExport', AM_MAX = 50, AM_SHORTCUT = 'Xplorio-Mix';
 var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';   /* note */
 
 (function(){
