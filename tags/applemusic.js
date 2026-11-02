@@ -7,9 +7,12 @@ var BASE = process.env.ITUNES_URL || 'https://itunes.apple.com';
 var COUNTRY = process.env.ITUNES_COUNTRY || 'de';
 var MAX = 100;
 
+/* leading track number in the title ("01 - Song", "3. Song", "07_Song"); needs a separator, so "99 Luftballons" stays */
+function noNum(s) { return String(s || '').replace(/^\s*\d{1,3}\s*[-._)]\s*(?=\S)/, '').replace(/^\s*\d{1,3}\s+[-–]\s+/, ''); }
+
 /* best result for {artist, title, album} among the iTunes songs, or null */
 function match(t, results) {
-  var ka = coversearch.key(t.artist), kt = coversearch.key(t.title), kb = coversearch.key(t.album);
+  var title = noNum(t.title), ka = coversearch.key(t.artist), kt = coversearch.key(title), kb = coversearch.key(t.album);
   if (!ka || !kt) return null;
   function low(x) { return String(x || '').toLowerCase().trim(); }
   function same(a, b) { return !!a && !!b && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0); }
@@ -18,7 +21,7 @@ function match(t, results) {
   });
   if (!hits.length) return null;
   var best = hits.filter(function(r){ return kb && coversearch.key(r.collectionName) === kb; })[0]
-    || hits.filter(function(r){ return low(r.trackName) === low(t.title); })[0] || hits[0];   /* "So What" before "So What (Live)" */
+    || hits.filter(function(r){ return low(r.trackName) === low(title); })[0] || hits[0];   /* "So What" before "So What (Live)" */
   return {id: best.trackId, artist: best.artistName, title: best.trackName, album: best.collectionName};
 }
 
@@ -31,15 +34,15 @@ function search(term, limit, cb) {
 /* first artist + title; if that finds nothing, the title alone with more results (Apple's search often misses
    artist spellings such as "feat." or "&") */
 function lookup(t, cb) {
-  search(String(t.artist || '') + ' ' + bare(t.title), 15, function(r1){
+  search(String(t.artist || '') + ' ' + bare(noNum(t.title)), 15, function(r1){
     var m = match(t, r1);
     if (m) return cb(m);
-    setTimeout(function(){ search(bare(t.title), 50, function(r2){ cb(match(t, r2)); }); }, 150);
+    setTimeout(function(){ search(bare(noNum(t.title)), 50, function(r2){ cb(match(t, r2)); }); }, 150);
   });
 }
 
 var MISS_RETRY_MS = 30 * 24 * 3600000;                  /* not found: ask Apple again after 30 days (catalog grows) */
-function cacheKey(t) { return String(t.artist || '').toLowerCase().trim() + '|' + String(t.title || '').toLowerCase().trim(); }
+function cacheKey(t) { return String(t.artist || '').toLowerCase().trim() + '|' + noNum(t.title).toLowerCase().trim(); }
 
 /* tracks -> cb([{id, artist, title, album}]) in order, one request after another (Apple limits the rate).
    cache (optional): {get(key), set(key, value)} remembers hits and misses, so a track is looked up only once */
@@ -59,4 +62,4 @@ function resolve(tracks, cb, cache, now) {
   })();
 }
 
-module.exports = {match: match, resolve: resolve, cacheKey: cacheKey};
+module.exports = {match: match, resolve: resolve, cacheKey: cacheKey, noNum: noNum};

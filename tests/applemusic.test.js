@@ -26,6 +26,12 @@ t('Apple spelling is returned', function(){
   var m = am.match({artist: 'miles davis', title: 'so what', album: ''}, res);
   assert.strictEqual(m.artist, 'Miles Davis'); assert.strictEqual(m.title, 'So What');
 });
+t('track number in the title is ignored, "99 Luftballons" stays', function(){
+  assert.strictEqual(am.match({artist: 'Miles Davis', title: '01 - So What', album: 'Kind of Blue'}, res).id, 2);
+  ['01 - So What', '01. So What', '1 - So What', '07_So What', '3) So What'].forEach(function(x){ assert.strictEqual(am.noNum(x), 'So What', x); });
+  assert.strictEqual(am.noNum('99 Luftballons'), '99 Luftballons');
+  assert.strictEqual(am.noNum('1979'), '1979');
+});
 t('cache: hits and recent misses need no request', function(){
   var store = {}, cache = {get: function(k){ return store[k] || null; }, set: function(k, v){ store[k] = v; }};
   store[am.cacheKey({artist: 'A', title: 'B'})] = {id: 7, artist: 'A', title: 'B', album: 'C'};
