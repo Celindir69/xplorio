@@ -140,6 +140,7 @@ langRegister('es', 'Español', {
   'amexport.empty': 'La cola está vacía',
   'amexport.search': 'Buscando {n} pistas en Apple Music …',
   'amexport.none': 'No se encontraron pistas en Apple Music',
+  'amexport.found': '{n} de {of} pistas encontradas en Apple Music',
   'remote.away': 'Sonando en otro dispositivo',
   'remote.join': 'Toca para escuchar aquí',
   'remote.failed': 'No se pudo cambiar',

@@ -142,6 +142,7 @@ langRegister('en', 'English', {
   'amexport.empty': 'The queue is empty',
   'amexport.search': 'Looking up {n} tracks in Apple Music …',
   'amexport.none': 'No tracks found in Apple Music',
+  'amexport.found': 'Found {n} of {of} tracks in Apple Music',
   'remote.away': 'Playing on another device',
   'remote.join': 'Tap to listen here',
   'remote.failed': 'Switching failed',

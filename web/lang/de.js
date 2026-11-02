@@ -140,6 +140,7 @@ langRegister('de', 'Deutsch', {
   'amexport.empty': 'Warteschlange ist leer',
   'amexport.search': 'Suche {n} Titel in Apple Music …',
   'amexport.none': 'Keine Titel in Apple Music gefunden',
+  'amexport.found': '{n} von {of} Titeln in Apple Music gefunden',
   'remote.away': 'Läuft auf einem anderen Gerät',
   'remote.join': 'Tippen zum Mithören',
   'remote.failed': 'Umschalten fehlgeschlagen',

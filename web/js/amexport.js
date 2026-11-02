@@ -1,7 +1,7 @@
 /* Hidden test: hand the queue to Apple Music on iOS. Not in the docs. Switched on once with ?amexport=1
    (off with ?amexport=0); then a button sits in the queue's header. From the current track on (at most
    AM_MAX), the tag service finds each track in Apple Music (POST /applemusic, iTunes search; no match: dropped)
-   and Xplorio opens the iOS shortcut "Xplorio-Mix" with one line "artist – title" per track in Apple's spelling.
+   and Xplorio opens the iOS shortcut "Xplorio-Mix" with one line "artist title" per track (search term) in Apple's spelling.
    Classic script, shared global scope; load order see xplorio.html. */
 var AM_KEY = 'xplorioAmExport', AM_MAX = 25, AM_SHORTCUT = 'Xplorio-Mix';
 var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';   /* note */
@@ -32,7 +32,8 @@ var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V
       busy = false; btn.classList.remove('busy');
       var list = (r && r.tracks) || [];
       if (!list.length) return showToast(T('amexport.none'));
-      var text = list.map(function(t){ return t.artist + ' – ' + t.title; }).join('\n');
+      showToast(T('amexport.found', {n: list.length, of: tracks.length}));
+      var text = list.map(function(t){ return t.artist + ' ' + t.title; }).join('\n');   /* search term for the shortcut */
       location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(AM_SHORTCUT) + '&input=text&text=' + encodeURIComponent(text);
     }).catch(function(){ busy = false; btn.classList.remove('busy'); showToast(T('amexport.none')); });
   });

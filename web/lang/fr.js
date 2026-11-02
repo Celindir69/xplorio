@@ -141,6 +141,7 @@ langRegister('fr', 'Français', {
   'amexport.empty': 'La file d’attente est vide',
   'amexport.search': 'Recherche de {n} titres dans Apple Music …',
   'amexport.none': 'Aucun titre trouvé dans Apple Music',
+  'amexport.found': '{n} titres sur {of} trouvés dans Apple Music',
   'remote.away': 'Lecture sur un autre appareil',
   'remote.join': 'Touchez pour écouter ici',
   'remote.failed': 'Échec du changement',

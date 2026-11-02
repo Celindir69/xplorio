@@ -22,10 +22,19 @@ function match(t, results) {
   return {id: best.trackId, artist: best.artistName, title: best.trackName, album: best.collectionName};
 }
 
+function bare(s) { return String(s || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+[-–]\s+.*$/, '').trim(); }
+function search(term, limit, cb) {
+  coversearch.getJson(BASE + '/search?media=music&entity=song&limit=' + limit + '&country=' + COUNTRY + '&term=' + encodeURIComponent(term), function(e, j){
+    cb(e ? [] : (j && j.results) || []);
+  });
+}
+/* first artist + title; if that finds nothing, the title alone with more results (Apple's search often misses
+   artist spellings such as "feat." or "&") */
 function lookup(t, cb) {
-  var term = String(t.artist || '') + ' ' + String(t.title || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '');
-  coversearch.getJson(BASE + '/search?media=music&entity=song&limit=15&country=' + COUNTRY + '&term=' + encodeURIComponent(term), function(e, j){
-    cb(e ? null : match(t, j && j.results));
+  search(String(t.artist || '') + ' ' + bare(t.title), 15, function(r1){
+    var m = match(t, r1);
+    if (m) return cb(m);
+    setTimeout(function(){ search(bare(t.title), 50, function(r2){ cb(match(t, r2)); }); }, 150);
   });
 }
 
