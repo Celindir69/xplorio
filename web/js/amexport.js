@@ -4,7 +4,7 @@
    and Xplorio opens the iOS shortcut "Xplorio-Mix" with one line "artist title" per track (search term) in Apple's spelling.
    Classic script, shared global scope; load order see xplorio.html. */
 var AM_KEY = 'xplorioAmExport', AM_MAX = 50, AM_SHORTCUT = 'Xplorio-Mix';
-var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';   /* note */
+var AM_SVG = '<svg viewBox="0 0 24 24"><path d="M4.2 18a2.9 2.3 0 1 1 5.8 0a2.9 2.3 0 1 1-5.8 0zM8.6 8.4h1.4V18H8.6zM14.2 15.6a2.9 2.3 0 1 1 5.8 0a2.9 2.3 0 1 1-5.8 0zM18.6 5.8h1.4v9.8h-1.4zM8.6 7.6L20 5v2.8L8.6 10.4z"/></svg>';   /* two beamed eighth notes, drawn for Xplorio */
 
 (function(){
   var m = /[?&]amexport=([01])\b/.exec(location.search);
