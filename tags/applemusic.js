@@ -26,26 +26,31 @@ function match(t, results) {
 }
 
 function bare(s) { return String(s || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+[-–]\s+.*$/, '').trim(); }
-function search(term, limit, cb) {
+/* cb(failed, results); a failed request (network, Apple's rate limit: HTTP 403/429) is tried once more after 3 s */
+var RETRY_MS = +(process.env.ITUNES_RETRY_MS || 3000);
+function search(term, limit, cb, tried) {
   coversearch.getJson(BASE + '/search?media=music&entity=song&limit=' + limit + '&country=' + COUNTRY + '&term=' + encodeURIComponent(term), function(e, j){
-    cb(e ? [] : (j && j.results) || []);
+    if (e && !tried) return setTimeout(function(){ search(term, limit, cb, true); }, RETRY_MS);
+    cb(!!e, e ? [] : (j && j.results) || []);
   });
 }
 /* first artist + title; if that finds nothing, the title alone with more results (Apple's search often misses
    artist spellings such as "feat." or "&") */
-function lookup(t, cb) {
-  search(String(t.artist || '') + ' ' + bare(noNum(t.title)), 15, function(r1){
+function lookup(t, cb) {                                /* cb(match or null, failed: no answer from Apple) */
+  search(String(t.artist || '') + ' ' + bare(noNum(t.title)), 15, function(f1, r1){
     var m = match(t, r1);
-    if (m) return cb(m);
-    setTimeout(function(){ search(bare(noNum(t.title)), 50, function(r2){ cb(match(t, r2)); }); }, 150);
+    if (m) return cb(m, false);
+    setTimeout(function(){ search(bare(noNum(t.title)), 50, function(f2, r2){ cb(match(t, r2), f1 || f2); }); }, PAUSE_MS);
   });
 }
 
+var PAUSE_MS = +(process.env.ITUNES_PAUSE_MS || 300);                                     /* between requests, Apple limits the rate */
 var MISS_RETRY_MS = 30 * 24 * 3600000;                  /* not found: ask Apple again after 30 days (catalog grows) */
 function cacheKey(t) { return String(t.artist || '').toLowerCase().trim() + '|' + noNum(t.title).toLowerCase().trim(); }
 
 /* tracks -> cb([{id, artist, title, album}]) in order, one request after another (Apple limits the rate).
-   cache (optional): {get(key), set(key, value)} remembers hits and misses, so a track is looked up only once */
+   cache (optional): {get(key), set(key, value)} remembers hits and misses, so a track is looked up only once;
+   a track Apple did not answer for is not remembered */
 function resolve(tracks, cb, cache, now) {
   var list = (tracks || []).slice(0, MAX), out = [], i = 0;
   now = now || Date.now();
@@ -54,10 +59,10 @@ function resolve(tracks, cb, cache, now) {
     var t = list[i++], k = cacheKey(t), c = cache && cache.get(k);
     if (c && c.id) { out.push({id: c.id, artist: c.artist, title: c.title, album: c.album}); return next(); }
     if (c && c.miss && now - c.at < MISS_RETRY_MS) return next();
-    lookup(t, function(m){
-      if (cache) cache.set(k, m ? {id: m.id, artist: m.artist, title: m.title, album: m.album} : {miss: true, at: now});
+    lookup(t, function(m, failed){
+      if (cache && (m || !failed)) cache.set(k, m ? {id: m.id, artist: m.artist, title: m.title, album: m.album} : {miss: true, at: now});   /* no answer: not remembered as missing */
       if (m) out.push(m);
-      setTimeout(next, 150);
+      setTimeout(next, PAUSE_MS);
     });
   })();
 }

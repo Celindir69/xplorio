@@ -41,3 +41,15 @@ t('cache: hits and recent misses need no request', function(){
   assert.deepStrictEqual(got, [{id: 7, artist: 'A', title: 'B', album: 'C'}]);   /* synchronous: no lookup happened */
 });
 console.log(n + ' checks passed');
+
+/* no answer from Apple (here: nothing listens on the port): the track is not remembered as missing */
+(function(){
+  var cp = require('child_process');
+  var code = "var am=require(" + JSON.stringify(require('path').join(__dirname, '..', 'tags', 'applemusic.js')) + ");" +
+    "var store={};am.resolve([{artist:'A',title:'B'}],function(l){console.log(JSON.stringify({l:l,store:store}))}," +
+    "{get:function(k){return store[k]||null},set:function(k,v){store[k]=v}});";
+  var r = cp.spawnSync(process.execPath, ['-e', code], {env: Object.assign({}, process.env, {ITUNES_URL: 'http://127.0.0.1:9', ITUNES_RETRY_MS: '10', ITUNES_PAUSE_MS: '1'}), encoding: 'utf8', timeout: 20000});
+  var o = JSON.parse(r.stdout);
+  assert.deepStrictEqual(o, {l: [], store: {}});
+  console.log('ok   no answer from Apple: not remembered as missing');
+})();
