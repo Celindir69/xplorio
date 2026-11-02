@@ -1414,9 +1414,24 @@ function doReplayGain(query, cb) {
 /* POST /applemusic {tracks: [{artist, title, album}]} -> {ok, tracks: [{id, artist, title, album}]}: Apple Music entries
    via the iTunes search (hidden test, tags/applemusic.js) */
 var applemusic = require('./applemusic.js');
+var AM_FILE = path.join(DATA_DIR, 'applemusic-ids.json'), AM_MAX_ENTRIES = 50000, amData = null, amDirty = false;
+function amCache() {                                     /* found Apple Music IDs (and misses), kept for good */
+  if (!amData) { try { amData = JSON.parse(fs.readFileSync(AM_FILE, 'utf8')); } catch (e) { amData = {}; } }
+  if (!amData || typeof amData !== 'object' || Array.isArray(amData)) amData = {};
+  return {
+    get: function(k){ return Object.prototype.hasOwnProperty.call(amData, k) ? amData[k] : null; },
+    set: function(k, v){ if (Object.keys(amData).length < AM_MAX_ENTRIES || Object.prototype.hasOwnProperty.call(amData, k)) { amData[k] = v; amDirty = true; } }
+  };
+}
+function amCacheSave() {
+  if (!amDirty) return;
+  amDirty = false;
+  var tmp = AM_FILE + '.tmp';
+  fs.writeFile(tmp, JSON.stringify(amData), function(e){ if (!e) fs.rename(tmp, AM_FILE, function(){}); });
+}
 function doAppleMusic(body, cb) {
   var tracks = Array.isArray(body && body.tracks) ? body.tracks : [];
-  applemusic.resolve(tracks, function(list){ cb(200, {ok: true, tracks: list}); });
+  applemusic.resolve(tracks, function(list){ amCacheSave(); cb(200, {ok: true, tracks: list}); }, amCache());
 }
 
 /* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; remembered per file */

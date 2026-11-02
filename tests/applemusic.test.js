@@ -26,4 +26,12 @@ t('Apple spelling is returned', function(){
   var m = am.match({artist: 'miles davis', title: 'so what', album: ''}, res);
   assert.strictEqual(m.artist, 'Miles Davis'); assert.strictEqual(m.title, 'So What');
 });
+t('cache: hits and recent misses need no request', function(){
+  var store = {}, cache = {get: function(k){ return store[k] || null; }, set: function(k, v){ store[k] = v; }};
+  store[am.cacheKey({artist: 'A', title: 'B'})] = {id: 7, artist: 'A', title: 'B', album: 'C'};
+  store[am.cacheKey({artist: 'X', title: 'Y'})] = {miss: true, at: 1000};
+  var got = null;
+  am.resolve([{artist: 'a', title: 'b'}, {artist: 'X', title: 'Y'}], function(l){ got = l; }, cache, 2000);
+  assert.deepStrictEqual(got, [{id: 7, artist: 'A', title: 'B', album: 'C'}]);   /* synchronous: no lookup happened */
+});
 console.log(n + ' checks passed');

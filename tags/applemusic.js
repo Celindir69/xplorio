@@ -38,13 +38,25 @@ function lookup(t, cb) {
   });
 }
 
-/* tracks -> cb([{id, artist, title, album}]) in order, one request after another (Apple limits the rate) */
-function resolve(tracks, cb) {
+var MISS_RETRY_MS = 30 * 24 * 3600000;                  /* not found: ask Apple again after 30 days (catalog grows) */
+function cacheKey(t) { return String(t.artist || '').toLowerCase().trim() + '|' + String(t.title || '').toLowerCase().trim(); }
+
+/* tracks -> cb([{id, artist, title, album}]) in order, one request after another (Apple limits the rate).
+   cache (optional): {get(key), set(key, value)} remembers hits and misses, so a track is looked up only once */
+function resolve(tracks, cb, cache, now) {
   var list = (tracks || []).slice(0, MAX), out = [], i = 0;
+  now = now || Date.now();
   (function next(){
     if (i >= list.length) return cb(out);
-    lookup(list[i++], function(m){ if (m) out.push(m); setTimeout(next, 150); });
+    var t = list[i++], k = cacheKey(t), c = cache && cache.get(k);
+    if (c && c.id) { out.push({id: c.id, artist: c.artist, title: c.title, album: c.album}); return next(); }
+    if (c && c.miss && now - c.at < MISS_RETRY_MS) return next();
+    lookup(t, function(m){
+      if (cache) cache.set(k, m ? {id: m.id, artist: m.artist, title: m.title, album: m.album} : {miss: true, at: now});
+      if (m) out.push(m);
+      setTimeout(next, 150);
+    });
   })();
 }
 
-module.exports = {match: match, resolve: resolve};
+module.exports = {match: match, resolve: resolve, cacheKey: cacheKey};
