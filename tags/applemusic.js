@@ -67,4 +67,65 @@ function resolve(tracks, cb, cache, now) {
   })();
 }
 
-module.exports = {match: match, resolve: resolve, cacheKey: cacheKey, noNum: noNum};
+/* ---------- Xplorio items -> tracks ("Apple Music" mode: everything played goes to the shortcut) ---------- */
+function q(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
+function dec(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+/* MPD command that lists the tracks behind an item, or null (radio, streaming services, unknown) */
+function itemCommand(it) {
+  var uri = String((it && it.uri) || ''), m;
+  if ((m = /^albums:\/\/([^\/]+)\/(.+)$/.exec(uri))) return 'find albumartist ' + q(dec(m[1])) + ' album ' + q(dec(m[2]));
+  if ((m = /^artists:\/\/([^\/]+)\/?$/.exec(uri))) return 'find artist ' + q(dec(m[1]));
+  if ((m = /^artists:\/\/([^\/]+)\/(.+)$/.exec(uri))) return 'find artist ' + q(dec(m[1])) + ' album ' + q(dec(m[2]));
+  if ((m = /^genres:\/\/([^\/]+)\/?$/.exec(uri))) return 'find genre ' + q(dec(m[1]));
+  if (/^[a-z]+:\/\//i.test(uri) || (it.service && it.service !== 'mpd')) return null;
+  var path = uri.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
+  return path ? 'listallinfo ' + q(path) : null;
+}
+/* MPD's answer -> [{artist, title, album, file, disc, track}] */
+function parseSongs(lines) {
+  var out = [], cur = null;
+  (lines || []).forEach(function(l){
+    var i = l.indexOf(': ');
+    if (i < 0) return;
+    var k = l.slice(0, i).toLowerCase(), v = l.slice(i + 2);
+    if (k === 'file') { cur = {file: v, artist: '', title: '', album: '', disc: 0, track: 0}; out.push(cur); return; }
+    if (k === 'directory' || k === 'playlist') { cur = null; return; }
+    if (!cur) return;
+    if (k === 'artist' && !cur.artist) cur.artist = v;
+    else if (k === 'title') cur.title = v;
+    else if (k === 'album') cur.album = v;
+    else if (k === 'disc') cur.disc = parseInt(v, 10) || 0;
+    else if (k === 'track') cur.track = parseInt(v, 10) || 0;
+  });
+  return out;
+}
+function bySong(a, b) {                                  /* album by album, then disc and track (find answers in no order) */
+  return a.album < b.album ? -1 : a.album > b.album ? 1 : (a.disc - b.disc) || (a.track - b.track) || (a.file < b.file ? -1 : 1);
+}
+/* items as Xplorio plays them -> cb([{artist, title, album}]), at most MAX; songs with artist and title as they are,
+   folders, albums, artists, genres through MPD. mpd(cmds, cb(err, lines)) */
+function expand(items, mpd, cb) {
+  var list = (items || []).slice(0, 500), out = [], i = 0;
+  (function next(){
+    if (i >= list.length || out.length >= MAX) return cb(out.slice(0, MAX));
+    var it = list[i++] || {};
+    if (it.artist && it.title && (it.type === 'song' || it.type === 'track')) { out.push({artist: it.artist, title: it.title, album: it.album || ''}); return next(); }
+    var cmd = itemCommand(it);
+    if (!cmd) return next();
+    mpd([cmd], function(err, lines){
+      var songs = err ? [] : parseSongs(lines);
+      if (!songs.length && /^find albumartist /.test(cmd)) {     /* album without album artist tag: by artist */
+        cmd = cmd.replace(/^find albumartist /, 'find artist ');
+        return mpd([cmd], function(e2, l2){ add(e2 ? [] : parseSongs(l2)); });
+      }
+      add(songs);
+    });
+    function add(songs) {
+      if (/^find /.test(cmd)) songs.sort(bySong);
+      songs.forEach(function(s){ if (s.artist && s.title) out.push({artist: s.artist, title: s.title, album: s.album}); });
+      next();
+    }
+  })();
+}
+
+module.exports = {match: match, resolve: resolve, cacheKey: cacheKey, noNum: noNum, expand: expand, itemCommand: itemCommand, parseSongs: parseSongs};

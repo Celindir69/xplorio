@@ -331,6 +331,7 @@ function tracksPlay(list) {
    If nothing is playing, like tracksPlay. */
 function tracksAfterCurrent(list) {
   var items = tracksItems(list);
+  if (typeof amPlayItems === 'function' && amPlayItems(items, true)) return;   /* "Apple Music" mode: append there */
   Promise.all([
     fetch('/api/v1/getState').then(function(r){ return r.json(); }),
     fetch('/api/v1/getQueue').then(function(r){ return r.json(); })

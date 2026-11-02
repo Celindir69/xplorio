@@ -142,6 +142,8 @@ langRegister('en', 'English', {
   'amexport.empty': 'The queue is empty',
   'amexport.search': 'Looking up {n} tracks in Apple Music …',
   'amexport.none': 'No tracks found in Apple Music',
+  'amexport.searching': 'Looking up in Apple Music …',
+  'amexport.mode': 'Apple Music mode: playback goes to Apple Music, the system at home stays untouched',
   'amexport.found': 'Found {n} of {of} tracks in Apple Music',
   'remote.away': 'Playing on another device',
   'remote.join': 'Tap to listen here',

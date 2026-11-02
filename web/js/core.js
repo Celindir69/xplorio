@@ -46,6 +46,7 @@ socket.on('pushUiSettings', function(s){
    starts the first track (ui.js). true: done, otherwise play as usual */
 var queuedForInput = false;
 function queueForInput(items) {
+  if (typeof amPlayItems === 'function' && amPlayItems(items, false)) return true;   /* "Apple Music" mode (amexport.js) */
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   if (!inp) { queuedForInput = false; return false; }
   if (!items || !items.length) return true;

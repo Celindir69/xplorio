@@ -40,6 +40,19 @@ t('cache: hits and recent misses need no request', function(){
   am.resolve([{artist: 'a', title: 'b'}, {artist: 'X', title: 'Y'}], function(l){ got = l; }, cache, 2000);
   assert.deepStrictEqual(got, [{id: 7, artist: 'A', title: 'B', album: 'C'}]);   /* synchronous: no lookup happened */
 });
+t('expand: songs as they are, albums and folders through MPD (album without album artist: by artist), radio dropped', function(){
+  var asked = [], got = null;
+  function mpd(cmds, cb) {
+    asked.push(cmds[0]);
+    if (/^find albumartist/.test(cmds[0])) return cb(null, []);
+    if (/^find artist/.test(cmds[0])) return cb(null, ['file: a/2.flac', 'Artist: M', 'Title: Two', 'Album: K', 'Track: 2', 'file: a/1.flac', 'Artist: M', 'Title: One', 'Album: K', 'Track: 1']);
+    cb(null, ['directory: d', 'file: d/x.flac', 'Artist: F', 'Title: X', 'Album: D']);
+  }
+  am.expand([{uri: 'x', type: 'song', artist: 'S', title: 'T'}, {uri: 'albums://M/K', type: 'folder'}, {uri: 'music-library/USB/d', type: 'folder'},
+    {uri: 'http://radio', service: 'webradio', type: 'webradio'}], mpd, function(l){ got = l; });
+  assert.deepStrictEqual(got.map(function(x){ return x.title; }), ['T', 'One', 'Two', 'X']);
+  assert.deepStrictEqual(asked, ['find albumartist "M" album "K"', 'find artist "M" album "K"', 'listallinfo "USB/d"']);
+});
 console.log(n + ' checks passed');
 
 /* no answer from Apple (here: nothing listens on the port): the track is not remembered as missing */
