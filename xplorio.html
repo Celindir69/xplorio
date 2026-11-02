@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Xplorio">
+<script>
+  /* hidden "Apple Music" mode (?amexport=play, amexport.js): own home-screen app that always starts in this mode */
+  var XAM = /[?&]amexport=play\b/.test(location.search);
+  document.write('<meta name="apple-mobile-web-app-title" content="' + (XAM ? 'Xplorio AM' : 'Xplorio') + '">' +
+                 '<link rel="manifest" href="web/' + (XAM ? 'manifest-am.json' : 'manifest.json') + '">');
+</script>
 <title>Xplorio</title>
 <link rel="apple-touch-icon" sizes="180x180" href="web/icons/icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="web/icons/favicon-32.png">
-<link rel="manifest" href="web/manifest.json">
 <script>
   /* Installed build (written by make-plugin): reload scripts and styles only after an update.
      Without web/build.js (development) fresh every time. */
