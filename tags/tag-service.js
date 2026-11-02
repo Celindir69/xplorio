@@ -1411,7 +1411,7 @@ function doReplayGain(query, cb) {
     runPy({op: 'replaygain', path: r.full}, function(p){ done(p.ok ? null : new Error(p.error), p); });
   }, function(o){ cb(o.ok ? 200 : 503, o); });
 }
-/* POST /applemusic {tracks: [{artist, title, album}]} -> {ok, tracks: [{id, artist, title, album}]}: Apple Music entries
+/* POST /applemusic {tracks: [{artist, title, album}]} or {items: [Xplorio items]} -> {ok, tracks: [{id, artist, title, album}], of}: Apple Music entries
    via the iTunes search (hidden test, tags/applemusic.js) */
 var applemusic = require('./applemusic.js');
 var AM_FILE = path.join(DATA_DIR, 'applemusic-ids.json'), AM_MAX_ENTRIES = 50000, amData = null, amDirty = false;
@@ -1430,8 +1430,11 @@ function amCacheSave() {
   fs.writeFile(tmp, JSON.stringify(amData), function(e){ if (!e) fs.rename(tmp, AM_FILE, function(){}); });
 }
 function doAppleMusic(body, cb) {
-  var tracks = Array.isArray(body && body.tracks) ? body.tracks : [];
-  applemusic.resolve(tracks, function(list){ amCacheSave(); cb(200, {ok: true, tracks: list}); }, amCache());
+  function go(tracks) { applemusic.resolve(tracks, function(list){ amCacheSave(); cb(200, {ok: true, tracks: list, of: tracks.length}); }, amCache()); }
+  if (Array.isArray(body && body.items)) {               /* "Apple Music" mode: Xplorio items (albums, folders, …) */
+    return applemusic.expand(body.items, function(cmds, done){ remote.mpd(MPD_HOST, MPD_PORT, cmds, done); }, go);
+  }
+  go(Array.isArray(body && body.tracks) ? body.tracks : []);
 }
 
 /* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; remembered per file */

@@ -196,6 +196,7 @@ function queueAddButton(items, n) {
     ev.stopPropagation();
     var list = typeof items === 'function' ? items() : items;
     if (!list || !list.length) return;
+    if (typeof amPlayItems === 'function' && amPlayItems(list, true)) return;   /* "Apple Music" mode: append there */
     socket.emit('addToQueue', list);
     showToast(n ? T('mix.added', {n: n}) : T('queue.added'));
   });

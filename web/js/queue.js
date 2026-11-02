@@ -27,6 +27,7 @@ var queueSeq = 0;              /* only draw the answer to the latest request (ol
 function queuePlayAt(i) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   if (inp) { showToast(T('audio.otherInput', {name: inp.name})); return; }
+  if (typeof amPlayMode === 'function' && amPlayMode()) { showToast(T('amexport.mode')); return; }   /* the queue at home stays untouched */
   socket.emit('play', {value: i});
 }
 function loadQueue() {

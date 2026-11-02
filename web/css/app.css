@@ -1212,3 +1212,11 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 /* Apple Music export (hidden test, amexport.js) */
 .amExport { margin-left:auto; margin-right:8px; }
 .amExport.busy { opacity:.3; pointer-events:none; }
+/* "Apple Music" mode (?amexport=play): label at the top, the player's controls at home greyed out */
+#amChip { position:fixed; z-index:6; top:calc(var(--sat) + 12px); left:50%; transform:translateX(-50%); display:flex; align-items:center;
+  gap:.35em; padding:.3em .8em; border-radius:1em; font-size:13px; font-weight:600; cursor:pointer;
+  background:var(--accent, var(--fg)); color:var(--on-accent, #000); }
+#amChip svg { width:1.1em; height:1.1em; fill:currentColor; }
+@media (orientation:portrait) and (max-width:600px) { #amChip { top:calc(var(--sat) + 34px); } }
+html.amPlay #seekBar, html.amPlay #cRepeat, html.amPlay #cPrev, html.amPlay #cPlay, html.amPlay #cNext, html.amPlay #cRandom,
+html.amPlay #volWrap, html.amPlay #btnRotelPower, html.amPlay .remoteIcon { opacity:.25; pointer-events:none; }

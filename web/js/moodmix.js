@@ -436,6 +436,7 @@ function mixItems(tracks) {
 }
 function mixPlay(tracks, replace) {
   var items = mixItems(tracks);
+  if (!replace && typeof amPlayItems === 'function' && amPlayItems(items, true)) return;   /* "Apple Music" mode: append there */
   if (!replace) { socket.emit('addToQueue', items); closeAllOverlays(); showToast(T('mix.added', {n: items.length})); return; }
   if (queueForInput(items)) return;
   fetch('/api/v1/replaceAndPlay', {

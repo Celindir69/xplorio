@@ -1,0 +1,23 @@
+{
+  "name": "Xplorio AM",
+  "short_name": "Xplorio AM",
+  "start_url": "../xplorio.html?amexport=play",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#1b2140",
+  "icons": [
+    {
+      "src": "icons/icon-am-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-am-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "id": "../xplorio.html?amexport=play"
+}

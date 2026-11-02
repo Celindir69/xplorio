@@ -140,6 +140,8 @@ langRegister('it', 'Italiano', {
   'amexport.empty': 'La coda è vuota',
   'amexport.search': 'Cerco {n} brani in Apple Music …',
   'amexport.none': 'Nessun brano trovato in Apple Music',
+  'amexport.searching': 'Ricerca in Apple Music …',
+  'amexport.mode': 'Modalità Apple Music: la riproduzione va ad Apple Music, l’impianto di casa resta intatto',
   'amexport.found': 'Trovati {n} brani su {of} in Apple Music',
   'remote.away': 'In riproduzione su un altro dispositivo',
   'remote.join': 'Tocca per ascoltare qui',
