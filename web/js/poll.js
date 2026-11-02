@@ -209,7 +209,10 @@ function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   document.documentElement.classList.toggle('otherInput', !!inp);
   if (!inp) { inputSession = ''; return st; }
-  if (inputSession !== inp.name) { inputSession = inp.name; inputBaseUri = st.uri || ''; }   /* what was loaded when switching */
+  if (inputSession !== inp.name) {                                     /* what was loaded when switching */
+    inputSession = inp.name; inputBaseUri = st.uri || '';
+    if (inp.off && st.status === 'play') { fetch('/api/v1/commands/?cmd=stop').catch(function(){}); st.status = 'stop'; }   /* switched off while playing: stop once, so Volumio does not run on into nothing */
+  }
   if (st.status === 'play' || (st.uri || '') !== inputBaseUri) {
     var a = {};
     for (var j in st) if (st.hasOwnProperty(j)) a[j] = st[j];

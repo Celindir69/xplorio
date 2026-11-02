@@ -160,6 +160,7 @@ langRegister('fr', 'Français', {
   'controls.rotel.off': 'Éteindre le Rotel',
   'controls.rotel.on': 'Allumer le Rotel',
   'controls.rotel.unreachable': 'Service Rotel injoignable',
+  'rotel.standby': 'veille',
 
   'disc.ago.album': {one: 'Écouté il y a un an', other: 'Écouté il y a {n} ans'},
   'disc.ago.artist': {one: 'Écouté il y a un an', other: 'Écouté il y a {n} ans'},
