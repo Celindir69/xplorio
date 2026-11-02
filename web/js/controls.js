@@ -107,6 +107,7 @@ btnRotelPower.addEventListener('click', function(){
    instead of format and pen (poll.js paintQuality, tagedit.js tagPaintPlayer).
    Names and icons come from the bridge profile (ROTEL_PROFILE, ROTEL_INPUTS) */
 var ROTEL_ICONS = {
+  power: 'M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z',   /* amplifier in standby */
   phono: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z',
   cd: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 3.8a8.2 8.2 0 1 0 0 16.4a8.2 8.2 0 1 0 0-16.4zM12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7zM12 10.8a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4zM6.2 11.4A5.9 5.9 0 0 1 11.4 6.2v1.6A4.3 4.3 0 0 0 7.8 11.4z',
   tuner: 'M3.24 6.15C2.51 6.43 2 7.17 2 8v12c0 1.1.89 2 2 2h16c1.11 0 2-.9 2-2V8c0-1.11-.89-2-2-2H8.3l8.26-3.34L15.88 1 3.24 6.15zM7 20c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm13-8h-2v-2h-2v2H4V8h16v4z',
@@ -126,10 +127,13 @@ function rotelProfLoad() {
   fetch(ROTEL + '/profile').then(function(r){ return r.json(); })
     .then(function(j){ if (j && j.profile) { rotelProf = j.profile; rotelInputRepaint(); } }).catch(function(){});
 }
-/* {name, icon} of the active foreign input or null (amp off, player input, not yet known) */
+/* {name, icon} of the active foreign input, {name: "Standby", icon: 'power', off: true} with the amp in standby or off,
+   or null (player input, not yet known, Rotel service unreachable, playback only on this device) */
 function rotelInput() {
-  if (!ROTEL_ON || !rotelProf || !rotelOn || !rotelLinked || !rotelSource) return null;
+  if (!ROTEL_ON || !rotelReachable) return null;                                    /* service unreachable: do not lock anything */
   if (typeof remoteMode !== 'undefined' && remoteMode === 'remote') return null;   /* only on this device (remote.js): the amplifier plays no part */
+  if (!rotelOn) return {name: T('rotel.standby'), icon: 'power', off: true};      /* standby/off: the player's USB output is gone too */
+  if (!rotelProf || !rotelLinked || !rotelSource) return null;
   var src = rotelNorm(rotelSource);
   if (src === rotelNorm(rotelProf.player)) return null;
   var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];

@@ -163,6 +163,7 @@ langRegister('de', 'Deutsch', {
   'controls.rotel.off': 'Rotel ausschalten',
   'controls.rotel.on': 'Rotel einschalten',
   'controls.rotel.unreachable': 'Rotel-Dienst nicht erreichbar',
+  'rotel.standby': 'Standby',
 
   'disc.ago.album': {one: 'Vor einem Jahr gehört', other: 'Vor {n} Jahren gehört'},
   'disc.ago.artist': {one: 'Vor einem Jahr gehört', other: 'Vor {n} Jahren gehört'},

@@ -165,6 +165,7 @@ langRegister('en', 'English', {
   'controls.rotel.off': 'Turn Rotel off',
   'controls.rotel.on': 'Turn Rotel on',
   'controls.rotel.unreachable': 'Rotel service unreachable',
+  'rotel.standby': 'standby',
 
   'disc.ago.album': {one: 'Played a year ago', other: 'Played {n} years ago'},
   'disc.ago.artist': {one: 'Played a year ago', other: 'Played {n} years ago'},

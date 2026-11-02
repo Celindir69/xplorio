@@ -163,6 +163,7 @@ langRegister('es', 'Español', {
   'controls.rotel.off': 'Apagar Rotel',
   'controls.rotel.on': 'Encender Rotel',
   'controls.rotel.unreachable': 'Servicio Rotel no disponible',
+  'rotel.standby': 'standby',
 
   'disc.ago.album': {one: 'Escuchado hace un año', other: 'Escuchado hace {n} años'},
   'disc.ago.artist': {one: 'Escuchado hace un año', other: 'Escuchado hace {n} años'},
