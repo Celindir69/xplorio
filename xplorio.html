@@ -9,10 +9,10 @@
   /* hidden "Apple Music" mode (?amexport=play, amexport.js): own home-screen app that always starts in this mode */
   var XAM = /[?&]amexport=play\b/.test(location.search);
   document.write('<meta name="apple-mobile-web-app-title" content="' + (XAM ? 'Xplorio AM' : 'Xplorio') + '">' +
-                 '<link rel="manifest" href="web/' + (XAM ? 'manifest-am.json' : 'manifest.json') + '">');
+                 '<link rel="manifest" href="web/' + (XAM ? 'manifest-am.json' : 'manifest.json') + '">' +
+                 '<link rel="apple-touch-icon" sizes="180x180" href="web/icons/' + (XAM ? 'icon-am-180.png' : 'icon-180.png') + '">');
 </script>
 <title>Xplorio</title>
-<link rel="apple-touch-icon" sizes="180x180" href="web/icons/icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="web/icons/favicon-32.png">
 <script>
   /* Installed build (written by make-plugin): reload scripts and styles only after an update.
