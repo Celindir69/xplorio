@@ -1411,6 +1411,29 @@ function doReplayGain(query, cb) {
     runPy({op: 'replaygain', path: r.full}, function(p){ done(p.ok ? null : new Error(p.error), p); });
   }, function(o){ cb(o.ok ? 200 : 503, o); });
 }
+/* POST /applemusic {tracks: [{artist, title, album}]} -> {ok, tracks: [{id, artist, title, album}]}: Apple Music entries
+   via the iTunes search (hidden test, tags/applemusic.js) */
+var applemusic = require('./applemusic.js');
+var AM_FILE = path.join(DATA_DIR, 'applemusic-ids.json'), AM_MAX_ENTRIES = 50000, amData = null, amDirty = false;
+function amCache() {                                     /* found Apple Music IDs (and misses), kept for good */
+  if (!amData) { try { amData = JSON.parse(fs.readFileSync(AM_FILE, 'utf8')); } catch (e) { amData = {}; } }
+  if (!amData || typeof amData !== 'object' || Array.isArray(amData)) amData = {};
+  return {
+    get: function(k){ return Object.prototype.hasOwnProperty.call(amData, k) ? amData[k] : null; },
+    set: function(k, v){ if (Object.keys(amData).length < AM_MAX_ENTRIES || Object.prototype.hasOwnProperty.call(amData, k)) { amData[k] = v; amDirty = true; } }
+  };
+}
+function amCacheSave() {
+  if (!amDirty) return;
+  amDirty = false;
+  var tmp = AM_FILE + '.tmp';
+  fs.writeFile(tmp, JSON.stringify(amData), function(e){ if (!e) fs.rename(tmp, AM_FILE, function(){}); });
+}
+function doAppleMusic(body, cb) {
+  var tracks = Array.isArray(body && body.tracks) ? body.tracks : [];
+  applemusic.resolve(tracks, function(list){ amCacheSave(); cb(200, {ok: true, tracks: list}); }, amCache());
+}
+
 /* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; remembered per file */
 var mqaCache = new Map(), MQA_CACHE_MAX = 500;
 function doMqa(query, cb) {
@@ -1806,7 +1829,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1814,7 +1837,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

@@ -1208,3 +1208,7 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .remoteIcon.both::after { content:''; position:absolute; right:2px; top:2px; width:9px; height:9px; border-radius:50%; background:var(--accent, var(--fg)); }
 .remoteIcon.away { opacity:.55; }
 .remoteIcon.away::after { display:none; }
+
+/* Apple Music export (hidden test, amexport.js) */
+.amExport { margin-left:auto; margin-right:8px; }
+.amExport.busy { opacity:.3; pointer-events:none; }

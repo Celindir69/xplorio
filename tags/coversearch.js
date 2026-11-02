@@ -144,4 +144,4 @@ function image(u, cb) {
   });
 }
 
-module.exports = {search: search, image: image, key: key, fetchUrl: fetchUrl, privateIp: privateIp};
+module.exports = {search: search, image: image, key: key, fetchUrl: fetchUrl, getJson: getJson, privateIp: privateIp};
