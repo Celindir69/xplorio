@@ -368,7 +368,7 @@ function browseArtist(e, seq) {
         browseRender();
       });
       pane.appendChild(row);
-      if (!isStream) genreRows.push({row: row, uri: al.uri, album: al.title, artist: al.artist || e.artist});
+      if (!isStream) genreRows.push({row: row, uri: al.uri, album: al.title, artist: al.artist || e.artist, noArtist: true});   /* artist page: no artist line */
     });
     if (genreRows.length && typeof genreDecorate === 'function') genreDecorate(genreRows, seq);   /* genre before the pen */
 

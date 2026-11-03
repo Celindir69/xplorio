@@ -1182,9 +1182,9 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 
 /* album versions (browse.js versionsLayer): quality badge as in the player, path small below */
 #browseBody .verRow .sSub { white-space:normal; }
-#browseBody .verQ .qBadge { font-size:.72em; padding:.4em .55em .22em; border-radius:.35em; margin-right:.6em; vertical-align:.12em; }
+#browseBody .verQ .qBadge, #searchResults .verQ .qBadge { font-size:.72em; padding:.4em .55em .22em; border-radius:.35em; margin-right:.6em; vertical-align:.12em; }
 #browseBody .verBest { color:var(--gold); }
-#browseBody .verPath { font-size:.85em; opacity:.45; overflow-wrap:anywhere; }
+#browseBody .verPath, #searchResults .verPath { font-size:.85em; opacity:.45; overflow-wrap:anywhere; }
 .verStack { display:inline-flex; align-items:center; gap:.15em; margin-left:.45em; font-size:.72em; opacity:.6; vertical-align:.08em; white-space:nowrap; }
 .verStack svg { width:1.15em; height:1.15em; fill:currentColor; }
 

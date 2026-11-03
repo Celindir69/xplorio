@@ -116,6 +116,18 @@ function browseGenre(e, seq) {
   });
 }
 
+/* below a local album in a list, like in the version list: badge, file type, tracks, duration; then the path.
+   fi: {ext, bits, rate, codec, n, s} (tag service album list) */
+function albumFileLines(meta, fi, dir) {
+  var q = versionQuality(fi), line = histEl('div', 'sSub verQ');
+  if (q.label) line.appendChild(histEl('span', 'qBadge ' + q.kind, q.label));
+  var bits = q.tech.concat(fi.n ? [T('browse.trackCount', {n: fi.n})] : []);
+  if (fi.s) bits.push(mixDuration(fi.s));
+  line.appendChild(document.createTextNode(bits.join(' \u00b7 ')));
+  meta.appendChild(line);
+  meta.appendChild(histEl('div', 'sSub verPath', dir));
+}
+
 /* Albums from the tag service's album list ({dir, al, ar, y}) with "Play all" and dice above, year after
    the title; into: target (otherwise browseBody), noHead: without "Play all" (then already above the tabs),
    match: the page's mood/style query, the dice then takes only tracks that match themselves */
@@ -133,6 +145,7 @@ function genreAlbumPage(list, into, noHead, match) {
     if (a.y) ti.appendChild(yearSpan(a.y));
     meta.appendChild(ti);
     meta.appendChild(histEl('div', 'sSub', histArtistName(a.ar)));
+    if (!(a.nv > 1) && a.fi) albumFileLines(meta, a.fi, a.dir);   /* several versions: the stack symbol says enough */
     if (a.st && a.sp) meta.appendChild(histEl('div', 'sSub', a.st.map(function(s, i){   /* genre page: why the album is listed here */
       return T('genre.styleShare', {s: s, p: langNum(a.sp[i])});
     }).join(' · ')));
@@ -278,9 +291,9 @@ function genreOpen(g) {
 
 /* look up genre and year for albums: items [{uri, album, artist}] -> Promise {genres: [...], years: [...]} ('' or 0 = unknown);
    withStyle: also styles: [...] (strongest style of the album from the audio analysis, '' = none) */
-function albumInfoLookup(items, withStyle) {
+function albumInfoLookup(items, withStyle, withFiles) {
   var none = {genres: items.map(function(){ return ''; }), years: items.map(function(){ return 0; }), styles: items.map(function(){ return ''; }),
-              versions: items.map(function(){ return 0; })};
+              versions: items.map(function(){ return 0; }), infos: items.map(function(){ return 0; })};
   if (!genreReady || !items.length) return Promise.resolve(none);
   var q = items.map(function(it){ return [it.uri || '', it.album || '', it.artist || '']; });
   /* in chunks: a long address would otherwise exceed the service's header limit (about 8 kB), and everything silently goes missing */
@@ -293,13 +306,13 @@ function albumInfoLookup(items, withStyle) {
   if (cur.length) parts.push(cur);
   return Promise.all(parts.map(function(part){
     var empty = function(v){ return part.map(function(){ return v; }); };
-    return tagGetJson('/albumgenre?q=' + encodeURIComponent(JSON.stringify(part)) + (withStyle ? '&st=1' : '')).then(function(r){
+    return tagGetJson('/albumgenre?q=' + encodeURIComponent(JSON.stringify(part)) + (withStyle ? '&st=1' : '') + (withFiles ? '&fi=1' : '')).then(function(r){
       return {genres: (r && r.genres) || empty(''), years: (r && r.years) || empty(0), styles: (r && r.styles) || empty(''),
-              versions: (r && r.versions) || empty(0)};
-    }).catch(function(){ return {genres: empty(''), years: empty(0), styles: empty(''), versions: empty(0)}; });
+              versions: (r && r.versions) || empty(0), infos: (r && r.infos) || empty(0)};
+    }).catch(function(){ return {genres: empty(''), years: empty(0), styles: empty(''), versions: empty(0), infos: empty(0)}; });
   })).then(function(rs){
     function all(k) { return [].concat.apply([], rs.map(function(r){ return r[k]; })); }
-    return {genres: all('genres'), years: all('years'), styles: all('styles'), versions: all('versions')};
+    return {genres: all('genres'), years: all('years'), styles: all('styles'), versions: all('versions'), infos: all('infos')};
   });
 }
 function genreLookup(items) { return albumInfoLookup(items).then(function(r){ return r.genres; }); }
@@ -344,12 +357,17 @@ function genreDecorate(rows, seq) {
   rows = rows.filter(function(x){ return x.uri && !streamOf(x.uri); });
   var seen = {};                                         /* album versions: best folder -> {row, place} of the row shown */
   for (var i = 0; i < rows.length; i += 200) (function(part){
-    albumInfoLookup(part).then(function(info){
+    albumInfoLookup(part, false, true).then(function(info){
       if (seq !== undefined && seq !== browseSeq) return;
       part.forEach(function(x, k){
-        var g = info.genres[k], y = info.years[k], v = info.versions[k];
+        var g = info.genres[k], y = info.years[k], v = info.versions[k], f = info.infos[k];
         if (!x.row.parentNode) return;
         var ti = x.row.querySelector('.sTitle');
+        if (!v && f) {                                   /* one version: file type, tracks, duration and path */
+          var meta = x.row.querySelector('.sMeta');
+          if (x.noArtist) Array.prototype.slice.call(meta.querySelectorAll('.sSub')).forEach(function(el){ meta.removeChild(el); });
+          albumFileLines(meta, f.fi, f.dir);
+        }
         if (v && ti) {                                   /* several versions: shown once, the best one in the list */
           var had = seen[v[0]];
           if (had && had.place <= v[2]) { x.row.style.display = 'none'; return; }

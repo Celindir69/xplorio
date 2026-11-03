@@ -2,6 +2,7 @@
    preferring albums that have not played for a long time or never. Node 8, ES5 only. */
 var path  = require('path');
 var plays = require('./plays.js');
+var duplicates = require('./duplicates.js');
 
 var DAY = 86400;
 var DISC_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*\d+\b/i;     /* subfolder of a multi-disc set */
@@ -25,7 +26,7 @@ function fromSongs(songs) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
     var d = albumDir(s.file);
-    if (!dirs[d]) { dirs[d] = {al: '', aa: '', artists: {}, genres: {}, years: {}, dates: {}, n: 0, m: 0}; order.push(d); }
+    if (!dirs[d]) { dirs[d] = {al: '', aa: '', artists: {}, genres: {}, years: {}, dates: {}, n: 0, m: 0, sec: 0, songs: []}; order.push(d); }
     var g = dirs[d];
     if (!g.al && s.album) g.al = s.album;
     if (!g.aa && s.albumartist) g.aa = s.albumartist;
@@ -38,6 +39,8 @@ function fromSongs(songs) {
     var m = Date.parse(s['last-modified'] || '');
     if (m > 0 && m / 1000 > g.m) g.m = Math.floor(m / 1000);
     g.n++;
+    g.sec += parseFloat(s.time) || 0;
+    g.songs.push(s);
   });
   return order.sort().map(function(d){
     var g = dirs[d], artists = Object.keys(g.artists);
@@ -49,8 +52,18 @@ function fromSongs(songs) {
     if (g.m) o.m = g.m;
     var rd = Object.keys(g.dates).sort(function(a, b){ return g.dates[b] - g.dates[a] || (a < b ? -1 : 1); })[0];
     if (rd && +rd.slice(0, 4) === o.y) o.rd = rd;                /* full date only if it matches the album's year */
+    o.fi = fileInfo(g.songs, g.n, g.sec);
     return o;
   });
+}
+
+/* file info of an album for the lists: {ext, bits, rate, codec, n: tracks, s: seconds}, quality as in duplicates.quality */
+function fileInfo(songs, n, sec) {
+  var q = duplicates.quality(songs), o = {ext: q.ext || '', n: n, s: Math.round(sec)};
+  if (q.bits) o.bits = q.bits;
+  if (q.rate) o.rate = q.rate;
+  if (q.codec) o.codec = q.codec;
+  return o;
 }
 
 /* album list -> genreOf(history entry): genre via the folder, else album+artist, for compilations album name only */
@@ -113,7 +126,7 @@ function yearAlbums(list, y) {
   y = parseInt(y, 10);
   function key(a) { return a.ar.toLowerCase().replace(/^the\s+/, ''); }
   return list.filter(function(a){ return a.y === y; })
-    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y}; })
+    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y, fi: a.fi}; })
     .sort(function(a, b){ return key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
@@ -135,7 +148,7 @@ function genreAlbums(list, g) {
   g = String(g || '').toLowerCase();
   function key(a) { return (a.ar === 'Verschiedene' ? '\uffff' : '') + a.ar.toLowerCase().replace(/^the\s+/, ''); }
   return list.filter(function(a){ return a.ge && a.ge.toLowerCase() === g; })
-    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar}; })
+    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, fi: a.fi}; })
     .sort(function(a, b){ return key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
@@ -156,7 +169,7 @@ function decadeAlbums(list, d) {
   d = parseInt(d, 10);
   function key(a) { return a.ar.toLowerCase().replace(/^the\s+/, ''); }
   return list.filter(function(a){ return a.y && a.y - a.y % 10 === d; })
-    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y}; })
+    .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y, fi: a.fi}; })
     .sort(function(a, b){ return a.y - b.y || key(a).localeCompare(key(b)) || a.al.localeCompare(b.al); });
 }
 
@@ -275,5 +288,5 @@ function freshAlbums(list, now, n, days) {
     .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y, m: a.m}; });
 }
 
-module.exports = {dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, dirIndex: dirIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
+module.exports = {fileInfo: fileInfo, dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, dirIndex: dirIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
                   artists: artists, lastArtistIndex: lastArtistIndex, lastTrackIndex: lastTrackIndex, pickArtist: pickArtist, pickTrack: pickTrack};

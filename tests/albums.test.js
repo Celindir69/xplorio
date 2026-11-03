@@ -16,9 +16,17 @@ var songs = [
 var list = albums.fromSongs(songs);
 t('albums per folder, CD subfolders merged, Verschiedene, folder name without Album tag', function(){
   assert.deepStrictEqual(list, [
-    {dir: 'USB/Bravo', al: 'Bravo Hits', ar: 'Verschiedene'},
-    {dir: 'USB/Ohne', al: 'Ohne', ar: 'X'},
-    {dir: 'USB/Spliff/85555', al: '85555', ar: 'Spliff', ge: 'NDW'}]);
+    {dir: 'USB/Bravo', al: 'Bravo Hits', ar: 'Verschiedene', fi: {ext: 'flac', n: 2, s: 0}},
+    {dir: 'USB/Ohne', al: 'Ohne', ar: 'X', fi: {ext: 'mp3', n: 1, s: 0}},
+    {dir: 'USB/Spliff/85555', al: '85555', ar: 'Spliff', ge: 'NDW', fi: {ext: 'flac', n: 3, s: 0}}]);
+});
+t('file info per album: quality like the versions, tracks and duration (all discs)', function(){
+  var fi = albums.fromSongs([
+    S('USB/A/CD1/01.flac', {album: 'A', format: '96000:24:2', time: '200.4'}),
+    S('USB/A/CD2/01.flac', {album: 'A', format: '96000:24:2', time: '100.2'}),
+    S('USB/B/01.m4a', {album: 'B', format: '44100:f:2', time: '60'})]).map(function(a){ return a.fi; });
+  assert.deepStrictEqual(fi[0], {ext: 'flac', n: 2, s: 301, bits: 24, rate: 96000});
+  assert.deepStrictEqual(fi[1], {ext: 'm4a', n: 1, s: 60, rate: 44100, codec: 'aac'});
 });
 t('last heard: by folder, by album+artist (Last.fm), compilations by album name', function(){
   var last = albums.lastIndex([
@@ -144,8 +152,16 @@ mpd.listen(0, function(){
               t('random track via ?kind=track', function(){
                 assert.deepStrictEqual(r4, {ok: true, track: {ar: 'Spliff', ti: 'Carbonara', f: 'USB/A/1.flac', d: 260, al: '85555', last: null}});
               });
-              console.log(n + ' checks');
-              svc.close(); mpd.close();
+              var q = encodeURIComponent(JSON.stringify([['music-library/USB/A', '85555', 'Spliff'], ['qobuz://album/1', 'X', 'Y']]));
+              http.get({port: svc.address().port, path: '/albumgenre?fi=1&q=' + q}, function(res){
+                var d = ''; res.on('data', function(c){ d += c; }); res.on('end', function(){
+                  t('album lists: /albumgenre?fi=1 gives file type, tracks and duration of local albums', function(){
+                    assert.deepStrictEqual(JSON.parse(d).infos, [{dir: 'USB/A', fi: {ext: 'flac', n: 1, s: 260}}, 0]);
+                  });
+                  console.log(n + ' checks');
+                  svc.close(); mpd.close();
+                });
+              });
             }, '?kind=track');
           }, '?kind=artist');
         });

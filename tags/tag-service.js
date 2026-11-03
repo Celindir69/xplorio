@@ -699,7 +699,7 @@ var ALBUMS_FILE = path.join(DATA_DIR, 'albums.json');
 var albumIdx = null, albumBuilding = false, albumSoonUntil = 0, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
 var ALBUMS_CHECK_MS = 60000;                             /* ask MPD at most this often whether the database has changed */
 var ALBUMS_AFTER_SCAN_MS = 90000;                        /* after our own scan: update the album list once MPD and Volumio are done */
-var ALBUMS_VERSION = 12;                                 /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions, 10: more additions ignored, 11: version name without additions, 12: MQA as addition */
+var ALBUMS_VERSION = 13;                                 /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions, 10: more additions ignored, 11: version name without additions, 12: MQA as addition, 13: file info (fi) per album */
 var TRACKS_FILE = path.join(DATA_DIR, 'library-tracks.json');   /* [[artist, title, file, seconds, album, album genre], …] */
 
 function albumsEnsure(cb) {
@@ -751,7 +751,8 @@ var moodCollector = new moodtags.Collector({
    GET /albumgenre?q=[[uri, album, artist], …] -> {ok, genres:[…], years:[…]} (empty = unknown). building: album list still being built.
    GET /decades -> {ok, decades:[{d, n, dir, al, ar}]}; GET /decadealbums?d=1990 -> {ok, albums:[{dir, al, ar, y}]} (year from the Date tag).
    GET /yearalbums?y=1984 -> {ok, albums}; GET /decadeprofile?d=1980 -> {ok, n, artists, moods, styles, decades} (Discover).
-   /albumgenre also returns years:[…] (0 = unknown), with st=1 styles:[…] (strongest style of the album, '' = none).
+   /albumgenre also returns years:[…] (0 = unknown), with st=1 styles:[…] (strongest style of the album, '' = none),
+   with fi=1 infos:[{dir, fi: {ext, bits, rate, codec, n, s}} or 0] (file type, tracks, duration for the album lists).
    Substyles come from the audio analysis (tools/essentia), per album within its genre */
 var albumYear = null;
 function albumGenreFn() {
@@ -820,13 +821,18 @@ function doGenreLib(route, query, cb) {
     try { q = JSON.parse(String(query.q || '[]')); } catch (e) { return cb(400, {ok: false, error: 'invalid q'}); }
     if (!Array.isArray(q) || q.length > 500) return cb(400, {ok: false, error: 'invalid q'});
     var fn = albumGenreFn();
-    if (!albumYear || albumYear.list !== list) albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list)};
+    if (!albumYear || albumYear.list !== list) {
+      var byDir = {};
+      list.forEach(function(a){ byDir[a.dir] = a; });
+      albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list), byDir: byDir};
+    }
     var es = q.map(function(x){ x = Array.isArray(x) ? x : []; return {u: String(x[0] || ''), al: String(x[1] || ''), ar: String(x[2] || '')}; });
     var subs = query.st === '1' ? genreSubsIdx(list) : null;   /* strongest style of the album (player view) */
     var vf = versionsFind(list).find;                 /* album versions: [best folder, number, place of this one] or 0 */
     cb(200, {ok: true, genres: es.map(fn), years: es.map(albumYear.fn),
              versions: es.map(function(e){ var d = albumYear.dir(e) || histRelDir(e.u); return versions.mark(vf(d, e.al, e.ar), d); }),
-             styles: subs ? es.map(function(e){ var d = albumYear.dir(e); return (d && subs[d] && subs[d][0]) || ''; }) : undefined});
+             styles: subs ? es.map(function(e){ var d = albumYear.dir(e); return (d && subs[d] && subs[d][0]) || ''; }) : undefined,
+             infos: query.fi === '1' ? es.map(function(e){ var d = albumYear.dir(e), a = d && albumYear.byDir[d]; return a && a.fi ? {dir: d, fi: a.fi} : 0; }) : undefined});
   });
 }
 
