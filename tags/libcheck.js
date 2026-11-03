@@ -8,6 +8,7 @@ var genres = require('./genres.js');
 var duplicates = require('./duplicates.js');
 
 var IMG_RE = /\.(jpe?g|png)$/i;
+var DISC_DIR_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*(\d+)\b/i;     /* subfolder of a multi-disc set, as albums.js */
 
 /* ---------- read MPD ---------- */
 
@@ -113,6 +114,56 @@ function uniq(list) { var o = {}, out = []; list.forEach(function(x){ if (!o.has
 function filesOf(list) { return list.map(function(s){ return {uri: s.file, title: s.title || path.basename(s.file)}; }); }
 function byName(a, b) { return a.name.localeCompare(b.name); }
 
+/* "1-3, 5" from sorted numbers */
+function ranges(nums) {
+  var out = [], i = 0;
+  while (i < nums.length) {
+    var j = i;
+    while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+    out.push(j > i ? nums[i] + '\u2013' + nums[j] : String(nums[i]));
+    i = j + 1;
+  }
+  return out.join(', ');
+}
+
+/* gaps in the track numbers of one folder, per disc (Disc tag; a CD2 folder counts as disc 2) and album name.
+   Missing: from 1 (from the lowest number on a later disc, which may count on from the first) up to the highest
+   number or the total from "3/10". Also numbers used twice. Not checked: single tracks (loose files) and groups
+   with tracks without number (own category). Returns [{disc, missing: n, nums: "1-2, 4", dups: "3", files}] */
+function trackGaps(dir, list) {
+  var m = DISC_DIR_RE.exec(path.basename(dir)), dirDisc = m ? parseInt(m[3], 10) : 0;
+  var groups = {}, keys = [];
+  list.forEach(function(s){
+    var dm = /^\s*(\d+)/.exec(s.disc || ''), disc = dm ? parseInt(dm[1], 10) : dirDisc;
+    var k = disc + '\n' + (s.album || '');
+    if (!groups[k]) { groups[k] = {disc: disc, songs: []}; keys.push(k); }
+    groups[k].songs.push(s);
+  });
+  var out = [];
+  keys.forEach(function(k){
+    var g = groups[k], seen = {}, dups = [], nums = [], total = 0, bad = false;
+    if (g.songs.length < 2) return;
+    g.songs.forEach(function(s){
+      var tm = /^\s*(\d+)\s*(?:\/\s*(\d+))?/.exec(s.track || '');
+      if (!tm) { bad = true; return; }
+      var n = parseInt(tm[1], 10);
+      if (tm[2]) total = Math.max(total, parseInt(tm[2], 10));
+      if (!n) return;                                    /* track 0: hidden track or pregap */
+      if (seen[n]) { if (dups.indexOf(n) < 0) dups.push(n); } else { seen[n] = true; nums.push(n); }
+    });
+    if (bad || !nums.length) return;
+    nums.sort(function(a, b){ return a - b; });
+    var from = g.disc > 1 ? nums[0] : 1, to = Math.max(nums[nums.length - 1], total), missing = [];
+    if (to - from > 999) return;                         /* nonsense numbers (e.g. a year): not a gap */
+    for (var n = from; n <= to; n++) if (!seen[n]) missing.push(n);
+    if (!missing.length && !dups.length) return;
+    dups.sort(function(a, b){ return a - b; });
+    out.push({disc: g.disc > 0 && (g.disc > 1 || keys.length > 1 || dirDisc) ? g.disc : 0, missing: missing.length,
+              nums: ranges(missing), dups: ranges(dups), files: g.songs});
+  });
+  return out;
+}
+
 /* songs: as from mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> audio analysis entry or null (optional).
    Result: lists per category */
 function analyze(songs, hasCover, audioOf) {
@@ -122,7 +173,7 @@ function analyze(songs, hasCover, audioOf) {
     if (!dirs[d]) { dirs[d] = []; order.push(d); }
     dirs[d].push(s);
   });
-  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], mixed: [], noTrack: [], spelling: []};
+  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], mixed: [], noTrack: [], gaps: [], spelling: []};
   var forGenres = [];
   order.sort().forEach(function(d){
     var list = dirs[d];
@@ -145,6 +196,9 @@ function analyze(songs, hasCover, audioOf) {
     }
     var noTrack = list.filter(function(s){ return !/\d/.test(s.track); });
     if (noTrack.length) res.noTrack.push(item({missing: noTrack.length}));
+    trackGaps(d, list).forEach(function(g){
+      res.gaps.push(item({disc: g.disc, missing: g.missing, nums: g.nums, dups: g.dups}, list));
+    });
     forGenres.push({dir: d, name: name, artist: who, files: filesOf(list), songs: list,
                     audio: audioOf ? list.map(audioOf).filter(Boolean) : []});
   });
@@ -196,4 +250,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, dirsWithoutImage: dirsWithoutImage};

@@ -32,6 +32,44 @@ t('inconsistent: album name or year (same year in another format does not count)
 t('no track number', function(){
   assert.deepStrictEqual(r.noTrack.map(function(x){ return [x.dir, x.missing]; }), [['USB/C/NDW', 1]]);
 });
+t('no gaps in the regular test albums', function(){ assert.deepStrictEqual(r.gaps, []); });
+function G(dir, tracks, o) {
+  return tracks.map(function(tr, i){ return S(dir + '/' + i + '.flac', Object.assign({album: 'A', track: tr}, o || {})); });
+}
+function gaps(dir, list) { return lc.trackGaps(dir, list).map(function(g){ return [g.disc, g.nums, g.dups]; }); }
+t('gaps: missing numbers, from 1', function(){
+  assert.deepStrictEqual(gaps('X', G('X', ['3', '7', '10'])), [[0, '1–2, 4–6, 8–9', '']]);
+  assert.deepStrictEqual(gaps('X', G('X', ['5', '6', '7'])), [[0, '1–4', '']]);
+  assert.deepStrictEqual(gaps('X', G('X', ['1', '2', '3'])), []);
+});
+t('gaps: total from 3/10 finds missing tracks at the end', function(){
+  assert.deepStrictEqual(gaps('X', G('X', ['1/10', '2/10', '3/10'])), [[0, '4–10', '']]);
+  assert.deepStrictEqual(gaps('X', G('X', ['1/3', '2/3', '3/3'])), []);
+});
+t('gaps: numbers used twice', function(){
+  assert.deepStrictEqual(gaps('X', G('X', ['1', '2', '2', '3'])), [[0, '', '2']]);
+});
+t('gaps: discs one by one (tag or CD2 folder), a later disc may count on', function(){
+  var two = G('X', ['1', '2', '3'], {disc: '1/2'}).concat(G('X', ['1', '3'], {disc: '2/2'}));
+  assert.deepStrictEqual(gaps('X', two), [[2, '2', '']]);
+  assert.deepStrictEqual(gaps('X/CD2', G('X/CD2', ['11', '12', '13'])), []);
+  assert.deepStrictEqual(gaps('X/CD2', G('X/CD2', ['1', '3'])), [[2, '2', '']]);
+});
+t('gaps: not checked for single tracks, tracks without number, nonsense numbers; track 0 ignored', function(){
+  assert.deepStrictEqual(gaps('X', G('X', ['7'])), []);
+  assert.deepStrictEqual(gaps('X', G('X', ['1', '', '3'])), []);
+  assert.deepStrictEqual(gaps('X', G('X', ['1', '1999'])), []);
+  assert.deepStrictEqual(gaps('X', G('X', ['0', '1', '2'])), []);
+});
+t('gaps: loose tracks of different albums in one folder are single tracks', function(){
+  var loose = [S('L/a.mp3', {album: 'A', track: '4'}), S('L/b.mp3', {album: 'B', track: '9'})];
+  assert.deepStrictEqual(gaps('L', loose), []);
+});
+t('gaps: in analyze, with files of the folder', function(){
+  var g = lc.analyze(G('USB/G', ['1', '3']), function(){ return true; }).gaps;
+  assert.strictEqual(g.length, 1); assert.strictEqual(g[0].nums, '2'); assert.strictEqual(g[0].missing, 1);
+  assert.strictEqual(g[0].files.length, 2); assert.strictEqual(g[0].dir, 'USB/G');
+});
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
   assert.ok(g.indexOf('SPLIFF|Spliff') >= 0);
