@@ -16,6 +16,7 @@ var CHECK_CATS = [
   {key: 'mixed', name: T('check.cat.mixed'), hint: T('check.cat.mixedHint')},
   {key: 'releaseDate', name: T('check.cat.releaseDate'), hint: T('check.cat.releaseDateHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
+  {key: 'gaps', name: T('check.cat.gaps'), hint: T('check.cat.gapsHint')},
   {key: 'genreMissing', name: T('check.cat.genreMissing'), hint: T('check.cat.genreMissingHint')},
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
@@ -430,8 +431,10 @@ function checkAlbumRow(key, it) {
   else if (key === 'mixed') sub = [it.albums.length > 1 ? it.albums.join(' / ') : '', it.years.length > 1 ? it.years.join(' / ') : ''].filter(Boolean).join(' · ') || it.dir;
   else if (key === 'releaseDate') sub = T('check.releaseSub', {tag: it.tag || T('check.releaseNone'), mb: it.mb});
   else if (key === 'noTrack') sub = T('check.noTrackSub', {missing: checkNum(it.missing), count: checkNum(it.count), dir: it.dir});
+  else if (key === 'gaps') sub = [it.disc ? T('check.gapsDisc', {disc: it.disc}) : '', it.nums ? T('check.gapsMissing', {nums: it.nums}) : '',
+                                  it.dups ? T('check.gapsDups', {nums: it.dups}) : '', it.dir].filter(Boolean).join(' · ');
   if (key === 'genreMissing') return checkGenreAlbumRow(key, it);
-  return checkRow(key + '|' + it.dir, heading, sub, function(){
+  return checkRow(key + '|' + it.dir + (it.disc ? '|' + it.disc : ''), heading, sub, function(){
     if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* date suggested by MusicBrainz */
     else if (key === 'albumArtist' || key === 'mixed') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
     else openTagEditor(it.files, it.name);
