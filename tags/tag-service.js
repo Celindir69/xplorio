@@ -233,7 +233,7 @@ function scanRun() {
       if (!list.length) {
         scanRunning = false;
         albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS;   /* meanwhile Volumio rebuilds its own album list */
-        var t = setTimeout(function(){ albumChecked = 0; albumsEnsure(); }, ALBUMS_AFTER_SCAN_MS);
+        var t = setTimeout(function(){ albumChecked = 0; albumsEnsure(null, true); }, ALBUMS_AFTER_SCAN_MS);   /* own scan: no waiting for quiet */
         if (t.unref) t.unref();   /* keep genres and random album current */
         if (scanWaiting() && !scanTimer) scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
         return;
@@ -698,11 +698,13 @@ var versions = require('./versions.js');
 var ALBUMS_FILE = path.join(DATA_DIR, 'albums.json');
 var albumIdx = null, albumBuilding = false, albumSoonUntil = 0, albumChecked = 0, albumPicks = [], albumLast = null, albumGenre = null;
 var ALBUMS_CHECK_MS = 60000;                             /* ask MPD at most this often whether the database has changed */
+var ALBUMS_QUIET_MS = parseInt(process.env.ALBUMS_QUIET_MS || '300000', 10);   /* database changed: rebuild only after it stayed unchanged this long */
+var albumQuiet = null, albumQuietTimer = null;
 var ALBUMS_AFTER_SCAN_MS = 90000;                        /* after our own scan: update the album list once MPD and Volumio are done */
 var ALBUMS_VERSION = 12;                                 /* 2: with genre, 3: plus library-tracks.json, 4: with duration and album, 5: tracks with genre, 6: albums with year, 7: with modification date, 8: with full date, 9: with album versions, 10: more additions ignored, 11: version name without additions, 12: MQA as addition */
 var TRACKS_FILE = path.join(DATA_DIR, 'library-tracks.json');   /* [[artist, title, file, seconds, album, album genre], …] */
 
-function albumsEnsure(cb) {
+function albumsEnsure(cb, now) {
   cb = cb || function(){};
   if (!albumIdx) { try { albumIdx = JSON.parse(fs.readFileSync(ALBUMS_FILE, 'utf8')); } catch (e) { /* never read yet */ } }
   if (albumBuilding || (albumIdx && Date.now() - albumChecked < ALBUMS_CHECK_MS)) return cb(albumIdx && albumIdx.list);
@@ -710,6 +712,17 @@ function albumsEnsure(cb) {
   libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'stats', function(err, st){
     var stamp = !err && st.db_update;
     if (albumIdx && (err || stamp === albumIdx.db) && albumIdx.v === ALBUMS_VERSION) return cb(albumIdx.list);
+    if (albumIdx && albumIdx.v === ALBUMS_VERSION && !now) {     /* changed: wait until the database is quiet (imports) */
+      var q = albums.settled(albumQuiet, stamp, Date.now(), ALBUMS_QUIET_MS);
+      albumQuiet = q.state;
+      if (!q.ready) {
+        clearTimeout(albumQuietTimer);                   /* check again once it may be quiet, even without a request */
+        albumQuietTimer = setTimeout(function(){ albumChecked = 0; albumsEnsure(); }, ALBUMS_QUIET_MS + 5000);
+        if (albumQuietTimer.unref) albumQuietTimer.unref();
+        return cb(albumIdx.list);
+      }
+    }
+    albumQuiet = null;
     albumBuilding = true;
     if (albumIdx) cb(albumIdx.list);                     /* old list until the new one is ready */
     libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT}, function(e2, songs){

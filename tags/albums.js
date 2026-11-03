@@ -275,5 +275,13 @@ function freshAlbums(list, now, n, days) {
     .map(function(a){ return {dir: a.dir, al: a.al, ar: a.ar, y: a.y, m: a.m}; });
 }
 
-module.exports = {dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, dirIndex: dirIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
+/* wait for quiet before rebuilding the album list: the database stamp (MPD stats db_update) must stay the same for
+   ms, so that an import (rsync, Samba), which changes the database again and again, causes one rebuild at the end
+   instead of one every minute. state: {stamp, since} from the previous call. Returns {state, ready} */
+function settled(state, stamp, now, ms) {
+  if (!state || state.stamp !== stamp) return {state: {stamp: stamp, since: now}, ready: !(ms > 0)};
+  return {state: state, ready: now - state.since >= ms};
+}
+
+module.exports = {settled: settled, dayAlbum: dayAlbum, freshAlbums: freshAlbums, seeded: seeded, albumDir: albumDir, fromSongs: fromSongs, genreIndex: genreIndex, dirIndex: dirIndex, genreList: genreList, genreAlbums: genreAlbums, decadeList: decadeList, decadeAlbums: decadeAlbums, yearIndex: yearIndex, yearAlbums: yearAlbums, yearOf: yearOf, lastIndex: lastIndex, pick: pick, weight: weight,
                   artists: artists, lastArtistIndex: lastArtistIndex, lastTrackIndex: lastTrackIndex, pickArtist: pickArtist, pickTrack: pickTrack};
