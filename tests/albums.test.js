@@ -14,6 +14,15 @@ var songs = [
   S('USB/Ohne/01.mp3', {artist: 'X'})
 ];
 var list = albums.fromSongs(songs);
+t('settled: rebuild only after the database stayed unchanged long enough', function(){
+  var q = albums.settled(null, 'a', 1000, 300);
+  assert.strictEqual(q.ready, false);
+  q = albums.settled(q.state, 'a', 1200, 300); assert.strictEqual(q.ready, false);
+  q = albums.settled(q.state, 'b', 1400, 300); assert.strictEqual(q.ready, false);   /* changed again: wait anew */
+  assert.strictEqual(albums.settled(q.state, 'b', 1650, 300).ready, false);
+  assert.strictEqual(albums.settled(q.state, 'b', 1700, 300).ready, true);
+  assert.strictEqual(albums.settled(null, 'a', 1000, 0).ready, true);                  /* no waiting configured */
+});
 t('albums per folder, CD subfolders merged, Verschiedene, folder name without Album tag', function(){
   assert.deepStrictEqual(list, [
     {dir: 'USB/Bravo', al: 'Bravo Hits', ar: 'Verschiedene', fi: {ext: 'flac', n: 2, s: 0}},
