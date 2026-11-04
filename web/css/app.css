@@ -1225,3 +1225,17 @@ html.amPlay #volWrap, html.amPlay #btnRotelPower, html.amPlay .remoteIcon { opac
 .tagMoveBox { margin-top:1.6em; padding-top:1em; border-top:1px solid rgba(var(--fg-rgb),.15); }
 .tagMoveNote { font-size:.8em; opacity:.55; margin-top:.5em; }
 .ckDupRow .sMeta { cursor:pointer; }
+
+/* Apple Music hand-over: stays while searching, then the result with Cancel / OK */
+#amSheet { position:fixed; z-index:21; left:50%; bottom:max(env(safe-area-inset-bottom,0px), 24px); transform:translate(-50%, 20px);
+  opacity:0; pointer-events:none; width:min(86%, 26em); box-sizing:border-box; text-align:center; padding:1em 1.2em;
+  border-radius:14px; background:rgba(30,30,30,.95); color:#fff; font-size:15px; transition:opacity .25s, transform .25s; }
+#amSheet.on { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+#amSheet.busy .amSheetText::after { content:''; display:inline-block; width:.9em; height:.9em; margin-left:.6em; vertical-align:-.1em;
+  border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:amSpin .8s linear infinite; }
+@keyframes amSpin { to { transform:rotate(360deg); } }
+.amSheetBtns { display:flex; gap:.6em; justify-content:center; margin-top:.8em; }
+.amSheetBtns:empty { display:none; }
+.amSheetBtn { flex:1; max-width:10em; font:inherit; padding:.6em 1em; border-radius:999px; border:1px solid rgba(255,255,255,.3);
+  background:transparent; color:#fff; cursor:pointer; }
+.amSheetBtn.ok { background:#fff; border-color:transparent; color:#111; font-weight:600; }
