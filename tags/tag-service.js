@@ -201,7 +201,7 @@ function mpdUpdate(relFiles, cb) {
   scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
   cb(scanOk);
 }
-/* folders that are gone (moved aside into Xplorio Duplicates): MPD forgets them when exactly their path is updated. Never merged
+/* folders that are gone (moved aside into Xplorio Trash): MPD forgets them when exactly their path is updated. Never merged
    into a parent folder: on a large NTFS drive a scan of the whole drive overloads the player */
 function mpdForget(relDirs, cb) {
   scanExact = scanExact.concat(relDirs);
@@ -475,8 +475,8 @@ function doCheckDone(body, cb) {
   cb(200, {ok: true});
 }
 
-/* POST /dupmove {dirs, token}: move one version of a duplicate album (its folders, as listed by the last check) into
-   the folder "Xplorio Duplicates" on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
+/* POST /dupmove {dirs, token}: move an album aside (a version of a duplicate album as listed by the last check, or any
+   album folder of the library, from the album editor) into the folder "Xplorio Trash" on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
    moving it back restores it. Password only if one is set (adminpass.js), like restarting the player. */
 var duplicates = require('./duplicates.js');
 function dupFolder(rel) {
@@ -499,8 +499,8 @@ function dupIgnore(drive) {
   try { fs.writeFileSync(f, neu); return true; }
   catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
 }
-/* at the start: the folder of earlier versions (.duplicates, hidden on the Mac) gets its visible name, and every
-   duplicates folder its .mpdignore line. MPD forgets the old path when exactly it is updated */
+/* at the start: the folder of earlier versions (".duplicates", hidden on the Mac, then "Xplorio Duplicates") gets its
+   current name ("Xplorio Trash"), and every such folder its .mpdignore line. MPD forgets the old path when exactly it is updated */
 function dupMigrate() {
   var drives = ['INTERNAL'];
   ['USB', 'NAS'].forEach(function(r){
@@ -509,14 +509,14 @@ function dupMigrate() {
   function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } }
   var forget = [];
   drives.forEach(function(d){
-    var old = path.join(MUSIC_ROOT, d, duplicates.OLD_TRASH), neu = path.join(MUSIC_ROOT, d, duplicates.TRASH);
-    if (isDir(old)) {
-      if (isDir(neu)) console.error('both ' + old + ' and ' + neu + ' exist: ' + old + ' left as it is');
-      else {
-        try { fs.renameSync(old, neu); forget.push(d + '/' + duplicates.OLD_TRASH); }
-        catch (e) { console.error('cannot rename ' + old + ': ' + e.message); }
-      }
-    }
+    var neu = path.join(MUSIC_ROOT, d, duplicates.TRASH);
+    duplicates.OLD_TRASHES.forEach(function(name){
+      var old = path.join(MUSIC_ROOT, d, name);
+      if (!isDir(old)) return;
+      if (isDir(neu)) return console.error('both ' + old + ' and ' + neu + ' exist: ' + old + ' left as it is');
+      try { fs.renameSync(old, neu); forget.push(d + '/' + name); }
+      catch (e) { console.error('cannot rename ' + old + ': ' + e.message); }
+    });
     if (isDir(neu) && dupIgnore(d)) forget.push(d + '/' + duplicates.TRASH);
   });
   if (forget.length) mpdForget(forget, function(){});
@@ -525,32 +525,33 @@ function doDupMove(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   var dirs = Array.isArray(body.dirs) ? body.dirs.map(String) : [];
   if (!dirs.length || dirs.length > 50) return cb(400, {ok: false, error: 'dirs missing'});
-  var last = readCheck();
-  if (!last || !last.duplicates) return cb(200, {ok: false, error: 'not checked yet'});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
-  var listed = {};
-  last.duplicates.forEach(function(g){ g.versions.forEach(function(v){ v.dirs.forEach(function(d){ listed[d] = 1; }); }); });
-  var bad = dirs.filter(function(d){ return !listed[d] || !dupFolder(d); });
-  if (bad.length) return cb(200, {ok: false, error: 'not a duplicate folder: ' + bad[0]});
-  var moved = [];
-  for (var i = 0; i < dirs.length; i++) {
-    var to = duplicates.trashPath(dirs[i]), n = 2;
-    while (fs.existsSync(path.join(MUSIC_ROOT, to))) to = duplicates.trashPath(dirs[i]) + ' (' + (n++) + ')';
-    try {
-      mkdirs(path.dirname(path.join(MUSIC_ROOT, to)));
-      fs.renameSync(path.join(MUSIC_ROOT, dirs[i]), path.join(MUSIC_ROOT, to));
-    } catch (e) {
-      if (moved.length) mpdForget(moved.map(function(m){ return m.from; }), function(){});
-      return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + dirs[i] : e.message, moved: moved});
+  var last = readCheck(), listed = {};
+  if (last && last.duplicates) last.duplicates.forEach(function(g){ g.versions.forEach(function(v){ v.dirs.forEach(function(d){ listed[d] = 1; }); }); });
+  albumsEnsure(function(list){
+    var known = {};                                      /* album folders of the library (album editor), disc folders included */
+    (list || []).forEach(function(a){ known[a.dir] = 1; });
+    var bad = dirs.filter(function(d){ return !(listed[d] || known[d] || known[albums.albumDir(d + '/x')]) || !dupFolder(d); });
+    if (bad.length) return cb(200, {ok: false, error: list ? 'not an album folder: ' + bad[0] : 'album list not ready yet'});
+    var moved = [];
+    for (var i = 0; i < dirs.length; i++) {
+      var to = duplicates.trashPath(dirs[i]), n = 2;
+      while (fs.existsSync(path.join(MUSIC_ROOT, to))) to = duplicates.trashPath(dirs[i]) + ' (' + (n++) + ')';
+      try {
+        mkdirs(path.dirname(path.join(MUSIC_ROOT, to)));
+        fs.renameSync(path.join(MUSIC_ROOT, dirs[i]), path.join(MUSIC_ROOT, to));
+      } catch (e) {
+        if (moved.length) mpdForget(moved.map(function(m){ return m.from; }), function(){});
+        return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + dirs[i] : e.message, moved: moved});
+      }
+      moved.push({from: dirs[i], to: to});
+      dupIgnore(duplicates.driveOf(dirs[i]));
+      if (last && listed[dirs[i]]) { last.done = last.done || {}; last.done['duplicates|' + dirs[i]] = 1; }
     }
-    moved.push({from: dirs[i], to: to});
-    dupIgnore(duplicates.driveOf(dirs[i]));
-    last.done = last.done || {};
-    last.done['duplicates|' + dirs[i]] = 1;
-  }
-  try { writeCheck(last); } catch (e) { /* the marks are only for display */ }
-  mpdForget(dirs, function(){});                          /* only these folders: MPD drops them */
-  cb(200, {ok: true, moved: moved});
+    if (last) { try { writeCheck(last); } catch (e) { /* the marks are only for display */ } }
+    mpdForget(dirs, function(){});                        /* only these folders: MPD drops them */
+    cb(200, {ok: true, moved: moved});
+  });
 }
 
 /* ---------- Online cover search ---------- */

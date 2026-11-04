@@ -437,7 +437,7 @@ function checkAlbumRow(key, it) {
   return checkRow(key + '|' + it.dir + (it.disc ? '|' + it.disc : ''), heading, sub, function(){
     if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* date suggested by MusicBrainz */
     else if (key === 'albumArtist' || key === 'mixed') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
-    else openTagEditor(it.files, it.name);
+    else openTagEditor(it.files, it.name, {move: true});
   });
 }
 
@@ -495,8 +495,8 @@ function checkSpellingRow(v, i, group) {
   return checkRow('spelling|' + v.name, v.name, T('check.spellingSub', {n: v.count, others: others}), function(){ openArtistEditor(v.name); });
 }
 
-/* ---------- Duplicate albums: move a version into "Xplorio Duplicates" on the same drive (tag service POST /dupmove) ---------- */
-var CHECK_TRASH = 'Xplorio Duplicates';                /* duplicates.TRASH in the tag service */
+/* ---------- Duplicate albums: move a version into "Xplorio Trash" on the same drive (tag service POST /dupmove) ---------- */
+var CHECK_TRASH = 'Xplorio Trash';                     /* duplicates.TRASH in the tag service */
 function checkShellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 function checkDupTrashPath(dir) {                       /* same rule as duplicates.trashPath in the tag service */
   var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
@@ -544,6 +544,20 @@ function checkDupPlay(g, v) {
     if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
   }).catch(function(){});
 }
+/* album editor for one version: its tracks from Volumio (all its folders), moving offered for exactly these folders */
+function checkDupEdit(g, v) {
+  showToast(T('tag.loadingTracks'));
+  Promise.all(v.dirs.map(function(d){ return browseGet('music-library/' + d).then(browseItems); })).then(function(lists){
+    var files = [].concat.apply([], lists).filter(isLocalTrack).map(function(t){ return {uri: t.uri, title: t.title || t.name || ''}; });
+    if (files.length) openTagEditor(files, g.name, {move: v.dirs});
+    else showToast(T('tag.noLocalTracks'));
+  }).catch(function(){ showToast(T('tag.albumUnreadable')); });
+}
+/* moved from the album editor: the version rows of these folders count as done */
+function checkMovedElsewhere(dirs) {
+  dirs.forEach(function(d){ checkDone['duplicates|' + d] = 1; });
+  if (overlayCheck.classList.contains('on') && checkShown && checkShown.res) checkRender(checkShown.res);
+}
 function checkDupRows(g) {
   var head = document.createElement('div'); head.className = 'ckDupHead';
   head.textContent = g.name + (g.artist ? ' · ' + g.artist : '');
@@ -558,6 +572,10 @@ function checkDupRows(g) {
     var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';
     meta.appendChild(ti); meta.appendChild(su); meta.appendChild(msg);
     row.appendChild(meta);
+    meta.addEventListener('click', function(){            /* look inside first: album editor of this version, with "Move" */
+      if (checkDone[key]) return;
+      checkDupEdit(g, v);
+    });
     var play = document.createElement('button'); play.className = 'ckBtn ckDupPlay'; play.title = T('check.dup.play');
     play.setAttribute('aria-label', T('check.dup.play'));
     play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';

@@ -472,7 +472,7 @@ function browseAlbum(e, seq) {
     var play = playRow(T('browse.play'), playRowSub(tracks, function(t){ return t.duration; }), function(){
       browsePlay({uri:e.uri, service:info.service || e.service || 'mpd', type:'folder', title:e.album, artist:e.artist});
     }, [localTracks.length ? tagEditButton(localTracks.map(function(t){ return {uri:t.uri, title:t.title || t.name || ''}; }),   /* local files: edit tags */
-                                           e.album, 'browseEditBtn') : null,
+                                           e.album, 'browseEditBtn', {move: true}) : null,
         queueAddButton([{uri:e.uri, service:info.service || e.service || 'mpd', type:'folder', title:e.album, artist:e.artist}], tracks.length)]);
     play.title = T('browse.playAlbum');
     browseBody.appendChild(play);
