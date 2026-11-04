@@ -487,7 +487,7 @@ function browseAlbum(e, seq) {
       ['bg', T('browse.tab.bg'), function(box){ backgroundFill(box, e, seq, who, e.album); }]]);
     var pane = panes.tracks;
 
-    var rows = [];
+    var rows = [], nums = [];
     pane.appendChild(listHint(T('browse.hintAlbum')));
     tracks.forEach(function(t, i){
       var row = document.createElement('div');
@@ -495,6 +495,7 @@ function browseAlbum(e, seq) {
       row.className = 'sRow bTrack' + (isCur ? ' cur' : '');
       var num = document.createElement('div');
       num.className = 'bNum'; num.textContent = i + 1;
+      nums.push({el: num, t: t});
       var tm = document.createElement('div');
       tm.className = 'sMeta';
       var tt = document.createElement('div');
@@ -514,12 +515,33 @@ function browseAlbum(e, seq) {
       pane.appendChild(row);
       rows.push(row);
     });
+    albumTrackNums(nums, seq);                              /* local: the track numbers from the tags instead of the position */
     rateAlbumPage(seq, e, who, tracks, meta, rows);         /* stars and thumbs (rating.js) */
   }).catch(function(){
     if (seq !== browseSeq) return;
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
     browseBody.appendChild(browseNote(T('browse.loadError')));
   });
+}
+
+/* album view: track number tags (tag service GET /tracknums, from MPD) instead of the position in the list; with several
+   discs as "2.3". Tracks without a number keep their position. nums: [{el, t}] */
+function albumTrackNums(nums, seq) {
+  if (typeof TAGS === 'undefined') return;
+  var rels = nums.map(function(x){ return isLocalTrack(x.t) ? histRel(x.t.uri) : ''; }), dirs = [];
+  rels.forEach(function(r){ var d = r.slice(0, r.lastIndexOf('/')); if (r && d && dirs.indexOf(d) < 0) dirs.push(d); });
+  if (!dirs.length || dirs.length > 10) return;
+  tagGetJson('/tracknums?d=' + encodeURIComponent(JSON.stringify(dirs))).then(function(r){
+    if (seq !== browseSeq || !r || !r.ok || !r.tracks) return;
+    var got = rels.map(function(rel){
+      var v = rel && r.tracks[rel], tm = v && /^\s*(\d+)/.exec(v[0]), dm = v && v[1] && /^\s*(\d+)/.exec(v[1]);
+      return tm ? {n: parseInt(tm[1], 10), d: dm ? parseInt(dm[1], 10) : 0} : null;
+    });
+    var discs = {};
+    got.forEach(function(g){ if (g && g.d) discs[g.d] = 1; });
+    var multi = Object.keys(discs).length > 1;
+    got.forEach(function(g, i){ if (g) nums[i].el.textContent = multi && g.d ? g.d + '.' + g.n : String(g.n); });
+  }).catch(function(){});
 }
 
 /* ---------- Album versions ---------- */

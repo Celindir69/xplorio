@@ -553,6 +553,22 @@ function doDupMove(body, cb) {
   cb(200, {ok: true, moved: moved});
 }
 
+/* GET /tracknums?d=["USB/S/Album", …]: track number tags of the files in these folders (MPD database), for the album view,
+   which otherwise only has the position in the list -> {ok, tracks: {file: [track, disc]}} (disc only if tagged). At most 10 folders */
+function doTrackNums(query, cb) {
+  var dirs;
+  try { dirs = JSON.parse(String(query.d || '[]')); } catch (e) { return cb(400, {ok: false, error: 'invalid d'}); }
+  if (!Array.isArray(dirs) || !dirs.length || dirs.length > 10) return cb(400, {ok: false, error: 'invalid d'});
+  dirs = dirs.map(String);
+  if (dirs.some(function(d){ return !d || d.charAt(0) === '/' || d.indexOf('\0') >= 0 || d.split('/').indexOf('..') >= 0; })) return cb(400, {ok: false, error: 'invalid d'});
+  libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT, roots: dirs, timeout: 20000}, function(err, songs){
+    if (err) return cb(200, {ok: false, error: err.message});
+    var out = {};
+    songs.forEach(function(s){ if (s.track) out[s.file] = s.disc ? [s.track, s.disc] : [s.track]; });
+    cb(200, {ok: true, tracks: out});
+  });
+}
+
 /* ---------- Online cover search ---------- */
 /* GET /coversearch?artist=…&album=… -> {ok, results:[{id, source}]}; GET /coverimage?id=… returns the image.
    Only addresses found by the search itself are loaded (via the id). Last.fm key from web/config*.js. */
@@ -1823,6 +1839,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/check')   return doCheckGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/versions', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
     return doGenreLib(route, url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/tracknums') return doTrackNums(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/genres')  return doGenres(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/stationlogo') return doStationLogo(url.parse(req.url, true).query, res);

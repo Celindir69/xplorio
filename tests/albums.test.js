@@ -113,7 +113,7 @@ t('random track from the track list, with last heard', function(){
 });
 
 /* fake MPD for the route */
-var tree = {'': 'directory: USB\n', 'USB': 'directory: USB/A\n', 'USB/A': 'file: USB/A/1.flac\nArtist: Spliff\nAlbum: 85555\nTitle: Carbonara\nTime: 260\n'};
+var tree = {'': 'directory: USB\n', 'USB': 'directory: USB/A\n', 'USB/A': 'file: USB/A/1.flac\nArtist: Spliff\nAlbum: 85555\nTitle: Carbonara\nTime: 260\nTrack: 3/12\n'};
 var walks = 0;
 var mpd = net.createServer(function(c){
   c.write('OK MPD 0.19.0\n');
@@ -167,8 +167,19 @@ mpd.listen(0, function(){
                   t('album lists: /albumgenre?fi=1 gives file type, tracks and duration of local albums', function(){
                     assert.deepStrictEqual(JSON.parse(d).infos, [{dir: 'USB/A', fi: {ext: 'flac', n: 1, s: 260}}, 0]);
                   });
-                  console.log(n + ' checks');
-                  svc.close(); mpd.close();
+                  http.get({port: svc.address().port, path: '/tracknums?d=' + encodeURIComponent(JSON.stringify(['USB/A']))}, function(res1){
+                    var d1 = ''; res1.on('data', function(c){ d1 += c; }); res1.on('end', function(){
+                      t('album view: /tracknums gives the track number tags of a folder', function(){
+                        assert.deepStrictEqual(JSON.parse(d1), {ok: true, tracks: {'USB/A/1.flac': ['3/12']}});
+                      });
+                      http.get({port: svc.address().port, path: '/tracknums?d=' + encodeURIComponent(JSON.stringify(['USB/../etc']))}, function(res2){
+                        t('/tracknums refuses paths with ..', function(){ assert.strictEqual(res2.statusCode, 400); });
+                        res2.resume();
+                        console.log(n + ' checks');
+                        svc.close(); mpd.close();
+                      });
+                    });
+                  });
                 });
               });
             }, '?kind=track');
