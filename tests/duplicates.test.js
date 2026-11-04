@@ -72,16 +72,16 @@ t('quality: DSD before lossless before m4a before lossy', function(){
 });
 
 t('moved aside: hidden folder on the same drive, keeps the path', function(){
-  assert.strictEqual(dup.trashPath('INTERNAL/bandcamp/X/Album'), 'INTERNAL/Xplorio Duplicates/bandcamp/X/Album');
-  assert.strictEqual(dup.trashPath('USB/Stick/Album'), 'USB/Stick/Xplorio Duplicates/Album');
-  assert.strictEqual(dup.trashPath('NAS/Musik/Rock/Album'), 'NAS/Musik/Xplorio Duplicates/Rock/Album');
+  assert.strictEqual(dup.trashPath('INTERNAL/bandcamp/X/Album'), 'INTERNAL/Xplorio Trash/bandcamp/X/Album');
+  assert.strictEqual(dup.trashPath('USB/Stick/Album'), 'USB/Stick/Xplorio Trash/Album');
+  assert.strictEqual(dup.trashPath('NAS/Musik/Rock/Album'), 'NAS/Musik/Xplorio Trash/Rock/Album');
 });
 
 t('.mpdignore: the duplicates folder added once, other lines stay', function(){
-  assert.strictEqual(dup.ignoreLine(''), 'Xplorio Duplicates\n');
-  assert.strictEqual(dup.ignoreLine('.duplicates'), '.duplicates\nXplorio Duplicates\n');
-  assert.strictEqual(dup.ignoreLine('a\nXplorio Duplicates\n'), null);
-  assert.ok(dup.isTrash('USB/S/.duplicates/x/1.mp3') && dup.isTrash('USB/S/Xplorio Duplicates/x') && !dup.isTrash('USB/S/Duplicates/x'));
+  assert.strictEqual(dup.ignoreLine(''), 'Xplorio Trash\n');
+  assert.strictEqual(dup.ignoreLine('Xplorio Duplicates'), 'Xplorio Duplicates\nXplorio Trash\n');
+  assert.strictEqual(dup.ignoreLine('a\nXplorio Trash\n'), null);
+  assert.ok(dup.isTrash('USB/S/.duplicates/x/1.mp3') && dup.isTrash('USB/S/Xplorio Duplicates/x') && dup.isTrash('USB/S/Xplorio Trash/x') && !dup.isTrash('USB/S/Duplicates/x'));   /* old names too */
 });
 t('medium and quality markers do not count, year spans and live do', function(){
   function k(x) { return dup.albumKey(x, lc.artistKey); }

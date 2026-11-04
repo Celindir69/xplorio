@@ -174,20 +174,26 @@ count, nor do additions such as “(Remastered)”, “[Deluxe Edition]”, “-
 album name only. Folders of one album split by disc next to each other (CD1, CD2 or different disc numbers) count as one
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
 (lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
+Tapping a version opens it in the album editor to look inside first; it can be moved from there too.
 
-“Move” puts the folders of a version into the folder `Xplorio Duplicates` on the same drive, keeping the rest of the
-path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/Xplorio Duplicates/mp3/Nena/Nena`). This is instant even for
+“Move” puts the folders of a version into the folder `Xplorio Trash` on the same drive, keeping the rest of the
+path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/Xplorio Trash/mp3/Nena/Nena`). This is instant even for
 large albums, and the folder is visible over the network share. So that MPD does not read it, Xplorio adds it to the
 drive's `.mpdignore` file (e.g. `/mnt/INTERNAL/.mpdignore`); the album disappears from the library with the next scan.
 Xplorio's own album list (welcome screen, random album, library check) always leaves the folder out. Earlier versions
-called it `.duplicates`; the Tag Service renames it once at the start. If moved albums were already in the library, run
+called it `.duplicates` or `Xplorio Duplicates`; the Tag Service renames it once at the start. If moved albums were already in the library, run
 "Update library" in Volumio once ("Update", not "Rescan") and they are gone. Moving an album back with `mv` restores it.
 If a password for the services is set, the device must be logged in once under System at the services. Xplorio deletes
 nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
 ```bash
-sudo rm -rf '/mnt/INTERNAL/Xplorio Duplicates'
+sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 ```
 The Tag Service needs write access to the music folders for this, as for the Tag Editor.
+
+**Move album in the album editor:** when the album editor shows a whole album (pen on the album page, in album lists, in
+search or in the library check), “Move album” sits below the tracks. It puts the whole album folder (with disc
+subfolders) into `Xplorio Trash` the same way, even if it is no duplicate. Only album folders the Tag Service knows from
+the library can be moved.
 
 ### Web Radio: Cover Art and Station Logos
 

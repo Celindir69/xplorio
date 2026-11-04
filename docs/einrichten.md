@@ -188,22 +188,28 @@ und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Editi
 Zusammenstellungen werden nur nach dem Albumnamen verglichen. Ordner eines Albums, die nach CDs getrennt nebeneinander
 liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je Fassung stehen Format, Auflösung, Zahl der
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
-Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen.
+Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen. Tippen
+auf eine Fassung öffnet sie im Album-Editor, um vorher hineinzuschauen; dort lässt sie sich ebenfalls verschieben.
 
-„Verschieben“ legt die Ordner einer Fassung in den Ordner `Xplorio Duplicates` auf demselben Laufwerk, mit dem
-übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/Xplorio Duplicates/mp3/Nena/Nena`). Das geht auch bei
+„Verschieben“ legt die Ordner einer Fassung in den Ordner `Xplorio Trash` auf demselben Laufwerk, mit dem
+übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/Xplorio Trash/mp3/Nena/Nena`). Das geht auch bei
 großen Alben sofort, und der Ordner ist über die Netzwerkfreigabe sichtbar. Damit MPD ihn nicht mit einliest, trägt
 Xplorio ihn in die Datei `.mpdignore` des Laufwerks ein (z. B. `/mnt/INTERNAL/.mpdignore`); das Album verschwindet beim
 nächsten Einlesen aus der Bibliothek. Xplorios eigene Albenliste (Begrüßung, Zufallsalbum, Bibliothek prüfen) lässt den
-Ordner immer aus. Frühere Versionen nannten ihn `.duplicates`; der Tag-Dienst benennt ihn beim Start einmal um. Waren
+Ordner immer aus. Frühere Versionen nannten ihn `.duplicates` bzw. `Xplorio Duplicates`; der Tag-Dienst benennt ihn beim Start einmal um. Waren
 verschobene Alben schon in der Bibliothek, einmal „Bibliothek aktualisieren“ in Volumio („Aktualisieren“, nicht „Neu
 einlesen“), dann sind sie weg. Zurückschieben per `mv` stellt ein Album wieder her. Ist ein Passwort für die Dienste
 gesetzt, muss das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig
 löschen geht per ssh mit dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
 ```bash
-sudo rm -rf '/mnt/INTERNAL/Xplorio Duplicates'
+sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 ```
 Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
+
+**Album verschieben im Album-Editor:** Zeigt der Album-Editor ein ganzes Album (Stift auf der Albumseite, in Albumlisten,
+in der Suche oder in der Bibliotheksprüfung), steht unter den Titeln „Album verschieben“. Das legt den ganzen Albumordner
+(mit CD-Unterordnern) genauso in `Xplorio Trash`, auch wenn es keine Dublette ist. Verschieben lassen sich nur
+Albumordner, die der Tag-Dienst aus der Bibliothek kennt.
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der

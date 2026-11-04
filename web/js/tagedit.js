@@ -38,9 +38,9 @@ function tagPenButton(cls, title, onClick) {
 }
 
 /* pen for specific files; files: [{uri, title}] or a function returning them */
-function tagEditButton(files, heading, cls) {
+function tagEditButton(files, heading, cls, opts) {
   return tagPenButton(cls, T('tag.edit'), function(){
-    openTagEditor(typeof files === 'function' ? files() : files, heading);
+    openTagEditor(typeof files === 'function' ? files() : files, heading, opts);
   });
 }
 
@@ -63,7 +63,7 @@ function tagAlbumButton(al) {
     showToast(T('tag.loadingTracks'));
     browseGet(al.uri).then(function(j){
       var files = browseItems(j).filter(isLocalTrack).map(function(t){ return {uri:t.uri, title:t.title || t.name || ''}; });
-      if (files.length) openTagEditor(files, al.title || al.name || '');
+      if (files.length) openTagEditor(files, al.title || al.name || '', {move: true});
       else showToast(T('tag.noLocalTracks'));
     }).catch(function(){ showToast(T('tag.albumUnreadable')); });
   });
@@ -197,9 +197,12 @@ function tagMsg(text) {
   tagBody.appendChild(browseNote(text));
 }
 
-/* files: [{uri, title}] */
-function openTagEditor(files, heading) {
+/* files: [{uri, title}]; opts.move: the editor shows a whole album, offer "Move album" (true: its folder from the files,
+   or a list of folders, e.g. a version of a duplicate album) */
+var tagMoveDirs = null;
+function openTagEditor(files, heading, opts) {
   tagMode = 'album';
+  tagMoveDirs = opts && opts.move ? (Array.isArray(opts.move) ? opts.move : tagAlbumDir(files)) : null;
   var seq = ++artSeq;                                     /* discard a late answer for a previously opened album */
   tagSave.textContent = T('tag.save');
   if (!heading && files.length === 1) heading = files[0].title;
@@ -270,7 +273,64 @@ function tagRender(files, items) {
     }
     tagBody.appendChild(row);
   });
+  if (tagMoveDirs && tagMoveDirs.length) tagBody.appendChild(tagMoveSection(tagMoveDirs));
   tagSave.disabled = false;
+}
+
+/* the album folder of these files (disc folders such as "CD2": their parent, as albums.albumDir in the tag service);
+   null if they lie in several albums */
+var TAG_DISC_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*\d+\b/i;
+function tagAlbumDir(files) {
+  var dirs = {};
+  files.forEach(function(f){
+    var rel = histRel(f.uri || ''), d = rel.slice(0, rel.lastIndexOf('/'));
+    if (TAG_DISC_RE.test(d.slice(d.lastIndexOf('/') + 1))) d = d.slice(0, d.lastIndexOf('/'));
+    dirs[d] = 1;
+  });
+  var list = Object.keys(dirs);
+  return list.length === 1 && list[0] && list[0].indexOf('/') > 0 ? list : null;
+}
+
+/* "Move album": into "Xplorio Trash" on the same drive (tag service POST /dupmove), like a duplicate in the library check */
+var TAG_TRASH = 'Xplorio Trash';                         /* duplicates.TRASH in the tag service */
+function tagTrashPath(dir) {
+  var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
+  return drive + '/' + TAG_TRASH + '/' + dir.slice(drive.length + 1);
+}
+function tagMoveSection(dirs) {
+  var box = document.createElement('div'); box.className = 'tagMoveBox';
+  var b = document.createElement('button'); b.className = 'tagBtn tagMoveBtn'; b.textContent = T('tag.move');
+  var note = document.createElement('div'); note.className = 'tagMoveNote';
+  note.textContent = T('tag.moveHint', {folder: TAG_TRASH});
+  b.addEventListener('click', function(){
+    var from = dirs.map(function(d){ return '/mnt/' + d; }).join(' + '), to = dirs.map(function(d){ return '/mnt/' + tagTrashPath(d); }).join(' + ');
+    if (!confirm(T('check.dup.confirm', {dir: from, to: to}))) return;
+    b.disabled = true;
+    var token = (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : '');
+    tagPostJson('/dupmove', {dirs: dirs, token: token}).then(function(r){
+      if (r && r.ok) {
+        overlayTags.classList.remove('on');
+        showToast(T('check.dup.moved', {to: r.moved.map(function(m){ return '/mnt/' + m.to; }).join(' + ')}));
+        if (typeof checkMovedElsewhere === 'function') checkMovedElsewhere(dirs);
+        tagLeaveMoved(dirs);
+        return;
+      }
+      b.disabled = false;
+      note.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+    }).catch(function(){ b.disabled = false; note.textContent = T('check.dup.error', {error: '?'}); });
+  });
+  box.appendChild(b); box.appendChild(note);
+  return box;
+}
+/* after moving: an open album page of that folder goes back one step, lists are drawn anew */
+function tagLeaveMoved(dirs) {
+  var top = browseStack.length && browseStack[browseStack.length - 1];
+  var rel = top && top.kind === 'album' ? histRel(top.uri || '') : '';
+  if (rel && overlayBrowse.classList.contains('on') && dirs.some(function(d){ return rel === d || rel.indexOf(d + '/') === 0; })) {
+    browseStack.pop();
+    if (browseStack.length) browseRender(); else overlayBrowse.classList.remove('on');
+  }
+  tagRefreshView();
 }
 
 function tagCollect() {
