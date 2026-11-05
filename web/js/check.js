@@ -653,12 +653,13 @@ function checkDupPlay(g, v) {
 }
 /* album editor for one version: its tracks from Volumio (all its folders), moving offered for exactly these folders */
 function checkDupEdit(g, v) {
-  showToast(T('tag.loadingTracks'));
+  if (tagBusyOn) return;
+  tagBusy(T('tag.loadingTracks'));
   Promise.all(v.dirs.map(function(d){ return browseGet('music-library/' + d).then(browseItems); })).then(function(lists){
     var files = [].concat.apply([], lists).filter(isLocalTrack).map(function(t){ return {uri: t.uri, title: t.title || t.name || ''}; });
     if (files.length) openTagEditor(files, g.name, {move: v.dirs});
-    else showToast(T('tag.noLocalTracks'));
-  }).catch(function(){ showToast(T('tag.albumUnreadable')); });
+    else { tagBusy(''); showToast(T('tag.noLocalTracks')); }
+  }).catch(function(){ tagBusy(''); showToast(T('tag.albumUnreadable')); });
 }
 /* moved from the album editor: the version rows of these folders count as done */
 function checkMovedElsewhere(dirs) {

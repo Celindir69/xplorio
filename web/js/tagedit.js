@@ -60,12 +60,13 @@ function tagTrackButton(t) {
 function tagAlbumButton(al) {
   if (!al || !al.uri || (al.service || 'mpd') !== 'mpd' || streamOf(al.uri)) return null;
   return tagPenButton('tagEditMini', T('tag.edit'), function(){
-    showToast(T('tag.loadingTracks'));
+    if (tagBusyOn) return;                                /* already loading: a second tap changes nothing */
+    tagBusy(T('tag.loadingTracks'));
     browseGet(al.uri).then(function(j){
       var files = browseItems(j).filter(isLocalTrack).map(function(t){ return {uri:t.uri, title:t.title || t.name || ''}; });
       if (files.length) openTagEditor(files, al.title || al.name || '', {move: true});
-      else showToast(T('tag.noLocalTracks'));
-    }).catch(function(){ showToast(T('tag.albumUnreadable')); });
+      else { tagBusy(''); showToast(T('tag.noLocalTracks')); }
+    }).catch(function(){ tagBusy(''); showToast(T('tag.albumUnreadable')); });
   });
 }
 
@@ -192,9 +193,20 @@ function tagInput(value, cls) {
   return i;
 }
 
-function tagMsg(text) {
+/* busy: still loading, the panel at the bottom stays (with spinner); otherwise (result or error) it goes */
+function tagMsg(text, busy) {
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
   tagBody.appendChild(browseNote(text));
+  tagBusy(busy ? text : '');
+}
+
+/* panel at the bottom with spinner from the tap on a pen until the editor is drawn (the panel of amexport.js), so it is
+   clear the tap arrived; meanwhile further taps on album pens are ignored */
+var tagBusyOn = false;
+function tagBusy(text) {
+  tagBusyOn = !!text;
+  if (typeof amSheetShow !== 'function') return;
+  if (text) amSheetShow(text); else amSheetHide();
 }
 
 /* files: [{uri, title}]; opts.move: the editor shows a whole album, offer "Move album" (true: its folder from the files,
@@ -208,7 +220,7 @@ function openTagEditor(files, heading, opts) {
   if (!heading && files.length === 1) heading = files[0].title;
   document.getElementById('tagTitle').textContent = heading || T('tag.edit');
   tagBatch = null; tagUndo.style.display = 'none'; tagSave.disabled = true; tagStatus.textContent = '';
-  tagMsg(T('tag.loading'));
+  tagMsg(T('tag.loading'), true);
   overlayTags.classList.add('on');
   tagPost('/read', {uris: files.map(function(f){ return f.uri; })}).then(function(res){
     if (seq !== artSeq) return;
@@ -221,6 +233,7 @@ function openTagEditor(files, heading, opts) {
 }
 
 function tagRender(files, items) {
+  tagBusy('');
   tagFiles = items.map(function(it, i){
     return {uri: it.uri, ok: !!it.ok, error: it.error, tags: it.tags || {}, name: files[i] && files[i].title};
   });
@@ -712,7 +725,7 @@ function tagBulkFail(seq, e) {
 function tagBulkLoad(seq, uris) {
   return tagInChunks(uris, TAG_CHUNK * 2, function(part, done){
     if (seq !== artSeq) return Promise.reject(new Error('abgebrochen'));
-    tagMsg(T('tag.readingProgress', {done: langNum(Math.min(done, uris.length)), total: langNum(uris.length)}));
+    tagMsg(T('tag.readingProgress', {done: langNum(Math.min(done, uris.length)), total: langNum(uris.length)}), true);
     return tagPost('/read', {uris: part}).then(function(r){
       if (!r.ok) throw new Error(r.error || T('tag.readFailed'));
       r.items.forEach(function(it){
@@ -727,7 +740,7 @@ function openArtistEditor(name) {
   var seq = tagBulkStart(name);
   artName = name;
   artReload = function(){ openArtistEditor(name); };
-  tagMsg(T('tag.searchingTracks'));
+  tagMsg(T('tag.searchingTracks'), true);
   tagGetJson('/artist?name=' + encodeURIComponent(name)).then(function(res){
     if (!res.ok) throw new Error(res.error || T('tag.searchFailed'));
     if (!res.files.length) { tagMsg(T('tag.noArtistTracks')); return; }
@@ -779,6 +792,7 @@ function tagBadList(bad) {
 }
 
 function artistRender() {
+  tagBusy('');
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
   var albums = {};
   artFiles.forEach(function(f){ albums[(f.tags.album || '').toLowerCase()] = true; });
@@ -1080,4 +1094,4 @@ tagUndo.addEventListener('click', function(){
   }).catch(function(){ tagStatus.textContent = T('tag.serviceDown'); });
 });
 
-document.getElementById('closeTags').addEventListener('click', function(){ overlayTags.classList.remove('on'); });
+document.getElementById('closeTags').addEventListener('click', function(){ tagBusy(''); overlayTags.classList.remove('on'); });
