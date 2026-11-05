@@ -106,6 +106,22 @@ t('duplicate tracks: not across versions of an album (incomplete copy in the alb
   assert.strictEqual(d.duplicates.length, 1);                       /* listed as two versions */
   assert.deepStrictEqual(d.dupTracks.map(function(a){ return a.groups.map(function(g){ return g.title; }); }), [['Outro']]);
 });
+t('duplicate albums: tracks the best version lacks, with the folder to copy them into', function(){
+  function V(f, o) { o.album = 'Hits'; o.albumartist = 'Band'; return D(f, o); }
+  var r2 = lc.analyze([V('USB/B/Hits/CD1/01.flac', {title: 'Intro', track: '1', disc: '1', format: '44100:16:2'}),
+                       V('USB/B/Hits/CD2/01.flac', {title: 'Outro', track: '1', disc: '2', format: '44100:16:2'}),
+                       V('USB/M/Hits/01.mp3', {title: 'Intro (2009 Remaster)', track: '1', disc: '1'}),
+                       V('USB/M/Hits/02.mp3', {title: 'Bonus', track: '2', disc: '1'}),
+                       V('USB/M/Hits/03.mp3', {title: 'Outro', track: '1', disc: '2'}),
+                       V('USB/M/Hits/04.mp3', {title: 'Extra', track: '2', disc: '2'}),
+                       V('USB/M/Hits/05.mp3', {title: 'Third', track: '1', disc: '3'})], function(){ return true; });
+  var g = r2.duplicates[0];
+  assert.deepStrictEqual(g.versions[0].dirs, ['USB/B/Hits/CD1', 'USB/B/Hits/CD2']);
+  assert.deepStrictEqual(g.missing.map(function(m){ return [m.title, m.to, m.worse]; }),
+    [['Bonus', 'USB/B/Hits/CD1', true], ['Extra', 'USB/B/Hits/CD2', true], ['Third', 'USB/B/Hits/CD3', true]]);
+  var r3 = lc.analyze([V('USB/B/Hits/01.flac', {title: 'Intro', track: '1'}), V('USB/M/Hits/01.mp3', {title: 'Intro', track: '1'})], function(){ return true; });
+  assert.strictEqual(r3.duplicates[0].missing, undefined);           /* nothing missing */
+});
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
   assert.ok(g.indexOf('SPLIFF|Spliff') >= 0);
@@ -137,7 +153,8 @@ var tree = {
   'USB/S/Let It Be': 'file: USB/S/Let It Be/1.flac\nArtist: The Beatles\nAlbum: Let It Be\nTrack: 1\n',
   'USB/S/Xplorio Duplicates': 'directory: USB/S/Xplorio Duplicates/Help\n',
   'USB/S/Xplorio Duplicates/Help': 'file: USB/S/Xplorio Duplicates/Help/1.mp3\nArtist: The Beatles\nAlbum: Help!\n',
-  'USB/S/Abbey Road': 'file: USB/S/Abbey Road/1.mp3\nArtist: The Beatles\nAlbum: Abbey Road\nFormat: 44100:24:2\nTime: 259\n',
+  'USB/S/Abbey Road': 'file: USB/S/Abbey Road/1.mp3\nArtist: The Beatles\nAlbum: Abbey Road\nFormat: 44100:24:2\nTime: 259\n' +
+                      'file: USB/S/Abbey Road/2.mp3\nArtist: The Beatles\nAlbum: Abbey Road\nTitle: Something\nTrack: 2\nTime: 180\n',
   'USB/S/Abbey Road (Remastered)': 'file: USB/S/Abbey Road (Remastered)/1.flac\nArtist: Beatles\nAlbum: Abbey Road (2019 Remaster)\nFormat: 96000:24:2\nTime: 260\n',
   'USB/A': 'file: USB/A/1.flac\nArtist: Spliff\nArtist: Zweiter\nAlbum: 85555\nTrack: 1\nTitle: Carbonara\nGenre: Rock\nTime: 245\nfile: USB/A/2.flac\nTitle: Ohne Tags\n'
 };
@@ -164,9 +181,9 @@ srv.listen(0, function(){
     t('read MPD: all folders, tracks with tags, broken folder skipped, duplicates folder left out', function(){
       assert.ifError(err);
       assert.strictEqual(dirs, 9);
-      assert.strictEqual(list.length, 7);
+      assert.strictEqual(list.length, 8);
       assert.deepStrictEqual(list[0], {file: 'USB/A/1.flac', artist: 'Spliff', albumartist: '', album: '85555', title: 'Carbonara', track: '1', date: '', genre: 'Rock', time: '245', 'last-modified': '', disc: '', format: ''});
-      assert.strictEqual(list[3].format, '96000:24:2');
+      assert.strictEqual(list[4].format, '96000:24:2');
       assert.strictEqual(list[1].title, 'Ohne Tags');
       assert.ok(prog.length >= 3);
     });
@@ -194,7 +211,7 @@ function service(mpdPort) {
     req.end(method === 'POST' ? JSON.stringify(body || {}) : undefined);
   }
   ['USB/S/Abbey Road', 'USB/S/Abbey Road (Remastered)', 'USB/S/Let It Be', 'USB/S/Fremd', 'USB/S/Help'].forEach(function(d){ fs.mkdirSync(path.join(root, d), {recursive: true}); });
-  ['USB/S/Help/1.flac', 'USB/S/Help/1 (1).flac'].forEach(function(f){ fs.writeFileSync(path.join(root, f), 'x'); });
+  ['USB/S/Help/1.flac', 'USB/S/Help/1 (1).flac', 'USB/S/Abbey Road/2.mp3'].forEach(function(f){ fs.writeFileSync(path.join(root, f), 'x'); });
   s2.listen(0, function(){
     call('GET', '/check', function(r0){
       t('service: no result before the first check', function(){ assert.ok(r0.ok); assert.strictEqual(r0.result, null); });
@@ -205,7 +222,7 @@ function service(mpdPort) {
             if (r.running && k < 50) return setTimeout(function(){ poll(k + 1); }, 100);
             t('service: result saved', function(){
               assert.ok(!r.running && !r.error && r.result);
-              assert.strictEqual(r.result.songs, 7);
+              assert.strictEqual(r.result.songs, 8);
               assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A', 'USB/S/Abbey Road', 'USB/S/Abbey Road (Remastered)', 'USB/S/Help', 'USB/S/Let It Be']);     /* Python missing: counts as without cover */
               assert.ok(fs.existsSync(path.join(root, 'log', 'check.json')));
               var d = r.result.duplicates;
@@ -223,6 +240,26 @@ function service(mpdPort) {
               });
               call('POST', '/filemove', function(f2){
               t('service: /filemove refuses tracks that are not listed', function(){ assert.ok(!f2.ok && /not a duplicate track/.test(f2.error)); });
+            call('POST', '/dupfill', function(c1){
+              var copy = path.join(root, 'USB/S/Abbey Road (Remastered)/2.mp3');
+              t('service: /dupfill copies the tracks the best version lacks into its folder', function(){
+                assert.deepStrictEqual(r.result.duplicates[0].missing.map(function(m){ return [m.uri, m.to, m.worse]; }),
+                  [['USB/S/Abbey Road/2.mp3', 'USB/S/Abbey Road (Remastered)', true]]);
+                assert.ok(c1.ok, c1.error);
+                assert.deepStrictEqual(c1.copied, ['USB/S/Abbey Road (Remastered)/2.mp3']);
+                assert.strictEqual(fs.readFileSync(copy, 'utf8'), 'x');
+                assert.ok(fs.existsSync(path.join(root, 'USB/S/Abbey Road/2.mp3')));            /* the original stays */
+              });
+              call('POST', '/dupfill', function(c2){
+                t('service: /dupfill never overwrites a file', function(){
+                  assert.ok(c2.ok && !c2.copied.length && c2.skipped[0].error === 'exists');
+                });
+                call('POST', '/dupfill', function(u1){
+                  t('service: /dupfill undo deletes the unchanged copies', function(){
+                    assert.ok(u1.ok, u1.error);
+                    assert.deepStrictEqual(u1.removed, ['USB/S/Abbey Road (Remastered)/2.mp3']);
+                    assert.ok(!fs.existsSync(copy));
+                  });
             call('POST', '/dupmove', function(m1){
               t('service: /dupmove refuses folders that are no album folder (here a whole drive)', function(){
                 assert.ok(!m1.ok && /not an album folder|not ready/.test(m1.error));
@@ -254,7 +291,7 @@ function service(mpdPort) {
                   call('POST', '/scan', function(){                 /* check closed: collected scans run now */
                     setTimeout(function(){
                       t('service: after moving, MPD rescans exactly the moved folder, not its parent or the drive', function(){
-                        assert.strictEqual(fs.readFileSync(mpcLog, 'utf8'), 'update USB/S/Help\nupdate USB/S/Abbey Road\nupdate USB/S/Let It Be\n');
+                        assert.strictEqual(fs.readFileSync(mpcLog, 'utf8'), 'update USB/S/Help\nupdate USB/S/Abbey Road (Remastered)\nupdate USB/S/Abbey Road\nupdate USB/S/Let It Be\n');
                       });
                       s2.close(); srv.close();
                       console.log(n + ' checks');
@@ -266,6 +303,9 @@ function service(mpdPort) {
                 }, {dirs: ['USB/S/Abbey Road']});
               }, {dirs: ['USB/S/Abbey Road']});
             }, {dirs: ['USB/A']});
+                }, {undo: c1.batch});
+              }, {dir: 'USB/S/Abbey Road (Remastered)'});
+            }, {dir: 'USB/S/Abbey Road (Remastered)'});
               }, {files: ['USB/A/1.flac']});
             }, {files: ['USB/S/Help/1 (1).flac']});
           });

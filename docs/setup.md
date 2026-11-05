@@ -190,6 +190,15 @@ sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 ```
 The Tag Service needs write access to the music folders for this, as for the Tag Editor.
 
+**Add missing tracks:** if another version has tracks the best one lacks (same artist and title, compared as for duplicate
+tracks), “n tracks missing in the best version” appears below the best version, folding out with title, format and
+origin; tracks in lower quality (e.g. MP3 for a FLAC album) are marked. “Add missing” copies them into the folder of the
+best version, with disc folders into the one with the same disc number (for a whole missing disc into a new folder such
+as `CD3`). Album, album artist, year and genre of the copies come from the best version; title, artist, track and disc
+number stay. The originals stay where they are, and existing files are never overwritten. “Undo” deletes the copies
+again as long as they have not been changed since. Afterwards the other version can be moved into `Xplorio Trash` as
+above.
+
 **Move album in the album editor:** when the album editor shows a whole album (pen on the album page, in album lists, in
 search or in the library check), “Move album” sits below the tracks. It puts the whole album folder (with disc
 subfolders) into `Xplorio Trash` the same way, even if it is no duplicate. Only album folders the Tag Service knows from

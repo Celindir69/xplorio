@@ -709,8 +709,71 @@ function checkDupRows(g) {
     });
     row.appendChild(btn);
     rows.push(row);
+    if (v.keep && g.missing) rows.push(checkDupFillRow(g));
   });
   return rows;
+}
+
+/* below the best version: "3 tracks missing here" (folded: which, from where), "Add missing" copies them in (POST /dupfill),
+   then "Undo" deletes the copies again */
+function checkDupFillRow(g) {
+  var dir = g.versions[0].dirs[0], key = 'dupfill|' + dir, worse = g.missing.some(function(m){ return m.worse; });
+  var row = document.createElement('div'); row.className = 'sRow ckDupFill' + (checkDone[key] ? ' done' : '');
+  var meta = document.createElement('div'); meta.className = 'sMeta';
+  var ti = document.createElement('div'); ti.className = 'sTitle';
+  ti.textContent = T('check.dupfill.title', {n: checkNum(g.missing.length)}) + (worse ? ' · ' + T('check.dupfill.worse') : '');
+  var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';
+  var list = document.createElement('div'); list.className = 'ckAlbFold'; list.style.display = 'none';
+  var tog = document.createElement('div'); tog.className = 'ckAlbToggle';
+  function label() { tog.textContent = (list.style.display === 'none' ? '\u25b8 ' : '\u25be ') + T('check.dupfill.which'); }
+  tog.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    if (!list.firstChild) g.missing.forEach(function(m){
+      var num = (m.disc ? parseInt(m.disc, 10) + '-' : '') + (parseInt(m.track, 10) || '');
+      list.appendChild(histEl('div', '', (num ? num + ' ' : '') + m.title + (m.artist && m.artist !== g.artist ? ' · ' + m.artist : '') + ' · ' +
+        m.format + (m.worse ? ' (' + T('check.dupfill.worseOne') + ')' : '') + ' · ' + T('check.dupfill.from', {dir: '/mnt/' + m.uri.replace(/\/[^\/]*$/, '')}) +
+        (m.to !== dir ? ' → /mnt/' + m.to : '')));
+    });
+    list.style.display = list.style.display === 'none' ? '' : 'none';
+    label();
+  });
+  label();
+  meta.appendChild(ti); meta.appendChild(tog); meta.appendChild(list); meta.appendChild(msg);
+  row.appendChild(meta);
+  var token = function(){ return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : ''); };
+  function fail(r, b) {
+    b.disabled = false; msg.style.display = '';
+    msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+  }
+  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dupfill.add');
+  btn.disabled = !!checkDone[key];
+  btn.addEventListener('click', function(){
+    if (!confirm(T('check.dupfill.confirm', {n: g.missing.length, dir: '/mnt/' + dir}))) return;
+    btn.disabled = true; btn.textContent = T('check.dupfill.copying');
+    tagPostJson('/dupfill', {dir: dir, token: token()}).then(function(r){
+      btn.textContent = T('check.dupfill.add');
+      if (!r || !r.ok) return fail(r, btn);
+      msg.style.display = '';
+      msg.textContent = T('check.dupfill.done', {n: checkNum(r.copied.length)}) +
+        (r.skipped.length ? ' ' + T('check.dupfill.skipped', {n: checkNum(r.skipped.length), error: r.skipped[0].error}) : '');
+      if (!r.batch) { btn.disabled = false; return; }
+      checkDone[key] = 1; row.classList.add('done');
+      btn.textContent = T('check.conflict.undoApply'); btn.disabled = false;
+      btn.onclick = null;
+      var undo = btn.cloneNode(true); btn.parentNode.replaceChild(undo, btn);
+      undo.addEventListener('click', function(){
+        undo.disabled = true;
+        tagPostJson('/dupfill', {undo: r.batch, token: token()}).then(function(u){
+          if (!u || !u.ok) return fail(u, undo);
+          row.classList.remove('done'); delete checkDone[key];
+          msg.textContent = T('check.dupfill.undone', {n: checkNum(u.removed.length)}) +
+            (u.kept.length ? ' ' + T('check.dupfill.kept', {n: checkNum(u.kept.length)}) : '');
+        }).catch(function(){ fail(null, undo); });
+      });
+    }).catch(function(){ btn.textContent = T('check.dupfill.add'); fail(null, btn); });
+  });
+  row.appendChild(btn);
+  return row;
 }
 
 /* ---------- Duplicate tracks in an album: per file play, move into "Xplorio Trash" (POST /filemove), keep the group ---------- */
