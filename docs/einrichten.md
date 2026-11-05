@@ -188,7 +188,8 @@ und Satzzeichen zählen nicht, Zusätze wie „(Remastered)“, „[Deluxe Editi
 Zusammenstellungen werden nur nach dem Albumnamen verglichen. Ordner eines Albums, die nach CDs getrennt nebeneinander
 liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je Fassung stehen Format, Auflösung, Zahl der
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
-Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen. Tippen
+Abtastrate, mehr Titel; bei verlustbehafteten Fassungen zuerst die höhere Datenrate, aus Dateigröße und Spielzeit
+berechnet und als „MP3 320 kbps“ angezeigt, wobei AAC bei gleicher Datenrate leicht vorne liegt). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen. Tippen
 auf eine Fassung öffnet sie im Album-Editor, um vorher hineinzuschauen; dort lässt sie sich ebenfalls verschieben.
 „Behalten“ neben dem Albumnamen lässt alle Fassungen, wie sie sind: Die Gruppe steht dann eingeklappt am Ende der
 Kategorie („Wieder vorschlagen“ holt sie zurück); kommt eine weitere Fassung dazu, erscheint sie wieder.

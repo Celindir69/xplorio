@@ -50,9 +50,23 @@ function most(list) {
 }
 function kHz(rate) { var k = rate / 1000; return String(Math.round(k * 10) / 10); }
 
-/* songs of one version -> {format: 'FLAC 24/96', rank, bits, rate, ext, codec}; codec only for m4a: 'aac' (MPD reports
-   float samples, "44100:f:2") or 'alac' */
+/* songs of one version -> {format: 'FLAC 24/96', rank, bits, rate, ext, codec, kbps, eff}; codec only for m4a: 'aac' (MPD
+   reports float samples, "44100:f:2") or 'alac'. Lossy: kbps = average data rate from file size (s.size, set by the tag
+   service) and playing time, shown as "MP3 320 kbps"; eff for comparing, AAC counts a little more at the same rate */
 function quality(songs) {
+  var q = quality0(songs);
+  if (q.rank >= 2) return q;
+  var bytes = 0, secs = 0;
+  songs.forEach(function(s){ var t = parseFloat(s.time) || 0; if (s.size > 0 && t > 0) { bytes += s.size; secs += t; } });
+  var kbps = bytes && secs ? Math.round(bytes * 8 / secs / 1000) : 0;
+  if (kbps >= 8) {                                                          /* below: no real audio file */
+    q.kbps = kbps;
+    q.eff = Math.round(q.kbps * (q.codec === 'aac' || /^(aac|ogg|oga|opus)$/.test(q.ext) ? 1.1 : 1));
+    q.format += ' ' + q.kbps + ' kbps';
+  }
+  return q;
+}
+function quality0(songs) {
   var ext = most(songs.map(function(s){ var m = /\.([a-z0-9]+)$/i.exec(s.file); return m ? m[1].toLowerCase() : ''; }));
   var fmt = most(songs.map(function(s){ return s.format || ''; })).split(':');
   var dsd = /^dsd(\d+)/i.exec(fmt[0] || '');
@@ -69,9 +83,9 @@ function quality(songs) {
   return {format: (ext || '?').toUpperCase(), rank: LOSSY.indexOf(ext) >= 0 ? 1 : 0, bits: 0, rate: rate, ext: ext};
 }
 
-/* better first: lossless before lossy, then bit depth, sample rate, more tracks, longer */
+/* better first: lossless before lossy, then the data rate (lossy), bit depth, sample rate, more tracks, longer */
 function better(a, b) {
-  return b.rank - a.rank || b.bits - a.bits || b.rate - a.rate || b.tracks - a.tracks || b.seconds - a.seconds || a.dirs[0].localeCompare(b.dirs[0]);
+  return b.rank - a.rank || (b.eff || 0) - (a.eff || 0) || b.bits - a.bits || b.rate - a.rate || b.tracks - a.tracks || b.seconds - a.seconds || a.dirs[0].localeCompare(b.dirs[0]);
 }
 
 /* songs: [{file, artist, albumartist, album, disc, format, time}] as from libcheck.mpdWalk; artistKey from libcheck.
@@ -126,13 +140,13 @@ function find(songs, artistKey) {
     if (versions.length < 2) return;
     versions = versions.map(function(v){
       var q = quality(v.songs);
-      return {dirs: v.dirs.sort(), format: q.format, rank: q.rank, bits: q.bits, rate: q.rate, ext: q.ext, codec: q.codec || '', tracks: v.songs.length,
+      return {dirs: v.dirs.sort(), format: q.format, rank: q.rank, bits: q.bits, rate: q.rate, ext: q.ext, codec: q.codec || '', eff: q.eff || 0, kbps: q.kbps || 0, tracks: v.songs.length,
               seconds: v.songs.reduce(function(n, s){ return n + (parseFloat(s.time) || 0); }, 0), drive: driveOf(v.dirs[0]),
               name: v.name, artist: v.artist};
     }).sort(better);
     out.push({name: versions[0].name, artist: versions[0].artist, versions: versions.map(function(v, i){
       return {dirs: v.dirs, format: v.format, tracks: v.tracks, seconds: Math.round(v.seconds), keep: i === 0, drive: v.drive,
-              name: v.name, ext: v.ext, bits: v.bits, rate: v.rate, codec: v.codec};
+              name: v.name, ext: v.ext, bits: v.bits, rate: v.rate, codec: v.codec, kbps: v.kbps};
     })});
   });
   return out.sort(function(a, b){

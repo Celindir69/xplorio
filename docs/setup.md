@@ -173,7 +173,8 @@ The model is weaker at recognising classical music, soundtracks and radio plays.
 count, nor do additions such as “(Remastered)”, “[Deluxe Edition]”, “- 2009 Remaster”, “[HD]”, “(SACD)” or “[24-96]”; compilations are compared by
 album name only. Folders of one album split by disc next to each other (CD1, CD2 or different disc numbers) count as one
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
-(lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
+(lossless before lossy, then more bits, higher sample rate, more tracks; for lossy versions first the higher data rate,
+computed from file size and playing time and shown as “MP3 320 kbps”, with AAC slightly ahead at the same rate). ▶ plays a version (replacing the queue) while the list stays open.
 Tapping a version opens it in the album editor to look inside first; it can be moved from there too.
 “Keep” next to the album name leaves all versions as they are: the group is then listed folded at the end of the
 category (“Suggest again” brings it back); if another version is added, it shows up again.
