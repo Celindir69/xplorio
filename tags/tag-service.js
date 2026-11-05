@@ -218,6 +218,23 @@ function scanSetHold(on) {
   if (scanHold) { if (scanWaiting()) scanSchedule(SCAN_HOLD_MAX, true); else { clearTimeout(scanTimer); scanTimer = null; } }
   else if (scanWaiting()) scanSchedule(0);
 }
+/* after our own scan: "mpc update" only starts it, MPD reads on in the background. Wait until it is done, then give
+   Volumio time for its own album list, then rebuild ours without waiting for quiet (genres, random album, versions).
+   Meanwhile GET /scan reports building, so the symbol in the top bar stays until the new list is there */
+var albumAfterTimer = null;
+function albumsAfterScan(n) {
+  clearTimeout(albumAfterTimer);
+  albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS + 10000;
+  libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'status', function(err, st){
+    if (!err && st.updating_db && n < 1440) {          /* still reading (at most 2 hours) */
+      albumAfterTimer = setTimeout(function(){ albumsAfterScan(n + 1); }, 5000);
+    } else {
+      albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS + 5000;   /* meanwhile Volumio rebuilds its own album list */
+      albumAfterTimer = setTimeout(function(){ albumChecked = 0; albumsEnsure(null, true); }, ALBUMS_AFTER_SCAN_MS);
+    }
+    if (albumAfterTimer.unref) albumAfterTimer.unref();
+  });
+}
 function scanRun() {
   scanTimer = null;
   if (scanRunning || (scanHold && !scanAll) || (!scanWaiting() && !scanAll)) return;
@@ -232,9 +249,7 @@ function scanRun() {
     (function step() {
       if (!list.length) {
         scanRunning = false;
-        albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS;   /* meanwhile Volumio rebuilds its own album list */
-        var t = setTimeout(function(){ albumChecked = 0; albumsEnsure(null, true); }, ALBUMS_AFTER_SCAN_MS);   /* own scan: no waiting for quiet */
-        if (t.unref) t.unref();   /* keep genres and random album current */
+        albumsAfterScan(0);
         if (scanWaiting() && !scanTimer) scanSchedule(scanHold ? SCAN_HOLD_MAX : SCAN_QUIET, scanHold);
         return;
       }
