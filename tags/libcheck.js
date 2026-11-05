@@ -299,11 +299,31 @@ function missingTracks(g, songsOf) {
   return out.sort(function(a, b){ return (parseInt(a.disc, 10) || 0) - (parseInt(b.disc, 10) || 0) || (parseInt(a.track, 10) || 0) - (parseInt(b.track, 10) || 0); });
 }
 
-/* best first: lossless before lossy, more bits, higher rate, then without copy name, then the older file */
+/* best first: lossless before lossy, the higher data rate (lossy, from s.size), more bits, higher rate, then without
+   copy name, then the older file */
 function rank(files) {
   return files.map(function(s){ return {s: s, q: quality(s), c: COPY_RE.test(base(s.file)) ? 1 : 0, m: Date.parse(s['last-modified'] || '') || 0}; })
-    .sort(function(a, b){ return b.q.rank - a.q.rank || b.q.bits - a.q.bits || b.q.rate - a.q.rate || a.c - b.c || (a.m && b.m ? a.m - b.m : 0) || (a.s.file < b.s.file ? -1 : 1); })
+    .sort(function(a, b){ return b.q.rank - a.q.rank || (b.q.eff || 0) - (a.q.eff || 0) || b.q.bits - a.q.bits || b.q.rate - a.q.rate || a.c - b.c || (a.m && b.m ? a.m - b.m : 0) || (a.s.file < b.s.file ? -1 : 1); })
     .map(function(x){ return x.s; });
+}
+
+/* songs of an album: disc folders ("CD2") together with their album -> {albumsOf: {dir: [song]}, albumOrder: [dir]} */
+function albumGroups(dirs, order) {
+  var albumsOf = {}, albumOrder = [];
+  order.forEach(function(d){
+    var m = DISC_DIR_RE.exec(path.basename(d)), a = m ? path.dirname(d) : d;
+    if (!albumsOf[a]) { albumsOf[a] = []; albumOrder.push(a); }
+    albumsOf[a] = albumsOf[a].concat(dirs[d]);
+  });
+  return {albumsOf: albumsOf, albumOrder: albumOrder};
+}
+/* all songs that are in a group of duplicate tracks (before analyze: the tag service then reads their size and m4a codec) */
+function dupTrackSongs(songs) {
+  var dirs = {}, order = [], out = [];
+  songs.forEach(function(s){ var d = path.dirname(s.file); if (!dirs[d]) { dirs[d] = []; order.push(d); } dirs[d].push(s); });
+  var ag = albumGroups(dirs, order);
+  ag.albumOrder.forEach(function(a){ trackDups(ag.albumsOf[a]).forEach(function(g){ out = out.concat(g.files); }); });
+  return out;
 }
 
 /* songs: as from mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> audio analysis entry or null (optional).
@@ -345,12 +365,7 @@ function analyze(songs, hasCover, audioOf) {
                     audio: audioOf ? list.map(audioOf).filter(Boolean) : []});
   });
   /* duplicate tracks: per album, disc folders ("CD2") together with their album */
-  var albumsOf = {}, albumOrder = [];
-  order.forEach(function(d){
-    var m = DISC_DIR_RE.exec(path.basename(d)), a = m ? path.dirname(d) : d;
-    if (!albumsOf[a]) { albumsOf[a] = []; albumOrder.push(a); }
-    albumsOf[a] = albumsOf[a].concat(dirs[d]);
-  });
+  var ag = albumGroups(dirs, order), albumsOf = ag.albumsOf, albumOrder = ag.albumOrder;
   /* folders that the duplicate check counts as different versions of an album (e.g. an incomplete copy in the album
      folder next to CD1/CD2): the same track in two versions is listed there, not here */
   var verOf = {};
@@ -430,4 +445,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, dupTrackSongs: dupTrackSongs, dirsWithoutImage: dirsWithoutImage};

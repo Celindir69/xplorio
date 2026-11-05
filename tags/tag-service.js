@@ -437,10 +437,16 @@ function checkCovers(songs, cand) {
       dups.forEach(function(g){
         g.versions.forEach(function(v){ if (v.ext === 'm4a' || v.ext === 'mp4') v.dirs.forEach(function(d){ m4aDirs[d] = 1; }); });
       });
-      var dupDirs = {};
+      var dupDirs = {}, dupFiles = {};
       dups.forEach(function(g){ g.versions.forEach(function(v){ v.dirs.forEach(function(d){ dupDirs[d] = 1; }); }); });
+      libcheck.dupTrackSongs(songs).forEach(function(s){                   /* duplicate tracks: the same for their files */
+        dupFiles[s.file] = 1;
+        if (/\.(m4a|mp4)$/i.test(s.file)) m4aDirs[path.dirname(s.file)] = 1;
+      });
       return m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){
-        fileSizes(songs.filter(function(s){ return dupDirs[path.dirname(s.file)] && !/\.(flac|wav|aiff?|ape|wv|dsf|dff)$/i.test(s.file); }), finish);
+        fileSizes(songs.filter(function(s){
+          return (dupDirs[path.dirname(s.file)] || dupFiles[s.file]) && !/\.(flac|wav|aiff?|ape|wv|dsf|dff)$/i.test(s.file);
+        }), finish);
       });
     }
     var part = jobs.slice(i, i + PY_BATCH);
