@@ -407,20 +407,27 @@ function checkCovers(songs, cand) {
   (function step() {                                   /* in parts so that progress keeps updating */
     if (i >= jobs.length) {
       cand.forEach(function(c, k){ if (!(results[k] && results[k].ok && results[k].has)) noCover[c.dir] = true; });
-      var res = libcheck.analyze(songs, function(d){ return !noCover[d]; },
-        function(s){ return audioStore.get(s.artist, s.title, s.album); });
-      res.releaseDate = releasedates.diffs(albums.fromSongs(songs), songs,
-        function(d){ var r = releaseDates.by[d]; return (r && r.d) || ''; }, albums.albumDir);   /* Date tag vs. MusicBrainz */
-      res.at = Date.now();
-      res.seconds = Math.round((res.at - checkRun.started) / 1000);
-      try { writeCheck(res); } catch (e) { checkError = 'cannot save result: ' + e.message; }
-      checkRun = null;
-      return;
+      /* m4a in duplicate albums: codec and resolution from the file, MPD's format is not reliable there */
+      var m4aDirs = {};
+      duplicates.find(songs, libcheck.artistKey).forEach(function(g){
+        g.versions.forEach(function(v){ if (v.ext === 'm4a' || v.ext === 'mp4') v.dirs.forEach(function(d){ m4aDirs[d] = 1; }); });
+      });
+      return m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){ finish(); });
     }
     var part = jobs.slice(i, i + PY_BATCH);
     i += part.length;
     runPyMany(part, function(r){ results = results.concat(r); checkRun.done = i; step(); });
   })();
+  function finish() {
+    var res = libcheck.analyze(songs, function(d){ return !noCover[d]; },
+      function(s){ return audioStore.get(s.artist, s.title, s.album); });
+    res.releaseDate = releasedates.diffs(albums.fromSongs(songs), songs,
+      function(d){ var r = releaseDates.by[d]; return (r && r.d) || ''; }, albums.albumDir);   /* Date tag vs. MusicBrainz */
+    res.at = Date.now();
+    res.seconds = Math.round((res.at - checkRun.started) / 1000);
+    try { writeCheck(res); } catch (e) { checkError = 'cannot save result: ' + e.message; }
+    checkRun = null;
+  }
 }
 
 /* GET /genres?dir=… -> main category and substyles of an album from the audio analysis (as of the last check);
@@ -483,6 +490,7 @@ function doCheckDone(body, cb) {
    album folder of the library, from the album editor) into the folder "Xplorio Trash" on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
    moving it back restores it. Password only if one is set (adminpass.js), like restarting the player. */
 var duplicates = require('./duplicates.js');
+var m4aprobe = require('./m4aprobe.js');
 function dupFolder(rel) {
   var parts = rel.split('/');
   if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (parts[0] === 'INTERNAL' ? 2 : 3) || rel.indexOf('\0') >= 0) return null;
