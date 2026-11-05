@@ -192,14 +192,16 @@ sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 ```
 The Tag Service needs write access to the music folders for this, as for the Tag Editor.
 
-**Add missing tracks:** if another version has tracks the best one lacks (same artist and title, compared as for duplicate
-tracks; a title cut short counts as the same, and the best version must lack the track and disc number), “n tracks missing in the best version” appears below the best version, folding out with title, format and
-origin; tracks in lower quality (e.g. MP3 for a FLAC album) are marked. “Add missing” copies them into the folder of the
-best version, with disc folders into the one with the same disc number (for a whole missing disc into a new folder such
-as `CD3`). Album, album artist, year and genre of the copies come from the best version; title, artist, track and disc
-number stay. The originals stay where they are, and existing files are never overwritten. “Undo” deletes the copies
-again as long as they have not been changed since. Afterwards the other version can be moved into `Xplorio Trash` as
-above.
+**Add missing tracks:** if another version has tracks that do not occur in the best one (same artist and title, compared
+as for duplicate tracks; a title cut short such as “The More You Live, The More Yo” counts as the same, an addition such
+as “(Remix)” does not), “n tracks missing” appears below the best version with a list to tick: title, format and origin,
+lower quality (e.g. MP3 for a FLAC album) is marked. Ticked in advance are only tracks whose track and disc number is free
+in the best version; if it is taken, the title there is shown (“No. 3 there: …”), as it is often the same track spelled
+otherwise. “Add selected” copies the ticked ones into the folder of the best version, with disc folders into the one with
+the same disc number (for a whole missing disc into a new folder such as `CD3`). Album, album artist, year and genre of
+the copies come from the best version; title, artist, track and disc number stay. The originals stay where they are, and
+existing files are never overwritten. “Undo” deletes the copies again as long as they have not been changed since.
+Afterwards the other version can be moved into `Xplorio Trash` as above.
 
 **Move album in the album editor:** when the album editor shows a whole album (pen on the album page, in album lists, in
 search or in the library check), “Move album” sits below the tracks. It puts the whole album folder (with disc

@@ -625,8 +625,8 @@ function doFileMove(body, cb) {
   cb(200, {ok: true, moved: moved});
 }
 
-/* POST /dupfill {dir, token}: duplicate albums: copy the tracks the best version lacks (missing in the last check, the
-   group whose best version starts with dir) from the other versions into its folders; album, album artist, date and
+/* POST /dupfill {dir, files, token}: duplicate albums: copy the tracks the best version lacks (files: the ones ticked of
+   missing in the last check, the group whose best version starts with dir; without files the sure ones) from the other versions into its folders; album, album artist, date and
    genre then come from the best version (written with an undo ID). Never overwrites a file.
    POST /dupfill {undo: batch, token}: delete these copies again, as long as they are unchanged since */
 var DUPFILL_FILE = path.join(DATA_DIR, 'dupfill.json');
@@ -655,10 +655,13 @@ function doDupFill(body, cb) {
   var dir = String(body.dir || ''), last = readCheck();
   var g = last && (last.duplicates || []).filter(function(x){ return x.versions[0].dirs[0] === dir && x.missing; })[0];
   if (!g) return cb(200, {ok: false, error: 'nothing to add for ' + dir});
+  var pick = Array.isArray(body.files) ? body.files.map(String) : null;      /* the tracks ticked in the list */
+  var todo = pick ? g.missing.filter(function(m){ return pick.indexOf(m.uri) >= 0; }) : g.missing.filter(function(m){ return m.sure !== false; });
+  if (!todo.length || (pick && todo.length !== pick.length)) return cb(200, {ok: false, error: 'nothing to add for ' + dir});
   var best = g.versions[0], bestDirs = {};
   best.dirs.forEach(function(d){ bestDirs[d] = 1; });
   /* only into a folder of the best version, or a new disc folder next to them */
-  var bad = g.missing.filter(function(m){
+  var bad = todo.filter(function(m){
     if (!dupFile(m.uri)) return true;
     if (bestDirs[m.to]) return !dupFolder(m.to);
     var nb = path.basename(m.to);
@@ -673,8 +676,8 @@ function doDupFill(body, cb) {
     ['album', 'albumartist', 'date', 'genre'].forEach(function(k){ if (t[k]) tags[k] = t[k]; });
     var copied = [], skipped = [], made = [], i = 0;
     (function next() {
-      if (i >= g.missing.length) return written();
-      var m = g.missing[i++], toDir = path.join(MUSIC_ROOT, m.to), to = path.join(toDir, path.basename(m.uri));
+      if (i >= todo.length) return written();
+      var m = todo[i++], toDir = path.join(MUSIC_ROOT, m.to), to = path.join(toDir, path.basename(m.uri));
       if (fs.existsSync(to)) { skipped.push({uri: m.uri, error: 'exists'}); return next(); }
       if (!fs.existsSync(toDir)) { try { mkdirs(toDir); made.push(m.to); } catch (e) { skipped.push({uri: m.uri, error: e.message}); return next(); } }
       copyFile(path.join(MUSIC_ROOT, m.uri), to, function(e){

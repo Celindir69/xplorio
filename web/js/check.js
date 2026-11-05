@@ -745,14 +745,30 @@ function checkDupFillRow(g) {
   var list = document.createElement('div'); list.className = 'ckAlbFold'; list.style.display = 'none';
   var tog = document.createElement('div'); tog.className = 'ckAlbToggle';
   function label() { tog.textContent = (list.style.display === 'none' ? '\u25b8 ' : '\u25be ') + T('check.dupfill.which'); }
+  /* one line per track with a tick: ticked are those whose number is free in the best version; a taken number is named */
+  var picked = {};
+  g.missing.forEach(function(m){ if (m.sure !== false) picked[m.uri] = 1; });
+  function count() { return Object.keys(picked).length; }
+  g.missing.forEach(function(m){
+    var num = (m.disc ? parseInt(m.disc, 10) + '-' : '') + (parseInt(m.track, 10) || '');
+    var line = document.createElement('label'); line.className = 'ckDupFillLine';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!picked[m.uri];
+    cb.disabled = !!checkDone[key];
+    cb.addEventListener('change', function(){
+      if (cb.checked) picked[m.uri] = 1; else delete picked[m.uri];
+      btn.textContent = T('check.dupfill.add', {n: checkNum(count())});
+      btn.disabled = !count();
+    });
+    var txt = document.createElement('span');
+    txt.textContent = (num ? num + ' ' : '') + m.title + (m.artist && m.artist !== g.artist ? ' · ' + m.artist : '') + ' · ' +
+      m.format + (m.worse ? ' (' + T('check.dupfill.worseOne') + ')' : '') + ' · ' + T('check.dupfill.from', {dir: '/mnt/' + m.uri.replace(/\/[^\/]*$/, '')}) +
+      (m.to !== dir ? ' → /mnt/' + m.to : '') + (m.taken ? ' · ' + T('check.dupfill.taken', {num: num, title: m.taken}) : '');
+    line.appendChild(cb); line.appendChild(txt);
+    line.addEventListener('click', function(ev){ ev.stopPropagation(); });
+    list.appendChild(line);
+  });
   tog.addEventListener('click', function(ev){
     ev.stopPropagation();
-    if (!list.firstChild) g.missing.forEach(function(m){
-      var num = (m.disc ? parseInt(m.disc, 10) + '-' : '') + (parseInt(m.track, 10) || '');
-      list.appendChild(histEl('div', '', (num ? num + ' ' : '') + m.title + (m.artist && m.artist !== g.artist ? ' · ' + m.artist : '') + ' · ' +
-        m.format + (m.worse ? ' (' + T('check.dupfill.worseOne') + ')' : '') + ' · ' + T('check.dupfill.from', {dir: '/mnt/' + m.uri.replace(/\/[^\/]*$/, '')}) +
-        (m.to !== dir ? ' → /mnt/' + m.to : '')));
-    });
     list.style.display = list.style.display === 'none' ? '' : 'none';
     label();
   });
@@ -764,13 +780,16 @@ function checkDupFillRow(g) {
     b.disabled = false; msg.style.display = '';
     msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
   }
-  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dupfill.add');
-  btn.disabled = !!checkDone[key];
+  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dupfill.add', {n: checkNum(count())});
+  btn.disabled = !!checkDone[key] || !count();
+  if (g.missing.some(function(m){ return m.sure === false; })) { list.style.display = ''; label(); }   /* something to decide: open */
   btn.addEventListener('click', function(){
-    if (!confirm(T('check.dupfill.confirm', {n: g.missing.length, dir: '/mnt/' + dir}))) return;
+    var files = Object.keys(picked);
+    if (!files.length || !confirm(T('check.dupfill.confirm', {n: files.length, dir: '/mnt/' + dir}))) return;
     btn.disabled = true; btn.textContent = T('check.dupfill.copying');
-    tagPostJson('/dupfill', {dir: dir, token: token()}).then(function(r){
-      btn.textContent = T('check.dupfill.add');
+    tagPostJson('/dupfill', {dir: dir, files: files, token: token()}).then(function(r){
+      btn.textContent = T('check.dupfill.add', {n: checkNum(files.length)});
+      list.querySelectorAll('input').forEach(function(c){ c.disabled = !!(r && r.ok && r.batch); });
       if (!r || !r.ok) return fail(r, btn);
       msg.style.display = '';
       msg.textContent = T('check.dupfill.done', {n: checkNum(r.copied.length)}) +
@@ -785,11 +804,12 @@ function checkDupFillRow(g) {
         tagPostJson('/dupfill', {undo: r.batch, token: token()}).then(function(u){
           if (!u || !u.ok) return fail(u, undo);
           row.classList.remove('done'); delete checkDone[key];
+          list.querySelectorAll('input').forEach(function(c){ c.disabled = false; });
           msg.textContent = T('check.dupfill.undone', {n: checkNum(u.removed.length)}) +
             (u.kept.length ? ' ' + T('check.dupfill.kept', {n: checkNum(u.kept.length)}) : '');
         }).catch(function(){ fail(null, undo); });
       });
-    }).catch(function(){ btn.textContent = T('check.dupfill.add'); fail(null, btn); });
+    }).catch(function(){ btn.textContent = T('check.dupfill.add', {n: checkNum(files.length)}); fail(null, btn); });
   });
   row.appendChild(btn);
   return row;

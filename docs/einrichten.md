@@ -208,15 +208,17 @@ sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 ```
 Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
 
-**Fehlende Titel ergänzen:** Hat eine andere Fassung Titel, die der besten fehlen (gleicher Künstler und Titel, verglichen
-wie bei den doppelten Titeln; ein abgeschnittener Titel zählt als derselbe, und die Track- und CD-Nummer muss in der
-besten Fassung fehlen), steht unter der besten Fassung „In der besten Fassung fehlen n Titel“, aufklappbar mit
-Titel, Format und Herkunft; Titel in schlechterer Qualität (z. B. MP3 für ein FLAC-Album) sind markiert. „Fehlende
-ergänzen“ kopiert sie in den Ordner der besten Fassung, bei CD-Ordnern in den mit derselben CD-Nummer (fehlt eine ganze
-CD, in einen neuen Ordner wie `CD3`). Album, Albumkünstler, Jahr und Genre der Kopien kommen von der besten Fassung,
-Titel, Künstler, Track- und CD-Nummer bleiben. Die Originale bleiben, wo sie sind, und vorhandene Dateien werden nie
-überschrieben. „Rückgängig“ löscht die Kopien wieder, solange sie seitdem nicht geändert wurden. Danach lässt sich die
-andere Fassung wie oben in `Xplorio Trash` verschieben.
+**Fehlende Titel ergänzen:** Hat eine andere Fassung Titel, die in der besten nicht vorkommen (gleicher Künstler und
+Titel, verglichen wie bei den doppelten Titeln; ein abgeschnittener Titel wie „The More You Live, The More Yo“ zählt als
+derselbe, ein Zusatz wie „(Remix)“ nicht), steht unter der besten Fassung „n Titel fehlen“ mit einer Liste zum Anhaken:
+Titel, Format und Herkunft, schlechtere Qualität (z. B. MP3 für ein FLAC-Album) ist markiert. Vorab angehakt sind nur
+Titel, deren Track- und CD-Nummer in der besten Fassung frei ist; ist sie belegt, steht der dortige Titel dabei
+(„Nr. 3 vorhanden: …“), denn oft ist es derselbe Titel in anderer Schreibweise. „Ausgewählte ergänzen“ kopiert die
+angehakten in den Ordner der besten Fassung, bei CD-Ordnern in den mit derselben CD-Nummer (fehlt eine ganze CD, in einen
+neuen Ordner wie `CD3`). Album, Albumkünstler, Jahr und Genre der Kopien kommen von der besten Fassung, Titel, Künstler,
+Track- und CD-Nummer bleiben. Die Originale bleiben, wo sie sind, und vorhandene Dateien werden nie überschrieben.
+„Rückgängig“ löscht die Kopien wieder, solange sie seitdem nicht geändert wurden. Danach lässt sich die andere Fassung wie
+oben in `Xplorio Trash` verschieben.
 
 **Album verschieben im Album-Editor:** Zeigt der Album-Editor ein ganzes Album (Stift auf der Albumseite, in Albumlisten,
 in der Suche oder in der Bibliotheksprüfung), steht unter den Titeln „Album verschieben“. Das legt den ganzen Albumordner

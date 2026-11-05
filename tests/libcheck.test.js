@@ -126,7 +126,11 @@ t('duplicate albums: tracks the best version lacks, with the folder to copy them
                        V('USB/M/Hits/03.mp3', {title: 'The More You Live, The More Yo', track: '3'}),     /* cut short */
                        V('USB/M/Hits/04.mp3', {title: 'Vier', track: '4'}),                             /* number there */
                        V('USB/M/Hits/09.mp3', {title: 'Bonus', track: '9'})], function(){ return true; });
-  assert.deepStrictEqual(r4.duplicates[0].missing.map(function(m){ return m.title; }), ['Bonus']);
+  assert.deepStrictEqual(r4.duplicates[0].missing.map(function(m){ return [m.title, m.sure, m.taken]; }),
+    [['Vier', false, 'Four'], ['Bonus', true, undefined]]);                /* number taken: listed, but not checked */
+  var r5 = lc.analyze([V('USB/B/Hits/11.flac', {title: 'Northern Skies', track: '11'}),
+                       V('USB/M/Hits/2-3.mp3', {title: 'Northern Skies (Remix)', track: '3', disc: '2'})], function(){ return true; });
+  assert.deepStrictEqual(r5.duplicates[0].missing.map(function(m){ return m.title; }), ['Northern Skies (Remix)']);   /* addition: another track */
 });
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
