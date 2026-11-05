@@ -399,6 +399,15 @@ function doCheckStart(body, cb) {
     libcheck.dirsWithoutImage(songs, MUSIC_ROOT, function(cand){ checkCovers(songs, cand); });
   }, function(done, total){ checkRun.done = done; checkRun.total = total; });
 }
+/* lossy files of duplicate albums: their size (s.size) for the data rate (duplicates.quality), one stat after another */
+function fileSizes(list, cb) {
+  var i = 0;
+  (function next() {
+    if (i >= list.length) return cb();
+    var s = list[i++];
+    fs.stat(path.join(MUSIC_ROOT, s.file), function(e, st){ if (!e) s.size = st.size; if (i % 200) next(); else setImmediate(next); });
+  })();
+}
 function checkCovers(songs, cand) {
   var noCover = {};
   checkRun.done = 0; checkRun.total = cand.length;
@@ -409,10 +418,15 @@ function checkCovers(songs, cand) {
       cand.forEach(function(c, k){ if (!(results[k] && results[k].ok && results[k].has)) noCover[c.dir] = true; });
       /* m4a in duplicate albums: codec and resolution from the file, MPD's format is not reliable there */
       var m4aDirs = {};
-      duplicates.find(songs, libcheck.artistKey).forEach(function(g){
+      var dups = duplicates.find(songs, libcheck.artistKey);
+      dups.forEach(function(g){
         g.versions.forEach(function(v){ if (v.ext === 'm4a' || v.ext === 'mp4') v.dirs.forEach(function(d){ m4aDirs[d] = 1; }); });
       });
-      return m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){ finish(); });
+      var dupDirs = {};
+      dups.forEach(function(g){ g.versions.forEach(function(v){ v.dirs.forEach(function(d){ dupDirs[d] = 1; }); }); });
+      return m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){
+        fileSizes(songs.filter(function(s){ return dupDirs[path.dirname(s.file)] && !/\.(flac|wav|aiff?|ape|wv|dsf|dff)$/i.test(s.file); }), finish);
+      });
     }
     var part = jobs.slice(i, i + PY_BATCH);
     i += part.length;

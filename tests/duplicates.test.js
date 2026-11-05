@@ -5,6 +5,13 @@ function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function S(file, o) { var s = {file: file, artist: '', albumartist: '', album: '', disc: '', format: '', time: '200'}; for (var k in o) s[k] = o[k]; return s; }
 function find(songs) { return dup.find(songs, lc.artistKey); }
 
+t('lossy versions: higher data rate first (from file size and time), AAC counts a little more, shown in kbps', function(){
+  function L(dir, ext, kbps, o) { var x = S(dir + '/01.' + ext, {artist: 'Dido', album: 'Life for Rent', size: kbps * 1000 / 8 * 200}); for (var k in o) x[k] = o[k]; return x; }
+  var v = find([L('A/mp3-128', 'mp3', 128), L('A/mp3-320', 'mp3', 320), L('A/aac-256', 'm4a', 256, {format: '44100:f:2'}),
+                L('A/aac-300', 'm4a', 300, {format: '44100:f:2'}), L('A/flac', 'flac', 900, {format: '44100:16:2'})])[0].versions;
+  assert.deepStrictEqual(v.map(function(x){ return [x.dirs[0], x.format]; }), [
+    ['A/flac', 'FLAC 16/44.1'], ['A/aac-300', 'AAC 300 kbps'], ['A/mp3-320', 'MP3 320 kbps'], ['A/aac-256', 'AAC 256 kbps'], ['A/mp3-128', 'MP3 128 kbps']]);
+});
 t('same album: "The", case, remaster additions do not count; best quality first', function(){
   var r = find([
     S('INTERNAL/mp3/Beatles/Abbey Road/01.mp3', {artist: 'The Beatles', album: 'Abbey Road', format: '44100:24:2'}),
