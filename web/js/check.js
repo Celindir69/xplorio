@@ -123,7 +123,7 @@ function checkRender(res) {
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
-    if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
+    if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing' || cat.key === 'duplicates') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
     if (cat.key === 'dupTracks') list = checkDupTracksOpen(list);
     if (cat.key === 'spelling') list = list.filter(function(g){ return !g.variants.some(function(v){ return fixed[v.name]; }); });
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
@@ -301,7 +301,7 @@ function checkFill(box, cat, list) {
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
   more();
-  if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') checkKeptSection(box, cat.key);
+  if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing' || cat.key === 'duplicates') checkKeptSection(box, cat.key);
 }
 
 /* ---------- Genre suggestions with buttons: "Apply" writes the suggestion, "Keep" leaves the tag for good ---------- */
@@ -310,6 +310,7 @@ function checkFill(box, cat, list) {
 function checkKeepOf(cat, it) {
   if (cat === 'genreMerge') return {k: 'merge|' + it.from + '|' + it.genre, v: it.genre};
   if (cat === 'genreMissing') return {k: 'missing|' + it.dir, v: ''};            /* stays without a genre */
+  if (cat === 'duplicates') return {k: 'dupk|' + checkDupDirs(it), v: ''};      /* all versions stay; a new version shows it again */
   return {k: it.dir, v: it.tag};
 }
 function checkIsKept(cat, it) {
@@ -406,6 +407,7 @@ function checkKeptSection(box, cat) {
   list.className = 'ckOkList';
   list.style.display = checkOkOpen[cat] ? '' : 'none';
   kept.forEach(function(it){
+    if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -665,9 +667,25 @@ function checkMovedElsewhere(dirs) {
   dirs.forEach(function(d){ checkDone['duplicates|' + d] = 1; });
   if (overlayCheck.classList.contains('on') && checkShown && checkShown.res) checkRender(checkShown.res);
 }
-function checkDupRows(g) {
-  var head = document.createElement('div'); head.className = 'ckDupHead';
-  head.textContent = g.name + (g.artist ? ' · ' + g.artist : '');
+function checkDupDirs(g) { return g.versions.map(function(v){ return v.dirs.join('+'); }).sort().join('|'); }
+/* kept: the group listed folded at the end, with "Check again" instead of "Keep" */
+function checkDupRows(g, kept) {
+  var head = document.createElement('div'); head.className = 'ckDupHead ckDupTrHead';
+  head.appendChild(document.createTextNode(g.name + (g.artist ? ' · ' + g.artist : '')));
+  var keep = document.createElement('button'); keep.className = 'ckBtn ckOkBtn';
+  keep.textContent = T(kept ? 'check.conflict.undoKeep' : 'check.conflict.keep');
+  keep.title = T(kept ? 'check.conflict.undoKeepHint' : 'check.dup.keepAllHint');
+  keep.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    keep.disabled = true;
+    var o = checkKeepOf('duplicates', g);
+    tagPost('/genreok', {dir: o.k, tag: o.v, ok: !kept}).then(function(r){
+      if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
+      if (kept) delete checkGenreOk[o.k]; else checkGenreOk[o.k] = o.v;
+      if (checkShown && checkShown.res) checkRender(checkShown.res);
+    }).catch(function(){ keep.disabled = false; showToast(T('check.conflict.failed')); });
+  });
+  head.appendChild(keep);
   var rows = [head];
   g.versions.forEach(function(v){
     var key = 'duplicates|' + v.dirs[0];

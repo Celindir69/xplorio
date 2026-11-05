@@ -102,6 +102,7 @@ langRegister('de', 'Deutsch', {
   'check.dup.copyFailed': 'Bitte markieren',
   'check.dup.error': 'Verschieben ging nicht: {error}',
   'check.dup.keep': 'beste Fassung',
+  'check.dup.keepAllHint': 'Alle Fassungen behalten: nicht mehr als doppelt melden (eingeklappt am Ende)',
   'check.dup.move': 'Verschieben',
   'check.dup.moved': 'Verschoben nach {to}',
   'check.dupfill.title': 'In der besten Fassung fehlen {n} Titel',

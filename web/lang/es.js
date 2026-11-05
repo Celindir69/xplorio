@@ -102,6 +102,7 @@ langRegister('es', 'Español', {
   'check.dup.copyFailed': 'Selecciónalo',
   'check.dup.error': 'No se pudo mover: {error}',
   'check.dup.keep': 'mejor versión',
+  'check.dup.keepAllHint': 'Mantener todas las versiones: no volver a marcar como duplicado (plegado al final)',
   'check.dup.move': 'Mover',
   'check.dup.moved': 'Movido a {to}',
   'check.dupfill.title': 'Faltan {n} pistas en la mejor versión',
