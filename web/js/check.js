@@ -170,7 +170,8 @@ function libUpdPoll() {
   libUpd.timer = setTimeout(function(){
     tagGetJson('/scan').then(function(r){
       if (r && r.ok && r.updating) return libUpdPoll();
-      libUpdSet(r && r.ok ? 'done' : 'failed');
+      if (r && r.ok && r.building) { libUpdSet('done'); return libUpdPoll(); }   /* read in, album list still being built */
+      libUpdSet(r && r.ok ? '' : 'failed');                                     /* all done: back to the normal hint */
     }).catch(libUpdPoll);
   }, 3000);
 }
