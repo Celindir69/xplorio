@@ -103,6 +103,7 @@ langRegister('fr', 'Français', {
   'check.dup.copyFailed': 'Sélectionner',
   'check.dup.error': 'Déplacement impossible : {error}',
   'check.dup.keep': 'meilleure version',
+  'check.dup.keepAllHint': 'Garder toutes les versions : ne plus signaler comme doublon (replié à la fin)',
   'check.dup.move': 'Déplacer',
   'check.dup.moved': 'Déplacé vers {to}',
   'check.dupfill.title': '{n} titres manquent dans la meilleure version',

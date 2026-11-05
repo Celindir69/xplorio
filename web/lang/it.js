@@ -102,6 +102,7 @@ langRegister('it', 'Italiano', {
   'check.dup.copyFailed': 'Selezionalo',
   'check.dup.error': 'Spostamento non riuscito: {error}',
   'check.dup.keep': 'versione migliore',
+  'check.dup.keepAllHint': 'Mantenere tutte le versioni: non segnalarle più come doppie (chiuse in fondo)',
   'check.dup.move': 'Sposta',
   'check.dup.moved': 'Spostato in {to}',
   'check.dupfill.title': 'Nella versione migliore mancano {n} brani',

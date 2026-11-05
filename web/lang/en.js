@@ -104,6 +104,7 @@ langRegister('en', 'English', {
   'check.dup.copyFailed': 'Please select',
   'check.dup.error': 'Could not move: {error}',
   'check.dup.keep': 'best version',
+  'check.dup.keepAllHint': 'Keep all versions: no longer report as duplicate (folded at the end)',
   'check.dup.move': 'Move',
   'check.dup.moved': 'Moved to {to}',
   'check.dupfill.title': '{n} tracks missing in the best version',

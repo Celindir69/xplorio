@@ -175,6 +175,8 @@ album name only. Folders of one album split by disc next to each other (CD1, CD2
 version. Each version shows format, resolution, number of tracks, playing time and path; the best one is marked
 (lossless before lossy, then more bits, higher sample rate, more tracks). ▶ plays a version (replacing the queue) while the list stays open.
 Tapping a version opens it in the album editor to look inside first; it can be moved from there too.
+“Keep” next to the album name leaves all versions as they are: the group is then listed folded at the end of the
+category (“Suggest again” brings it back); if another version is added, it shows up again.
 
 “Move” puts the folders of a version into the folder `Xplorio Trash` on the same drive, keeping the rest of the
 path (`/mnt/INTERNAL/mp3/Nena/Nena` becomes `/mnt/INTERNAL/Xplorio Trash/mp3/Nena/Nena`). This is instant even for

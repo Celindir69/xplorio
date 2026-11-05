@@ -190,6 +190,8 @@ liegen (CD1, CD2 oder verschiedene Disc-Nummern), zählen als eine Fassung. Je F
 Titel, Spielzeit und Pfad da; die beste ist markiert (verlustfrei vor verlustbehaftet, dann mehr Bit, höhere
 Abtastrate, mehr Titel). ▶ spielt eine Fassung ab (ersetzt die Warteschlange), die Liste bleibt dabei offen. Tippen
 auf eine Fassung öffnet sie im Album-Editor, um vorher hineinzuschauen; dort lässt sie sich ebenfalls verschieben.
+„Behalten“ neben dem Albumnamen lässt alle Fassungen, wie sie sind: Die Gruppe steht dann eingeklappt am Ende der
+Kategorie („Wieder vorschlagen“ holt sie zurück); kommt eine weitere Fassung dazu, erscheint sie wieder.
 
 „Verschieben“ legt die Ordner einer Fassung in den Ordner `Xplorio Trash` auf demselben Laufwerk, mit dem
 übrigen Pfad (aus `/mnt/INTERNAL/mp3/Nena/Nena` wird `/mnt/INTERNAL/Xplorio Trash/mp3/Nena/Nena`). Das geht auch bei
