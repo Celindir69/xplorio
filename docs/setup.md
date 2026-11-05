@@ -191,7 +191,7 @@ sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 The Tag Service needs write access to the music folders for this, as for the Tag Editor.
 
 **Add missing tracks:** if another version has tracks the best one lacks (same artist and title, compared as for duplicate
-tracks), “n tracks missing in the best version” appears below the best version, folding out with title, format and
+tracks; a title cut short counts as the same, and the best version must lack the track and disc number), “n tracks missing in the best version” appears below the best version, folding out with title, format and
 origin; tracks in lower quality (e.g. MP3 for a FLAC album) are marked. “Add missing” copies them into the folder of the
 best version, with disc folders into the one with the same disc number (for a whole missing disc into a new folder such
 as `CD3`). Album, album artist, year and genre of the copies come from the best version; title, artist, track and disc

@@ -207,7 +207,8 @@ sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
 Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
 
 **Fehlende Titel ergänzen:** Hat eine andere Fassung Titel, die der besten fehlen (gleicher Künstler und Titel, verglichen
-wie bei den doppelten Titeln), steht unter der besten Fassung „In der besten Fassung fehlen n Titel“, aufklappbar mit
+wie bei den doppelten Titeln; ein abgeschnittener Titel zählt als derselbe, und die Track- und CD-Nummer muss in der
+besten Fassung fehlen), steht unter der besten Fassung „In der besten Fassung fehlen n Titel“, aufklappbar mit
 Titel, Format und Herkunft; Titel in schlechterer Qualität (z. B. MP3 für ein FLAC-Album) sind markiert. „Fehlende
 ergänzen“ kopiert sie in den Ordner der besten Fassung, bei CD-Ordnern in den mit derselben CD-Nummer (fehlt eine ganze
 CD, in einen neuen Ordner wie `CD3`). Album, Albumkünstler, Jahr und Genre der Kopien kommen von der besten Fassung,

@@ -240,14 +240,28 @@ function trackDups(list) {
   return out;
 }
 /* duplicate albums: tracks of the other versions that the best one lacks (same artist and title as for duplicate
-   tracks), each with the folder of the best version to copy it into: the disc folder with the same disc number, a new
-   disc folder next to them for a disc the best version lacks ("CD3" like "CD1"), otherwise its (first) folder.
+   tracks, a title cut short counts as the same) and whose disc and track number it lacks too, each with the folder of
+   the best version to copy it into: the disc folder with the same disc number, a new disc folder next to them for a disc the best version lacks ("CD3" like "CD1"), otherwise its (first) folder.
    g: entry of duplicates.find; songsOf(dir) -> songs. -> [{uri, title, artist, format, worse, disc, track, to}] */
 function missingTracks(g, songsOf) {
   var best = g.versions[0], have = {}, bestSongs = [];
   best.dirs.forEach(function(d){ bestSongs = bestSongs.concat(songsOf(d)); });
   function key(s) { var t = titleKey(s.title); return t ? artistKey(s.artist || s.albumartist) + '|' + t : ''; }
-  bestSongs.forEach(function(s){ have[key(s)] = 1; });
+  function num(s, d) {                                   /* "disc|track"; no disc counts as disc 1 */
+    var tm = /^\s*(\d+)/.exec(s.track || ''), dm = /^\s*(\d+)/.exec(s.disc || ''), fm = DISC_DIR_RE.exec(path.basename(d || path.dirname(s.file)));
+    return tm && +tm[1] ? ((dm ? +dm[1] : fm ? +fm[3] : 0) || 1) + '|' + (+tm[1]) : '';
+  }
+  var keys = [], nums = {};
+  bestSongs.forEach(function(s){ var k = key(s); have[k] = 1; keys.push(k); var n = num(s); if (n) nums[n] = 1; });
+  /* the same title, also cut short in one of them ("The More You Live, The More Yo", e.g. ID3v1 with 30 characters) */
+  function known(k) {
+    if (have[k]) return true;
+    return keys.some(function(h){
+      if (!h) return false;
+      var a = h.length < k.length ? h : k, b = a === h ? k : h;
+      return a.split('|')[1].length >= 12 && b.indexOf(a) === 0;
+    });
+  }
   var bestRank = duplicates.quality(bestSongs).rank, discDirs = {};
   best.dirs.forEach(function(d){
     var m = DISC_DIR_RE.exec(path.basename(d));
@@ -259,9 +273,9 @@ function missingTracks(g, songsOf) {
   g.versions.slice(1).forEach(function(v){
     v.dirs.forEach(function(d){
       songsOf(d).forEach(function(s){
-        var k = key(s);
-        if (!k || have[k]) return;
-        have[k] = 1;
+        var k = key(s), n = num(s, d);
+        if (!k || known(k) || (n && nums[n])) return;      /* only a track whose number the best version lacks */
+        have[k] = 1; keys.push(k); if (n) nums[n] = 1;
         var dm = /^\s*(\d+)/.exec(s.disc || ''), fm = DISC_DIR_RE.exec(path.basename(d));
         var disc = dm ? +dm[1] : fm ? +fm[3] : 0, to = best.dirs[0];
         if (disc && discDirs[disc]) to = discDirs[disc];

@@ -121,6 +121,12 @@ t('duplicate albums: tracks the best version lacks, with the folder to copy them
     [['Bonus', 'USB/B/Hits/CD1', true], ['Extra', 'USB/B/Hits/CD2', true], ['Third', 'USB/B/Hits/CD3', true]]);
   var r3 = lc.analyze([V('USB/B/Hits/01.flac', {title: 'Intro', track: '1'}), V('USB/M/Hits/01.mp3', {title: 'Intro', track: '1'})], function(){ return true; });
   assert.strictEqual(r3.duplicates[0].missing, undefined);           /* nothing missing */
+  var r4 = lc.analyze([V('USB/B/Hits/03.flac', {title: 'The More You Live, The More You Love', track: '3'}),
+                       V('USB/B/Hits/04.flac', {title: 'Four', track: '4'}),
+                       V('USB/M/Hits/03.mp3', {title: 'The More You Live, The More Yo', track: '3'}),     /* cut short */
+                       V('USB/M/Hits/04.mp3', {title: 'Vier', track: '4'}),                             /* number there */
+                       V('USB/M/Hits/09.mp3', {title: 'Bonus', track: '9'})], function(){ return true; });
+  assert.deepStrictEqual(r4.duplicates[0].missing.map(function(m){ return m.title; }), ['Bonus']);
 });
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
