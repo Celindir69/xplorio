@@ -63,7 +63,8 @@ function quality(songs) {
   }
   if (ext === 'm4a' || ext === 'mp4') {                                     /* ALAC or AAC */
     var codec = fmt[1] === 'f' ? 'aac' : bits ? 'alac' : '';
-    return {format: ext.toUpperCase(), rank: codec === 'alac' ? 2 : codec === 'aac' ? 1 : 1.5, bits: codec === 'alac' ? bits : 0, rate: rate, ext: ext, codec: codec};
+    var shown = codec === 'alac' ? 'ALAC' + (rate ? ' ' + bits + '/' + kHz(rate) : '') : codec === 'aac' ? 'AAC' : ext.toUpperCase();
+    return {format: shown, rank: codec === 'alac' ? 2 : codec === 'aac' ? 1 : 1.5, bits: codec === 'alac' ? bits : 0, rate: rate, ext: ext, codec: codec};
   }
   return {format: (ext || '?').toUpperCase(), rank: LOSSY.indexOf(ext) >= 0 ? 1 : 0, bits: 0, rate: rate, ext: ext};
 }
