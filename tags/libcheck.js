@@ -240,9 +240,11 @@ function trackDups(list) {
   return out;
 }
 /* duplicate albums: tracks of the other versions that the best one lacks (same artist and title as for duplicate
-   tracks, a title cut short counts as the same) and whose disc and track number it lacks too, each with the folder of
-   the best version to copy it into: the disc folder with the same disc number, a new disc folder next to them for a disc the best version lacks ("CD3" like "CD1"), otherwise its (first) folder.
-   g: entry of duplicates.find; songsOf(dir) -> songs. -> [{uri, title, artist, format, worse, disc, track, to}] */
+   tracks, a title cut short counts as the same); sure: its disc and track number is free in the best version (otherwise
+   taken: the title there, perhaps the same track spelled otherwise; offered unchecked). Each with the folder of the
+   best version to copy it into: the disc folder with the same disc number, a new disc folder next to them for a disc
+   the best version lacks ("CD3" like "CD1"), otherwise its (first) folder.
+   g: entry of duplicates.find; songsOf(dir) -> songs. -> [{uri, title, artist, format, worse, disc, track, to, sure, taken}] */
 function missingTracks(g, songsOf) {
   var best = g.versions[0], have = {}, bestSongs = [];
   best.dirs.forEach(function(d){ bestSongs = bestSongs.concat(songsOf(d)); });
@@ -252,7 +254,7 @@ function missingTracks(g, songsOf) {
     return tm && +tm[1] ? ((dm ? +dm[1] : fm ? +fm[3] : 0) || 1) + '|' + (+tm[1]) : '';
   }
   var keys = [], nums = {};
-  bestSongs.forEach(function(s){ var k = key(s); have[k] = 1; keys.push({k: k, t: String(s.title || '')}); var n = num(s); if (n) nums[n] = 1; });
+  bestSongs.forEach(function(s){ var k = key(s); have[k] = 1; keys.push({k: k, t: String(s.title || '')}); var n = num(s); if (n && !nums[n]) nums[n] = s.title || path.basename(s.file); });
   /* the same title, also cut short in one of them ("The More You Live, The More Yo", e.g. ID3v1 with 30 characters);
      but an addition after the shorter one ("Northern Skies (Remix)", "Song - Live") is another track */
   function known(k, title) {
@@ -277,8 +279,9 @@ function missingTracks(g, songsOf) {
     v.dirs.forEach(function(d){
       songsOf(d).forEach(function(s){
         var k = key(s), n = num(s, d);
-        if (!k || known(k, s.title) || (n && nums[n])) return;   /* only a track whose number the best version lacks */
-        have[k] = 1; keys.push({k: k, t: String(s.title || '')}); if (n) nums[n] = 1;
+        if (!k || known(k, s.title)) return;
+        var taken = n && nums[n];                        /* number already there: perhaps the same track spelled otherwise */
+        have[k] = 1; keys.push({k: k, t: String(s.title || '')}); if (n && !taken) nums[n] = s.title || path.basename(s.file);
         var dm = /^\s*(\d+)/.exec(s.disc || ''), fm = DISC_DIR_RE.exec(path.basename(d));
         var disc = dm ? +dm[1] : fm ? +fm[3] : 0, to = best.dirs[0];
         if (disc && discDirs[disc]) to = discDirs[disc];
@@ -286,8 +289,10 @@ function missingTracks(g, songsOf) {
           to = path.dirname(best.dirs[0]) + '/' + (fm ? path.basename(d) : path.basename(best.dirs[0]).replace(/\d+/, String(disc)));
         }
         var q = duplicates.quality([s]);
-        out.push({uri: s.file, title: s.title || path.basename(s.file), artist: s.artist || '', format: q.format, worse: q.rank < bestRank,
-                  disc: s.disc || '', track: s.track || '', to: to});
+        var o = {uri: s.file, title: s.title || path.basename(s.file), artist: s.artist || '', format: q.format, worse: q.rank < bestRank,
+                 disc: s.disc || '', track: s.track || '', to: to, sure: !taken};
+        if (taken) o.taken = taken;
+        out.push(o);
       });
     });
   });
