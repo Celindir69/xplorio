@@ -141,7 +141,7 @@ The Tag Service performs the queries; the player therefore needs internet access
 
 ### Check Library
 
-In the menu (gear at the top right, only available while the Tag Service is running): finds albums without cover art, compilations without a consistent album artist, artists with multiple spellings, inconsistent album names/years, albums whose Date tag differs from the first release according to MusicBrainz (from the birthday lookup; the pencil suggests the MusicBrainz date), tracks without track numbers and incomplete albums (gaps or duplicates in the track numbers, per disc); the pencil icon opens the appropriate editor.
+In the menu (gear at the top right, only available while the Tag Service is running): finds albums without cover art, compilations without a consistent album artist, artists with multiple spellings, inconsistent album names/years, albums whose Date tag differs from the first release according to MusicBrainz (from the birthday lookup; the pencil suggests the MusicBrainz date), tracks without track numbers and incomplete albums (gaps in the track numbers, per disc), duplicate tracks in an album; the pencil icon opens the appropriate editor.
 
 The check reads the MPD database (`MPD_HOST`, `MPD_PORT`, default `localhost:6600`) and the folders, does not modify any files, and only runs when triggered manually (exception: “Move” for duplicate albums, see below). Result: `/data/xplorio/data/check.json`, retained until the next check. Entries whose pencil was used are recorded there and stay greyed out, also after closing, until the next check.
 
@@ -194,6 +194,14 @@ The Tag Service needs write access to the music folders for this, as for the Tag
 search or in the library check), “Move album” sits below the tracks. It puts the whole album folder (with disc
 subfolders) into `Xplorio Trash` the same way, even if it is no duplicate. Only album folders the Tag Service knows from
 the library can be moved.
+
+**Duplicate tracks in an album:** tracks that occur more than once in an album (with disc subfolders). Certain: copy names
+such as `01 Song (1).flac` or `01 Song Kopie.flac` next to `01 Song.flac`, the same track in two formats (`01.flac` and
+`01.mp3`), and the same artist and title with the same length (±2 s). Dimmed as a hint: the same title with another
+length, and the same disc and track number with another title. Case, punctuation, leading numbers and remaster additions
+do not count, other additions such as “(Live)” do; the same title by different artists (compilations) is not reported.
+In each group the best file is on top (lossless before lossy, then without a copy name, then the older one). ▶ plays a
+file, “Move” puts it into `Xplorio Trash` with the rest of its path, “Keep” hides the group for good.
 
 ### Web Radio: Cover Art and Station Logos
 

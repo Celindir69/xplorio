@@ -148,7 +148,7 @@ Die Abfragen macht der Tag-Dienst; der Player braucht dafür Internetzugang.
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren Schreibweisen, uneinheitliche Albumnamen/Jahre, Alben, deren
 Date-Tag vom ersten Erscheinen laut MusicBrainz abweicht (aus dem Nachschlagen für die Geburtstage; der Stift schlägt
-das MusicBrainz-Datum vor), Titel ohne Tracknummer und unvollständige Alben (Lücken oder doppelte Nummern in den Tracknummern, je CD); der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
+das MusicBrainz-Datum vor), Titel ohne Tracknummer und unvollständige Alben (Lücken in den Tracknummern, je CD), doppelte Titel im Album; der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
 `localhost:6600`) und die Ordner, ändert nichts an den Dateien und läuft nur auf Knopfdruck (Ausnahme: „Verschieben“ bei den doppelten Alben, siehe unten). Ergebnis:
 `/data/xplorio/data/check.json`, bis neu geprüft wird. Einträge, deren Stift benutzt wurde, bleiben dort vermerkt und
 ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.
@@ -210,6 +210,15 @@ Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Edi
 in der Suche oder in der Bibliotheksprüfung), steht unter den Titeln „Album verschieben“. Das legt den ganzen Albumordner
 (mit CD-Unterordnern) genauso in `Xplorio Trash`, auch wenn es keine Dublette ist. Verschieben lassen sich nur
 Albumordner, die der Tag-Dienst aus der Bibliothek kennt.
+
+**Doppelte Titel im Album:** Titel, die in einem Album (mit CD-Unterordnern) mehrfach vorkommen. Sicher doppelt: Kopie-Namen
+wie `01 Song (1).flac` oder `01 Song Kopie.flac` neben `01 Song.flac`, derselbe Titel in zwei Formaten (`01.flac` und
+`01.mp3`) und gleicher Künstler und Titel mit gleicher Spielzeit (±2 s). Gedämpft als Hinweis: gleicher Titel mit anderer
+Spielzeit und gleiche CD- und Tracknummer mit anderem Titel. Groß-/Kleinschreibung, Satzzeichen, führende Nummern und
+Remaster-Zusätze zählen nicht, andere Zusätze wie „(Live)“ schon; gleiche Titel verschiedener Künstler (Compilations)
+werden nicht gemeldet. Je Gruppe steht die beste Datei oben (verlustfrei vor verlustbehaftet, dann ohne Kopie-Namen,
+dann die ältere). ▶ spielt eine Datei, „Verschieben“ legt sie mit dem übrigen Pfad in `Xplorio Trash`, „Behalten“ blendet
+die Gruppe dauerhaft aus.
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der
