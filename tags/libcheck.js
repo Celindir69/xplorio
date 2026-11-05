@@ -252,14 +252,17 @@ function missingTracks(g, songsOf) {
     return tm && +tm[1] ? ((dm ? +dm[1] : fm ? +fm[3] : 0) || 1) + '|' + (+tm[1]) : '';
   }
   var keys = [], nums = {};
-  bestSongs.forEach(function(s){ var k = key(s); have[k] = 1; keys.push(k); var n = num(s); if (n) nums[n] = 1; });
-  /* the same title, also cut short in one of them ("The More You Live, The More Yo", e.g. ID3v1 with 30 characters) */
-  function known(k) {
+  bestSongs.forEach(function(s){ var k = key(s); have[k] = 1; keys.push({k: k, t: String(s.title || '')}); var n = num(s); if (n) nums[n] = 1; });
+  /* the same title, also cut short in one of them ("The More You Live, The More Yo", e.g. ID3v1 with 30 characters);
+     but an addition after the shorter one ("Northern Skies (Remix)", "Song - Live") is another track */
+  function known(k, title) {
     if (have[k]) return true;
+    title = String(title || '');
     return keys.some(function(h){
-      if (!h) return false;
-      var a = h.length < k.length ? h : k, b = a === h ? k : h;
-      return a.split('|')[1].length >= 12 && b.indexOf(a) === 0;
+      if (!h.k) return false;
+      var short = h.k.length < k.length ? h : {k: k, t: title}, long = short === h ? {k: k, t: title} : h;
+      if (short.k.split('|')[1].length < 12 || long.k.indexOf(short.k) !== 0) return false;
+      return !/[(\[]|\s[-–]\s/.test(long.t.slice(Math.max(0, short.t.trim().length - 1)));
     });
   }
   var bestRank = duplicates.quality(bestSongs).rank, discDirs = {};
@@ -274,8 +277,8 @@ function missingTracks(g, songsOf) {
     v.dirs.forEach(function(d){
       songsOf(d).forEach(function(s){
         var k = key(s), n = num(s, d);
-        if (!k || known(k) || (n && nums[n])) return;      /* only a track whose number the best version lacks */
-        have[k] = 1; keys.push(k); if (n) nums[n] = 1;
+        if (!k || known(k, s.title) || (n && nums[n])) return;   /* only a track whose number the best version lacks */
+        have[k] = 1; keys.push({k: k, t: String(s.title || '')}); if (n) nums[n] = 1;
         var dm = /^\s*(\d+)/.exec(s.disc || ''), fm = DISC_DIR_RE.exec(path.basename(d));
         var disc = dm ? +dm[1] : fm ? +fm[3] : 0, to = best.dirs[0];
         if (disc && discDirs[disc]) to = discDirs[disc];
