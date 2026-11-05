@@ -141,7 +141,7 @@ The Tag Service performs the queries; the player therefore needs internet access
 
 ### Check Library
 
-In the menu (gear at the top right, only available while the Tag Service is running): finds albums without cover art, compilations without a consistent album artist, artists with multiple spellings, inconsistent album names/years, albums whose Date tag differs from the first release according to MusicBrainz (from the birthday lookup; the pencil suggests the MusicBrainz date), tracks without track numbers and incomplete albums (gaps in the track numbers, per disc), duplicate tracks in an album; the pencil icon opens the appropriate editor.
+In the menu (gear at the top right, only available while the Tag Service is running): finds albums without cover art, compilations without a consistent album artist, artists with multiple or unusual spellings, inconsistent album names/years, albums whose Date tag differs from the first release according to MusicBrainz (from the birthday lookup; the pencil suggests the MusicBrainz date), tracks without track numbers and incomplete albums (gaps in the track numbers, per disc), duplicate tracks in an album; the pencil icon opens the appropriate editor.
 
 The check reads the MPD database (`MPD_HOST`, `MPD_PORT`, default `localhost:6600`) and the folders, does not modify any files, and only runs when triggered manually (exception: “Move” for duplicate albums, see below). Result: `/data/xplorio/data/check.json`, retained until the next check. Entries whose pencil was used are recorded there and stay greyed out, also after closing, until the next check.
 
@@ -202,6 +202,17 @@ length, and the same disc and track number with another title. Case, punctuation
 do not count, other additions such as “(Live)” do; the same title by different artists (compilations) is not reported.
 In each group the best file is on top (lossless before lossy, then without a copy name, then the older one). ▶ plays a
 file, “Move” puts it into `Xplorio Trash` with the rest of its path, “Keep” hides the group for good.
+
+**Artists not in their usual spelling:** in the background the Tag Service looks up each artist and album artist once at
+MusicBrainz (at most one request every 1.5 s, slower while the release dates are fetched); if MusicBrainz has nothing
+fitting, it asks Last.fm (only with a Last.fm key). Only another spelling of the same name is suggested (case, accents,
+umlauts, “The”, punctuation, & / and) or another name of this artist known to MusicBrainz, never a different name.
+Combinations such as “A feat. B” or “A vs. B” are first looked up as a whole, without a hit each name on its own, and the
+suggestion puts them back together. Each suggestion lists the existing spellings with their number of tracks; “Apply”
+writes the usual spelling into artist and album artist of all affected tracks (with undo), “Ignore” keeps the existing
+spelling. Names listed here do not appear again under “Artists with several spellings”. Results are kept in
+`artistnames.jsonl`; names without a hit are looked up again after 90 days. Turn off with `ARTISTNAMES: false` in
+`config.local.js`.
 
 ### Web Radio: Cover Art and Station Logos
 

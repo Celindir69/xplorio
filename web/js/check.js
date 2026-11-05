@@ -11,6 +11,7 @@ var checkDoneAt  = 0;           /* which check run checkDone belongs to */
 var CHECK_CATS = [
   {key: 'noCover', name: T('check.cat.noCover'), hint: T('check.cat.noCoverHint')},
   {key: 'albumArtist', name: T('check.cat.albumArtist'), hint: T('check.cat.albumArtistHint')},
+  {key: 'artistFix', name: T('check.cat.artistFix'), hint: T('check.cat.artistFixHint')},
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
   {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
   {key: 'dupTracks', name: T('check.cat.dupTracks'), hint: T('check.cat.dupTracksHint')},
@@ -116,11 +117,15 @@ function checkRender(res) {
   if (res.genreOk) checkGenreOk = res.genreOk;
   if (checkDoneAt !== r.at) { checkDone = {}; checkDoneAt = r.at; }
   Object.keys(r.done || {}).forEach(function(k){ checkDone[k] = 1; });
+  r.artistFix = res.artistFix || [];
+  var fixed = {};                                        /* names with a usual spelling: not again under "several spellings" */
+  r.artistFix.forEach(function(g){ g.variants.forEach(function(v){ fixed[v.name] = 1; }); });
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
     if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
     if (cat.key === 'dupTracks') list = checkDupTracksOpen(list);
+    if (cat.key === 'spelling') list = list.filter(function(g){ return !g.variants.some(function(v){ return fixed[v.name]; }); });
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
     row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
     row.querySelector('.ckName').textContent = cat.name;
@@ -281,6 +286,7 @@ function checkFill(box, cat, list) {
     for (; shown < end; shown++) {
       if (cat.key === 'genreMerge') box.insertBefore(checkGenreGroupRow(cat.key, list[shown]), moreRow);
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
+      else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
       else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
@@ -290,6 +296,7 @@ function checkFill(box, cat, list) {
     moreRow.textContent = T('check.more', {k: checkNum(Math.min(CHECK_PAGE, list.length - shown)), left: checkNum(list.length - shown)});
   }
   if (cat.key === 'duplicates' && list.length) checkDupTrash(box, list);
+  if (cat.key === 'artistFix') checkArtistStatus(box);
   var moreRow = document.createElement('div'); moreRow.className = 'ckMore';
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
@@ -491,6 +498,103 @@ function checkAlbumFold(row, albums) {
   });
   label();
   meta.appendChild(tog); meta.appendChild(list);
+}
+
+/* ---------- Usual spelling of artist names (MusicBrainz, Last.fm; tags/artistnames.js) ---------- */
+/* progress of the lookup, below the hint: "MusicBrainz: 120 of 800 artists looked up" */
+function checkArtistStatus(box) {
+  var st = checkShown && checkShown.res && checkShown.res.artistStatus;
+  if (!st || !st.names || st.done >= st.names) return;
+  var line = document.createElement('div'); line.className = 'ckCatHint';
+  line.textContent = T('check.artistFix.progress', {done: checkNum(st.done), total: checkNum(st.names)});
+  box.appendChild(line);
+}
+
+/* one row per usual spelling: "AC/DC (MusicBrainz)" · "ac dc · 3 tracks, Ac/Dc · 12 tracks"; Apply / Ignore, pen: editor */
+function checkArtistFixRow(g) {
+  var src = g.src.split('+').map(function(x){ return x === 'mb' ? 'MusicBrainz' : 'Last.fm'; }).join(', ');
+  var sub = g.variants.map(function(v){ return T('check.artistFix.variant', {name: v.name, n: checkNum(v.count)}); }).join(', ');
+  var key = 'artistFix|' + g.to;
+  var row = checkRow(key, T('check.artistFix.title', {to: g.to, src: src}), sub, function(){ openArtistEditor(g.variants[0].name); });
+  var box = document.createElement('div'); box.className = 'ckGenreBtns';
+  function btn(label, hint, fn) {
+    var b = document.createElement('button'); b.className = 'ckBtn ckOkBtn';
+    b.textContent = label; b.title = hint;
+    b.addEventListener('click', function(ev){ ev.stopPropagation(); b.disabled = true; fn(b); });
+    box.appendChild(b);
+    return b;
+  }
+  btn(T('check.conflict.apply'), T('check.artistFix.applyHint', {to: g.to}), function(b){
+    checkApplyArtist(g, b).then(function(batch){
+      row.classList.add('done'); checkMarkDone(key);
+      while (box.firstChild) box.removeChild(box.firstChild);
+      if (batch) btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
+        tagPost('/undo', {batch: batch}).then(function(r){
+          if (!r || !r.ok) throw new Error((r && r.error) || 'undo');
+          row.classList.remove('done');
+          u.textContent = T('check.conflict.undone');
+          showToast(T('check.conflict.undone'));
+        }).catch(function(e){ u.disabled = false; showToast(T('tag.error', {error: e.message})); });
+      });
+    }).catch(function(){ b.disabled = false; b.textContent = T('check.conflict.apply'); });
+  });
+  btn(T('check.artistFix.ignore'), T('check.artistFix.ignoreHint'), function(b){
+    Promise.all(g.variants.map(function(v){ return tagPost('/genreok', {dir: 'artist|' + v.name, tag: g.to, ok: true}); })).then(function(rs){
+      if (rs.some(function(r){ return !r || !r.ok; })) throw new Error('genreok');
+      g.variants.forEach(function(v){ checkGenreOk['artist|' + v.name] = g.to; });
+      if (checkShown && checkShown.res) {
+        checkShown.res.artistFix = (checkShown.res.artistFix || []).filter(function(x){ return x !== g; });
+        checkRender(checkShown.res);
+      }
+    }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
+  });
+  row.classList.add('ckGenreRow');
+  row.querySelector('.sMeta').appendChild(box);
+  return row;
+}
+
+/* write the usual spelling into artist and album artist of all tracks with one of the variants (only the field that
+   has it), in chunks with one undo ID */
+function checkApplyArtist(g, b) {
+  var names = {}, uris = [], seen = {}, items = [], batch = Date.now().toString(36), changed = [], errs = [];
+  g.variants.forEach(function(v){ names[v.name] = 1; });
+  b.textContent = T('tag.searchingTracks');
+  tagWriting++;
+  return g.variants.reduce(function(p, v){
+    return p.then(function(){
+      return tagGetJson('/artist?name=' + encodeURIComponent(v.name)).then(function(r){
+        if (!r.ok) throw new Error(r.error || T('tag.searchFailed'));
+        r.files.forEach(function(f){ if (!seen[f]) { seen[f] = 1; uris.push(f); } });
+      });
+    });
+  }, Promise.resolve()).then(function(){
+    b.textContent = T('tag.saving');
+    return tagInChunks(uris, TAG_CHUNK * 2, function(part){
+      return tagPost('/read', {uris: part}).then(function(r){
+        if (!r.ok) throw new Error(r.error || T('tag.readFailed'));
+        r.items.forEach(function(it){
+          var t = (it.ok && it.tags) || {}, set = {};
+          if (names[String(t.artist || '').trim()]) set.artist = g.to;
+          if (names[String(t.albumartist || '').trim()]) set.albumartist = g.to;
+          if (set.artist || set.albumartist) items.push({uri: it.uri, tags: set});
+        });
+      });
+    });
+  }).then(function(){
+    return tagInChunks(items, TAG_WRITE_CHUNK, function(part){
+      return tagPostRetry('/write', {items: part, batch: batch, scan: false}).then(function(res){
+        if (!res.ok) throw new Error(res.error || T('tag.writeFailed'));
+        res.items.forEach(function(r, k){ if (!r.ok) errs.push(r.error); else if (r.changed || res.retried) changed.push(part[k].uri); });
+      });
+    });
+  }).then(function(){
+    if (changed.length) tagPost('/scan', {uris: changed}).catch(function(){});
+    showToast(T('tag.filesChanged', {n: changed.length}) + (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0]}) : ''));
+    return changed.length ? batch : null;
+  }).catch(function(e){
+    showToast(T('tag.error', {error: e.message}) + (changed.length ? T('tag.alreadyChanged', {n: changed.length}) : ''));
+    throw e;
+  }).then(function(r){ tagWriting--; return r; }, function(e){ tagWriting--; throw e; });
 }
 
 function checkSpellingRow(v, i, group) {
