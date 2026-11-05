@@ -1239,3 +1239,10 @@ html.amPlay #volWrap, html.amPlay #btnRotelPower, html.amPlay .remoteIcon { opac
 .amSheetBtn { flex:1; max-width:10em; font:inherit; padding:.6em 1em; border-radius:999px; border:1px solid rgba(255,255,255,.3);
   background:transparent; color:#fff; cursor:pointer; }
 .amSheetBtn.ok { background:#fff; border-color:transparent; color:#111; font-weight:600; }
+
+/* library check, duplicate tracks: album heading with pen, one line per group (title, why, Keep), files below */
+.ckDupTrHead { display:flex; align-items:center; justify-content:space-between; gap:calc(2 * var(--vw)); }
+.ckDupTrGroup { display:flex; align-items:center; justify-content:space-between; gap:calc(2 * var(--vw)); padding:calc(2 * var(--vw)) 0 0; }
+.ckDupTrTitle { font-size:calc(3.3 * var(--vw)); overflow-wrap:anywhere; }
+.ckDupTrGroup.maybe .ckDupTrTitle { opacity:.6; }
+.ckDupFile .sMeta { cursor:default; padding-left:calc(3 * var(--vw)); }

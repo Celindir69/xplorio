@@ -570,6 +570,49 @@ function doTrackNums(query, cb) {
   });
 }
 
+/* POST /filemove {files, token}: move single tracks aside, only files the last check listed as duplicate tracks
+   (dupTracks), into "Xplorio Trash" on the same drive with the rest of the path (like /dupmove for folders) */
+function dupFile(rel) {
+  var dir = path.dirname(rel), parts = rel.split('/');
+  if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (parts[0] === 'INTERNAL' ? 2 : 3) || rel.indexOf('\0') >= 0) return null;
+  for (var i = 0; i < parts.length; i++) if (!parts[i] || parts[i] === '.' || parts[i] === '..' || duplicates.isTrash(parts[i])) return null;
+  var full = path.join(MUSIC_ROOT, rel), real, root;
+  try { real = fs.realpathSync(full); root = fs.realpathSync(path.join(MUSIC_ROOT, parts[0])); } catch (e) { return null; }
+  if (real.indexOf(root + path.sep) !== 0) return null;   /* symlink leads out of INTERNAL/USB/NAS */
+  try { if (!fs.statSync(full).isFile()) return null; } catch (e) { return null; }
+  return dir ? full : null;
+}
+function doFileMove(body, cb) {
+  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  var files = Array.isArray(body.files) ? body.files.map(String) : [];
+  if (!files.length || files.length > 50) return cb(400, {ok: false, error: 'files missing'});
+  if (checkRun) return cb(200, {ok: false, error: 'check running'});
+  var last = readCheck(), listed = {};
+  if (!last || !last.dupTracks) return cb(200, {ok: false, error: 'not checked yet'});
+  last.dupTracks.forEach(function(a){ a.groups.forEach(function(g){ g.files.forEach(function(f){ listed[f.uri] = 1; }); }); });
+  var bad = files.filter(function(f){ return !listed[f] || !dupFile(f); });
+  if (bad.length) return cb(200, {ok: false, error: 'not a duplicate track: ' + bad[0]});
+  var moved = [];
+  for (var i = 0; i < files.length; i++) {
+    var to = duplicates.trashPath(files[i]), n = 2, ext = path.extname(to);
+    while (fs.existsSync(path.join(MUSIC_ROOT, to))) to = duplicates.trashPath(files[i]).slice(0, -ext.length || undefined) + ' (' + (n++) + ')' + ext;
+    try {
+      mkdirs(path.dirname(path.join(MUSIC_ROOT, to)));
+      fs.renameSync(path.join(MUSIC_ROOT, files[i]), path.join(MUSIC_ROOT, to));
+    } catch (e) {
+      if (moved.length) mpdForget(moved.map(function(m){ return path.dirname(m.from); }), function(){});
+      return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + files[i] : e.message, moved: moved});
+    }
+    moved.push({from: files[i], to: to});
+    dupIgnore(duplicates.driveOf(files[i]));
+    last.done = last.done || {};
+    last.done['dupTracks|' + files[i]] = 1;
+  }
+  try { writeCheck(last); } catch (e) { /* the marks are only for display */ }
+  mpdForget(moved.map(function(m){ return path.dirname(m.from); }).filter(function(d, i, all){ return all.indexOf(d) === i; }), function(){});   /* their folders: MPD drops the files */
+  cb(200, {ok: true, moved: moved});
+}
+
 /* ---------- Online cover search ---------- */
 /* GET /coversearch?artist=…&album=… -> {ok, results:[{id, source}]}; GET /coverimage?id=… returns the image.
    Only addresses found by the search itself are loaded (via the id). Last.fm key from web/config*.js. */
@@ -1869,7 +1912,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -1877,7 +1920,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

@@ -13,6 +13,7 @@ var CHECK_CATS = [
   {key: 'albumArtist', name: T('check.cat.albumArtist'), hint: T('check.cat.albumArtistHint')},
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
   {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
+  {key: 'dupTracks', name: T('check.cat.dupTracks'), hint: T('check.cat.dupTracksHint')},
   {key: 'mixed', name: T('check.cat.mixed'), hint: T('check.cat.mixedHint')},
   {key: 'releaseDate', name: T('check.cat.releaseDate'), hint: T('check.cat.releaseDateHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
@@ -119,6 +120,7 @@ function checkRender(res) {
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
     if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
+    if (cat.key === 'dupTracks') list = checkDupTracksOpen(list);
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
     row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
     row.querySelector('.ckName').textContent = cat.name;
@@ -281,6 +283,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
       else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
+      else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
     }
     moreRow.style.display = shown < list.length ? '' : 'none';
@@ -432,7 +435,7 @@ function checkAlbumRow(key, it) {
   else if (key === 'releaseDate') sub = T('check.releaseSub', {tag: it.tag || T('check.releaseNone'), mb: it.mb});
   else if (key === 'noTrack') sub = T('check.noTrackSub', {missing: checkNum(it.missing), count: checkNum(it.count), dir: it.dir});
   else if (key === 'gaps') sub = [it.disc ? T('check.gapsDisc', {disc: it.disc}) : '', it.nums ? T('check.gapsMissing', {nums: it.nums}) : '',
-                                  it.dups ? T('check.gapsDups', {nums: it.dups}) : '', it.dir].filter(Boolean).join(' · ');
+                                  it.dir].filter(Boolean).join(' · ');
   if (key === 'genreMissing') return checkGenreAlbumRow(key, it);
   return checkRow(key + '|' + it.dir + (it.disc ? '|' + it.disc : ''), heading, sub, function(){
     if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* date suggested by MusicBrainz */
@@ -604,6 +607,85 @@ function checkDupRows(g) {
     rows.push(row);
   });
   return rows;
+}
+
+/* ---------- Duplicate tracks in an album: per file play, move into "Xplorio Trash" (POST /filemove), keep the group ---------- */
+/* kept groups: genre-ok.json like the genre suggestions, key "dupt|<album folder>|<group>" with value "" */
+function checkDupTrackKey(a, g) { return 'dupt|' + a.dir + '|' + g.key; }
+function checkDupTracksOpen(list) {
+  return list.map(function(a){
+    var groups = a.groups.filter(function(g){ return checkGenreOk[checkDupTrackKey(a, g)] !== ''; });
+    if (groups.length === a.groups.length) return a;
+    var o = {}; for (var k in a) o[k] = a[k]; o.groups = groups; return o;
+  }).filter(function(a){ return a.groups.length; });
+}
+function checkDupTrackRows(a) {
+  var head = document.createElement('div'); head.className = 'ckDupHead ckDupTrHead';
+  head.appendChild(document.createTextNode(a.name + (a.artist ? ' · ' + a.artist : '')));
+  head.appendChild(tagPenButton('tagEditMini', T('check.edit'), function(){ openTagEditor(a.files, a.name, {move: true}); }));
+  var rows = [head];
+  a.groups.forEach(function(g){
+    var gh = document.createElement('div'); gh.className = 'ckDupTrGroup' + (g.sure ? '' : ' maybe');
+    var gt = document.createElement('div'); gt.className = 'ckDupTrTitle';
+    gt.textContent = g.title + ' · ' + checkNum(g.files.length) + '× · ' + T('check.dupt.why.' + g.why);
+    gh.appendChild(gt);
+    var keep = document.createElement('button'); keep.className = 'ckBtn ckOkBtn'; keep.textContent = T('check.conflict.keep');
+    keep.title = T('check.dupt.keepHint');
+    keep.addEventListener('click', function(){
+      keep.disabled = true;
+      tagPost('/genreok', {dir: checkDupTrackKey(a, g), tag: '', ok: true}).then(function(r){
+        if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
+        checkGenreOk[checkDupTrackKey(a, g)] = '';
+        if (checkShown && checkShown.res) checkRender(checkShown.res);
+      }).catch(function(){ keep.disabled = false; showToast(T('check.conflict.failed')); });
+    });
+    gh.appendChild(keep);
+    rows.push(gh);
+    g.files.forEach(function(f){ rows.push(checkDupTrackFile(f)); });
+  });
+  return rows;
+}
+function checkDupTrackFile(f) {
+  var key = 'dupTracks|' + f.uri;
+  var row = document.createElement('div'); row.className = 'sRow ckDupRow ckDupFile' + (checkDone[key] ? ' done' : '');
+  var meta = document.createElement('div'); meta.className = 'sMeta';
+  var ti = document.createElement('div'); ti.className = 'sTitle';
+  ti.textContent = [f.format, f.seconds ? fmtTime(f.seconds) : ''].filter(Boolean).join(' · ') + (f.best ? ' · ' + T('check.dupt.best') : '');
+  var su = document.createElement('div'); su.className = 'sSub'; su.textContent = f.name;
+  su.title = '/mnt/' + f.uri;
+  var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';
+  meta.appendChild(ti); meta.appendChild(su); meta.appendChild(msg);
+  row.appendChild(meta);
+  var play = document.createElement('button'); play.className = 'ckBtn ckDupPlay'; play.title = T('check.dup.play');
+  play.setAttribute('aria-label', T('check.dup.play'));
+  play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  play.addEventListener('click', function(){
+    var item = {uri: 'music-library/' + f.uri, service: 'mpd', type: 'song', title: f.name};
+    if (queueForInput([item])) return;
+    fetch('/api/v1/replaceAndPlay', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({item: item})}).catch(function(){});
+  });
+  if (!checkDone[key]) row.appendChild(play);
+  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.move');
+  btn.disabled = !!checkDone[key];
+  btn.addEventListener('click', function(){
+    var to = '/mnt/' + checkDupTrashPath(f.uri);
+    if (!confirm(T(f.best ? 'check.dup.confirmKeep' : 'check.dup.confirm', {dir: '/mnt/' + f.uri, to: to}))) return;
+    btn.disabled = true;
+    var token = (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : '');
+    tagPostJson('/filemove', {files: [f.uri], token: token}).then(function(r){
+      msg.style.display = '';
+      if (r && r.ok) {
+        checkDone[key] = 1; row.classList.add('done');
+        if (play.parentNode) play.parentNode.removeChild(play);
+        msg.textContent = T('check.dup.moved', {to: r.moved.map(function(m){ return '/mnt/' + m.to; }).join(' + ')});
+        return;
+      }
+      btn.disabled = false;
+      msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+    }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
+  });
+  row.appendChild(btn);
+  return row;
 }
 
 document.getElementById('closeCheck').addEventListener('click', function(){ clearTimeout(checkTimer); closeAllOverlays(); });
