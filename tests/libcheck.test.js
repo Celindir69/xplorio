@@ -79,6 +79,14 @@ t('duplicate tracks: copy names, the same track in two formats', function(){
   assert.deepStrictEqual(dups([D('U/a/02.mp3', {title: 'Other', track: '2', time: '100'}), D('U/a/02.flac', {title: 'Other', track: '2', time: '100'})]),
     [['format', true, ['U/a/02.flac', 'U/a/02.mp3']]]);   /* lossless first */
 });
+t('duplicate tracks: lossy ones by data rate (file size and time), AAC a little ahead; songs for the tag service', function(){
+  var list = [D('U/a/r1.mp3', {title: 'Rate', track: '3', time: '200', size: 128000 / 8 * 200}),
+              D('U/a/r2.m4a', {title: 'Rate', track: '3', time: '200', size: 300000 / 8 * 200, format: '44100:f:2'}),
+              D('U/a/r3.mp3', {title: 'Rate', track: '3', time: '200', size: 320000 / 8 * 200})];
+  assert.deepStrictEqual(dups(list), [['same', true, ['U/a/r2.m4a', 'U/a/r3.mp3', 'U/a/r1.mp3']]]);
+  assert.deepStrictEqual(lc.dupTrackSongs(list.concat([D('U/a/04.mp3', {title: 'Alone', track: '4'})])).map(function(x){ return x.file; }).sort(),
+    ['U/a/r1.mp3', 'U/a/r2.m4a', 'U/a/r3.mp3']);
+});
 t('duplicate tracks: same title, same or different length; remaster additions do not count, others do', function(){
   assert.deepStrictEqual(dups([D('U/a/05.flac', {title: 'Jump', track: '5', time: '100'}), D('U/a/06.flac', {title: 'Jump (2009 Remaster)', track: '6', time: '101'})]),
     [['same', true, ['U/a/05.flac', 'U/a/06.flac']]]);

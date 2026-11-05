@@ -231,8 +231,8 @@ wie `01 Song (1).flac` oder `01 Song Kopie.flac` neben `01 Song.flac`, derselbe 
 `01.mp3`) und gleicher Künstler und Titel mit gleicher Spielzeit (±2 s). Gedämpft als Hinweis: gleicher Titel mit anderer
 Spielzeit und gleiche CD- und Tracknummer mit anderem Titel. Groß-/Kleinschreibung, Satzzeichen, führende Nummern und
 Remaster-Zusätze zählen nicht, andere Zusätze wie „(Live)“ schon; gleiche Titel verschiedener Künstler (Compilations)
-werden nicht gemeldet. Je Gruppe steht die beste Datei oben (verlustfrei vor verlustbehaftet, dann ohne Kopie-Namen,
-dann die ältere). ▶ spielt eine Datei, „Verschieben“ legt sie mit dem übrigen Pfad in `Xplorio Trash`, „Behalten“ blendet
+werden nicht gemeldet. Je Gruppe steht die beste Datei oben (verlustfrei vor verlustbehaftet, bei verlustbehafteten
+die höhere Datenrate, dann ohne Kopie-Namen, dann die ältere). ▶ spielt eine Datei, „Verschieben“ legt sie mit dem übrigen Pfad in `Xplorio Trash`, „Behalten“ blendet
 die Gruppe dauerhaft aus.
 
 **Künstler nicht in üblicher Schreibweise:** Der Tag-Dienst gleicht im Hintergrund jeden Künstler und Albumkünstler einmal

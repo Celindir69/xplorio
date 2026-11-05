@@ -214,7 +214,8 @@ such as `01 Song (1).flac` or `01 Song Kopie.flac` next to `01 Song.flac`, the s
 `01.mp3`), and the same artist and title with the same length (±2 s). Dimmed as a hint: the same title with another
 length, and the same disc and track number with another title. Case, punctuation, leading numbers and remaster additions
 do not count, other additions such as “(Live)” do; the same title by different artists (compilations) is not reported.
-In each group the best file is on top (lossless before lossy, then without a copy name, then the older one). ▶ plays a
+In each group the best file is on top (lossless before lossy, for lossy ones the higher data rate, then without a copy
+name, then the older one). ▶ plays a
 file, “Move” puts it into `Xplorio Trash` with the rest of its path, “Keep” hides the group for good.
 
 **Artists not in their usual spelling:** in the background the Tag Service looks up each artist and album artist once at
