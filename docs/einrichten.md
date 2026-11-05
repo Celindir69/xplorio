@@ -146,7 +146,7 @@ Die Abfragen macht der Tag-Dienst; der Player braucht dafür Internetzugang.
 
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
-einheitlichen Album-Künstler, Künstler in mehreren Schreibweisen, uneinheitliche Albumnamen/Jahre, Alben, deren
+einheitlichen Album-Künstler, Künstler in mehreren oder nicht üblicher Schreibweise, uneinheitliche Albumnamen/Jahre, Alben, deren
 Date-Tag vom ersten Erscheinen laut MusicBrainz abweicht (aus dem Nachschlagen für die Geburtstage; der Stift schlägt
 das MusicBrainz-Datum vor), Titel ohne Tracknummer und unvollständige Alben (Lücken in den Tracknummern, je CD), doppelte Titel im Album; der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
 `localhost:6600`) und die Ordner, ändert nichts an den Dateien und läuft nur auf Knopfdruck (Ausnahme: „Verschieben“ bei den doppelten Alben, siehe unten). Ergebnis:
@@ -219,6 +219,17 @@ Remaster-Zusätze zählen nicht, andere Zusätze wie „(Live)“ schon; gleiche
 werden nicht gemeldet. Je Gruppe steht die beste Datei oben (verlustfrei vor verlustbehaftet, dann ohne Kopie-Namen,
 dann die ältere). ▶ spielt eine Datei, „Verschieben“ legt sie mit dem übrigen Pfad in `Xplorio Trash`, „Behalten“ blendet
 die Gruppe dauerhaft aus.
+
+**Künstler nicht in üblicher Schreibweise:** Der Tag-Dienst gleicht im Hintergrund jeden Künstler und Albumkünstler einmal
+mit MusicBrainz ab (höchstens eine Anfrage alle 1,5 s, langsamer solange die Erscheinungsdaten geholt werden); findet
+MusicBrainz nichts Passendes, fragt er Last.fm (nur mit Last.fm-Schlüssel). Vorgeschlagen wird nur eine andere
+Schreibweise desselben Namens (Groß-/Kleinschreibung, Akzente, Umlaute, „The“, Satzzeichen, & / und) oder ein bei
+MusicBrainz bekannter anderer Name dieses Künstlers, nie ein anderer Name. Kombinationen wie „A feat. B“ oder „A vs. B“
+werden erst als Ganzes gesucht, ohne Treffer jeder Name einzeln, und der Vorschlag setzt sie wieder zusammen. Je Vorschlag
+stehen die vorhandenen Schreibweisen mit Anzahl Titel; „Übernehmen“ schreibt die übliche Schreibweise in Künstler und
+Albumkünstler aller betroffenen Titel (mit Rückgängig), „Ignorieren“ behält die vorhandene Schreibweise. Was hier steht,
+erscheint nicht noch einmal unter „Künstler in mehreren Schreibweisen“. Ergebnisse liegen in `artistnames.jsonl`; Namen
+ohne Treffer werden nach 90 Tagen erneut gesucht. Abschalten mit `ARTISTNAMES: false` in `config.local.js`.
 
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der

@@ -325,6 +325,9 @@ function analyze(songs, hasCover, audioOf) {
       .sort(function(a, b){ return b.count - a.count || a.name.localeCompare(b.name); })});
   });
   res.spelling.sort(function(a, b){ return byName(a.variants[0], b.variants[0]); });
+  /* names with their number of tracks (as artist or album artist), for the usual spelling (artistnames.js) */
+  res.names = {};
+  songs.forEach(function(s){ uniq([s.artist, s.albumartist].filter(Boolean)).forEach(function(n){ res.names[n] = (res.names[n] || 0) + 1; }); });
   return res;
 }
 

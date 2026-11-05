@@ -6,6 +6,7 @@ window.APP_CONFIG = {
   THEME: 'auto',      /* 'auto' = light or dark like the device; 'light' = always light; 'dark' = always dark */
   HISTORY: true,      /* history: tag service records played tracks; false = off (restart the tag service) */
   RELEASEDATES: true, /* birthdays: look up missing album release dates on MusicBrainz; false = off */
+  ARTISTNAMES: true,  /* library check: look up the usual spelling of the artists on MusicBrainz (else Last.fm); false = off */
   MOODTAGS: true,     /* mood tags: collect Last.fm tags per track, only while nothing is playing (needs LASTFM_KEY in keys.json); false = off */
   COLOR_MOOD: true,   /* color mood from the cover (only covers from the player itself); false = off */
   M4A_PROBE: true,    /* m4a: read the codec (ALAC/AAC) from the file; false = only M4A_LOSSLESS */

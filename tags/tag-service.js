@@ -436,7 +436,11 @@ function doGenres(query, cb) {
 function doCheckGet(query, cb) {
   var last = readCheck();
   var same = last && query && query.have && String(last.at) === String(query.have);
-  cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, genreOk: genreOkLoad()});
+  var ok = genreOkLoad();
+  cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, genreOk: ok,
+           artistFix: artistnames.fixes(last && last.names, function(n){ return artistNames.suggest(n); },
+             function(n, to){ return ok['artist|' + n] === to; }),   /* ignored: genre-ok.json "artist|<name>" = suggestion */
+           artistStatus: artistNames.status()});
 }
 
 /* Genre contradicts the audio analysis, but is right: POST /genreok {dir, tag, ok} remembers it for good (genre-ok.json,
@@ -1116,6 +1120,18 @@ function doDiscover(query, cb) {
 var WELCOME_FILE = path.join(DATA_DIR, 'welcome.json');
 var releasedates = require('./releasedates.js');          /* release dates (Date tag, otherwise MusicBrainz) for the birthdays */
 var releaseDates = new releasedates.Collector({file: path.join(DATA_DIR, 'releasedates.jsonl'), list: function(){ return albumIdx && albumIdx.list; }});
+/* usual spelling of the artists (MusicBrainz, Last.fm) for the library check; slower while the release dates are looked up */
+var artistnames = require('./artistnames.js');
+var artistNames = new artistnames.Collector({file: path.join(DATA_DIR, 'artistnames.jsonl'),
+  names: function(){
+    var tl = libTracksLoad(), seen = {}, out = [];
+    function add(n) { if (n && !seen[n]) { seen[n] = 1; out.push(n); } }
+    ((albumIdx && albumIdx.list) || []).forEach(function(a){ if (a.ar !== 'Verschiedene') add(a.ar); });
+    (tl || []).forEach(function(t){ add(t[0]); });
+    return out;
+  },
+  lastfmKey: function(){ return keys.lastfm().key || ''; },
+  busy: function(){ return releaseDates.running && !!releaseDates.next(Math.floor(Date.now() / 1000)); }});
 var welcomeDay = null;
 function doWelcome(query, cb) {
   var day = /^\d{4}-\d\d-\d\d$/.test(query.day || '') ? query.day : new Date().toISOString().slice(0, 10);
@@ -1935,6 +1951,7 @@ if (require.main === module) {
   sysInfo.start();                                        /* measure CPU load ("System" page) */
   rgAuto.start();                                         /* follows the queue via MPD idle */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
+  if (process.env.ARTISTNAMES !== '0' && appConfig().ARTISTNAMES !== false) artistNames.start();      /* library check: usual spelling */
   if (process.env.MOODTAGS !== '0' && appConfig().MOODTAGS !== false) {
     moodCollector.start();
     setInterval(function(){ albumsEnsure(); }, 3600000);  /* keep the track list current (rereads only when MPD has changed) */
