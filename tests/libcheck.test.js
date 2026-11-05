@@ -97,6 +97,15 @@ t('duplicate tracks: in analyze per album, disc folders together', function(){
   assert.strictEqual(d.length, 1); assert.strictEqual(d[0].dir, 'USB/T/A');
   assert.deepStrictEqual(d[0].groups[0].files.map(function(f){ return [f.uri, f.best]; }), [['USB/T/A/CD1/01.flac', true], ['USB/T/A/CD2/01.flac', false]]);
 });
+t('duplicate tracks: not across versions of an album (incomplete copy in the album folder next to CD1/CD2)', function(){
+  function V(f, o) { o.album = 'Hits'; o.albumartist = 'Band'; return D(f, o); }
+  var d = lc.analyze([V('USB/V/Hits/01.mp3', {title: 'Intro', track: '1', time: '60'}),
+                      V('USB/V/Hits/CD1/01.flac', {title: 'Intro', track: '1', disc: '1', time: '60'}),
+                      V('USB/V/Hits/CD2/01.flac', {title: 'Outro', track: '1', disc: '2', time: '90'}),
+                      V('USB/V/Hits/CD2/02.flac', {title: 'Outro', track: '2', disc: '2', time: '90'})], function(){ return true; });
+  assert.strictEqual(d.duplicates.length, 1);                       /* listed as two versions */
+  assert.deepStrictEqual(d.dupTracks.map(function(a){ return a.groups.map(function(g){ return g.title; }); }), [['Outro']]);
+});
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
   assert.ok(g.indexOf('SPLIFF|Spliff') >= 0);
