@@ -291,8 +291,20 @@ function analyze(songs, hasCover, audioOf) {
     if (!albumsOf[a]) { albumsOf[a] = []; albumOrder.push(a); }
     albumsOf[a] = albumsOf[a].concat(dirs[d]);
   });
+  /* folders that the duplicate check counts as different versions of an album (e.g. an incomplete copy in the album
+     folder next to CD1/CD2): the same track in two versions is listed there, not here */
+  var verOf = {};
+  res.duplicates = duplicates.find(songs, artistKey);
+  res.duplicates.forEach(function(g, i){
+    g.versions.forEach(function(v, k){ v.dirs.forEach(function(d){ verOf[d] = i + '.' + k; }); });
+  });
+  function oneVersion(g) {
+    var seen = {};
+    g.files.forEach(function(s){ var v = verOf[path.dirname(s.file)]; if (v) seen[v] = 1; });
+    return Object.keys(seen).length < 2;
+  }
   albumOrder.sort().forEach(function(a){
-    var list = albumsOf[a], groups = trackDups(list);
+    var list = albumsOf[a], groups = trackDups(list).filter(oneVersion);
     if (!groups.length) return;
     var albumNames = uniq(list.map(function(s){ return s.album; }).filter(Boolean));
     var aas = uniq(list.map(function(s){ return s.albumartist; }).filter(Boolean)), artists = uniq(list.map(function(s){ return s.artist; }).filter(Boolean));
@@ -306,7 +318,6 @@ function analyze(songs, hasCover, audioOf) {
   });
   var gc = genres.check(forGenres);
   res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreConflict = gc.conflict; res.genreStyles = gc.styles;
-  res.duplicates = duplicates.find(songs, artistKey);
 
   /* spellings: artist and album artist, grouped by artistKey */
   var groups = {};
