@@ -157,6 +157,18 @@ t('spellings: case, The, accents', function(){
   assert.ok(!g.some(function(x){ return /Various/.test(x); }));     /* "Various" and "Various Artists" are different */
   assert.strictEqual(r.spelling.filter(function(x){ return x.variants[0].name === 'Spliff'; })[0].variants[0].count, 2);
 });
+t('spellings: suggestion is the most common one, cleaned; invisible differences are named', function(){
+  assert.strictEqual(r.spelling.filter(function(x){ return x.variants[0].name === 'Spliff'; })[0].suggest, 'Spliff');
+  var songs = [];
+  function add(a, k) { for (var i = 0; i < k; i++) songs.push({file: 'USB/S/' + a.length + '/' + i + '.flac', artist: a, title: 't' + i, album: 'A', track: String(i + 1)}); }
+  add('Lumen Drift', 3); add('Lumen  Drift', 1); add('Velvet\u00a0Static ', 1); add('Velvet Static', 1);
+  var sp = lc.analyze(songs, function(){ return true; }).spelling;
+  var lumen = sp.filter(function(x){ return x.key === 'lumendrift'; })[0], velvet = sp.filter(function(x){ return x.key === 'velvetstatic'; })[0];
+  assert.strictEqual(lumen.suggest, 'Lumen Drift');
+  assert.deepStrictEqual(lumen.variants[1].flaws, ['double']);
+  assert.strictEqual(velvet.suggest, 'Velvet Static');                            /* tie: the one without flaws */
+  assert.deepStrictEqual(velvet.variants.filter(function(v){ return v.flaws; })[0].flaws, ['edge', 'nbsp']);
+});
 t('artistKey', function(){
   assert.strictEqual(lc.artistKey('Simon & Garfunkel'), lc.artistKey('Simon and Garfunkel'));
   assert.notStrictEqual(lc.artistKey('Nena'), lc.artistKey('Nina'));

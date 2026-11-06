@@ -23,7 +23,7 @@ var CHECK_CATS = [
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
-var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1};   /* categories with "Keep" */
+var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1, spelling: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -296,7 +296,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
       else if (cat.key === 'year' || cat.key === 'albumName') box.insertBefore(checkFixRow(cat.key, list[shown], false), moreRow);
       else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
-      else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
+      else if (cat.key === 'spelling') box.insertBefore(checkSpellingRow(list[shown], false), moreRow);
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
@@ -322,6 +322,7 @@ function checkKeepOf(cat, it) {
   if (cat === 'duplicates') return {k: 'dupk|' + checkDupDirs(it), v: ''};      /* all versions stay; a new version shows it again */
   if (cat === 'year') return {k: 'year|' + it.dir, v: checkValuesKey(it.years)};  /* as long as the album keeps these years */
   if (cat === 'albumName') return {k: 'albumname|' + it.dir, v: checkValuesKey(it.names)};
+  if (cat === 'spelling') return {k: 'spell|' + (it.key || checkValuesKey(it.variants)), v: checkValuesKey(it.variants)};   /* as long as these spellings stay */
   return {k: it.dir, v: it.tag};
 }
 function checkIsKept(cat, it) {
@@ -362,9 +363,13 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
   }
   if (kept) btn(T('check.conflict.undoKeep'), T('check.conflict.undoKeepHint'), function(b){ keep(false, b); });
   else {
-    var fix = cat === 'year' || cat === 'albumName';
-    if (fix ? it.suggest : it.genre) btn(T('check.conflict.apply'), fix ? T('check.fix.applyHint', {value: it.suggest}) : T('check.conflict.applyHint', {genre: it.genre}), function(b){
-      (fix ? checkApplyItems(checkFixItems(cat, it), b) : checkApplyGenre(files, it.genre, b)).then(function(batch){
+    var fix = cat === 'year' || cat === 'albumName' || cat === 'spelling';
+    var run = function(b, to){                               /* write the suggestion (or the chosen spelling) -> batch */
+      if (cat === 'spelling') return checkApplyArtist({variants: it.variants, to: to}, b);
+      return fix ? checkApplyItems(checkFixItems(cat, it), b) : checkApplyGenre(files, it.genre, b);
+    };
+    var apply = function(label, hint, to){ btn(label, hint, function(b){
+      run(b, to).then(function(batch){
         row.classList.add('done'); checkMarkDone(doneKey);
         while (box.firstChild) box.removeChild(box.firstChild);
         if (batch) btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
@@ -375,7 +380,11 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
             showToast(T('check.conflict.undone'));
           }).catch(function(e){ u.disabled = false; showToast(T('tag.error', {error: e.message})); });
         });
-      }).catch(function(){ b.disabled = false; });
+      }).catch(function(){ b.disabled = false; b.textContent = label; });
+    }); };
+    if (fix ? it.suggest : it.genre) apply(T('check.conflict.apply'), fix ? T('check.fix.applyHint', {value: it.suggest}) : T('check.conflict.applyHint', {genre: it.genre}), it.suggest);
+    if (cat === 'spelling') checkSpellingOthers(it).forEach(function(to){       /* another spelling instead of the suggestion */
+      apply(T('check.spelling.use', {name: to}), T('check.fix.applyHint', {value: to}), to);
     });
     btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
@@ -425,6 +434,7 @@ function checkKeptSection(box, cat) {
   kept.forEach(function(it){
     if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
+    if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -597,7 +607,7 @@ function checkArtistFixRow(g) {
    has it), in chunks with one undo ID */
 function checkApplyArtist(g, b) {
   var names = {}, uris = [], seen = {}, items = [], batch = Date.now().toString(36), changed = [], errs = [];
-  g.variants.forEach(function(v){ names[v.name] = 1; });
+  g.variants.forEach(function(v){ names[checkCleanName(v.name)] = 1; });   /* spellings that differ only in spaces count too */
   b.textContent = T('tag.searchingTracks');
   tagWriting++;
   return g.variants.reduce(function(p, v){
@@ -614,8 +624,8 @@ function checkApplyArtist(g, b) {
         if (!r.ok) throw new Error(r.error || T('tag.readFailed'));
         r.items.forEach(function(it){
           var t = (it.ok && it.tags) || {}, set = {};
-          if (names[String(t.artist || '').trim()]) set.artist = g.to;
-          if (names[String(t.albumartist || '').trim()]) set.albumartist = g.to;
+          if (t.artist && names[checkCleanName(t.artist)] && t.artist !== g.to) set.artist = g.to;
+          if (t.albumartist && names[checkCleanName(t.albumartist)] && t.albumartist !== g.to) set.albumartist = g.to;
           if (set.artist || set.albumartist) items.push({uri: it.uri, tags: set});
         });
       });
@@ -637,9 +647,27 @@ function checkApplyArtist(g, b) {
   }).then(function(r){ tagWriting--; return r; }, function(e){ tagWriting--; throw e; });
 }
 
-function checkSpellingRow(v, i, group) {
-  var others = group.variants.filter(function(o){ return o !== v; }).map(function(o){ return o.name; }).join(', ');
-  return checkRow('spelling|' + v.name, v.name, T('check.spellingSub', {n: v.count, others: others}), function(){ openArtistEditor(v.name); });
+/* one row per artist: "Barry White (most common spelling)" · "Barry White · 22 tracks, Barry  White · 1 track, double space";
+   Apply writes the suggestion into artist and album artist, the other spellings can be chosen instead; Keep; pen: editor */
+function checkSpellingRow(g, kept) {
+  g.key = g.key || checkValuesKey(g.variants);             /* result of an older check: without key and suggestion */
+  var sub = g.variants.map(function(v){
+    return T('check.artistFix.variant', {name: v.name, n: checkNum(v.count)}) +
+           (v.flaws ? ' (' + v.flaws.map(function(f){ return T('check.spelling.flaw.' + f); }).join(', ') + ')' : '');
+  }).join(', ');
+  var row = checkRow('spelling|' + g.key, T('check.spelling.title', {to: g.suggest || g.variants[0].name}), sub, function(){
+    openArtistEditor(g.variants[g.variants.length - 1].name);   /* the rarest spelling: usually the one to change */
+  });
+  checkGenreButtons(row, 'spelling', 'spelling|' + g.key, g, [], kept);
+  return row;
+}
+/* the other spellings worth choosing instead of the suggestion: those that look different from it */
+function checkCleanName(n) { n = String(n || ''); return (n.normalize ? n.normalize('NFC') : n).replace(/[\u200B-\u200F\u2060\uFEFF\u00AD]/g, '').replace(/\s+/g, ' ').trim(); }
+function checkSpellingOthers(g) {
+  var seen = {}, out = [];
+  seen[g.suggest] = 1;
+  g.variants.forEach(function(v){ var c = checkCleanName(v.name); if (!seen[c]) { seen[c] = 1; out.push(c); } });
+  return out;
 }
 
 /* ---------- Duplicate albums: move a version into "Xplorio Trash" on the same drive (tag service POST /dupmove) ---------- */
