@@ -30,7 +30,7 @@ XfAuto.prototype.save = function(on, seconds) {
   this.on = on;
   if (seconds > 0) this.seconds = seconds;
   if (!on) this.mine = null;
-  try { fs.writeFileSync(this.file, JSON.stringify({auto: on, seconds: this.seconds})); } catch (e) { console.log('crossfade.json: ' + e.message); }
+  try { require('./atomic.js').writeAtomic(this.file, JSON.stringify({auto: on, seconds: this.seconds})); } catch (e) { console.log('crossfade.json: ' + e.message); }
 };
 
 /* Playback page: auto true (with seconds) switches it on and sets the value right away, false off */

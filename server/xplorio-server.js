@@ -8,6 +8,7 @@ var net  = require('net');
 var fs   = require('fs');
 var path = require('path');
 var url  = require('url');
+var zlib = require('zlib');
 
 var DEFAULTS = {
   port:        parseInt(process.env.HTTP_PORT || '4040', 10),
@@ -21,6 +22,8 @@ var OURS = /^\/(xplorio\.html|web\/.*)$/;
 var TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
              '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
              '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8'};
+
+var GZ_TYPES = /^\.(html|js|css|json|svg|txt|webmanifest)$/;
 
 /* opts: port, volumioHost, volumioPort, www (folder of the interface) (see DEFAULTS) -> http.Server */
 function create(opts) {
@@ -37,16 +40,41 @@ function create(opts) {
     return f.indexOf(o.www + path.sep) === 0 ? f : null;
   }
 
+  /* text files compressed once and kept (the whole interface is about 1 MB, compressed a quarter of it) */
+  var gzCache = {};
+  function gzipped(f, st, cb) {
+    var key = f + ':' + st.size + ':' + st.mtime.getTime(), c = gzCache[f];
+    if (c && c.key === key) return cb(null, c.buf);
+    fs.readFile(f, function(err, raw){
+      if (err) return cb(err);
+      zlib.gzip(raw, {level: 9}, function(e, buf){
+        if (e) return cb(e);
+        gzCache[f] = {key: key, buf: buf};
+        cb(null, buf);
+      });
+    });
+  }
+
   function serveFile(req, res, f) {
     fs.stat(f, function(err, st){
       if (err || !st.isFile()) { res.writeHead(404, {'Content-Type': 'text/plain'}); return res.end('not found'); }
-      /* the HTML loads scripts and styles with ?v=<build>: check every time, answer 304 when unchanged */
-      var mod = st.mtime.toUTCString(), tag = '"' + st.size.toString(16) + '-' + st.mtime.getTime().toString(16) + '"';
-      var head = {'Content-Type': TYPES[path.extname(f).toLowerCase()] || 'application/octet-stream',
-                  'Cache-Control': 'no-cache', 'Last-Modified': mod, 'ETag': tag};
+      var ext = path.extname(f).toLowerCase(), gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '') && GZ_TYPES.test(ext);
+      /* scripts, styles and languages come with ?v=<build> (a hash over all interface files): a new build has a new address,
+         so the browser keeps them; everything else is checked every time and answered with 304 when unchanged */
+      var forever = /^v=[\w-]+$/.test(url.parse(req.url).query || '') && ext !== '.html';
+      var mod = st.mtime.toUTCString(), tag = '"' + st.size.toString(16) + '-' + st.mtime.getTime().toString(16) + (gz ? '-gz' : '') + '"';
+      var head = {'Content-Type': TYPES[ext] || 'application/octet-stream',
+                  'Cache-Control': forever ? 'public, max-age=31536000, immutable' : 'no-cache', 'Last-Modified': mod, 'ETag': tag,
+                  'Vary': 'Accept-Encoding'};
       if (req.headers['if-none-match'] === tag || (!req.headers['if-none-match'] && req.headers['if-modified-since'] === mod)) {
         res.writeHead(304, head); return res.end();
       }
+      if (gz) return gzipped(f, st, function(e, buf){
+        if (e) { res.writeHead(500, {'Content-Type': 'text/plain'}); return res.end('read error'); }
+        head['Content-Encoding'] = 'gzip'; head['Content-Length'] = buf.length;
+        res.writeHead(200, head);
+        res.end(req.method === 'HEAD' ? undefined : buf);
+      });
       head['Content-Length'] = st.size;
       res.writeHead(200, head);
       if (req.method === 'HEAD') return res.end();

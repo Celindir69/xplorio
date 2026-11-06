@@ -232,8 +232,9 @@ else {
                                 post(port, '/checkdone', {}, function(d2){
                                   t('service: handled check entries are remembered until the next check', function(){
                                     assert.ok(d1.ok); assert.strictEqual(d2.ok, false);
-                                    var ck = JSON.parse(fs.readFileSync(ckFile, 'utf8'));
+                                    var ck = JSON.parse(fs.readFileSync(path.join(root, 'log', 'check-done.json'), 'utf8'));
                                     assert.deepStrictEqual(ck.done, {'noCover|USB/A': 1}); assert.strictEqual(ck.at, 1);
+                                    assert.strictEqual(JSON.parse(fs.readFileSync(ckFile, 'utf8')).done, undefined);   /* result unchanged */
                                   });
                                   post(port, '/genreok', {dir: 'USB/A', tag: 'Rock', ok: true}, function(g1){
                                   post(port, '/genreok', {dir: 'USB/B', tag: 'Pop', ok: true}, function(g2){

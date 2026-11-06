@@ -16,6 +16,7 @@ var MPC         = process.env.MPC         || 'mpc';
 /* data folder /data/xplorio/data (see appdata.js) */
 var appdata     = require('./appdata.js');
 var guard       = require('./guard.js');
+var writeAtomic = require('./atomic.js').writeAtomic;      /* power cut: old or new file, never half of one */
 var DATA_PREP   = process.env.TAGS_LOG ? {dir: path.dirname(process.env.TAGS_LOG)}
   : appdata.prepare(process.env.TAGS_DATA || '/data/xplorio/data', console.log);
 var DATA_DIR    = DATA_PREP.dir;
@@ -390,7 +391,7 @@ var libcheck = require('./libcheck.js');
 var batchSeq = 0;
 function newBatch() { return Date.now().toString(36) + (++batchSeq % 1296).toString(36); }   /* two jobs in the same ms: different IDs */
 var CHECK_FILE = path.join(DATA_DIR, 'check.json');
-function writeCheck(obj) { fs.writeFileSync(CHECK_FILE + '.neu', JSON.stringify(obj)); fs.renameSync(CHECK_FILE + '.neu', CHECK_FILE); checkCache = null; }   /* power loss: old or new file, never half of one */
+function writeCheck(obj) { writeAtomic(CHECK_FILE, JSON.stringify(obj)); checkCache = null; }
 /* last result (can be several MB): reread only when the file has changed; null = never checked */
 var checkCache = null, checkStamp = '';
 function readCheck() {
@@ -398,7 +399,23 @@ function readCheck() {
   try { var st = fs.statSync(CHECK_FILE); stamp = st.mtime.getTime() + ':' + st.size; } catch (e) { return null; }
   if (checkCache && stamp === checkStamp) return checkCache;
   try { checkCache = JSON.parse(fs.readFileSync(CHECK_FILE, 'utf8')); checkStamp = stamp; } catch (e) { checkCache = null; }
+  if (checkCache) {                                      /* handled entries of this run (check-done.json) */
+    var d = null;
+    try { d = JSON.parse(fs.readFileSync(CHECK_DONE_FILE, 'utf8')); } catch (e) { /* none yet */ }
+    if (d && d.at === checkCache.at && d.done && typeof d.done === 'object') {
+      checkCache.done = checkCache.done || {};
+      Object.keys(d.done).forEach(function(k){ checkCache.done[k] = 1; });
+    }
+  }
   return checkCache;
+}
+/* remember entries as handled: in a small file of their own, so that a tap on a pen does not rewrite the result (MBs) */
+var CHECK_DONE_FILE = path.join(DATA_DIR, 'check-done.json');
+function markDone(last, keys) {
+  last.done = last.done || {};
+  keys.forEach(function(k){ last.done[k] = 1; });
+  try { writeAtomic(CHECK_DONE_FILE, JSON.stringify({at: last.at, done: last.done})); return true; }
+  catch (e) { console.error('check-done.json: ' + e.message); return false; }
 }
 var checkRun = null;                                     /* {phase, done, total, started} while checking */
 var checkError = null;
@@ -475,14 +492,22 @@ function doGenres(query, cb) {
 }
 
 /* ?have=<at>: caller already has the result of this state -> progress only, result: 'same' (saves MBs per request) */
+/* ?fix=<stamp>: caller already has the suggestion lists of this state (MusicBrainz lookups, kept entries) -> fix: 'same';
+   while a check runs the page asks every 2 s, and the lists carry all file names */
 function doCheckGet(query, cb) {
   var last = readCheck();
   var same = last && query && query.have && String(last.at) === String(query.have);
-  var ok = genreOkLoad();
-  cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, genreOk: ok,
-           artistFix: artistnames.fixes(last && last.names, function(n){ return artistNames.suggest(n); },
-             function(n, to){ return ok['artist|' + n] === to; }),   /* ignored: genre-ok.json "artist|<name>" = suggestion */
-           artistStatus: artistNames.status(), yearFix: yearFix(last), nameFix: nameFix(last)});
+  var ok = genreOkLoad(), st = artistNames.status();
+  var stamp = [last ? last.at : 0, releaseDates.fetched, st.fetched, genreOkRev].join(':');
+  var o = {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, artistStatus: st, fixStamp: stamp};
+  if (same && query.fix && String(query.fix) === stamp) o.fix = 'same';
+  else {
+    o.genreOk = ok;
+    o.artistFix = artistnames.fixes(last && last.names, function(n){ return artistNames.suggest(n); },
+      function(n, to){ return ok['artist|' + n] === to; });   /* ignored: genre-ok.json "artist|<name>" = suggestion */
+    o.yearFix = yearFix(last); o.nameFix = nameFix(last);
+  }
+  cb(200, o);
 }
 
 /* year not the same in all tracks, or Date tag differs from MusicBrainz: one entry per album with the years found
@@ -530,7 +555,7 @@ function releaseExtra() {
 
 /* Genre contradicts the audio analysis, but is right: POST /genreok {dir, tag, ok} remembers it for good (genre-ok.json,
    {dir: tag}); it counts only as long as the album still has this tag. ok false takes it back. */
-var GENRE_OK_FILE = path.join(DATA_DIR, 'genre-ok.json'), genreOk = null;
+var GENRE_OK_FILE = path.join(DATA_DIR, 'genre-ok.json'), genreOk = null, genreOkRev = 0;
 var GENRE_OK_MAX = 20000;
 function genreOkLoad() {
   if (!genreOk) { try { genreOk = JSON.parse(fs.readFileSync(GENRE_OK_FILE, 'utf8')); } catch (e) { genreOk = {}; } }
@@ -545,22 +570,21 @@ function doGenreOk(body, cb) {
     if (!Object.prototype.hasOwnProperty.call(m, dir) && Object.keys(m).length >= GENRE_OK_MAX) return cb(400, {ok: false, error: 'too many'});
     m[dir] = tag;
   } else delete m[dir];
-  try { fs.writeFileSync(GENRE_OK_FILE + '.neu', JSON.stringify(m)); fs.renameSync(GENRE_OK_FILE + '.neu', GENRE_OK_FILE); }
+  genreOkRev++;
+  try { writeAtomic(GENRE_OK_FILE, JSON.stringify(m)); }
   catch (e) { return cb(500, {ok: false, error: e.message}); }
   cb(200, {ok: true});
 }
 
 /* POST /checkdone {key}: remember an entry as handled (stays greyed out) until the next check.
-   Stored in check.json; a new check overwrites the file and thus the marks as well. */
+   Stored in check-done.json with the time of the check; a new check makes the marks obsolete. */
 function doCheckDone(body, cb) {
   var key = body && body.key;
   if (typeof key !== 'string' || !key || key.length > 1000) return cb(400, {ok: false, error: 'key missing'});
   var last = readCheck();
   if (!last) return cb(200, {ok: false, error: 'not checked yet'});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
-  last.done = last.done || {};
-  last.done[key] = 1;
-  try { writeCheck(last); } catch (e) { return cb(500, {ok: false, error: e.message}); }
+  if (!markDone(last, [key])) return cb(500, {ok: false, error: 'cannot save'});
   cb(200, {ok: true});
 }
 
@@ -586,7 +610,7 @@ function dupIgnore(drive) {
   try { text = fs.readFileSync(f, 'utf8'); } catch (e) { /* none yet */ }
   var neu = duplicates.ignoreLine(text);
   if (neu === null) return false;
-  try { fs.writeFileSync(f, neu); return true; }
+  try { writeAtomic(f, neu); return true; }
   catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
 }
 /* at the start: the folder of earlier versions (".duplicates", hidden on the Mac, then "Xplorio Duplicates") gets its
@@ -636,9 +660,8 @@ function doDupMove(body, cb) {
       }
       moved.push({from: dirs[i], to: to});
       dupIgnore(duplicates.driveOf(dirs[i]));
-      if (last && listed[dirs[i]]) { last.done = last.done || {}; last.done['duplicates|' + dirs[i]] = 1; }
+      if (last && listed[dirs[i]]) markDone(last, ['duplicates|' + dirs[i]]);
     }
-    if (last) { try { writeCheck(last); } catch (e) { /* the marks are only for display */ } }
     mpdForget(dirs, function(){});                        /* only these folders: MPD drops them */
     cb(200, {ok: true, moved: moved});
   });
@@ -695,10 +718,8 @@ function doFileMove(body, cb) {
     }
     moved.push({from: files[i], to: to});
     dupIgnore(duplicates.driveOf(files[i]));
-    last.done = last.done || {};
-    last.done['dupTracks|' + files[i]] = 1;
+    markDone(last, ['dupTracks|' + files[i]]);
   }
-  try { writeCheck(last); } catch (e) { /* the marks are only for display */ }
   mpdForget(moved.map(function(m){ return path.dirname(m.from); }).filter(function(d, i, all){ return all.indexOf(d) === i; }), function(){});   /* their folders: MPD drops the files */
   cb(200, {ok: true, moved: moved});
 }
@@ -773,8 +794,7 @@ function doDupFill(body, cb) {
         })};
         if (copied.length) dupFillSave(m);
         if (copied.length) {
-          last.done = last.done || {}; last.done['dupfill|' + dir] = 1;
-          try { writeCheck(last); } catch (e) { /* the marks are only for display */ }
+          markDone(last, ['dupfill|' + dir]);
           mpdForget(copied.map(function(f){ return path.dirname(f); }).filter(function(d, k, all){ return all.indexOf(d) === k; }), function(){});   /* exactly these folders */
         }
         cb(200, {ok: true, batch: copied.length ? batch : null, copied: copied, skipped: skipped});
@@ -981,7 +1001,7 @@ function albumsEnsure(cb, now) {
       albumBuilding = false;
       if (!e2 && songs.length) {
         albumIdx = {v: ALBUMS_VERSION, db: stamp || null, at: Date.now(), list: albums.fromSongs(songs), versions: versions.build(songs, libcheck.artistKey)};
-        try { fs.writeFileSync(ALBUMS_FILE, JSON.stringify(albumIdx)); } catch (x) { /* next time */ }
+        try { writeAtomic(ALBUMS_FILE, JSON.stringify(albumIdx)); } catch (x) { /* next time */ }
         var ge = {};                                     /* album genre (most common in the folder) for each track */
         albumIdx.list.forEach(function(a){ if (a.ge) ge[a.dir] = a.ge; });
         var tl = songs.filter(function(s){ return s.artist && s.title; }).map(function(s){
@@ -1337,7 +1357,7 @@ function doWelcome(query, cb) {
     else {
       pick = albums.dayAlbum(list, day, last, now);
       welcomeDay = {day: day, dir: pick && pick.dir};
-      try { fs.writeFileSync(WELCOME_FILE, JSON.stringify(welcomeDay)); } catch (e) { /* then it is simply picked again */ }
+      try { writeAtomic(WELCOME_FILE, JSON.stringify(welcomeDay)); } catch (e) { /* then it is simply picked again */ }
     }
     var recent = plays.recentAlbums(pl, 8);
     recent.forEach(function(it){ if (it.u) it.u = relUri(it.u); if (!it.u) delete it.u; var y = yearOf({u: it.u, al: it.ti, ar: it.ar}); if (y) it.y = y; });
