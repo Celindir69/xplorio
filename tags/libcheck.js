@@ -307,6 +307,23 @@ function rank(files) {
     .map(function(x){ return x.s; });
 }
 
+/* disc addition at the end of an album name: "Album (Disc 2)", "Album [CD 1]", "Album - CD2", "Album CD2",
+   "Album (Disc 1 of 2)"; "Vol. 2" is part of the name */
+var DISC_SFX_RE = /(?:\s*[(\[{]\s*(?:cd|dis[ck]|disco|disque)\s*[-_.]?\s*(\d+)(?:\s*(?:of|von|\/)\s*\d+)?\s*[)\]}]|\s+[-–:]\s*(?:cd|dis[ck]|disco|disque)\s*[-_.]?\s*(\d+)(?:\s*(?:of|von|\/)\s*\d+)?|\s+(?:cd|dis[ck])\s*(\d+))\s*$/i;
+function bareAlbum(name) { return String(name || '').replace(DISC_SFX_RE, '').trim(); }
+function discOfName(name) { var m = DISC_SFX_RE.exec(String(name || '')); return m ? String(+(m[1] || m[2] || m[3])) : ''; }
+/* [{name, count}] of the values fn(song), most common first */
+function counted(list, fn) {
+  var c = {}, order = [];
+  list.forEach(function(s){ var v = fn(s); if (!c.hasOwnProperty(v)) { c[v] = 0; order.push(v); } c[v]++; });
+  return order.map(function(v){ return {name: v, count: c[v]}; }).sort(function(a, b){ return b.count - a.count; });
+}
+function whoOf(list) {
+  var aas = uniq(list.map(function(s){ return s.albumartist; }).filter(Boolean)), artists = uniq(list.map(function(s){ return s.artist; }).filter(Boolean));
+  return aas[0] || (artists.length === 1 ? artists[0] : 'Verschiedene');
+}
+function merge(a, b) { var o = {}, k; for (k in a) o[k] = a[k]; for (k in b) o[k] = b[k]; return o; }
+
 /* songs of an album: disc folders ("CD2") together with their album -> {albumsOf: {dir: [song]}, albumOrder: [dir]} */
 function albumGroups(dirs, order) {
   var albumsOf = {}, albumOrder = [];
@@ -335,7 +352,7 @@ function analyze(songs, hasCover, audioOf) {
     if (!dirs[d]) { dirs[d] = []; order.push(d); }
     dirs[d].push(s);
   });
-  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], mixed: [], noTrack: [], gaps: [], dupTracks: [], spelling: []};
+  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], gaps: [], dupTracks: [], spelling: []};
   var forGenres = [];
   order.sort().forEach(function(d){
     var list = dirs[d];
@@ -352,10 +369,6 @@ function analyze(songs, hasCover, audioOf) {
     if (aaFilled.length > 1 || (artists.length > 1 && aaFilled.length < aas.length)) {
       res.albumArtist.push(item({artists: artists.slice(0, 6), albumartists: aaFilled, missing: aaFilled.length < aas.length}));
     }
-    var years = uniq(list.map(function(s){ return year(s.date); }));
-    if (albums.length > 1 || years.length > 1 || (albums.length === 1 && list.some(function(s){ return !s.album; }))) {
-      res.mixed.push(item({albums: albums, years: years.map(function(y){ return y || '(none)'; })}));
-    }
     var noTrack = list.filter(function(s){ return !/\d/.test(s.track); });
     if (noTrack.length) res.noTrack.push(item({missing: noTrack.length}));
     trackGaps(d, list).forEach(function(g){
@@ -366,6 +379,27 @@ function analyze(songs, hasCover, audioOf) {
   });
   /* duplicate tracks: per album, disc folders ("CD2") together with their album */
   var ag = albumGroups(dirs, order), albumsOf = ag.albumsOf, albumOrder = ag.albumOrder;
+  /* album name and year not the same in all tracks of an album (disc folders together): the suggestion is added by the
+     tag service (MusicBrainz), here the most common value; album names without a disc addition ("Album (Disc 2)") */
+  albumOrder.slice().sort().forEach(function(a){
+    var list = albumsOf[a], names = counted(list, function(s){ return s.album || ''; }), years = counted(list, function(s){ return year(s.date); });
+    var base = {dir: a, name: names.filter(function(x){ return x.name; }).concat([{name: path.basename(a)}])[0].name, artist: whoOf(list), count: list.length};
+    function files(extra) {
+      return list.map(function(s){ var o = {uri: s.file, title: s.title || path.basename(s.file)}; if (extra) extra(o, s); return o; });
+    }
+    if (names.length > 1) {
+      var bare = counted(list, function(s){ return bareAlbum(s.album); }).filter(function(x){ return x.name; });
+      res.albumName.push(merge(base, {names: names, bare: bare.length ? bare[0].name : base.name, files: files(function(o, s){
+        var n = discOfName(s.album);
+        if (n && !/\d/.test(s.disc || '')) o.disc = n;                 /* "Album (Disc 2)" without disc number: 2 */
+        o.album = s.album || '';
+      })}));
+    }
+    if (years.length > 1) {
+      var most = years.filter(function(x){ return x.name; });
+      res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', files: files()}));
+    }
+  });
   /* folders that the duplicate check counts as different versions of an album (e.g. an incomplete copy in the album
      folder next to CD1/CD2): the same track in two versions is listed there, not here */
   var verOf = {};
@@ -445,4 +479,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, dupTrackSongs: dupTrackSongs, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};

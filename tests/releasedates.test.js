@@ -72,3 +72,21 @@ pending++;
     console.log(n + ' checks');
   }); }); });
 })();
+
+(function(){
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-')), file = path.join(dir, 'r.jsonl'), urls = [];
+  var list = [{dir: 'L/H', al: 'Halbschatten', ar: 'Lumen Drift', y: 1981, rd: '1981-01-01'}];
+  fs.writeFileSync(file, JSON.stringify({dir: 'L/H', d: '1981-10-14', at: 1}) + '\n');   /* record from before titles */
+  var c = new rd.Collector({file: file, list: function(){ return list; }, stepMs: 1,
+    extra: function(){ return [{dir: 'L/H', al: 'halbschatten (Disc 2)', ar: 'Lumen Drift', y: 1981}, {dir: 'S/V', al: 'X', ar: 'Verschiedene'}]; },
+    getJson: function(u, cb){ urls.push(decodeURIComponent(u)); cb(null, mb); }});
+  c.step(function(){ c.step(function(){
+    c.stop();
+    t('extra albums: looked up despite Date tag, without disc addition, MusicBrainz title kept; once', function(){
+      assert.strictEqual(urls.length, 1);
+      assert.ok(/releasegroup:"halbschatten" AND/.test(urls[0]), urls[0]);
+      assert.strictEqual(c.by['L/H'].t, 'Halbschatten');
+      assert.strictEqual(c.by['L/H'].d, '1981-10-14');
+    });
+  }); });
+})();

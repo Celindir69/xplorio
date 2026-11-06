@@ -146,9 +146,11 @@ Die Abfragen macht der Tag-Dienst; der Player braucht dafür Internetzugang.
 
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
-einheitlichen Album-Künstler, Künstler in mehreren oder nicht üblicher Schreibweise, uneinheitliche Albumnamen/Jahre, Alben, deren
-Date-Tag vom ersten Erscheinen laut MusicBrainz abweicht (aus dem Nachschlagen für die Geburtstage; der Stift schlägt
-das MusicBrainz-Datum vor), Titel ohne Tracknummer und unvollständige Alben (Lücken in den Tracknummern, je CD), doppelte Titel im Album; der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
+einheitlichen Album-Künstler, Künstler in mehreren oder nicht üblicher Schreibweise, uneinheitliche Albumnamen (Vorschlag: Schreibweise
+bei MusicBrainz, sonst der häufigste Name ohne CD-Zusatz; „Übernehmen“ trägt bei „Album (Disc 2)“ auch die fehlende CD-Nummer ein),
+uneinheitliche oder von MusicBrainz abweichende Jahre (Vorschlag: erstes Erscheinen laut MusicBrainz, sonst das häufigste Jahr;
+nachgeschlagen im Hintergrund wie für die Geburtstage, Vorschläge können sich also noch ändern; „Übernehmen“ schreibt das Datum in alle
+Titel, mit Rückgängig, „Behalten“ legt den Eintrag zugeklappt ans Ende), Titel ohne Tracknummer und unvollständige Alben (Lücken in den Tracknummern, je CD), doppelte Titel im Album; der Stift öffnet den passenden Editor. Die Prüfung liest die MPD-Datenbank (`MPD_HOST`, `MPD_PORT`, Standard
 `localhost:6600`) und die Ordner, ändert nichts an den Dateien und läuft nur auf Knopfdruck (Ausnahme: „Verschieben“ bei den doppelten Alben, siehe unten). Ergebnis:
 `/data/xplorio/data/check.json`, bis neu geprüft wird. Einträge, deren Stift benutzt wurde, bleiben dort vermerkt und
 ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.

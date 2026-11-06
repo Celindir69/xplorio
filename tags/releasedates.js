@@ -4,6 +4,7 @@
    RETRY_DAYS. Node 8, ES5 only. */
 var fs = require('fs');
 var coversearch = require('./coversearch.js');
+var libcheck = require('./libcheck.js');
 
 var STEP_MS = 1500;              /* MusicBrainz allows one request per second */
 var RETRY_DAYS = 90;
@@ -20,20 +21,24 @@ function tkey(s) {
 }
 function quote(s) { return '"' + String(s || '').replace(/["\\]/g, '\\$&') + '"'; }
 
-/* best hit of a MusicBrainz response: title and artist match, date complete, not later than the own year */
-function pickDate(j, al, ar, y) {
+/* best hit of a MusicBrainz response: title and artist match, date complete, not later than the own year
+   -> {d: 'YYYY-MM-DD', t: title at MusicBrainz} or null */
+function pickHit(j, al, ar, y) {
   var hit = ((j && j['release-groups']) || []).filter(function(g){
     var credit = (g['artist-credit'] || []).map(function(c){ return c.name || (c.artist && c.artist.name) || ''; }).join(' ');
     var d = full(g['first-release-date']);
     return (g.score || 0) >= MIN_SCORE && d && tkey(g.title) === tkey(al) &&
            coversearch.key(credit).indexOf(coversearch.key(ar)) >= 0 && !(y && +d.slice(0, 4) > y + 1);
   })[0];
-  return hit ? hit['first-release-date'] : '';
+  return hit ? {d: hit['first-release-date'], t: hit.title || ''} : null;
 }
+function pickDate(j, al, ar, y) { var h = pickHit(j, al, ar, y); return h ? h.d : ''; }
 
-/* opts: file, list() -> album list (albums.json), getJson(url, cb) for testing, stepMs */
+/* opts: file, list() -> album list (albums.json), extra() -> further albums [{dir, al, ar, y}] to look up even with a full
+   Date tag (library check: year or album name not the same in all tracks; title t then gives the MusicBrainz spelling),
+   getJson(url, cb) for testing, stepMs */
 function Collector(opts) {
-  this.file = opts.file; this.list = opts.list; this.stepMs = opts.stepMs || STEP_MS;
+  this.file = opts.file; this.list = opts.list; this.extra = opts.extra || function(){ return []; }; this.stepMs = opts.stepMs || STEP_MS;
   this.getJson = opts.getJson || function(u, cb){
     coversearch.fetchUrl(u, 256 * 1024, function(e, r){
       if (e) return cb(e);
@@ -51,6 +56,12 @@ Collector.prototype.dateOf = function(a) { return full(a.rd) || (this.by[a.dir] 
 
 /* next album without date that has not been looked up yet (or unsuccessfully more than RETRY_DAYS ago) */
 Collector.prototype.next = function(now) {
+  var ex = this.extra() || [];
+  for (var k = 0; k < ex.length; k++) {
+    var e = ex[k], q = this.by[e.dir];
+    if (!e.al || !e.ar || e.ar === 'Verschiedene') continue;
+    if (!q || q.t === undefined || (!q.d && now - q.at > RETRY_DAYS * DAY)) return e;   /* records before titles: once more */
+  }
   var list = this.list() || [];
   for (var i = 0; i < list.length; i++) {
     var a = list[i], r = this.by[a.dir];
@@ -78,10 +89,11 @@ Collector.prototype.step = function(done) {
   var self = this, now = Math.floor(Date.now() / 1000), a = this.next(now);
   if (!(this.list() || []).length) { this.schedule(60000); return done && done(); }   /* album list not read yet */
   if (!a) { this.schedule(3600000); return done && done(); }           /* all done: check hourly for new albums */
-  var q = 'releasegroup:' + quote(a.al) + ' AND artist:' + quote(a.ar);
+  var al = libcheck.bareAlbum(a.al) || a.al;                       /* "Album (Disc 2)": search for "Album" */
+  var q = 'releasegroup:' + quote(al) + ' AND artist:' + quote(a.ar);
   this.getJson(MB + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
     if (e) { self.schedule(60000); return done && done(e); }           /* network or MusicBrainz gone: continue later */
-    var rec = {dir: a.dir, d: pickDate(j, a.al, a.ar, a.y), at: now};
+    var h = pickHit(j, al, a.ar, a.y), rec = {dir: a.dir, d: h ? h.d : '', t: h ? h.t : '', at: now};
     self.by[a.dir] = rec; self.fetched++; self.rev++;
     try { fs.appendFileSync(self.file, JSON.stringify(rec) + '\n'); } catch (x) { /* next time */ }
     self.schedule(self.stepMs);
@@ -138,4 +150,4 @@ function diffs(albumList, songs, mbOf, albumDir) {
   return out.sort(function(a, b){ return a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name); });
 }
 
-module.exports = {Collector: Collector, birthdays: birthdays, pickDate: pickDate, diffs: diffs};
+module.exports = {Collector: Collector, birthdays: birthdays, pickDate: pickDate, pickHit: pickHit, diffs: diffs};
