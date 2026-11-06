@@ -109,6 +109,33 @@ function artistKey(name) {
   return s.replace(/[^a-z0-9]+/g, '');
 }
 
+/* what makes two names look the same but differ: spaces at the start or end, double spaces, protected space, invisible
+   characters, another Unicode form (é as e + accent) -> ['edge', 'double', 'nbsp', 'invisible', 'unicode'] */
+var INVISIBLE_RE = /[\u200B-\u200F\u2060\uFEFF\u00AD]/;
+function nameFlaws(n) {
+  var f = [];
+  if (/^\s|\s$/.test(n)) f.push('edge');
+  if (/\S\s{2,}\S/.test(n)) f.push('double');
+  if (/[\u00A0\u2000-\u200A\u202F\u3000]/.test(n)) f.push('nbsp');
+  if (INVISIBLE_RE.test(n)) f.push('invisible');
+  if (n.normalize && n.normalize('NFC') !== n) f.push('unicode');
+  return f;
+}
+function cleanName(n) {
+  n = String(n || '');
+  if (n.normalize) n = n.normalize('NFC');
+  return n.replace(new RegExp(INVISIBLE_RE.source, 'g'), '').replace(/[\s\u00A0\u2000-\u200A\u202F\u3000]+/g, ' ').trim();
+}
+/* suggestion among the spellings of one artist: the most common one (ties: the one without flaws, then the one with fewer
+   special characters), cleaned of invisible flaws */
+function spellingSuggest(variants) {
+  function odd(n) { return (n.match(/[^\x20-\x7e]/g) || []).length; }   /* letters with accents and the like */
+  var best = variants.slice().sort(function(a, b){
+    return b.count - a.count || (a.flaws ? 1 : 0) - (b.flaws ? 1 : 0) || odd(a.name) - odd(b.name) || a.name.localeCompare(b.name);
+  })[0];
+  return cleanName(best.name);
+}
+
 function year(d) { var m = /\d{4}/.exec(d || ''); return m ? m[0] : ''; }
 function uniq(list) { var o = {}, out = []; list.forEach(function(x){ if (!o.hasOwnProperty(x)) { o[x] = 1; out.push(x); } }); return out; }
 function filesOf(list) { return list.map(function(s){ return {uri: s.file, title: s.title || path.basename(s.file)}; }); }
@@ -445,8 +472,9 @@ function analyze(songs, hasCover, audioOf) {
   Object.keys(groups).forEach(function(k){
     var names = Object.keys(groups[k]);
     if (names.length < 2) return;
-    res.spelling.push({variants: names.map(function(n){ return {name: n, count: groups[k][n]}; })
-      .sort(function(a, b){ return b.count - a.count || a.name.localeCompare(b.name); })});
+    var variants = names.map(function(n){ var o = {name: n, count: groups[k][n]}, f = nameFlaws(n); if (f.length) o.flaws = f; return o; })
+      .sort(function(a, b){ return b.count - a.count || a.name.localeCompare(b.name); });
+    res.spelling.push({key: k, variants: variants, suggest: spellingSuggest(variants)});
   });
   res.spelling.sort(function(a, b){ return byName(a.variants[0], b.variants[0]); });
   /* names with their number of tracks (as artist or album artist), for the usual spelling (artistnames.js) */

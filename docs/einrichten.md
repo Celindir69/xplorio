@@ -146,7 +146,8 @@ Die Abfragen macht der Tag-Dienst; der Player braucht dafür Internetzugang.
 
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
-einheitlichen Album-Künstler, Künstler in mehreren oder nicht üblicher Schreibweise, uneinheitliche Albumnamen (Vorschlag: Schreibweise
+einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,
+bereinigt um doppelte oder geschützte Leerzeichen und unsichtbare Zeichen; eine andere lässt sich stattdessen wählen) oder nicht üblicher Schreibweise, uneinheitliche Albumnamen (Vorschlag: Schreibweise
 bei MusicBrainz, sonst der häufigste Name ohne CD-Zusatz; „Übernehmen“ trägt bei „Album (Disc 2)“ auch die fehlende CD-Nummer ein),
 uneinheitliche oder von MusicBrainz abweichende Jahre (Vorschlag: erstes Erscheinen laut MusicBrainz, sonst das häufigste Jahr;
 nachgeschlagen im Hintergrund wie für die Geburtstage, Vorschläge können sich also noch ändern; „Übernehmen“ schreibt das Datum in alle
