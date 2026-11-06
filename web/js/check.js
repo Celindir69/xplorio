@@ -62,7 +62,8 @@ function openCheck() {
 var checkShown = null;          /* {at, info, res}: last drawn result; while checking, only rewrite the progress */
 function checkLoad() {
   clearTimeout(checkTimer);
-  var have = checkShown && checkShown.info.isConnected && checkShown.at ? '?have=' + encodeURIComponent(checkShown.at) : '';
+  var have = checkShown && checkShown.info.isConnected && checkShown.at ? '?have=' + encodeURIComponent(checkShown.at) +
+    (checkShown.res && checkShown.res.fixStamp ? '&fix=' + encodeURIComponent(checkShown.res.fixStamp) : '') : '';
   Promise.all([tagGetJson('/check' + have), tagGetJson('/moodtags').catch(function(){ return null; })]).then(function(both){
     var res = both[0];
     if (!overlayCheck.classList.contains('on')) return;
@@ -71,6 +72,9 @@ function checkLoad() {
       checkShown.info.textContent = checkRunText(res.running) + (res.error ? T('check.errorSuffix', {error: res.error}) : '');
     } else {
       if (res.result === 'same') res.result = checkShown ? checkShown.res.result : null;
+      if (res.fix === 'same' && checkShown) {                /* suggestion lists unchanged: keep the ones shown */
+        ['genreOk', 'artistFix', 'yearFix', 'nameFix'].forEach(function(k){ res[k] = checkShown.res[k]; });
+      }
       checkRender(res);
     }
     var mt = checkMood && checkMood.enabled && checkMood.status;

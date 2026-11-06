@@ -82,7 +82,7 @@ RgAuto.prototype.start = function() {
 RgAuto.prototype.save = function(on) {
   this.on = on;
   if (!on) this.mine = null;
-  try { fs.writeFileSync(this.file, JSON.stringify({auto: on})); } catch (e) { console.log('replaygain.json: ' + e.message); }
+  try { require('./atomic.js').writeAtomic(this.file, JSON.stringify({auto: on})); } catch (e) { console.log('replaygain.json: ' + e.message); }
 };
 
 /* Playback page: "auto" switches it on (and sets the mode right away), any other mode off */

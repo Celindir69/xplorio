@@ -257,6 +257,11 @@ function service(mpdPort) {
               assert.deepStrictEqual(d[0].versions.map(function(v){ return [v.dirs[0], v.format, v.keep]; }),
                 [['USB/S/Abbey Road (Remastered)', 'FLAC 24/96', true], ['USB/S/Abbey Road', 'MP3', false]]);
             });
+            call('GET', '/check?have=' + r.result.at + '&fix=' + encodeURIComponent(r.fixStamp), function(rs){
+            t('service: unchanged result and suggestions are not sent again', function(){
+              assert.strictEqual(rs.result, 'same'); assert.strictEqual(rs.fix, 'same');
+              assert.ok(Array.isArray(r.yearFix) && Array.isArray(r.nameFix)); assert.strictEqual(rs.yearFix, undefined);
+            });
             call('POST', '/filemove', function(f1){
               t('service: /filemove moves a duplicate track listed by the check into Xplorio Trash', function(){
                 assert.strictEqual(r.result.dupTracks.length, 1);
@@ -299,7 +304,7 @@ function service(mpdPort) {
                   assert.ok(!fs.existsSync(path.join(root, 'USB/S/Abbey Road')));
                   assert.ok(fs.statSync(path.join(root, 'USB/S/Xplorio Trash/Abbey Road')).isDirectory());
                   assert.strictEqual(fs.readFileSync(path.join(root, 'USB/S/.mpdignore'), 'utf8'), 'Xplorio Trash\n');   /* MPD leaves it out */
-                  var saved = JSON.parse(fs.readFileSync(path.join(root, 'log', 'check.json'), 'utf8'));
+                  var saved = JSON.parse(fs.readFileSync(path.join(root, 'log', 'check-done.json'), 'utf8'));
                   assert.strictEqual(saved.done['duplicates|USB/S/Abbey Road'], 1);
                 });
                 call('POST', '/dupmove', function(m3){
@@ -335,6 +340,7 @@ function service(mpdPort) {
             }, {dir: 'USB/S/Abbey Road (Remastered)'});
               }, {files: ['USB/A/1.flac']});
             }, {files: ['USB/S/Help/1 (1).flac']});
+            });
           });
         })(0);
       });

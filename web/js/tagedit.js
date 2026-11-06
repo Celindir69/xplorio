@@ -101,9 +101,16 @@ function tagPaintPlayer(st) {
   }
 }
 
+/* JSON to the tag service (as text/plain: no browser preflight request needed). No time limit: writing many files can
+   take minutes */
 function tagPost(route, body) {
   return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
-    .then(function(r){ return r.json(); }).then(tagNoWrite);
+    .then(tagJson).then(tagNoWrite);
+}
+/* answer of the tag service; not JSON (e.g. an error page of a proxy): a readable error instead of a JSON parse error */
+function tagJson(r) {
+  if (!/json/i.test(r.headers.get('content-type') || '')) throw new Error('HTTP ' + r.status);
+  return r.json();
 }
 
 /* missing write permission: say how to fix it (files copied over Volumio's network share belong to the guest user) */
@@ -644,8 +651,9 @@ function tagSelect(list, value) {
   return sel;
 }
 
+var TAG_GET_TIMEOUT = 45000;                         /* a hanging service does not leave the page spinning forever */
 function tagGetJson(route) {
-  return fetch(TAGS + route).then(function(r){ return r.json(); });
+  return withTimeout(fetch(TAGS + route).then(tagJson), TAG_GET_TIMEOUT);
 }
 
 /* whenTags(fn): fn(health) as soon as the tag service answers. One shared request for all parts; without an answer
@@ -672,11 +680,7 @@ function tagsCheck() {
   });
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && !tagsHealth && tagsWaiters.length) { tagsTries = 0; tagsCheck(); } });
-/* JSON to the tag service (as text/plain: no browser preflight request needed) */
-function tagPostJson(route, body) {
-  return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
-    .then(function(r){ return r.json(); }).then(tagNoWrite);
-}
+function tagPostJson(route, body) { return tagPost(route, body); }
 
 /* process a list in chunks one after another; fn(chunk) -> Promise */
 function tagInChunks(list, size, fn) {

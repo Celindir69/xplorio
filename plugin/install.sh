@@ -33,7 +33,8 @@ mkdir -p /data/xplorio || fail "mkdir /data/xplorio"
 [ -d /data/xplorio/data ] || mkdir -m 700 /data/xplorio/data || fail "mkdir /data/xplorio/data"
 chown volumio:volumio /data/xplorio /data/xplorio/data
 
-# unit name, description, script below app/, node options, "nopriv" (needs no sudo: no privileges at all);
+# unit name, description, script below app/, node options, "nopriv" (needs no sudo: no privileges at all), "low" (lower CPU
+# and disk priority than playback: checks, copying and writing tags never hold up MPD);
 # only our own files (marked) are written or replaced. /usr, /boot and /etc stay read-only for all three
 unit() {
   local f="/etc/systemd/system/$1.service"
@@ -55,10 +56,13 @@ Restart=always
 RestartSec=5
 ProtectSystem=full
 ${5:+NoNewPrivileges=true}
+${6:+Nice=10}
+${6:+IOSchedulingClass=best-effort}
+${6:+IOSchedulingPriority=7}
 UNIT
 }
 unit xplorio-web   "Xplorio web server (Volumio plugin)"  server/xplorio-server.js "" nopriv
-unit xplorio-tags  "Xplorio tag service (Volumio plugin)" tags/tag-service.js "--max-old-space-size=384"
+unit xplorio-tags  "Xplorio tag service (Volumio plugin)" tags/tag-service.js "--max-old-space-size=384" "" low
 unit xplorio-rotel "Xplorio Rotel bridge (Volumio plugin)" rotel/rotel-bridge.js "" nopriv
 systemctl daemon-reload || fail "systemctl daemon-reload"
 

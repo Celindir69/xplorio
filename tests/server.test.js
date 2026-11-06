@@ -43,6 +43,24 @@ volumio.listen(0, function(){
         });
       });
     }); });
+    steps.push(function(next){ get('/web/js/core.js?v=abc', {headers: {'Accept-Encoding': 'gzip, deflate'}}, function(res){
+      var parts = [];
+      http.get({port: port, path: '/web/js/core.js?v=abc', headers: {'Accept-Encoding': 'gzip'}}, function(r2){
+        r2.on('data', function(c){ parts.push(c); });
+        r2.on('end', function(){
+          get('/web/js/core.js?t=1', null, function(r3, d3){
+            t('with ?v=: kept by the browser, compressed; otherwise checked each time, uncompressed', function(){
+              assert.strictEqual(res.headers['content-encoding'], 'gzip');
+              assert.ok(/immutable/.test(res.headers['cache-control']), res.headers['cache-control']);
+              assert.strictEqual(String(require('zlib').gunzipSync(Buffer.concat(parts))), 'var core;');
+              assert.strictEqual(r3.headers['cache-control'], 'no-cache');
+              assert.ok(!r3.headers['content-encoding']); assert.strictEqual(d3, 'var core;');
+            });
+            next();
+          });
+        });
+      });
+    }); });
     steps.push(function(next){ get('/web/config.local.js?t=1', null, function(res, d){
       t('config.local.js: 404 as long as the plugin has not written it', function(){ assert.strictEqual(res.statusCode, 404); });
       fs.writeFileSync(path.join(www, 'web/config.local.js'), 'window.LOCAL = "neu";');
