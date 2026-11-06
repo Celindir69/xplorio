@@ -253,7 +253,7 @@ function browseMoodSet(e, seq) {
 /* "Play all" as on the artist page: replace the queue with all albums of the list (order as displayed) */
 function genrePlayAllHead(list, match) {
   function folders() { return list.map(function(a){ return {uri: 'music-library/' + a.dir, service: 'mpd', type: 'folder', title: a.al, artist: a.ar}; }); }
-  return playRow(T('browse.playAll'), '', function(){
+  return playRow(T('browse.playAll'), T('browse.albumCount', {n: list.length}), function(){
     var items = folders();
     browseOrigin = null;
     if (queueForInput(items)) return;

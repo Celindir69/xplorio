@@ -320,7 +320,7 @@ function browseArtist(e, seq) {
     browseBody.appendChild(photo);
 
     if (!isStream) {                                  /* play everything by the artist (albums and single tracks) */
-      browseBody.appendChild(playRow(T('browse.playAll'), '', function(){
+      browseBody.appendChild(playRow(T('browse.playAll'), albums.length ? T('browse.albumCount', {n: albums.length}) : '', function(){
         browsePlay({uri:artistUri(e.artist), service:'mpd', type:'folder', title:e.artist});
       }, [rateArtistHeart(e.artist),                   /* favorite artist (rating.js) */
           randomMixButton({artist: e.artist}),         /* 25 random tracks by the artist (discover.js) */

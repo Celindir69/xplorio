@@ -42,6 +42,7 @@ langRegister('fr', 'Français', {
   'browse.playPlaylist': 'Lire la playlist',
   'browse.playlistEmpty': 'La playlist est vide',
   'browse.trackCount': {one: '{n} titre', other: '{n} titres'},
+  'browse.albumCount': {one: '{n} album', other: '{n} albums'},
   'browse.tracks': 'Titres',
 
   'check.albumArtistIs': 'Artiste de l\'album : {names}',
@@ -232,7 +233,7 @@ langRegister('fr', 'Français', {
   'similar.title': 'Comme « {ti} »',
   'similar.seed': 'Proche en ambiance, énergie et tempo : {why}',
   'similar.energy': 'Énergie {e}',
-  'similar.hint': 'Toucher : lire ce titre',
+  'similar.hint': 'Toucher : lire à partir de ce titre',
   'similar.none': 'Aucun titre similaire trouvé dans la bibliothèque.',
   'similar.nodata': 'Aucune donnée d\'ambiance connue pour ce titre (tags d\'ambiance ou analyse audio).',
   'disc.moodNone': 'Aucun album majoritairement classé ainsi. Cela dépend des tags d\'ambiance (menu « Vérifier la bibliothèque »).',

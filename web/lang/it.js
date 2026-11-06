@@ -41,6 +41,7 @@ langRegister('it', 'Italiano', {
   'browse.playPlaylist': 'Riproduci playlist',
   'browse.playlistEmpty': 'La playlist è vuota',
   'browse.trackCount': {one: '{n} brano', other: '{n} brani'},
+  'browse.albumCount': {one: '{n} album', other: '{n} album'},
   'browse.tracks': 'Brani',
 
   'check.albumArtistIs': 'Artista dell\'album: {names}',
@@ -231,7 +232,7 @@ langRegister('it', 'Italiano', {
   'similar.title': 'Come “{ti}”',
   'similar.seed': 'Simili per mood, energia e tempo: {why}',
   'similar.energy': 'Energia {e}',
-  'similar.hint': 'Tocca: riproduci questo brano',
+  'similar.hint': 'Tocca: riproduci da questo brano',
   'similar.none': 'Nessun brano simile trovato nella libreria.',
   'similar.nodata': 'Per questo brano non ci sono ancora dati sul mood (tag mood o analisi audio).',
   'disc.moodNone': 'Nessun album classificato prevalentemente così. Dipende dai tag mood (menu “Controlla libreria”).',

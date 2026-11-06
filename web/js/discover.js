@@ -308,6 +308,37 @@ function randomMixPlay(q) {
   }).catch(function(){ showToast(T('hist.offline')); });
 }
 
+/* Track rows of the mix-like lists (Similar, Go together, Mood mix), the same everywhere: a tap plays the list from this
+   track on, pen for the tags, ✕ takes the track out of the list (onRemove redraws); thumbs follow with tracksRateRows */
+var MIX_DEL_SVG = '<svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
+function tracksRowTools(row, x, list, onRemove, onPlay) {
+  var pen = tagTrackButton({uri: 'music-library/' + x.f, service: 'mpd', title: x.ti});
+  if (pen) row.appendChild(pen);
+  var del = histEl('div', 'mxDel');
+  del.title = T('mix.remove');
+  del.innerHTML = MIX_DEL_SVG;
+  del.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    var i = list.indexOf(x);
+    if (i >= 0) list.splice(i, 1);
+    onRemove(row);
+  });
+  row.appendChild(del);
+  row.style.cursor = 'pointer';
+  row.addEventListener('click', function(){ (onPlay || tracksPlay)(list.slice(list.indexOf(x))); });
+}
+/* thumbs (rating.js) before the pen; alive() false: list redrawn in the meantime */
+function tracksRateRows(list, rows, alive) {
+  if (typeof rateRows === 'function') rateRows(tracksItems(list), rows, alive, '.mxDel').catch(function(){});
+}
+/* ✕ in Similar / Go together: row away, count and duration in the play row anew */
+function tracksRemoved(play, list) {
+  return function(row){
+    if (row.parentNode) row.parentNode.removeChild(row);
+    play.sub.textContent = playRowSub(list, function(x){ return x.d; });
+  };
+}
+
 /* tracks from the tag service ([{f, ti, ar, al}]) become the queue, the first one plays */
 function tracksItems(list) {
   return list.map(function(t){
@@ -346,7 +377,7 @@ function tracksAfterCurrent(list) {
 
 /* ---------- More like this track (tap on the title in now playing) ---------- */
 /* Tag service GET /similar: tracks with similar mood, energy and tempo, at most two per artist.
-   "Play all" plays the list, the dice 25 other similar tracks; a tap on a track plays it. */
+   "Play all" plays the list, the dice 25 other similar tracks; a tap on a track plays the list from there. */
 function similarQuery(e) {
   return '/similar?file=' + encodeURIComponent(e.file || '') + '&artist=' + encodeURIComponent(e.artist || '') +
     '&title=' + encodeURIComponent(e.title || '') + '&album=' + encodeURIComponent(e.album || '');
@@ -370,9 +401,11 @@ function browseSimilar(e, seq) {
         showToast(T('similar.mixQueued', {n: m.items.length}));
       }).catch(function(){ showToast(T('hist.offline')); });
     });
-    browseBody.appendChild(playRow(T('browse.playAll'), playRowSub(r.items, function(x){ return x.d; }),
-      function(){ tracksPlay(r.items); }, [dice, queueAddButton(tracksItems(r.items), r.items.length)]));
+    var play = playRow(T('browse.playAll'), playRowSub(r.items, function(x){ return x.d; }),
+      function(){ tracksPlay(r.items); }, [dice, queueAddButton(function(){ return tracksItems(r.items); }, 0)]);
+    browseBody.appendChild(play);
     browseBody.appendChild(listHint(T('similar.hint')));
+    var rows = [];
     r.items.forEach(function(x){
       var row = histEl('div', 'sRow mxRow');
       row.appendChild(histImg(histAlbumArt(x.ar, x.al, x.f.replace(/\/[^\/]*$/, ''))));
@@ -384,10 +417,11 @@ function browseSimilar(e, seq) {
       if (why.length) meta.appendChild(histEl('div', 'mxWhy', why.join(' · ')));
       row.appendChild(meta);
       if (x.why.energy) row.appendChild(histEl('div', 'mxDots', mixEnergyDots(x.why.energy)));
-      row.style.cursor = 'pointer';
-      row.addEventListener('click', function(){ histPlayUri('music-library/' + x.f, 'mpd', x); });
+      tracksRowTools(row, x, r.items, tracksRemoved(play, r.items));
       browseBody.appendChild(row);
+      rows.push(row);
     });
+    tracksRateRows(r.items.slice(), rows, function(){ return seq === browseSeq; });
   }).catch(function(){
     if (seq !== browseSeq) return;
     discoverClear(browseBody);
@@ -455,9 +489,11 @@ function browseTogether(e, seq) {
         showToast(T('disc.mixStarted', {n: m.items.length}));
       }).catch(function(){ showToast(T('hist.offline')); });
     });
-    browseBody.appendChild(playRow(T('tog.play'), playRowSub(r.items, function(x){ return x.d; }),
-      function(){ tracksPlay(r.items); }, [dice, queueAddButton(tracksItems(r.items), r.items.length)]));
+    var play = playRow(T('tog.play'), playRowSub(r.items, function(x){ return x.d; }),
+      function(){ tracksPlay(r.items); }, [dice, queueAddButton(function(){ return tracksItems(r.items); }, 0)]);
+    browseBody.appendChild(play);
     browseBody.appendChild(listHint(T('tog.hint')));
+    var rows = [];
     r.items.forEach(function(x){
       var row = histEl('div', 'sRow mxRow');
       row.appendChild(histImg(histAlbumArt(x.ar, x.al, x.f.replace(/\/[^\/]*$/, ''))));
@@ -466,10 +502,11 @@ function browseTogether(e, seq) {
       meta.appendChild(histEl('div', 'sSub', x.ar + (x.al ? ' · ' + x.al : '')));
       row.appendChild(meta);
       if (!x.plays) row.appendChild(histEl('div', 'tgMark', T('tog.new')));
-      row.style.cursor = 'pointer';
-      row.addEventListener('click', function(){ histPlayUri('music-library/' + x.f, 'mpd', x); });
+      tracksRowTools(row, x, r.items, tracksRemoved(play, r.items));
       browseBody.appendChild(row);
+      rows.push(row);
     });
+    tracksRateRows(r.items.slice(), rows, function(){ return seq === browseSeq; });
   }).catch(function(){
     if (seq !== browseSeq) return;
     discoverClear(browseBody);

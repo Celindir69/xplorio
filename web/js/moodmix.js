@@ -396,7 +396,7 @@ function mixPreview() {
     function(){ mixPlay(tracks, true); }, [reroll, add]));   /* row as on the album and artist page (browse.js) */
   mixBody.appendChild(listHint(T('mix.hint')));
 
-  var list = histEl('div', 'mxList');
+  var list = histEl('div', 'mxList'), rows = [];
   tracks.forEach(function(x, i){
     var dir = x.f.replace(/\/[^\/]*$/, '');
     var row = histEl('div', 'sRow mxRow');
@@ -411,21 +411,16 @@ function mixPreview() {
     meta.appendChild(histEl('div', 'mxWhy', why.join(' · ')));
     row.appendChild(meta);
     row.appendChild(histEl('div', 'mxDots', mixEnergyDots(x.energy)));
-    var del = histEl('div', 'mxDel');
-    del.title = T('mix.remove');
-    del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
-    del.addEventListener('click', function(e){
-      e.stopPropagation();
-      tracks.splice(tracks.indexOf(x), 1);
+    tracksRowTools(row, x, tracks, function(){                /* pen, ✕, tap: from this track (discover.js) */
       var keep = mixBody.scrollTop;
-      mixRender();
+      mixRender();                                             /* numbers and play row anew */
       mixBody.scrollTop = keep;
-    });
-    row.appendChild(del);
-    row.addEventListener('click', function(){ mixPlay(tracks.slice(tracks.indexOf(x)), true); });   /* from this track */
+    }, function(from){ mixPlay(from, true); });
     list.appendChild(row);
+    rows.push(row);
   });
   mixBody.appendChild(list);
+  tracksRateRows(tracks.slice(), rows, function(){ return list.isConnected; });
 }
 
 /* replace: replace the queue and play from track 1; otherwise append at the end */

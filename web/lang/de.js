@@ -41,6 +41,7 @@ langRegister('de', 'Deutsch', {
   'browse.playPlaylist': 'Playlist abspielen',
   'browse.playlistEmpty': 'Playlist ist leer',
   'browse.trackCount': {one: '{n} Titel', other: '{n} Titel'},
+  'browse.albumCount': {one: '{n} Album', other: '{n} Alben'},
   'browse.tracks': 'Titel',
 
   'check.albumArtistIs': 'Album-Künstler: {names}',
@@ -231,7 +232,7 @@ langRegister('de', 'Deutsch', {
   'similar.title': 'Wie „{ti}“',
   'similar.seed': 'Ähnlich in Stimmung, Energie und Tempo: {why}',
   'similar.energy': 'Energie {e}',
-  'similar.hint': 'Tippen: diesen Titel abspielen',
+  'similar.hint': 'Tippen: ab diesem Titel abspielen',
   'similar.none': 'Keine ähnlichen Titel in der Bibliothek gefunden.',
   'similar.nodata': 'Zu diesem Titel sind noch keine Stimmungsdaten bekannt (Stimmungs-Tags oder Audio-Analyse).',
   'disc.moodNone': 'Keine Alben, die überwiegend so eingeordnet sind. Das hängt von den Stimmungs-Tags ab (Menü „Bibliothek prüfen“).',

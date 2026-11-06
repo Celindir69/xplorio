@@ -159,8 +159,11 @@ function histRecent(seq) {
         var day = histDay(e.t);
         if (day !== lastDay) { histBody.appendChild(browseHeading(day)); lastDay = day; }
         var d = new Date(e.t * 1000);
-        histBody.appendChild(histRow(e.ti, e.ar + (e.al ? ' · ' + e.al : ''), histTwo(d.getHours()) + ':' + histTwo(d.getMinutes()),
-                                     function(){ histPlay(e); }, histImg(histTrackArt(e))));
+        var hr = histRow(e.ti, e.ar + (e.al ? ' · ' + e.al : ''), histTwo(d.getHours()) + ':' + histTwo(d.getMinutes()),
+                         function(){ histPlay(e); }, histImg(histTrackArt(e)));
+        var pen = e.u ? tagTrackButton({uri: e.u, service: e.s && e.s !== 'lastfm' ? e.s : 'mpd', title: e.ti}) : null;   /* local file: tags */
+        if (pen) hr.appendChild(pen);
+        histBody.appendChild(hr);
         before = e.t;
       });
       if (items.length >= 100) {
