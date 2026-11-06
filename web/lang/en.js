@@ -43,6 +43,7 @@ langRegister('en', 'English', {
   'browse.playPlaylist': 'Play playlist',
   'browse.playlistEmpty': 'Playlist is empty',
   'browse.trackCount': {one: '{n} track', other: '{n} tracks'},
+  'browse.albumCount': {one: '{n} album', other: '{n} albums'},
   'browse.tracks': 'Tracks',
 
   'check.albumArtistIs': 'Album artist: {names}',
@@ -233,7 +234,7 @@ langRegister('en', 'English', {
   'similar.title': 'Like “{ti}”',
   'similar.seed': 'Similar in mood, energy and tempo: {why}',
   'similar.energy': 'Energy {e}',
-  'similar.hint': 'Tap: play this track',
+  'similar.hint': 'Tap: play from this track',
   'similar.none': 'No similar tracks found in the library.',
   'similar.nodata': 'No mood data is known for this track yet (mood tags or audio analysis).',
   'disc.moodNone': 'No albums mostly classified like this. This depends on the mood tags (menu “Check library”).',

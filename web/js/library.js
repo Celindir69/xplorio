@@ -384,6 +384,10 @@ function searchRow(it, stream) {
     var pen = tagTrackButton(it);
     if (pen) row.appendChild(pen);
   }
+  if (searchCat === 'artists' && !stream && (it.title || it.name)) {   /* local artist: tags of all their tracks */
+    var name = it.title || it.name;
+    row.appendChild(tagPenButton('tagEditMini', T('tag.editArtist'), function(){ openArtistEditor(name); }));
+  }
   if (searchCat === 'albums' && !stream) {                  /* local album: tags of all tracks */
     var apen = tagAlbumButton(it);
     if (apen) row.appendChild(apen);

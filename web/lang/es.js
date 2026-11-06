@@ -41,6 +41,7 @@ langRegister('es', 'Español', {
   'browse.playPlaylist': 'Reproducir playlist',
   'browse.playlistEmpty': 'La playlist está vacía',
   'browse.trackCount': {one: '{n} canción', other: '{n} canciones'},
+  'browse.albumCount': {one: '{n} álbum', other: '{n} álbumes'},
   'browse.tracks': 'Canciones',
 
   'check.albumArtistIs': 'Artista del álbum: {names}',
@@ -231,7 +232,7 @@ langRegister('es', 'Español', {
   'similar.title': 'Como “{ti}”',
   'similar.seed': 'Parecidas en ánimo, energía y tempo: {why}',
   'similar.energy': 'Energía {e}',
-  'similar.hint': 'Toca: reproducir esta canción',
+  'similar.hint': 'Toca: reproducir a partir de esta canción',
   'similar.none': 'No se encontraron canciones parecidas en la biblioteca.',
   'similar.nodata': 'Aún no hay datos de ánimo para esta canción (etiquetas de ánimo o análisis de audio).',
   'disc.moodNone': 'No hay álbumes clasificados mayoritariamente así. Depende de las etiquetas de ánimo (menú “Revisar biblioteca”).',
