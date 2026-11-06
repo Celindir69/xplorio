@@ -15,14 +15,15 @@ var CHECK_CATS = [
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
   {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
   {key: 'dupTracks', name: T('check.cat.dupTracks'), hint: T('check.cat.dupTracksHint')},
-  {key: 'mixed', name: T('check.cat.mixed'), hint: T('check.cat.mixedHint')},
-  {key: 'releaseDate', name: T('check.cat.releaseDate'), hint: T('check.cat.releaseDateHint')},
+  {key: 'albumName', name: T('check.cat.albumName'), hint: T('check.cat.albumNameHint')},
+  {key: 'year', name: T('check.cat.year'), hint: T('check.cat.yearHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
   {key: 'gaps', name: T('check.cat.gaps'), hint: T('check.cat.gapsHint')},
   {key: 'genreMissing', name: T('check.cat.genreMissing'), hint: T('check.cat.genreMissingHint')},
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
+var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -118,12 +119,14 @@ function checkRender(res) {
   if (checkDoneAt !== r.at) { checkDone = {}; checkDoneAt = r.at; }
   Object.keys(r.done || {}).forEach(function(k){ checkDone[k] = 1; });
   r.artistFix = res.artistFix || [];
+  r.year = res.yearFix || [];                            /* with the MusicBrainz suggestion of the moment (tag service) */
+  r.albumName = res.nameFix || [];
   var fixed = {};                                        /* names with a usual spelling: not again under "several spellings" */
   r.artistFix.forEach(function(g){ g.variants.forEach(function(v){ fixed[v.name] = 1; }); });
 
   CHECK_CATS.forEach(function(cat){
     var list = r[cat.key] || [];
-    if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing' || cat.key === 'duplicates') list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
+    if (CHECK_KEEPABLE[cat.key]) list = list.filter(function(it){ return !checkIsKept(cat.key, it); });   /* kept ones at the end */
     if (cat.key === 'dupTracks') list = checkDupTracksOpen(list);
     if (cat.key === 'spelling') list = list.filter(function(g){ return !g.variants.some(function(v){ return fixed[v.name]; }); });
     var row = document.createElement('div'); row.className = 'ckCat' + (checkOpen[cat.key] ? ' open' : '');
@@ -287,6 +290,7 @@ function checkFill(box, cat, list) {
     for (; shown < end; shown++) {
       if (cat.key === 'genreMerge') box.insertBefore(checkGenreGroupRow(cat.key, list[shown]), moreRow);
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
+      else if (cat.key === 'year' || cat.key === 'albumName') box.insertBefore(checkFixRow(cat.key, list[shown], false), moreRow);
       else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
       else if (cat.key === 'spelling') list[shown].variants.forEach(function(v, i){ box.insertBefore(checkSpellingRow(v, i, list[shown]), moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
@@ -302,7 +306,7 @@ function checkFill(box, cat, list) {
   moreRow.addEventListener('click', more);
   box.appendChild(moreRow);
   more();
-  if (cat.key === 'genreConflict' || cat.key === 'genreMerge' || cat.key === 'genreMissing' || cat.key === 'duplicates') checkKeptSection(box, cat.key);
+  if (CHECK_KEEPABLE[cat.key]) checkKeptSection(box, cat.key);
 }
 
 /* ---------- Genre suggestions with buttons: "Apply" writes the suggestion, "Keep" leaves the tag for good ---------- */
@@ -312,6 +316,8 @@ function checkKeepOf(cat, it) {
   if (cat === 'genreMerge') return {k: 'merge|' + it.from + '|' + it.genre, v: it.genre};
   if (cat === 'genreMissing') return {k: 'missing|' + it.dir, v: ''};            /* stays without a genre */
   if (cat === 'duplicates') return {k: 'dupk|' + checkDupDirs(it), v: ''};      /* all versions stay; a new version shows it again */
+  if (cat === 'year') return {k: 'year|' + it.dir, v: checkValuesKey(it.years)};  /* as long as the album keeps these years */
+  if (cat === 'albumName') return {k: 'albumname|' + it.dir, v: checkValuesKey(it.names)};
   return {k: it.dir, v: it.tag};
 }
 function checkIsKept(cat, it) {
@@ -352,8 +358,9 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
   }
   if (kept) btn(T('check.conflict.undoKeep'), T('check.conflict.undoKeepHint'), function(b){ keep(false, b); });
   else {
-    if (it.genre) btn(T('check.conflict.apply'), T('check.conflict.applyHint', {genre: it.genre}), function(b){
-      checkApplyGenre(files, it.genre, b).then(function(batch){
+    var fix = cat === 'year' || cat === 'albumName';
+    if (fix ? it.suggest : it.genre) btn(T('check.conflict.apply'), fix ? T('check.fix.applyHint', {value: it.suggest}) : T('check.conflict.applyHint', {genre: it.genre}), function(b){
+      (fix ? checkApplyItems(checkFixItems(cat, it), b) : checkApplyGenre(files, it.genre, b)).then(function(batch){
         row.classList.add('done'); checkMarkDone(doneKey);
         while (box.firstChild) box.removeChild(box.firstChild);
         if (batch) btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
@@ -366,7 +373,7 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
         });
       }).catch(function(){ b.disabled = false; });
     });
-    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
+    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
   row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
@@ -374,14 +381,18 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
 
 /* write the genre into all files of the entry, in chunks with one undo ID; the scan follows when the check is closed */
 function checkApplyGenre(files, genre, b) {
-  var uris = files.map(function(f){ return f.uri; }), batch = Date.now().toString(36), changed = [], errs = [];
+  return checkApplyItems(files.map(function(f){ return {uri: f.uri, tags: {genre: genre}}; }), b);
+}
+/* items [{uri, tags}]: written in chunks with one undo ID -> batch or null (nothing changed) */
+function checkApplyItems(items, b) {
+  var batch = Date.now().toString(36), changed = [], errs = [];
   b.textContent = T('tag.saving');
   tagWriting++;
-  return tagInChunks(uris, TAG_WRITE_CHUNK, function(part){
-    return tagPostRetry('/write', {items: part.map(function(u){ return {uri: u, tags: {genre: genre}}; }), batch: batch, scan: false})
+  return tagInChunks(items, TAG_WRITE_CHUNK, function(part){
+    return tagPostRetry('/write', {items: part, batch: batch, scan: false})
       .then(function(res){
         if (!res.ok) throw new Error(res.error || T('tag.writeFailed'));
-        res.items.forEach(function(r, k){ if (!r.ok) errs.push(r.error); else if (r.changed || res.retried) changed.push(part[k]); });
+        res.items.forEach(function(r, k){ if (!r.ok) errs.push(r.error); else if (r.changed || res.retried) changed.push(part[k].uri); });
       });
   }).then(function(){
     if (changed.length) tagPost('/scan', {uris: changed}).catch(function(){});
@@ -409,6 +420,7 @@ function checkKeptSection(box, cat) {
   list.style.display = checkOkOpen[cat] ? '' : 'none';
   kept.forEach(function(it){
     if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
+    if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -441,16 +453,37 @@ function checkAlbumRow(key, it) {
   var heading = it.name + (it.artist ? ' · ' + it.artist : '');
   var sub = it.dir;
   if (key === 'albumArtist') sub = (it.missing ? T('check.albumArtistMissing') : T('check.albumArtistIs', {names: it.albumartists.join(' / ')})) + ' · ' + it.artists.join(', ') + (it.artists.length > 5 ? ' …' : '');
-  else if (key === 'mixed') sub = [it.albums.length > 1 ? it.albums.join(' / ') : '', it.years.length > 1 ? it.years.join(' / ') : ''].filter(Boolean).join(' · ') || it.dir;
-  else if (key === 'releaseDate') sub = T('check.releaseSub', {tag: it.tag || T('check.releaseNone'), mb: it.mb});
   else if (key === 'noTrack') sub = T('check.noTrackSub', {missing: checkNum(it.missing), count: checkNum(it.count), dir: it.dir});
   else if (key === 'gaps') sub = [it.disc ? T('check.gapsDisc', {disc: it.disc}) : '', it.nums ? T('check.gapsMissing', {nums: it.nums}) : '',
                                   it.dir].filter(Boolean).join(' · ');
   if (key === 'genreMissing') return checkGenreAlbumRow(key, it);
   return checkRow(key + '|' + it.dir + (it.disc ? '|' + it.disc : ''), heading, sub, function(){
-    if (key === 'releaseDate') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: 'date', value: it.mb});   /* date suggested by MusicBrainz */
-    else if (key === 'albumArtist' || key === 'mixed') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
+    if (key === 'albumArtist') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
     else openTagEditor(it.files, it.name, {move: true});
+  });
+}
+
+/* ---------- Year and album name not the same in all tracks: values found -> suggestion, "Apply" / "Keep" ---------- */
+function checkValuesKey(vals) { return (vals || []).map(function(v){ return v.name; }).sort().join('|').slice(0, 300); }   /* /genreok: at most 300 characters */
+/* "1999 (8), 2001 (4) → 1999-05-01 (MusicBrainz)" */
+function checkFixRow(cat, it, kept) {
+  var vals = (cat === 'year' ? it.years : it.names).map(function(v){
+    return T('check.fix.value', {name: v.name || T('check.releaseNone'), n: checkNum(v.count)});
+  }).join(', ');
+  var sub = T('check.fix.sub', {values: vals, suggest: it.suggest, src: it.src === 'mb' ? 'MusicBrainz' : T('check.fix.most')});
+  if (cat === 'albumName' && it.files.some(function(f){ return f.disc; })) sub += ' · ' + T('check.fix.disc');
+  var row = checkRow(cat + '|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), sub, function(){
+    openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: cat === 'year' ? 'date' : 'album', value: it.suggest});
+  });
+  checkGenreButtons(row, cat, cat + '|' + it.dir, it, it.files, kept);
+  return row;
+}
+/* what "Apply" writes: the date into all files; the album name, and the disc number from "(Disc 2)" where the disc tag is empty */
+function checkFixItems(cat, it) {
+  return it.files.map(function(f){
+    var tags = cat === 'year' ? {date: it.suggest} : {album: it.suggest};
+    if (cat === 'albumName' && f.disc) tags.disc = f.disc;
+    return {uri: f.uri, tags: tags};
   });
 }
 

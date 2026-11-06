@@ -25,9 +25,18 @@ t('album artist: compilation without and with inconsistent album artist', functi
   var ndw = r.albumArtist[1];
   assert.strictEqual(ndw.missing, true); assert.deepStrictEqual(ndw.artists, ['SPLIFF', 'Nena']);
 });
-t('inconsistent: album name or year (same year in another format does not count)', function(){
-  assert.deepStrictEqual(r.mixed.map(function(x){ return x.dir; }), ['USB/C/Mix']);
-  assert.deepStrictEqual(r.mixed[0].albums, ['Mix', 'Mix 2']); assert.deepStrictEqual(r.mixed[0].years, ['2001', '2003']);
+t('inconsistent: album name and year separately (same year in another format does not count)', function(){
+  assert.deepStrictEqual(r.albumName.map(function(x){ return x.dir; }), ['USB/C/Mix']);
+  assert.deepStrictEqual(r.albumName[0].names, [{name: 'Mix', count: 1}, {name: 'Mix 2', count: 1}]);
+  assert.deepStrictEqual(r.yearMixed.map(function(x){ return [x.dir, x.years.map(function(y){ return y.name; }), x.most]; }), [['USB/C/Mix', ['2001', '2003'], '2001']]);
+});
+t('album name: disc additions over disc folders, bare name, disc number only where empty', function(){
+  var a = lc.analyze([S('U/B/Hits/CD1/01.flac', {artist: 'B', album: 'Hits (Disc 1)', title: 'a', track: '1', disc: '1'}),
+                      S('U/B/Hits/CD2/01.flac', {artist: 'B', album: 'Hits (Disc 2)', title: 'b', track: '1'}),
+                      S('U/B/Hits/CD2/02.flac', {artist: 'B', album: 'Hits [CD 2]', title: 'c', track: '2'})], function(){ return true; }).albumName;
+  assert.strictEqual(a.length, 1); assert.strictEqual(a[0].dir, 'U/B/Hits'); assert.strictEqual(a[0].bare, 'Hits');
+  assert.deepStrictEqual(a[0].files.map(function(f){ return [f.album, f.disc]; }), [['Hits (Disc 1)', undefined], ['Hits (Disc 2)', '2'], ['Hits [CD 2]', '2']]);
+  assert.deepStrictEqual([lc.bareAlbum('Greatest Hits Vol. 2'), lc.discOfName('Album - CD2'), lc.discOfName('Album (Disc 1 of 2)')], ['Greatest Hits Vol. 2', '2', '1']);
 });
 t('no track number', function(){
   assert.deepStrictEqual(r.noTrack.map(function(x){ return [x.dir, x.missing]; }), [['USB/C/NDW', 1]]);

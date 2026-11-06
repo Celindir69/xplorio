@@ -482,7 +482,50 @@ function doCheckGet(query, cb) {
   cb(200, {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, genreOk: ok,
            artistFix: artistnames.fixes(last && last.names, function(n){ return artistNames.suggest(n); },
              function(n, to){ return ok['artist|' + n] === to; }),   /* ignored: genre-ok.json "artist|<name>" = suggestion */
-           artistStatus: artistNames.status()});
+           artistStatus: artistNames.status(), yearFix: yearFix(last), nameFix: nameFix(last)});
+}
+
+/* year not the same in all tracks, or Date tag differs from MusicBrainz: one entry per album with the years found
+   ({name, count}), the MusicBrainz date (looked up in the background, see releaseDates.extra) and the suggestion:
+   MusicBrainz date, else the most common year (src 'mb' | 'most') */
+function yearFix(last) {
+  if (!last) return [];
+  var out = [], at = {};
+  function mbOf(d) { var r = releaseDates.by[d]; return (r && r.d) || ''; }
+  (last.yearMixed || []).forEach(function(it){
+    var mb = mbOf(it.dir);
+    at[it.dir] = out.length;
+    out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: it.years, mb: mb,
+              suggest: mb || it.most, src: mb ? 'mb' : 'most', files: it.files});
+  });
+  (last.releaseDate || []).forEach(function(it){
+    if (at.hasOwnProperty(it.dir)) return;
+    var mb = mbOf(it.dir) || it.mb;
+    out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: [{name: it.tag, count: it.count}], mb: mb,
+              suggest: mb, src: 'mb', files: it.files});
+  });
+  return out.filter(function(it){ return it.suggest; })
+    .sort(function(a, b){ return String(a.artist).localeCompare(b.artist) || String(a.name).localeCompare(b.name); });
+}
+/* album name not the same in all tracks: suggestion is the MusicBrainz spelling, else the most common name without a disc
+   addition; files carry disc where the addition names one and the disc tag is empty */
+function nameFix(last) {
+  return ((last && last.albumName) || []).map(function(it){
+    var r = releaseDates.by[it.dir], t = (r && r.t) || '';
+    return {dir: it.dir, name: it.name, artist: it.artist, count: it.count, names: it.names,
+            suggest: t || it.bare, src: t ? 'mb' : 'most', files: it.files};
+  });
+}
+/* albums of the check that MusicBrainz is asked about even with a full Date tag (year or album name mixed) */
+function releaseExtra() {
+  var last = readCheck(), out = [];
+  if (!last) return out;
+  (last.yearMixed || []).forEach(function(it){
+    var ys = (it.years || []).map(function(y){ return +y.name; }).filter(Boolean);
+    out.push({dir: it.dir, al: it.name, ar: it.artist, y: ys.length ? Math.max.apply(null, ys) : 0});
+  });
+  (last.albumName || []).forEach(function(it){ out.push({dir: it.dir, al: it.bare, ar: it.artist}); });
+  return out;
 }
 
 /* Genre contradicts the audio analysis, but is right: POST /genreok {dir, tag, ok} remembers it for good (genre-ok.json,
@@ -1264,7 +1307,8 @@ function doDiscover(query, cb) {
    The album of the day stays the same all day, even if it has been played meanwhile (welcome.json) */
 var WELCOME_FILE = path.join(DATA_DIR, 'welcome.json');
 var releasedates = require('./releasedates.js');          /* release dates (Date tag, otherwise MusicBrainz) for the birthdays */
-var releaseDates = new releasedates.Collector({file: path.join(DATA_DIR, 'releasedates.jsonl'), list: function(){ return albumIdx && albumIdx.list; }});
+var releaseDates = new releasedates.Collector({file: path.join(DATA_DIR, 'releasedates.jsonl'), list: function(){ return albumIdx && albumIdx.list; },
+  extra: releaseExtra});
 /* usual spelling of the artists (MusicBrainz, Last.fm) for the library check; slower while the release dates are looked up */
 var artistnames = require('./artistnames.js');
 var artistNames = new artistnames.Collector({file: path.join(DATA_DIR, 'artistnames.jsonl'),
