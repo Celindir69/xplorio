@@ -15,7 +15,7 @@ function confOutputs(text) {
       var k = /^\s*([a-z_]+)\s+"([^"]*)"/i.exec(l);
       if (k) o[k[1].toLowerCase()] = k[2];
     });
-    out.push({type: o.type || '', name: o.name || '', port: parseInt(o.port, 10) || 8000, enabled: o.enabled !== 'no'});
+    out.push({type: o.type || '', name: o.name || '', port: parseInt(o.port, 10) || 8000, enabled: o.enabled !== 'no', encoder: o.encoder || 'lame'});
   }
   return out;
 }
@@ -35,14 +35,19 @@ function parseOutputs(lines) {
   return out;
 }
 
-/* outputs and mpd.conf -> {stream: {id, port, enabled}, alsa: [{id, enabled}]} or null without a stream output */
+/* outputs and mpd.conf -> {stream: {id, port, enabled, name, encoder}, alsa: [{id, enabled}]} or null without a stream output.
+   The stream output comes from mpd.conf: added by hand, or by the "MPD HTTP & Icecast output" plugin (mpdoutput, Volumio 4),
+   which writes its HTTP stream there through Volumio and adds a local-only feed for Icecast that is not meant for listeners */
+var PLUGIN_FEED = 'mpdoutput-icecast-feed';
 function find(outs, conf) {
   var types = {};
   conf.forEach(function(c){ types[c.name] = c; });
   var stream = null, alsa = [];
   outs.forEach(function(o){
     var type = o.plugin || (types[o.name] && types[o.name].type) || '';
-    if (type === 'httpd' && !stream) stream = {id: o.id, port: (types[o.name] || {}).port || 8000, enabled: o.enabled, name: o.name};
+    if (o.name === PLUGIN_FEED) return;                  /* the feed of the "MPD HTTP & Icecast output" plugin for its Icecast relay */
+    var c = types[o.name] || {};
+    if (type === 'httpd' && !stream) stream = {id: o.id, port: c.port || 8000, enabled: o.enabled, name: o.name, encoder: c.encoder || 'lame'};
     if (type === 'alsa') alsa.push({id: o.id, enabled: o.enabled});
   });
   return stream ? {stream: stream, alsa: alsa} : null;
@@ -98,8 +103,9 @@ function mpd(host, port, cmds, cb) {
 /* Range header of the browser -> {status, headers, limit} for a live stream: Safari first asks for "bytes=0-1" and only
    plays when ranges are answered; a live stream gets a very long length */
 var BIG = 2147483647;
-function rangeAnswer(range) {
-  var head = {'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache, no-store'};
+var TYPES = {lame: 'audio/mpeg', shine: 'audio/mpeg', vorbis: 'audio/ogg', opus: 'audio/ogg', flac: 'audio/flac', wave: 'audio/wav'};
+function rangeAnswer(range, encoder) {
+  var head = {'Content-Type': TYPES[encoder] || 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache, no-store'};
   var m = /bytes=(\d+)-(\d*)/.exec(range || '');
   if (!m) return {status: 200, headers: head, limit: 0};
   var start = +m[1], end = m[2] ? Math.min(+m[2], BIG - 1) : BIG - 1;

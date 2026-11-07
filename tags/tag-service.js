@@ -2042,7 +2042,7 @@ function doRemoteSet(body, cb) {
 function doStream(req, res) {
   remoteState(function(err, f){
     if (err || !f) { res.writeHead(404, {'Cache-Control': 'no-store'}); return res.end(); }
-    var a = remote.rangeAnswer(req.headers.range), left = a.limit, closed = false;
+    var a = remote.rangeAnswer(req.headers.range, f.stream.encoder), left = a.limit, closed = false;
     var hold = remote.cushion(!left || left > 1048576 ? STREAM_CUSHION_MS : 0);   /* not for short probes (bytes=0-1) */
     var up = http.get({host: '127.0.0.1', port: f.stream.port, path: '/'}, function(u){
       if (closed) return u.destroy();
