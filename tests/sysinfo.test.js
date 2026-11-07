@@ -98,6 +98,14 @@ s.report(true, function(r){
       assert.strictEqual(r2.hist, undefined);
       assert.strictEqual(r2.disks, undefined);
     });
+    t('samples every 2 s only while someone watches, otherwise every 10 s', function(){
+      var w = new si.Sysinfo({root: root});
+      assert.strictEqual(w.interval(1000), 10000);
+      w.watch(1000);
+      assert.strictEqual(w.interval(20000), 2000);
+      assert.strictEqual(w.interval(31001), 10000);
+      assert.ok(s.interval() === 2000);             /* report() counts as watching */
+    });
     console.log(n + ' checks ok');
   });
 });

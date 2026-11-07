@@ -37,23 +37,30 @@ var FOLDER_JPG  = 'folder.jpg';
 
 /* ---------- Paths ---------- */
 
-/* Volumio URI ("USB/Folder/x.flac", "music-library/USB/…", "/mnt/USB/…") -> absolute path; null if not allowed */
-function resolveUri(uri) {
-  if (typeof uri !== 'string' || !uri || uri.indexOf('\0') >= 0) return null;
-  var rel = uri.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
+/* the one check for every path below the music folder: relative path ("USB/Drive/Album/…") -> {full} if it is a clean path
+   below INTERNAL/USB/NAS that also stays there after symlinks; {full, missing} if it does not exist; null if not allowed.
+   minParts: at least that many path parts; noTrash: no part may be the duplicates folder */
+function libPath(rel, minParts, noTrash) {
+  if (typeof rel !== 'string' || !rel || rel.indexOf('\0') >= 0) return null;
   var parts = rel.split('/');
-  if (ROOTS.indexOf(parts[0]) < 0 || parts.length < 2) return null;
+  if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (minParts || 2)) return null;
   for (var i = 0; i < parts.length; i++) {
-    if (parts[i] === '' || parts[i] === '.' || parts[i] === '..') return null;
+    if (!parts[i] || parts[i] === '.' || parts[i] === '..' || (noTrash && duplicates.isTrash(parts[i]))) return null;
   }
-  if (!EXT_RE.test(rel)) return null;
-  var full = path.join(MUSIC_ROOT, rel);
-  var real;
-  try { real = fs.realpathSync(full); } catch (e) { return { rel: rel, full: full, missing: true }; }
-  var root;
+  var full = path.join(MUSIC_ROOT, rel), real, root;
+  try { real = fs.realpathSync(full); } catch (e) { return {full: full, missing: true}; }
   try { root = fs.realpathSync(path.join(MUSIC_ROOT, parts[0])); } catch (e) { return null; }
   if (real.indexOf(root + path.sep) !== 0) return null;   /* symlink leads out of INTERNAL/USB/NAS */
-  return { rel: rel, full: full };
+  return {full: full};
+}
+
+/* Volumio URI ("USB/Folder/x.flac", "music-library/USB/…", "/mnt/USB/…") -> absolute path; null if not allowed */
+function resolveUri(uri) {
+  if (typeof uri !== 'string') return null;
+  var rel = uri.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
+  if (!EXT_RE.test(rel)) return null;
+  var p = libPath(rel, 2, false);
+  return p && (p.missing ? {rel: rel, full: p.full, missing: true} : {rel: rel, full: p.full});
 }
 
 /* ---------- Calling tags.py (only one job at a time; the CM3 has little memory) ---------- */
@@ -393,10 +400,16 @@ function newBatch() { return Date.now().toString(36) + (++batchSeq % 1296).toStr
 var CHECK_FILE = path.join(DATA_DIR, 'check.json');
 function writeCheck(obj) { writeAtomic(CHECK_FILE, JSON.stringify(obj)); checkCache = null; }
 /* last result (can be several MB): reread only when the file has changed; null = never checked */
-var checkCache = null, checkStamp = '';
+var checkCache = null, checkStamp = '', checkUsed = 0;
+var CHECK_IDLE_MS = 5 * 60 * 1000;   /* then the parsed result leaves memory again (often 10+ MB on a 1 GB player) */
+function checkFileStamp() {
+  try { var st = fs.statSync(CHECK_FILE); return st.mtime.getTime() + ':' + st.size; } catch (e) { return ''; }
+}
+setInterval(function(){ if (checkCache && Date.now() - checkUsed > CHECK_IDLE_MS) checkCache = null; }, 60000).unref();
 function readCheck() {
-  var stamp;
-  try { var st = fs.statSync(CHECK_FILE); stamp = st.mtime.getTime() + ':' + st.size; } catch (e) { return null; }
+  var stamp = checkFileStamp();
+  if (!stamp) return null;
+  checkUsed = Date.now();
   if (checkCache && stamp === checkStamp) return checkCache;
   try { checkCache = JSON.parse(fs.readFileSync(CHECK_FILE, 'utf8')); checkStamp = stamp; } catch (e) { checkCache = null; }
   if (checkCache) {                                      /* handled entries of this run (check-done.json) */
@@ -541,9 +554,14 @@ function nameFix(last) {
             suggest: t || it.bare, src: t ? 'mb' : 'most', files: it.files};
   });
 }
-/* albums of the check that MusicBrainz is asked about even with a full Date tag (year or album name mixed) */
+/* albums of the check that MusicBrainz is asked about even with a full Date tag (year or album name mixed). Asked at every
+   lookup step: kept as a small list per state of check.json, so the big result need not stay in memory */
+var releaseExtraList = [], releaseExtraStamp = null;
 function releaseExtra() {
+  var stamp = checkFileStamp();
+  if (stamp === releaseExtraStamp) return releaseExtraList;
   var last = readCheck(), out = [];
+  releaseExtraStamp = stamp; releaseExtraList = out;
   if (!last) return out;
   (last.yearMixed || []).forEach(function(it){
     var ys = (it.years || []).map(function(y){ return +y.name; }).filter(Boolean);
@@ -594,14 +612,10 @@ function doCheckDone(body, cb) {
 var duplicates = require('./duplicates.js');
 var m4aprobe = require('./m4aprobe.js');
 function dupFolder(rel) {
-  var parts = rel.split('/');
-  if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (parts[0] === 'INTERNAL' ? 2 : 3) || rel.indexOf('\0') >= 0) return null;
-  for (var i = 0; i < parts.length; i++) if (!parts[i] || parts[i] === '.' || parts[i] === '..' || duplicates.isTrash(parts[i])) return null;
-  var full = path.join(MUSIC_ROOT, rel), real, root;
-  try { real = fs.realpathSync(full); root = fs.realpathSync(path.join(MUSIC_ROOT, parts[0])); } catch (e) { return null; }
-  if (real.indexOf(root + path.sep) !== 0) return null;   /* symlink leads out of INTERNAL/USB/NAS */
-  try { if (!fs.statSync(full).isDirectory()) return null; } catch (e) { return null; }
-  return full;
+  var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
+  if (!p || p.missing) return null;
+  try { if (!fs.statSync(p.full).isDirectory()) return null; } catch (e) { return null; }
+  return p.full;
 }
 /* .mpdignore in the drive folder names the duplicates folder, so a later scan of the drive (or of the whole library) leaves it
    out. true if the file was written now */
@@ -686,14 +700,10 @@ function doTrackNums(query, cb) {
 /* POST /filemove {files, token}: move single tracks aside, only files the last check listed as duplicate tracks
    (dupTracks), into "Xplorio Trash" on the same drive with the rest of the path (like /dupmove for folders) */
 function dupFile(rel) {
-  var dir = path.dirname(rel), parts = rel.split('/');
-  if (ROOTS.indexOf(parts[0]) < 0 || parts.length < (parts[0] === 'INTERNAL' ? 2 : 3) || rel.indexOf('\0') >= 0) return null;
-  for (var i = 0; i < parts.length; i++) if (!parts[i] || parts[i] === '.' || parts[i] === '..' || duplicates.isTrash(parts[i])) return null;
-  var full = path.join(MUSIC_ROOT, rel), real, root;
-  try { real = fs.realpathSync(full); root = fs.realpathSync(path.join(MUSIC_ROOT, parts[0])); } catch (e) { return null; }
-  if (real.indexOf(root + path.sep) !== 0) return null;   /* symlink leads out of INTERNAL/USB/NAS */
-  try { if (!fs.statSync(full).isFile()) return null; } catch (e) { return null; }
-  return dir ? full : null;
+  var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
+  if (!p || p.missing) return null;
+  try { if (!fs.statSync(p.full).isFile()) return null; } catch (e) { return null; }
+  return p.full;
 }
 function doFileMove(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
@@ -1777,7 +1787,7 @@ function doPower(body, cb) {
 }
 /* POST /logs {source, lines: 50|100|300, token}: last lines of a log (tags/logs.js), without source only the sources;
    password only if one is set */
-var logs = require('./logs.js'), logReader = new logs.Logs();
+var logs = require('./logs.js'), CRASH_LOG = path.join(DATA_DIR, 'crash.log'), logReader = new logs.Logs({files: {crashes: CRASH_LOG}});
 function doLogs(body, cb) {
   if (body.source && adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth', sources: logReader.sources()});
   logReader.read(String(body.source || ''), body.lines, cb);
@@ -2152,6 +2162,12 @@ function handle(req, res) {
 }
 
 if (require.main === module) {
+  /* an error nobody catches: note it where it survives a restart (System > Logs), then end; systemd starts the service again */
+  process.on('uncaughtException', function(e){
+    console.error('uncaught: ' + (e && e.stack || e));
+    logs.appendCrash(CRASH_LOG, e);
+    process.exit(1);
+  });
   server.listen(HTTP_PORT, function(){ console.log('tag-service on port ' + HTTP_PORT + ', music under ' + MUSIC_ROOT); });
   if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); }
   setTimeout(function(){ albumsEnsure(); }, 90000);       /* prepare the album list for the random album */

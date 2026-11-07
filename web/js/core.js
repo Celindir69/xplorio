@@ -57,6 +57,20 @@ function queueForInput(items) {
   if (typeof closeAllOverlays === 'function') closeAllOverlays();
   return true;
 }
+/* play a list (Volumio entries: tracks or folders), the same everywhere: replaces the queue, the first entry plays, the
+   rest follows once Volumio has answered (a moment later, otherwise it may land before the queue is cleared) */
+function playItems(items, stay) {   /* stay: leave the open overlay (search, check) as it is */
+  if (!items || !items.length) return;
+  if (!stay && typeof browseOrigin !== 'undefined') browseOrigin = null;   /* playing ends the way back (browse.js) */
+  if (queueForInput(items)) return;
+  fetch('/api/v1/replaceAndPlay', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({item: items[0]})
+  }).then(function(){
+    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
+  }).catch(function(){});
+  if (!stay && typeof closeAllOverlays === 'function') closeAllOverlays();
+}
 function audioErrorText(m) {
   var s = String((m && m.message) || '');
   if (!m || m.type !== 'error') return '';
@@ -399,14 +413,7 @@ function playArtistByName(name) {
         }
       });
       if (artistItem) {
-        if (queueForInput([{uri: artistItem.uri, service: artistItem.service || 'mpd', type: 'folder', title: artistItem.title || artistItem.name || name}])) return;
-        fetch('/api/v1/replaceAndPlay', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({item:{
-            uri: artistItem.uri, service: artistItem.service || 'mpd',
-            type:'folder', title: artistItem.title || artistItem.name || name
-          }})
-        }).catch(function(){});
+        playItems([{uri: artistItem.uri, service: artistItem.service || 'mpd', type: 'folder', title: artistItem.title || artistItem.name || name}], true);
       }
     }).catch(function(){});
 }

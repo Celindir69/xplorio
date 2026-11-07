@@ -345,18 +345,7 @@ function tracksItems(list) {
     return {uri: 'music-library/' + t.f, service: 'mpd', type: 'song', title: t.ti, artist: t.ar, album: t.al};
   });
 }
-function tracksPlay(list) {
-  var items = tracksItems(list);
-  browseOrigin = null;
-  if (queueForInput(items)) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({item: items[0]})
-  }).then(function(){
-    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
-  }).catch(function(){});
-  closeAllOverlays();
-}
+function tracksPlay(list) { playItems(tracksItems(list)); }
 
 /* Tracks after the current one: the current one keeps playing, whatever followed in the queue gives way to the mix.
    If nothing is playing, like tracksPlay. */

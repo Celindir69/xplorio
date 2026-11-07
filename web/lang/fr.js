@@ -537,6 +537,7 @@ langRegister('fr', 'Français', {
   'sys.log.src.tag-service': 'Tag Service',
   'sys.log.src.autodj': 'AutoDJ',
   'sys.log.src.smartplaylists': 'Smart Playlists',
+  'sys.log.src.crashes': 'Plantages Tag Service',
   'sys.log.lines': '{n} lignes',
   'sys.log.live': 'Direct',
   'sys.log.refresh': 'Actualiser',

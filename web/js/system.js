@@ -599,7 +599,7 @@ function sysPaintLive() {
   e.cpuVal.textContent = d.cpu === null || d.cpu === undefined ? '–' : sysNum(d.cpu) + ' %';
   e.cpuSub.textContent = (d.load || []).length ? T('sys.load', {a: sysNum(d.load[0], 2), b: sysNum(d.load[1], 2), c: sysNum(d.load[2], 2)}) : '';
   var now = d.now || Date.now(), live = d.live || [];
-  sysArea(e.cpuLive, live, {lo: 0, hi: 100, h: 64, fmt: function(v){ return sysNum(v) + ' %'; }, grid: [50], gap: 10000,
+  sysArea(e.cpuLive, live, {lo: 0, hi: 100, h: 64, fmt: function(v){ return sysNum(v) + ' %'; }, grid: [50], gap: 15000,
                             t0: live.length ? live[live.length - 1][0] - 180000 : now - 180000, t1: live.length ? live[live.length - 1][0] : now, hover: true});
   (d.cores || []).forEach(function(c, i){                 /* lines stay in place, only values change */
     var b = e.cores.children[i];
