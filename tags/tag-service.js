@@ -2001,7 +2001,7 @@ function doLastfmApi(query, cb) {
   });
 }
 
-/* ---------- Playback on this device (hidden: ?player=remote|both|lokal, tags/remote.js) ---------- */
+/* ---------- Playback on this device (headphones button, ?player=remote|both|lokal, tags/remote.js) ---------- */
 /* GET /remote -> {ok, available, mode}; POST /remote {mode}: switch MPD's outputs; GET /stream: MPD's stream output for
    the browser (Safari needs answers to range requests). If the amplifier output is off and nobody has listened for
    REMOTE_IDLE_MS, the outputs go back to "lokal" by themselves, so the system is never left silent. */

@@ -740,6 +740,45 @@ AutoDJ Vorrang, und beim Einschalten von ∞ schaltet Xplorio Continuous Play au
 Wer stattdessen Continuous Play über ∞ nutzen will, deaktiviert das AutoDJ-Plugin in Volumio unter „Installierte
 Plugins“.
 
+## Wiedergabe auf dem Handy (Stream-Ausgang)
+Hat MPD einen Stream-Ausgang (`httpd`), erscheint oben rechts ein Kopfhörer-Knopf. Ein Tipp schaltet zwischen
+**Anlage** und **nur dieses Gerät** um: Der Verstärker-Ausgang geht aus, und die Musik kommt aus dem Handy, Tablet oder
+Rechner, auf dem Xplorio gerade offen ist. Der nächste Tipp schaltet zurück auf die Anlage. Bedient wird wie gewohnt:
+Warteschlange, Abspielen, Pause und Lautstärke am Gerät. Die Einstellung gehört zum Player; jedes offene Xplorio zeigt
+sie an (spätestens nach 10 s). Ton gibt es aber nur auf Geräten, die es selbst gewählt haben; auf den anderen ist der
+Knopf gedimmt, und ein Tipp dort hört mit, ohne etwas umzuschalten. Auf iPhone und iPad startet der Ton erst nach einem
+Tipp irgendwo in Xplorio. Hört eine Minute lang niemand zu, schaltet der Player von selbst zurück auf die Anlage, damit
+er nie stumm bleibt.
+
+**Einrichten unter Volumio 4:** das Plugin „MPD HTTP & Icecast output“ ([mpd-output](https://github.com/foonerd/mpd-output))
+aus dem Plugin-Store installieren und in seinen Einstellungen den HTTP-Stream einschalten, am besten mit Encoder MP3
+(spielt auf allen Geräten, auch in Safari). Xplorio findet den Stream in `/etc/mpd.conf` von selbst; den internen
+Zubringer, den das Plugin für Icecast anlegt, lässt es aus. Derselbe Stream ist auch ohne Xplorio unter
+`http://<Player>:<Port>/` zu hören, etwa in VLC.
+
+**Unter Volumio 2** (MX-Stream) gibt es das Plugin nicht. Dort den Ausgang von Hand in Volumios Vorlage
+`/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` eintragen (nicht in `/etc/mpd.conf`, die Volumio neu schreibt)
+und Volumio neu starten:
+```
+audio_output {
+  type      "httpd"
+  name      "Mobile"
+  encoder   "lame"
+  port      "8000"
+  bitrate   "192"
+  format    "44100:16:2"
+  always_on "yes"
+  tags      "yes"
+}
+```
+Ein Volumio-Update überschreibt die Vorlage; dann den Block erneut eintragen.
+
+Gut zu wissen:
+- Der Ton kommt einige Sekunden später als auf der Anlage (Puffer im Browser).
+- Im Stream ist alles, was über MPD läuft: Bibliothek, Webradio, Qobuz und TIDAL über Volumio. Spotify Connect,
+  AirPlay und Bluetooth laufen an MPD vorbei und fehlen.
+- Der Knopf schaltet MPDs Ausgänge, nicht das Plugin; dessen Einstellungen bleiben unverändert.
+
 ## Volumio 2
 Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf Volumio 2 (z. B. MX-Stream) läuft das Plugin
 ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#installieren). Unterschiede:
