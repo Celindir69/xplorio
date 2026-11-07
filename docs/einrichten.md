@@ -748,13 +748,15 @@ Warteschlange, Abspielen, Pause und Lautstärke am Gerät. Die Einstellung gehö
 sie an (spätestens nach 10 s). Ton gibt es aber nur auf Geräten, die es selbst gewählt haben; auf den anderen ist der
 Knopf gedimmt, und ein Tipp dort hört mit, ohne etwas umzuschalten. Auf iPhone und iPad startet der Ton erst nach einem
 Tipp irgendwo in Xplorio. Hört eine Minute lang niemand zu, schaltet der Player von selbst zurück auf die Anlage, damit
-er nie stumm bleibt.
+er nie stumm bleibt. Startet Volumio MPD neu (etwa beim Speichern im Plugin), sind danach Anlage und Stream beide an; auch
+dann schaltet Xplorio den Stream nach einer Minute ohne Zuhörer wieder ab.
 
 **Einrichten unter Volumio 4:** das Plugin „MPD HTTP & Icecast output“ ([mpd-output](https://github.com/foonerd/mpd-output))
 aus dem Plugin-Store installieren und in seinen Einstellungen den HTTP-Stream einschalten, am besten mit Encoder MP3
 (spielt auf allen Geräten, auch in Safari). Xplorio findet den Stream in `/etc/mpd.conf` von selbst; den internen
 Zubringer, den das Plugin für Icecast anlegt, lässt es aus. Derselbe Stream ist auch ohne Xplorio unter
-`http://<Player>:<Port>/` zu hören, etwa in VLC.
+`http://<Player>:<Port>/` zu hören, etwa in VLC, solange er eingeschaltet ist; dauerhaft an bleibt er mit „Anlage und
+dieses Gerät“ (Aufruf mit `?player=both`).
 
 **Unter Volumio 2** (MX-Stream) gibt es das Plugin nicht. Dort den Ausgang von Hand in Volumios Vorlage
 `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` eintragen (nicht in `/etc/mpd.conf`, die Volumio neu schreibt)

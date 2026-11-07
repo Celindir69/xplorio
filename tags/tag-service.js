@@ -2004,12 +2004,13 @@ function doLastfmApi(query, cb) {
 /* ---------- Playback on this device (headphones button, ?player=remote|both|lokal, tags/remote.js) ---------- */
 /* GET /remote -> {ok, available, mode}; POST /remote {mode}: switch MPD's outputs; GET /stream: MPD's stream output for
    the browser (Safari needs answers to range requests). If the amplifier output is off and nobody has listened for
-   REMOTE_IDLE_MS, the outputs go back to "lokal" by themselves, so the system is never left silent. */
+   REMOTE_IDLE_MS, the outputs go back to "lokal" by themselves, so the system is never left silent; likewise when amplifier
+   and stream are both on without anyone choosing it (after MPD restarts), see remote.idleReset. */
 var remote = require('./remote.js');
 var MPD_CONF = process.env.MPD_CONF || '/etc/mpd.conf';
 var REMOTE_IDLE_MS = 60000;
 var STREAM_CUSHION_MS = 6000;                          /* head start for the browser's buffer (remote.cushion) */
-var remoteListeners = 0, remoteLastListen = Date.now();
+var remoteListeners = 0, remoteLastListen = Date.now(), remoteChosen = '';   /* last mode set here (POST /remote) */
 function remoteState(cb) {
   var conf = [];
   try { conf = remote.confOutputs(fs.readFileSync(MPD_CONF, 'utf8')); } catch (e) { /* not readable: plugin field only */ }
@@ -2035,6 +2036,7 @@ function doRemoteSet(body, cb) {
     remoteLastListen = Date.now();                       /* time to connect before the safety check counts */
     remote.mpd(MPD_HOST, MPD_PORT, cmds, function(e2){
       if (e2) return cb(200, {ok: false, error: e2.message});
+      remoteChosen = mode;
       cb(200, {ok: true, available: true, mode: mode});
     });
   });
@@ -2066,11 +2068,12 @@ function doStream(req, res) {
     req.on('close', function(){ closed = true; up.abort(); });
   });
 }
-setInterval(function(){                                  /* safety: amplifier off and nobody listening -> back to "lokal" */
+setInterval(function(){                                  /* safety: nobody listening -> back to "lokal" (remote.idleReset) */
   if (remoteListeners > 0 || Date.now() - remoteLastListen < REMOTE_IDLE_MS) return;
   remoteState(function(err, f){
-    if (err || !f || remote.modeOf(f) !== 'remote') return;
-    console.log('playback on device: nobody listening, amplifier output back on');
+    if (err || !f || !remote.idleReset(remote.modeOf(f), remoteChosen)) return;
+    console.log('playback on device: nobody listening, back to the amplifier only (was ' + remote.modeOf(f) + ')');
+    remoteChosen = 'lokal';
     var cmds = remote.commands(f, 'lokal');
     if (cmds) remote.mpd(MPD_HOST, MPD_PORT, cmds, function(){});
   });

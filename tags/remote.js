@@ -59,6 +59,13 @@ function modeOf(f) {
   return !f.stream.enabled ? 'lokal' : a ? 'both' : 'remote';
 }
 
+/* nobody has listened for a while: back to "lokal"? For "remote" always (the system must not stay silent); for "both" only
+   if nobody chose it here (chosen: last mode set through Xplorio): after MPD restarts (Volumio does that when settings
+   are saved) every output is on again, and the stream would keep running along unasked */
+function idleReset(mode, chosen) {
+  return mode === 'remote' || (mode === 'both' && chosen !== 'both');
+}
+
 /* MPD commands for a mode (alsa outputs on/off, stream on/off) */
 function commands(f, mode) {
   var cmds = [];
@@ -131,4 +138,4 @@ function cushion(ms) {
   }};
 }
 
-module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer, cushion: cushion};
+module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, idleReset: idleReset, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer, cushion: cushion};
