@@ -1,10 +1,11 @@
-/* Playback on this device: not in the docs. Only if MPD has a stream output ("httpd", added by hand) a headphones
+/* Playback on this device (docs: "Wiedergabe auf dem Handy"). Only if MPD has a stream output ("httpd") a headphones
    button appears top right; a tap switches between lokal (amplifier) and remote (only devices). "both" (amplifier and
    devices) is left out on purpose (rarely wanted); set from elsewhere (?player=both) it is still shown, a tap ends it.
    The mode belongs to the player (MPD's outputs) and every open Xplorio follows it (GET /remote, every 10 s and when
    it comes back to the foreground). Sound comes only from devices that chose it themselves (remembered per device);
    others show the mode dimmed, and a tap there joins in without changing the mode.
-   Needs a stream output ("httpd") in MPD's configuration, added by hand; the tag service passes it on
+   Needs a stream output ("httpd") in MPD's configuration: the "MPD HTTP & Icecast output" plugin (Volumio 4) or added by
+   hand to Volumio's mpd.conf template (Volumio 2); the tag service passes it on
    (GET /stream, tags/remote.js) and switches MPD's outputs (POST /remote). Operation stays as usual: this only
    follows play and pause. iOS starts sound only after a tap, so the first tap anywhere starts it.
    Classic script, shared global scope; load order see xplorio.html. */

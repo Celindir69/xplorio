@@ -48,6 +48,11 @@ weiter. Umschalten oben rechts oder mit `?layout=stage`.
   <img src="docs/bilder/display-desktop.jpg" width="49%" alt="Display-Layout am Desktop">
 </p>
 
+### Auf dem Handy hören
+Mit einem Stream-Ausgang in MPD (unter Volumio 4 das Plugin „MPD HTTP & Icecast output“) schaltet der Kopfhörer-Knopf
+oben rechts die Wiedergabe von der Anlage auf das Gerät, auf dem Xplorio offen ist, und zurück. Einrichtung:
+[docs/einrichten.md](docs/einrichten.md#wiedergabe-auf-dem-handy-stream-ausgang).
+
 ### Suchen & Entdecken
 Die Suche findet Künstler, Alben, Titel und Genres (je Genre die Stilrichtungen aus der Audio-Analyse und alle Alben) in der eigenen Bibliothek und bei den Streamingdiensten, die in Volumio
 eingerichtet sind (TIDAL, Qobuz, HIGHRESAUDIO, Spotify (bisher ungetestet)), jeweils in eigenen Abschnitten mit Kästchen zum Ein- und Ausblenden. Solange nichts

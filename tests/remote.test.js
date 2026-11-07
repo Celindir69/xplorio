@@ -44,6 +44,14 @@ t('commands per mode', function(){
   assert.strictEqual(r.commands({stream: f.stream, alsa: []}, 'remote'), null);
 });
 
+t('nobody listening: back to the amplifier, "both" only if nobody chose it', function(){
+  assert.strictEqual(r.idleReset('remote', 'remote'), true);
+  assert.strictEqual(r.idleReset('both', ''), true);           /* after MPD restarted: all outputs on */
+  assert.strictEqual(r.idleReset('both', 'lokal'), true);
+  assert.strictEqual(r.idleReset('both', 'both'), false);      /* chosen on purpose (?player=both) */
+  assert.strictEqual(r.idleReset('lokal', ''), false);
+});
+
 t('ranges: probe "bytes=0-1", open end, no range', function(){
   var a = r.rangeAnswer('bytes=0-1');
   assert.strictEqual(a.status, 206); assert.strictEqual(a.limit, 2); assert.strictEqual(a.headers['Content-Range'], 'bytes 0-1/2147483647');

@@ -47,6 +47,11 @@ automatically cycles through the available pages. Switch using the control at th
   <img src="docs/bilder/en/display-desktop.jpg" width="49%" alt="Display-Layout on Desktop">
 </p>
 
+### Listening on the phone
+With a stream output in MPD (on Volumio 4 the "MPD HTTP & Icecast output" plugin), the headphones button at the top
+right switches playback from the system to the device Xplorio is open on, and back. Setup:
+[docs/setup.md](docs/setup.md#playback-on-the-phone-stream-output).
+
 ### Search & Discover
 
 Search finds artists, albums, tracks, and genres (per genre the styles from the audio analysis and all albums) in the local library and on the streaming services configured in Volumio

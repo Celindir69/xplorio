@@ -1,6 +1,6 @@
-/* Playback on this device (hidden, ?player=remote|both|lokal): MPD's stream output ("httpd" in /etc/mpd.conf, added
-   by hand, Xplorio never changes the file) goes to the browser through the tag service; the ALSA output (amplifier) is
-   switched off for "remote". Pure helpers here, the service is in tag-service.js. Node 8, ES5 only. */
+/* Playback on this device (headphones button, web/js/remote.js; ?player=remote|both|lokal): MPD's stream output ("httpd" in
+   /etc/mpd.conf, from the "MPD HTTP & Icecast output" plugin or added by hand; Xplorio never changes the file) goes to the
+   browser through the tag service; the ALSA output (amplifier) is switched off for "remote". Pure helpers here, the service is in tag-service.js. Node 8, ES5 only. */
 var net = require('net');
 
 /* audio_output blocks of mpd.conf -> [{type, name, port, enabled}] */
@@ -36,7 +36,7 @@ function parseOutputs(lines) {
 }
 
 /* outputs and mpd.conf -> {stream: {id, port, enabled, name, encoder}, alsa: [{id, enabled}]} or null without a stream output.
-   The stream output comes from mpd.conf: added by hand, or by the "MPD HTTP & Icecast output" plugin (mpdoutput, Volumio 4),
+   The stream output comes from mpd.conf: from the "MPD HTTP & Icecast output" plugin (mpdoutput, Volumio 4) or added by hand,
    which writes its HTTP stream there through Volumio and adds a local-only feed for Icecast that is not meant for listeners */
 var PLUGIN_FEED = 'mpdoutput-icecast-feed';
 function find(outs, conf) {
@@ -57,6 +57,13 @@ function find(outs, conf) {
 function modeOf(f) {
   var a = f.alsa.some(function(x){ return x.enabled; });
   return !f.stream.enabled ? 'lokal' : a ? 'both' : 'remote';
+}
+
+/* nobody has listened for a while: back to "lokal"? For "remote" always (the system must not stay silent); for "both" only
+   if nobody chose it here (chosen: last mode set through Xplorio): after MPD restarts (Volumio does that when settings
+   are saved) every output is on again, and the stream would keep running along unasked */
+function idleReset(mode, chosen) {
+  return mode === 'remote' || (mode === 'both' && chosen !== 'both');
 }
 
 /* MPD commands for a mode (alsa outputs on/off, stream on/off) */
@@ -131,4 +138,4 @@ function cushion(ms) {
   }};
 }
 
-module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer, cushion: cushion};
+module.exports = {confOutputs: confOutputs, parseOutputs: parseOutputs, find: find, modeOf: modeOf, idleReset: idleReset, commands: commands, mpd: mpd, rangeAnswer: rangeAnswer, cushion: cushion};
