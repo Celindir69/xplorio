@@ -28,15 +28,7 @@ function browseGet(uri) {
   });
 }
 
-function browsePlay(item) {
-  browseOrigin = null;
-  if (queueForInput([item])) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({item:item})
-  }).catch(function(){});
-  closeAllOverlays();
-}
+function browsePlay(item) { playItems([item]); }
 
 function browseNote(text, cls) {
   var d = document.createElement('div');

@@ -460,18 +460,7 @@ function renderSearchResults() {
 
 function playSearchItem(it, type) {
   type = type || (searchCat === 'songs' ? 'song' : 'folder');
-  if (queueForInput([{uri: it.uri, service: it.service || 'mpd', type: type, title: it.title || it.name || '', artist: it.artist || '', album: it.album || ''}])) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({item:{
-      uri:    it.uri,
-      service:it.service || 'mpd',
-      type:   type,
-      title:  it.title || it.name || '',
-      artist: it.artist || '',
-      album:  it.album  || ''
-    }})
-  }).catch(function(){});
+  playItems([{uri: it.uri, service: it.service || 'mpd', type: type, title: it.title || it.name || '', artist: it.artist || '', album: it.album || ''}], true);
 }
 
 searchInput.addEventListener('keydown', function(e){

@@ -536,6 +536,7 @@ langRegister('es', 'Español', {
   'sys.log.src.tag-service': 'Servicio de etiquetas',
   'sys.log.src.autodj': 'AutoDJ',
   'sys.log.src.smartplaylists': 'Smart Playlists',
+  'sys.log.src.crashes': 'Fallos del servicio de etiquetas',
   'sys.log.lines': '{n} líneas',
   'sys.log.live': 'En directo',
   'sys.log.refresh': 'Actualizar',

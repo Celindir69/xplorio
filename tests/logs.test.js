@@ -58,4 +58,17 @@ t('journal without read permission: nojournal instead of empty list', function()
   l = new lg.Logs({files: files, run: function(f, a, cb){ cb(null, '-- No entries --\n', ''); }});
   l.read('mpd', 100, function(c, o){ assert.ok(o.ok); assert.deepStrictEqual(o.lines, []); });
 });
+t('crash log: time and stack, only the end is kept', function(){
+  var f = path.join(dir, 'crash.log'), e = new Error('kaputt');
+  assert.ok(lg.appendCrash(f, e, new Date(2026, 10, 7, 9, 5, 3).getTime()));
+  var txt = fs.readFileSync(f, 'utf8');
+  assert.ok(/^2026-11-07 09:05:03 Error: kaputt\n    /.test(txt));
+  for (var i = 0; i < 300; i++) lg.appendCrash(f, e);
+  txt = fs.readFileSync(f, 'utf8');
+  assert.ok(txt.length <= 32 * 1024);
+  assert.ok(/^\d{4}-|^    /.test(txt));
+  var l = new lg.Logs({files: {crashes: f}});
+  assert.ok(l.sources().indexOf('crashes') >= 0);
+  l.read('crashes', 50, function(c, o){ assert.ok(o.ok); assert.strictEqual(o.lines.length, 50); });
+});
 console.log(n + ' checks');

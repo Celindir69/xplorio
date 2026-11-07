@@ -711,13 +711,7 @@ function checkDupTrash(box, list) {
 /* play one version (all its folders) in place of the queue; the check stays open to compare */
 function checkDupPlay(g, v) {
   var items = v.dirs.map(function(d){ return {uri: 'music-library/' + d, service: 'mpd', type: 'folder', title: g.name, artist: g.artist}; });
-  if (queueForInput(items)) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({item: items[0]})
-  }).then(function(){
-    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
-  }).catch(function(){});
+  playItems(items, true);
 }
 /* album editor for one version: its tracks from Volumio (all its folders), moving offered for exactly these folders */
 function checkDupEdit(g, v) {
@@ -933,8 +927,7 @@ function checkDupTrackFile(f) {
   play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
   play.addEventListener('click', function(){
     var item = {uri: 'music-library/' + f.uri, service: 'mpd', type: 'song', title: f.name};
-    if (queueForInput([item])) return;
-    fetch('/api/v1/replaceAndPlay', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({item: item})}).catch(function(){});
+    playItems([item], true);
   });
   if (!checkDone[key]) row.appendChild(play);
   var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.move');

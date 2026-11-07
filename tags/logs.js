@@ -11,7 +11,8 @@ var SOURCES = [
   {id: 'mpd',            unit: 'mpd'},
   {id: 'tag-service',    unit: 'xplorio-tags'},
   {id: 'autodj',         file: '/data/volumio_autodj_data/autodj.debug.log'},
-  {id: 'smartplaylists', file: '/data/smart_playlists_data/smart_playlists.debug.log'}
+  {id: 'smartplaylists', file: '/data/smart_playlists_data/smart_playlists.debug.log'},
+  {id: 'crashes',        file: ''}                     /* tag service crashes (crash.log in its data folder, see appendCrash) */
 ];
 
 function sourceOf(id) {
@@ -79,7 +80,7 @@ Logs.prototype.read = function(id, n, cb) {
     if (error) o.error = error;
     cb(200, o);
   }
-  if (s.file) {
+  if (!s.unit) {
     var t = tailFile(this.path(s), n);
     return t ? done(t) : done(null, 'missing');
   }
@@ -91,4 +92,21 @@ Logs.prototype.read = function(id, n, cb) {
   });
 };
 
-module.exports = {Logs: Logs, SOURCES: SOURCES, LINES: LINES, sourceOf: sourceOf, lineCount: lineCount, cleanJournal: cleanJournal, tailFile: tailFile};
+/* an uncaught error of the tag service: time and stack appended to file, only the last CRASH_KEEP bytes stay. The journal
+   lives in RAM on Volumio and is gone after a restart, this file is not. Synchronous: the process ends right after */
+var CRASH_KEEP = 32 * 1024;
+function appendCrash(file, err, now) {
+  var d = new Date(now || Date.now()), p = function(x){ return (x < 10 ? '0' : '') + x; };
+  var at = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  var text = String((err && err.stack) || err).split('\n').map(function(l, i){ return (i ? '    ' : at + ' ') + l; }).join('\n') + '\n';
+  try {
+    var old = '';
+    try { old = fs.readFileSync(file, 'utf8'); } catch (e) { /* first crash */ }
+    var all = old + text;
+    if (all.length > CRASH_KEEP) { all = all.slice(-CRASH_KEEP); all = all.slice(all.indexOf('\n') + 1); }
+    fs.writeFileSync(file, all);
+    return true;
+  } catch (e) { return false; }
+}
+
+module.exports = {appendCrash: appendCrash, Logs: Logs, SOURCES: SOURCES, LINES: LINES, sourceOf: sourceOf, lineCount: lineCount, cleanJournal: cleanJournal, tailFile: tailFile};

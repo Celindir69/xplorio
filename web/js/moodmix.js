@@ -433,14 +433,7 @@ function mixPlay(tracks, replace) {
   var items = mixItems(tracks);
   if (!replace && typeof amPlayItems === 'function' && amPlayItems(items, true)) return;   /* "Apple Music" mode: append there */
   if (!replace) { socket.emit('addToQueue', items); closeAllOverlays(); showToast(T('mix.added', {n: items.length})); return; }
-  if (queueForInput(items)) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({item: items[0]})
-  }).then(function(){
-    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
-  }).catch(function(){});
-  closeAllOverlays();
+  playItems(items);
 }
 
 /* show the tab only if the tag service is running; the first time (nothing selected yet) start with the mix */

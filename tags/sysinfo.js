@@ -5,7 +5,7 @@
    Node 8, ES5 only. root: prefix for /proc etc. (tests) */
 var fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process');
 
-var SAMPLE_MS = 2000, MINUTE_MS = 60000, KEEP_MS = 24 * 3600000, LIVE_N = 90, SAVE_MS = 600000;
+var SAMPLE_MS = 2000, IDLE_MS = 10000, WATCH_MS = 30000, MINUTE_MS = 60000, KEEP_MS = 24 * 3600000, LIVE_N = 90, SAVE_MS = 600000;
 var DF_TIMEOUT = 4000, DISK_CACHE_MS = 30000;
 
 /* /proc/stat -> {busy, total} overall and per core */
@@ -113,7 +113,8 @@ function Sysinfo(opts) {
   this.live = [];                    /* [time, load] of the last 3 min */
   this.hist = [];                    /* [time, load, memory %, temperature] per minute */
   this.disks = null; this.disksAt = 0; this.disksWait = null;
-  this.timers = [];
+  this.timers = []; this.loop = null; this.running = false;
+  this.watchUntil = 0;               /* until then someone watches: sample every 2 s */
   this.load();
 }
 
@@ -172,14 +173,32 @@ Sysinfo.prototype.save = function() {
   try { fs.writeFileSync(tmp, JSON.stringify({hist: this.hist})); fs.renameSync(tmp, this.file); } catch (e) { /* next time */ }
 };
 
+/* every 2 s only while someone watches (a report in the last 30 s, i.e. the System page is open), otherwise every 10 s:
+   enough for the minute history and the player stays quieter */
+Sysinfo.prototype.interval = function(now) { return (now || Date.now()) < this.watchUntil ? SAMPLE_MS : IDLE_MS; };
+Sysinfo.prototype.tick = function() {
+  var self = this;
+  clearTimeout(this.loop);
+  this.sample();
+  this.loop = setTimeout(function(){ self.tick(); }, this.interval());
+  if (this.loop.unref) this.loop.unref();
+};
 Sysinfo.prototype.start = function() {
   var self = this;
-  this.sample();
-  this.timers.push(setInterval(function(){ self.sample(); }, SAMPLE_MS));
+  this.running = true;
+  this.tick();
   this.timers.push(setInterval(function(){ self.save(); }, SAVE_MS));
   this.timers.forEach(function(t){ if (t.unref) t.unref(); });
 };
+Sysinfo.prototype.watch = function(now) {
+  now = now || Date.now();
+  var slow = this.interval(now) === IDLE_MS;
+  this.watchUntil = now + WATCH_MS;
+  if (slow && this.running) this.tick();           /* page just opened: fresh value now, then every 2 s */
+};
 Sysinfo.prototype.stop = function() {
+  this.running = false;
+  clearTimeout(this.loop);
   this.timers.forEach(clearInterval); this.timers = [];
   this.save();
 };
@@ -217,6 +236,7 @@ Sysinfo.prototype.diskList = function(cb) {
 
 /* response for GET /sysinfo; full: with history, drives and static details */
 Sysinfo.prototype.report = function(full, cb) {
+  this.watch();
   var self = this, up = parseFloat(this.read('/proc/uptime'));
   var r = {ok: true, now: Date.now(), cpu: this.cpu, cores: this.cores, live: this.live, load: os.loadavg().map(function(x){ return Math.round(x * 100) / 100; }),
            mem: this.mem(), temp: this.temp(), uptime: isFinite(up) ? Math.round(up) : null};

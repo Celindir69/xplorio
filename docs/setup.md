@@ -243,7 +243,7 @@ When the page opens (only with the Tag Service), a card in the middle of the win
 
 ### System
 
-In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (internal card, USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 2 seconds (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
+In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (internal card, USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 10 seconds, and every 2 seconds only while the page is open (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
 
 #### Services
 Below that, the "Services" card: Volumio, MPD, Xplorio web server, Tag Service and Rotel control with their state (running
@@ -265,7 +265,7 @@ without a password.
 #### Logs
 Below the services, the "Logs" card: the last 50, 100 or 300 lines from Volumio, MPD and the Tag Service (from the journal, like
 `journalctl -u volumio`), plus the logs of the AutoDJ (`/data/volumio_autodj_data/autodj.debug.log`) and Smart Playlists
-(`/data/smart_playlists_data/smart_playlists.debug.log`) plugins once they exist. The card first shows only the sources; a tap loads that log, a second tap collapses it. The search field above it shows only lines containing the text you type (e.g. `error`, case-insensitive), also while "Live" is on. "Live" fetches new lines every 3 seconds
+(`/data/smart_playlists_data/smart_playlists.debug.log`) plugins once they exist. If the Tag Service ever crashes, the error and time also appear under "Tag Service crashes" (`/data/xplorio/data/crash.log`, only the last 32 KB); the journal is empty after the player restarts, this file is not. The card first shows only the sources; a tap loads that log, a second tap collapses it. The search field above it shows only lines containing the text you type (e.g. `error`, case-insensitive), also while "Live" is on. "Live" fetches new lines every 3 seconds
 (like `-f`) while the page is open. If a password is set (see above), the logs are protected by it as well, since they
 contain paths, track titles and network addresses.
 

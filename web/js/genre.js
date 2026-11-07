@@ -254,16 +254,7 @@ function browseMoodSet(e, seq) {
 function genrePlayAllHead(list, match) {
   function folders() { return list.map(function(a){ return {uri: 'music-library/' + a.dir, service: 'mpd', type: 'folder', title: a.al, artist: a.ar}; }); }
   return playRow(T('browse.playAll'), T('browse.albumCount', {n: list.length}), function(){
-    var items = folders();
-    browseOrigin = null;
-    if (queueForInput(items)) return;
-    fetch('/api/v1/replaceAndPlay', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({item: items[0]})
-    }).then(function(){
-      if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
-    }).catch(function(){});
-    closeAllOverlays();
+    playItems(folders());
   }, [randomMixButton({dirs: list.map(function(a){ return a.dir; }), match: match || ''}),     /* dice: 25 random tracks from it (discover.js) */
       queueAddButton(folders, 0)]);
 }
