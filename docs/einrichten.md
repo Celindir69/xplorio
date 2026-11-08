@@ -797,7 +797,13 @@ Zubringer, den das Plugin für Icecast anlegt, lässt es aus. Derselbe Stream is
 `http://<Player>:<Port>/` zu hören, etwa in VLC, solange er eingeschaltet ist; dauerhaft an bleibt er mit „Anlage und
 dieses Gerät“ (Aufruf mit `?player=both`).
 
-**Unter Volumio 2** (MX-Stream) gibt es das Plugin nicht. Dort den Ausgang von Hand in Volumios Vorlage
+**Unter Volumio 2** (MX-Stream) gibt es das Plugin nicht im Store. `tools/mpdoutput-volumio2.sh` lädt es von GitHub,
+passt zwei Stellen für Node 8 an und installiert es über Volumio (braucht ein installiertes Xplorio):
+```
+curl -fsSLO https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/mpdoutput-volumio2.sh
+sudo bash mpdoutput-volumio2.sh
+```
+Danach weiter wie unter Volumio 4. Ohne Plugin den Ausgang von Hand in Volumios Vorlage
 `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` eintragen (nicht in `/etc/mpd.conf`, die Volumio neu schreibt)
 und Volumio neu starten:
 ```
