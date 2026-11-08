@@ -204,13 +204,19 @@ Xplorio ihn in die Datei `.mpdignore` des Laufwerks ein (z. B. `/mnt/INTERNAL/.m
 nächsten Einlesen aus der Bibliothek. Xplorios eigene Albenliste (Begrüßung, Zufallsalbum, Bibliothek prüfen) lässt den
 Ordner immer aus. Frühere Versionen nannten ihn `.duplicates` bzw. `Xplorio Duplicates`; der Tag-Dienst benennt ihn beim Start einmal um. Waren
 verschobene Alben schon in der Bibliothek, einmal „Bibliothek aktualisieren“ in Volumio („Aktualisieren“, nicht „Neu
-einlesen“), dann sind sie weg. Zurückschieben per `mv` stellt ein Album wieder her. Ist ein Passwort für die Dienste
-gesetzt, muss das Gerät einmal unter System bei den Diensten angemeldet sein. Gelöscht wird in Xplorio nichts; endgültig
-löschen geht per ssh mit dem Befehl, den die Kategorie zum Kopieren anbietet, z. B.:
-```bash
-sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
-```
-Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
+einlesen“), dann sind sie weg. Ist ein Passwort für die Dienste gesetzt, muss das Gerät einmal unter System bei den
+Diensten angemeldet sein. Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
+
+**Papierkorb** (Menü → Papierkorb, unter „Bibliothek prüfen“): zeigt je Laufwerk alles in `Xplorio Trash`, mit dem
+Ordner, aus dem es kam, wann und warum es verschoben wurde (doppeltes Album, doppelter Titel, schlechtere Qualität, aus
+dem Album-Editor) und der Größe; der Menüeintrag zeigt Anzahl und Platz. „Zurücklegen“ bringt ein Album oder einen Titel
+an den alten Ort, und MPD liest genau diesen Ordner neu ein. Liegt dort inzwischen etwas mit gleichem Namen, wird nichts
+überschrieben; ein Album, dessen Ordner wieder da ist, bekommt seine Dateien dazu. Der Mülleimer löscht einen Eintrag
+endgültig, „Leeren“ den ganzen Papierkorb eines Laufwerks, jeweils nach Rückfrage. Gelöscht wird nur innerhalb von
+`Xplorio Trash`, das Passwort gilt wie beim Verschieben. Grund und Zeit merkt sich der Tag-Dienst ab dieser Version
+(`trash.json` im Datenordner); was schon vorher im Papierkorb lag, erscheint ohne Grund, je Ordner ein Eintrag, mit dem
+Pfad ohne `Xplorio Trash` als altem Ort. Per ssh geht es weiterhin mit dem Befehl, den die Kategorie zum Kopieren
+anbietet, z. B. `sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'`.
 
 **Fehlende Titel ergänzen:** Hat eine andere Fassung Titel, die in der besten nicht vorkommen (gleicher Künstler und
 Titel, verglichen wie bei den doppelten Titeln; ein abgeschnittener Titel wie „The More You Live, The More Yo“ zählt als

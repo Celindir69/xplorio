@@ -611,6 +611,15 @@ function doCheckDone(body, cb) {
    moving it back restores it. Password only if one is set (adminpass.js), like restarting the player. */
 var duplicates = require('./duplicates.js');
 var m4aprobe = require('./m4aprobe.js');
+var trash = require('./trash.js');
+/* journal of what went into "Xplorio Trash" (trash.js): from where, when, why; for the Papierkorb view */
+var TRASH_FILE = path.join(DATA_DIR, 'trash.json');
+function trashJournal() { try { var j = JSON.parse(fs.readFileSync(TRASH_FILE, 'utf8')); return Array.isArray(j) ? j : []; } catch (e) { return []; } }
+function trashJournalSave(j) { try { mkdirs(DATA_DIR); writeAtomic(TRASH_FILE, JSON.stringify(j)); } catch (e) { console.error('cannot write ' + TRASH_FILE + ': ' + e.message); } }
+function trashNote(moved, reasonOf) {
+  var at = Date.now();
+  trashJournalSave(trash.journalAdd(trashJournal(), moved.map(function(m){ return {to: m.to, from: m.from, at: at, reason: reasonOf(m.from)}; }), MUSIC_ROOT));
+}
 function dupFolder(rel) {
   var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
   if (!p || p.missing) return null;
@@ -677,6 +686,7 @@ function doDupMove(body, cb) {
       if (last && listed[dirs[i]]) markDone(last, ['duplicates|' + dirs[i]]);
     }
     mpdForget(dirs, function(){});                        /* only these folders: MPD drops them */
+    trashNote(moved, function(d){ return listed[d] ? 'dupAlbum' : 'albumEditor'; });
     cb(200, {ok: true, moved: moved});
   });
 }
@@ -712,8 +722,8 @@ function doFileMove(body, cb) {
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
   var last = readCheck(), listed = {};
   if (!last || !last.dupTracks) return cb(200, {ok: false, error: 'not checked yet'});
-  last.dupTracks.forEach(function(a){ a.groups.forEach(function(g){ g.files.forEach(function(f){ listed[f.uri] = 1; }); }); });
-  (last.mixedQuality || []).forEach(function(a){ a.worse.forEach(function(f){ listed[f.uri] = 1; }); });   /* lossy tracks next to lossless ones */
+  last.dupTracks.forEach(function(a){ a.groups.forEach(function(g){ g.files.forEach(function(f){ listed[f.uri] = 'dupTrack'; }); }); });
+  (last.mixedQuality || []).forEach(function(a){ a.worse.forEach(function(f){ listed[f.uri] = listed[f.uri] || 'mixedQuality'; }); });   /* lossy tracks next to lossless ones */
   var bad = files.filter(function(f){ return !listed[f] || !dupFile(f); });
   if (bad.length) return cb(200, {ok: false, error: 'not listed by the check: ' + bad[0]});
   var moved = [];
@@ -732,7 +742,40 @@ function doFileMove(body, cb) {
     markDone(last, ['dupTracks|' + files[i], 'mixedQuality|' + files[i]]);
   }
   mpdForget(moved.map(function(m){ return path.dirname(m.from); }).filter(function(d, i, all){ return all.indexOf(d) === i; }), function(){});   /* their folders: MPD drops the files */
+  trashNote(moved, function(f){ return listed[f]; });
   cb(200, {ok: true, moved: moved});
+}
+
+/* ---------- Papierkorb: what is in "Xplorio Trash" on the drives (trash.js) ---------- */
+/* GET /trash -> {ok, drives: [{drive, bytes, entries: [{path, kind, from, at, reason, bytes, files}]}], bytes, count} */
+function doTrashGet(cb) {
+  try { var l = trash.list(MUSIC_ROOT, trashJournal()); l.ok = true; cb(200, l); }
+  catch (e) { cb(200, {ok: false, error: e.message}); }
+}
+/* POST /trashrestore {path, token}: back to the old place (never overwrites); MPD reads exactly that folder again */
+function doTrashRestore(body, cb) {
+  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (checkRun) return cb(200, {ok: false, error: 'check running'});
+  var rel = String(body.path || ''), j = trashJournal(), entry = j.filter(function(x){ return x.to === rel; })[0];
+  var r;
+  try { r = trash.restore(MUSIC_ROOT, rel, entry && entry.from); }
+  catch (e) { return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + rel : e.message}); }
+  if (!r.ok) return cb(200, r);
+  trashJournalSave(j.filter(function(x){ return x.to !== rel; }));
+  var isFile = false;
+  try { isFile = !fs.statSync(path.join(MUSIC_ROOT, r.to)).isDirectory(); } catch (e) { /* gone again */ }
+  mpdForget([isFile ? path.dirname(r.to) : r.to], function(){});
+  cb(200, r);
+}
+/* POST /trashdelete {path | drive, token}: delete one entry, or everything in the trash of a drive, for good */
+function doTrashDelete(body, cb) {
+  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (checkRun) return cb(200, {ok: false, error: 'check running'});
+  var r;
+  try { r = body.drive ? trash.empty(MUSIC_ROOT, String(body.drive)) : trash.remove(MUSIC_ROOT, String(body.path || '')); }
+  catch (e) { return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission' : e.message}); }
+  if (r.ok) trashJournalSave(trash.journalAdd(trashJournal(), [], MUSIC_ROOT));   /* entries of deleted things drop out */
+  cb(200, r);
 }
 
 /* POST /dupfill {dir, files, token}: duplicate albums: copy the tracks the best version lacks (files: the ones ticked of
@@ -2119,6 +2162,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/coverimage') return doCoverImage(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/coversearch') return doCoverSearch(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/scan')    return doScanGet(function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/trash')   return doTrashGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/check')   return doCheckGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/versions', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
     return doGenreLib(route, url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
@@ -2151,7 +2195,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -2159,7 +2203,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });
