@@ -207,7 +207,7 @@ verschobene Alben schon in der Bibliothek, einmal „Bibliothek aktualisieren“
 einlesen“), dann sind sie weg. Ist ein Passwort für die Dienste gesetzt, muss das Gerät einmal unter System bei den
 Diensten angemeldet sein. Der Tag-Dienst braucht dafür Schreibrecht auf die Musikordner, wie beim Tag-Editor.
 
-**Papierkorb** (Menü → Papierkorb, unter „Bibliothek prüfen“): zeigt je Laufwerk alles in `Xplorio Trash`, mit dem
+**Papierkorb** (Menü → Papierkorb, vor „Hilfe“): zeigt je Laufwerk alles in `Xplorio Trash`, mit dem
 Ordner, aus dem es kam, wann und warum es verschoben wurde (doppeltes Album, doppelter Titel, schlechtere Qualität, aus
 dem Album-Editor) und der Größe; der Menüeintrag zeigt Anzahl und Platz. „Zurücklegen“ bringt ein Album oder einen Titel
 an den alten Ort, und MPD liest genau diesen Ordner neu ein. Liegt dort inzwischen etwas mit gleichem Namen, wird nichts
