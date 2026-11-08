@@ -209,7 +209,8 @@ Diensten angemeldet sein. Der Tag-Dienst braucht dafür Schreibrecht auf die Mus
 
 **Papierkorb** (Menü → Papierkorb, vor „Hilfe“): zeigt je Laufwerk alles in `Xplorio Trash`, mit dem
 Ordner, aus dem es kam, wann und warum es verschoben wurde (doppeltes Album, doppelter Titel, schlechtere Qualität, aus
-dem Album-Editor) und der Größe; der Menüeintrag zeigt Anzahl und Platz. „Zurücklegen“ bringt ein Album oder einen Titel
+dem Album-Editor) und der Größe; der Menüeintrag zeigt Anzahl und Platz. Das Filterfeld über der Liste grenzt sie ein: jedes Wort muss im Namen, im alten Ort, im Grund oder im
+Datum vorkommen; das x leert es. „Zurücklegen“ bringt ein Album oder einen Titel
 an den alten Ort, und MPD liest genau diesen Ordner neu ein. Liegt dort inzwischen etwas mit gleichem Namen, wird nichts
 überschrieben; ein Album, dessen Ordner wieder da ist, bekommt seine Dateien dazu. Ein Tipp auf einen
 Ordner klappt seine einzelnen Dateien auf, jede lässt sich für sich zurücklegen oder löschen. Der Mülleimer löscht einen Eintrag

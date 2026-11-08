@@ -466,6 +466,8 @@ langRegister('it', 'Italiano', {
   'trash.checkRunning': 'Il controllo della libreria è in corso, riprova dopo.',
   'trash.error': 'Errore: {error}',
   'trash.tapFiles': 'Tocca una cartella per vederne i file e ripristinarli o eliminarli uno per uno.',
+  'trash.filter': 'Filtra, ad es. artista o album',
+  'trash.noMatch': 'Nessuna voce corrisponde al filtro.',
   'trash.hint': 'Il cestino è la cartella «Xplorio Trash» su ogni unità, visibile anche in rete (SMB). Volumio non la legge.',
   'menu.system': 'Sistema',
   'menu.systemSub': 'Carico CPU, temperatura, memoria e unità',

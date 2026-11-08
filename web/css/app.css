@@ -781,6 +781,7 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .trIcon svg { width:55%; height:55%; fill:var(--fg); opacity:.7; }
 .trDel svg { fill:var(--err, var(--fg)); }
 .trMsg { padding:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); }
+.trFilter { margin:calc(2 * var(--vw)) 0 calc(1 * var(--vw)); }
 .trTap { cursor:pointer; }
 .trMore { flex:0 0 auto; width:calc(6 * var(--vw)); height:calc(10 * var(--vw)); display:flex; align-items:center; justify-content:center; }
 .trMore svg { width:100%; height:auto; fill:var(--fg); opacity:.6; transition:transform .15s; }
