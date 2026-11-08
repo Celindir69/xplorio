@@ -541,6 +541,8 @@ If multiple services are active, search displays their results in separate secti
 
 The TIDAL watchdog described below applies only to TIDAL.
 
+In the album view of an album of your own, Xplorio looks for the same album at the active services shortly after opening it. If a service has it with more tracks (for example because tracks are missing here), a second row "Complete on Qobuz" appears below "Play" and plays the album at the service. It searches once per album and session; a deluxe edition with bonus tracks can show up this way if the service only offers that one.
+
 ## TIDAL Watchdog (Optional)
 
 Not part of the plugin; set it up over ssh if you need it (from the repository folder):

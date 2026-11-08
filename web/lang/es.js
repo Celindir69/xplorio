@@ -16,6 +16,8 @@ langRegister('es', 'Español', {
   'browse.noTracks': 'No se encontraron canciones',
   'browse.play': 'Reproducir',
   'browse.playAlbum': 'Reproducir el álbum entero',
+  'browse.playFull': 'Completo en {service}',
+  'browse.fullMore': {one: '{total} canciones, 1 más que aquí', other: '{total} canciones, {n} más que aquí'},
   'browse.playAll': 'Reproducir todo',
   'browse.tab.albums': 'Álbumes y canciones',
   'browse.tab.more': 'Descubrir',

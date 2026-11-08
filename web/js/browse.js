@@ -393,15 +393,17 @@ function resolveAlbumUri(artist, album) {
 
 /* Search for an album at the service (service track in the player): same title, if several, the one by the same artist;
    suffixes like "(Remastered)" do not count. -> address or null */
-function streamFindAlbum(svc, artist, album) {
+function streamFindAlbum(svc, artist, album, whole) {   /* whole: the entry {uri, service, …} instead of the address */
   if (!svc || !svc.on) return Promise.resolve(null);
   function bare(s) { return String(s || '').toLowerCase().replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').trim(); }
   var want = bare(album), who = bare(artist);
   return withTimeout(fetch('/api/v1/search?query=' + volumioArg(album)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var found = streamSplitSearch(lists, album).stream[svc.id].albums.filter(function(it){ return bare(it.title || it.name) === want; });
-    var best = found.filter(function(it){ return !it.artist || bare(it.artist) === who; })[0] || found[0];
-    return best ? best.uri : null;
+    var exact = String(album || '').toLowerCase().trim();       /* "Album" before "Album (Deluxe)" */
+    found.sort(function(a, b){ return (String(b.title || b.name || '').toLowerCase().trim() === exact) - (String(a.title || a.name || '').toLowerCase().trim() === exact); });
+    var best = found.filter(function(it){ return !it.artist || bare(it.artist) === who; })[0] || (whole ? null : found[0]);
+    return best ? (whole ? best : best.uri) : null;
   }).catch(function(){ svc.downUntil = Date.now() + 60000; return null; });
 }
 
@@ -469,6 +471,7 @@ function browseAlbum(e, seq) {
     play.title = T('browse.playAlbum');
     browseBody.appendChild(play);
     albumPlaysInfo(play, seq, e.uri, e.album, who);
+    if (!streamOf(e.uri)) albumStreamFull(play, seq, e, who, tracks.length);
 
     /* Tabs "Tracks", "Discover" (for a service "Discover locally") and "Background" */
     var stream = !!streamOf(e.uri);
@@ -514,6 +517,49 @@ function browseAlbum(e, seq) {
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
     browseBody.appendChild(browseNote(T('browse.loadError')));
   });
+}
+
+/* ---------- Own album with fewer tracks than at a streaming service: second play row "Complete at Qobuz" ---------- */
+/* After a short wait (only if the album is still open) one search per active service, in order, until one has the album
+   by the same artist with more tracks. Remembered per album for the session, also "not found". */
+var STREAM_FULL_WAIT_MS = 1200;
+var streamFullCache = {};
+function albumStreamFull(play, seq, e, who, have) {
+  var svcs = streamsOn();
+  if (!svcs.length || !who || !e.album || /^various( artists)?$/i.test(who) || who === 'Verschiedene') return;
+  var key = who.toLowerCase() + '|' + e.album.toLowerCase();
+  function show(hit) {
+    if (!hit || seq !== browseSeq || hit.n <= have || !play.parentNode) return;
+    var row = playRow(T('browse.playFull', {service: hit.name}), T('browse.fullMore', {n: hit.n - have, total: hit.n}) + (hit.secs ? ' · ' + mixDuration(hit.secs) : ''), function(){
+      browsePlay({uri: hit.uri, service: hit.service, type: 'folder', title: e.album, artist: who});
+    }, [queueAddButton([{uri: hit.uri, service: hit.service, type: 'folder', title: e.album, artist: who}], hit.n)]);
+    row.classList.add('playFull');
+    row.title = T('browse.playFull', {service: hit.name});
+    play.parentNode.insertBefore(row, play.nextSibling);
+  }
+  if (key in streamFullCache) return show(streamFullCache[key]);
+  setTimeout(function(){
+    if (seq !== browseSeq) return;
+    svcs.reduce(function(chain, svc){
+      return chain.then(function(hit){
+        if (hit || seq !== browseSeq || Date.now() < svc.downUntil) return hit;
+        return streamFindAlbum(svc, who, e.album, true).then(function(it){
+          if (!it || !it.uri) return null;
+          return browseGet(it.uri).then(function(j){
+            var ts = browseItems(j).filter(function(t){ return t.uri && !/^folder/.test(t.type || ''); });
+            var secs = 0;
+            ts.forEach(function(t){ secs += Number(t.duration) || 0; });
+            var info = (j && j.navigation && j.navigation.info) || {};
+            return ts.length > have ? {name: svc.name, uri: it.uri, service: it.service || info.service || svc.id, n: ts.length, secs: secs} : null;
+          });
+        }).catch(function(){ return null; });
+      });
+    }, Promise.resolve(null)).then(function(hit){
+      if (seq !== browseSeq) return;                    /* left early: try again next time */
+      streamFullCache[key] = hit;
+      show(hit);
+    });
+  }, STREAM_FULL_WAIT_MS);
 }
 
 /* album view: track number tags (tag service GET /tracknums, from MPD) instead of the position in the list; with several

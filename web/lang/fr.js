@@ -17,6 +17,8 @@ langRegister('fr', 'Français', {
   'browse.noTracks': 'Aucun titre trouvé',
   'browse.play': 'Lire',
   'browse.playAlbum': 'Lire tout l\'album',
+  'browse.playFull': 'En entier sur {service}',
+  'browse.fullMore': {one: '{total} titres, 1 de plus qu’ici', other: '{total} titres, {n} de plus qu’ici'},
   'browse.playAll': 'Tout lire',
   'browse.tab.albums': 'Albums et titres',
   'browse.tab.more': 'Découvrir',

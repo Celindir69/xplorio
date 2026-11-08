@@ -18,6 +18,8 @@ langRegister('en', 'English', {
   'browse.noTracks': 'No tracks found',
   'browse.play': 'Play',
   'browse.playAlbum': 'Play whole album',
+  'browse.playFull': 'Complete on {service}',
+  'browse.fullMore': {one: '{total} tracks, 1 more than here', other: '{total} tracks, {n} more than here'},
   'browse.playAll': 'Play all',
   'browse.tab.albums': 'Albums & tracks',
   'browse.tab.more': 'Discover',
