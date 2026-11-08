@@ -400,11 +400,28 @@
   </div>
 </div>
 
+<!-- Smart playlist editor (smartlist.js, opens above the playlists; needs the Smart Playlists plugin) -->
+<div class="overlay" id="overlaySmart">
+  <div class="overlayHandle"></div>
+  <div class="overlayHead">
+    <h2 id="smartTitle" data-i18n="sp.title.new">Neue Smart-Playlist</h2>
+    <div class="overlayClose" id="closeSmart">
+      <svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+    </div>
+  </div>
+  <div class="overlayBody" id="smartBody"></div>
+  <div id="smartFoot" class="edFoot">
+    <div id="smartStatus"></div>
+    <button id="smartDelete" style="display:none" data-i18n="sp.delete">Löschen</button>
+    <button id="smartSave" class="edSave" data-i18n="html.save">Speichern</button>
+  </div>
+</div>
+
 <script>
   langApply(document);                      /* data-i18n texts in the HTML in the chosen language */
 
   /* load app scripts per build (?v=): fresh after an update, else from the browser cache (order matters) */
-  ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'playback', 'discover', 'genre', 'moodmix', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome', 'remote', 'amexport'].forEach(function(n){
+  ['streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'playback', 'discover', 'genre', 'moodmix', 'smartlist', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'welcome', 'remote', 'amexport'].forEach(function(n){
     document.write('<script src="web/js/' + n + '.js?v=' + XV + '"><\/script>');
   });
 </script>

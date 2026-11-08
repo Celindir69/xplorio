@@ -336,7 +336,7 @@
   .inputIcon { flex:0 0 auto; width:calc(6.5 * var(--vw)); height:calc(6.5 * var(--vw)); max-width:36px; max-height:36px;
     display:flex; align-items:center; justify-content:center; opacity:.6; cursor:pointer; }
   .inputIcon svg { width:70%; height:70%; fill:var(--fg); display:block; }
-  #overlayTags { z-index:11; }
+  #overlayTags, #overlaySmart { z-index:11; }
   .tagCover { margin-bottom:calc(4 * var(--vw)); padding-bottom:calc(4 * var(--vw)); border-bottom:1px solid rgba(var(--fg-rgb),.15); }
   .tagThumbs { display:flex; gap:calc(4 * var(--vw)); margin-bottom:calc(3 * var(--vw)); }
   .tagThumb { flex:0 0 auto; width:calc(30 * var(--vw)); max-width:160px; }
@@ -408,15 +408,45 @@
   .tagAlbText { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
   .tagAlbName { font-size:calc(3.3 * var(--vw)); cursor:pointer; }
   .tagAlbTracks { font-size:calc(3 * var(--vw)); opacity:.55; padding:calc(.5 * var(--vw)) 0 0 calc(2 * var(--vw)); }
-  #tagFoot { flex:0 0 auto; display:flex; align-items:center; gap:calc(3 * var(--vw));
+  #tagFoot, #smartFoot { flex:0 0 auto; display:flex; align-items:center; gap:calc(3 * var(--vw));
     padding:calc(3 * var(--vw)) calc(5 * var(--vw)) max(env(safe-area-inset-bottom,16px),16px) calc(5 * var(--vw));
     border-top:1px solid rgba(var(--fg-rgb),.15); }
-  #tagStatus { flex:1 1 auto; min-width:0; font-size:calc(3.2 * var(--vw)); opacity:.7; }
-  #tagFoot button { flex:0 0 auto; background:rgba(var(--fg-rgb),.15); border:1px solid rgba(var(--fg-rgb),.25);
+  #tagStatus, #smartStatus { flex:1 1 auto; min-width:0; font-size:calc(3.2 * var(--vw)); opacity:.7; }
+  #tagFoot button, #smartFoot button { flex:0 0 auto; background:rgba(var(--fg-rgb),.15); border:1px solid rgba(var(--fg-rgb),.25);
     border-radius:calc(3 * var(--vw)); color:var(--fg); font-family:inherit; font-size:calc(4 * var(--vw));
     padding:calc(2.5 * var(--vw)) calc(4 * var(--vw)); cursor:pointer; -webkit-appearance:none; }
-  #tagFoot #tagSave { background:var(--accent, var(--fg)); color:var(--on-accent); border-color:transparent; font-weight:700; }
-  #tagFoot button:disabled { opacity:.4; cursor:default; }
+  #tagFoot #tagSave, #smartFoot #smartSave { background:var(--accent, var(--fg)); color:var(--on-accent); border-color:transparent; font-weight:700; }
+  #tagFoot button:disabled, #smartFoot button:disabled { opacity:.4; cursor:default; }
+
+  /* Smart playlist editor (smartlist.js) */
+  #smartBody { padding-top:calc(2 * var(--vw)); }
+  .spHead { margin:calc(2 * var(--vw)) 0 calc(2 * var(--vw)) 0; font-size:calc(3.4 * var(--vw)); }
+  .spHead .spCheck { font-size:calc(3.4 * var(--vw)); }
+  .spCheck { display:flex; align-items:center; gap:calc(1.5 * var(--vw)); font-size:calc(3.6 * var(--vw)); margin-bottom:calc(3 * var(--vw)); cursor:pointer; }
+  .spCheck input { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); margin:0; }
+  .spFields.off { opacity:.35; pointer-events:none; }
+  .spArtists { margin-bottom:calc(2 * var(--vw)); }
+  .spArtist { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1.5 * var(--vw)) 0;
+    border-bottom:1px solid rgba(var(--fg-rgb),.1); }
+  .spArtistName { flex:1 1 auto; min-width:0; font-size:calc(4 * var(--vw)); overflow-wrap:anywhere; }
+  .spDel { opacity:.7; cursor:pointer; }
+  .spSearch { margin-bottom:calc(4 * var(--vw)); }
+  .spHits .sRow { cursor:pointer; }
+  .spHits .sRow.spHave { opacity:.45; cursor:default; }
+  .tagRow .spNum, .tagField .spNum { flex:0 0 auto; width:calc(22 * var(--vw)); max-width:120px; text-align:center; }
+  .spDash { align-self:center; opacity:.6; }
+  .spWarn { color:var(--warn); opacity:.9; margin-bottom:calc(2 * var(--vw)); }
+  .spLine { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:calc(3.4 * var(--vw)); overflow-wrap:anywhere; }
+  .spHelp { margin:calc(-1 * var(--vw)) 0 calc(3 * var(--vw)) 0; font-size:calc(3.2 * var(--vw)); }
+  .spHelp summary { opacity:.7; cursor:pointer; }
+  .spHelpText { white-space:pre-wrap; opacity:.75; line-height:1.4; margin-top:calc(1.5 * var(--vw));
+    font-family:ui-monospace, Menlo, Consolas, monospace; font-size:calc(3 * var(--vw)); }
+  .spPreview { font-size:calc(3.4 * var(--vw)); margin-bottom:calc(4 * var(--vw)); }
+  .spCount { font-weight:700; margin-bottom:calc(1.5 * var(--vw)); }
+  .spTrack { opacity:.75; padding:calc(.6 * var(--vw)) 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .plSmartBadge { display:inline-block; vertical-align:-0.15em; margin-right:calc(1.5 * var(--vw)); }
+  .plSmartBadge svg { width:1em; height:1em; fill:var(--accent, var(--fg)); display:block; }
+  .plSmartNew { margin-bottom:calc(1 * var(--vw)); }
 
   /* Playlists + radio */
   #plTabBar { flex:0 0 auto; display:flex;
