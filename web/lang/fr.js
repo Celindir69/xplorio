@@ -463,6 +463,7 @@ langRegister('fr', 'Français', {
   'trash.exists': 'Il y a déjà quelque chose à l’ancien emplacement ({path}). Rien n’est écrasé.',
   'trash.checkRunning': 'La vérification de la bibliothèque est en cours, réessayez ensuite.',
   'trash.error': 'Erreur : {error}',
+  'trash.tapFiles': 'Touchez un dossier pour voir ses fichiers et les remettre en place ou les supprimer un par un.',
   'trash.hint': 'La corbeille est le dossier « Xplorio Trash » de chaque disque, visible aussi sur le réseau (SMB). Volumio ne le lit pas.',
   'menu.system': 'Système',
   'menu.systemSub': 'Charge CPU, température, mémoire et disques',

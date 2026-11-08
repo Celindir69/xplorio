@@ -370,6 +370,11 @@ function service(mpdPort) {
                           'USB/S/Xplorio Trash/Abbey Road': ['dir', 'dupAlbum', 'USB/S/Abbey Road'],
                           'USB/S/Xplorio Trash/Let It Be': ['dir', 'albumEditor', 'USB/S/Let It Be']});
                       });
+                      call('GET', '/trashfiles?p=' + encodeURIComponent('USB/S/Xplorio Trash/Abbey Road'), function(gf){
+                      t('service: the files of a folder entry, one by one', function(){
+                        assert.ok(gf.ok, gf.error);
+                        assert.deepStrictEqual(gf.files.map(function(x){ return x.path; }), ['USB/S/Xplorio Trash/Abbey Road/2.mp3']);
+                      });
                       call('POST', '/trashrestore', function(g2){
                       t('service: put back: the album is in its old place again and MPD reads exactly it', function(){
                         assert.ok(g2.ok, g2.error);
@@ -393,6 +398,7 @@ function service(mpdPort) {
                       });
                       }, {path: 'USB/S/Xplorio Trash/Abbey Road'});
                       }, {path: 'USB/S/Xplorio Trash/Let It Be'});
+                      });
                       });
                     }, 500);
                   }, {hold: false});

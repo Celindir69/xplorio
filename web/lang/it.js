@@ -462,6 +462,7 @@ langRegister('it', 'Italiano', {
   'trash.exists': 'Al posto originale c’è già qualcosa ({path}). Non viene sovrascritto nulla.',
   'trash.checkRunning': 'Il controllo della libreria è in corso, riprova dopo.',
   'trash.error': 'Errore: {error}',
+  'trash.tapFiles': 'Tocca una cartella per vederne i file e ripristinarli o eliminarli uno per uno.',
   'trash.hint': 'Il cestino è la cartella «Xplorio Trash» su ogni unità, visibile anche in rete (SMB). Volumio non la legge.',
   'menu.system': 'Sistema',
   'menu.systemSub': 'Carico CPU, temperatura, memoria e unità',

@@ -105,4 +105,20 @@ t('journal: new entries replace old ones with the same place, gone ones drop out
   assert.deepStrictEqual(j.map(function(x){ return x.to; }), ['USB/S/Xplorio Trash/Beatles/Help/1 (1).flac', 'USB/S/Xplorio Trash/Beatles/Abbey Road', 'USB/S/Xplorio Trash/Old/Album']);
   rm(root);
 });
+t('a folder entry one by one: its files, the old place of each, put back a single file', function(){
+  var root = setup();
+  var f = trash.files(root, 'USB/S/Xplorio Trash/Beatles/Abbey Road');
+  assert.deepStrictEqual(f.files.map(function(x){ return [x.name, x.bytes]; }), [['1.mp3', 3], ['2.mp3', 2]]);
+  assert.strictEqual(trash.files(root, 'USB/S/Beatles').error, 'gone');
+  var J2 = J.concat([{to: 'USB/S/Xplorio Trash/Beatles/Abbey Road (2)', from: 'USB/S/Beatles/Abbey Road', at: 1}]);
+  assert.strictEqual(trash.originOf(J2, 'USB/S/Xplorio Trash/Beatles/Abbey Road (2)/2.mp3'), 'USB/S/Beatles/Abbey Road/2.mp3');
+  assert.strictEqual(trash.originOf(J2, 'USB/S/Xplorio Trash/Old/Album/a.flac'), 'USB/S/Old/Album/a.flac');
+  var r = trash.restore(root, 'USB/S/Xplorio Trash/Beatles/Abbey Road/2.mp3', trash.originOf(J, 'USB/S/Xplorio Trash/Beatles/Abbey Road/2.mp3'));
+  assert.ok(r.ok, r.error);
+  assert.ok(fs.existsSync(path.join(root, 'USB/S/Beatles/Abbey Road/2.mp3')));
+  assert.ok(fs.existsSync(path.join(root, 'USB/S/Xplorio Trash/Beatles/Abbey Road/1.mp3')));   /* the rest stays */
+  assert.ok(trash.remove(root, 'USB/S/Xplorio Trash/Beatles/Abbey Road/1.mp3').ok);
+  assert.ok(!fs.existsSync(path.join(root, 'USB/S/Xplorio Trash/Beatles/Abbey Road')));       /* empty: gone */
+  rm(root);
+});
 console.log(n + ' tests passed');

@@ -189,6 +189,28 @@ function empty(root, drive) {
   return {ok: true, removed: n};
 }
 
+/* the files of a folder entry, for putting back or deleting one by one -> {ok, files: [{path, name, bytes}]} */
+function files(root, rel) {
+  if (!split(rel) || !isDir(path.join(root, rel))) return {ok: false, error: 'gone'};
+  if (!inside(root, rel)) return {ok: false, error: 'not in the trash'};
+  return {ok: true, files: filesBelow(path.join(root, rel), '').filter(function(f){
+    var b = path.basename(f);
+    return b !== '.DS_Store' && b.indexOf('._') !== 0;
+  }).map(function(f){
+    var m = measure(path.join(root, rel, f));
+    return {path: rel + '/' + f, name: f, bytes: m.bytes};
+  })};
+}
+
+/* old place of something in the trash: from the journal entry it belongs to (itself or a folder above it), else the path */
+function originOf(journal, rel) {
+  var best = null;
+  (journal || []).forEach(function(j){
+    if (j && j.to && j.from && (rel === j.to || rel.indexOf(j.to + '/') === 0) && (!best || j.to.length > best.to.length)) best = j;
+  });
+  return best ? best.from + rel.slice(best.to.length) : origin(rel);
+}
+
 /* journal after a move: new entries in, ones whose file is gone out, at most the newest 2000 */
 function journalAdd(journal, entries, root) {
   var keep = (journal || []).filter(function(j){
@@ -197,4 +219,4 @@ function journalAdd(journal, entries, root) {
   return keep.concat(entries).slice(-2000);
 }
 
-module.exports = {drives: drives, split: split, origin: origin, list: list, restore: restore, remove: remove, empty: empty, journalAdd: journalAdd};
+module.exports = {drives: drives, split: split, origin: origin, originOf: originOf, files: files, list: list, restore: restore, remove: remove, empty: empty, journalAdd: journalAdd};

@@ -462,6 +462,7 @@ langRegister('de', 'Deutsch', {
   'trash.exists': 'Am alten Ort liegt schon etwas ({path}). Es wird nichts überschrieben.',
   'trash.checkRunning': 'Die Bibliotheksprüfung läuft gerade, bitte danach noch einmal.',
   'trash.error': 'Fehler: {error}',
+  'trash.tapFiles': 'Tipp auf einen Ordner zeigt seine einzelnen Dateien, die sich auch einzeln zurücklegen oder löschen lassen.',
   'trash.hint': 'Der Papierkorb ist der Ordner „Xplorio Trash“ auf jedem Laufwerk, auch über das Netzwerk (SMB) sichtbar. Volumio liest ihn nicht ein.',
   'menu.system': 'System',
   'menu.systemSub': 'Prozessorlast, Temperatur, Speicher und Laufwerke',

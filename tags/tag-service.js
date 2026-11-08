@@ -752,13 +752,18 @@ function doTrashGet(cb) {
   try { var l = trash.list(MUSIC_ROOT, trashJournal()); l.ok = true; cb(200, l); }
   catch (e) { cb(200, {ok: false, error: e.message}); }
 }
+/* GET /trashfiles?p=<entry>: the files of a folder entry, to put back or delete one by one */
+function doTrashFiles(query, cb) {
+  try { cb(200, trash.files(MUSIC_ROOT, String(query.p || ''))); }
+  catch (e) { cb(200, {ok: false, error: e.message}); }
+}
 /* POST /trashrestore {path, token}: back to the old place (never overwrites); MPD reads exactly that folder again */
 function doTrashRestore(body, cb) {
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
-  var rel = String(body.path || ''), j = trashJournal(), entry = j.filter(function(x){ return x.to === rel; })[0];
+  var rel = String(body.path || ''), j = trashJournal();
   var r;
-  try { r = trash.restore(MUSIC_ROOT, rel, entry && entry.from); }
+  try { r = trash.restore(MUSIC_ROOT, rel, trash.originOf(j, rel)); }   /* also a single file of a folder entry */
   catch (e) { return cb(200, {ok: false, error: e.code === 'EACCES' || e.code === 'EPERM' ? 'no write permission: /mnt/' + rel : e.message}); }
   if (!r.ok) return cb(200, r);
   trashJournalSave(j.filter(function(x){ return x.to !== rel; }));
@@ -2163,6 +2168,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/coversearch') return doCoverSearch(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/scan')    return doScanGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/trash')   return doTrashGet(function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/trashfiles') return doTrashFiles(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/check')   return doCheckGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/versions', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
     return doGenreLib(route, url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
