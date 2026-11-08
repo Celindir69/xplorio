@@ -131,6 +131,8 @@
     font-size:calc(3.6 * var(--vw)); background:rgba(30,30,30,.92); color:#fff;
     transition:opacity .25s, transform .25s; }
   #toast.on { opacity:1; transform:translate(-50%, 0); }
+  #toast.busy::after { content:''; display:inline-block; width:.9em; height:.9em; margin-left:.6em; vertical-align:-.1em;
+    border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:amSpin .8s linear infinite; }
 
   /* Overlays */
 .overlay { position:fixed; top:8vh; left:0; right:0; bottom:0; z-index:10;

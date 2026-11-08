@@ -152,12 +152,13 @@ document.addEventListener('visibilitychange', function(){
 
 /* short message at the bottom */
 var toastTimer = null;
-function showToast(text) {
+function showToast(text, busy) {                /* busy: with a spinner, stays until the next message */
   var el = document.getElementById('toast');
   el.textContent = text;
   el.classList.add('on');
+  el.classList.toggle('busy', !!busy);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('on'); }, 3500);
+  if (!busy) toastTimer = setTimeout(function(){ el.classList.remove('on'); }, 3500);
 }
 
 /* body.ovOn: an overlay is open; body.ovMain: one other than lyrics and info (for the CSS rules on the gear;
