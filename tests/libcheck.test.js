@@ -41,6 +41,29 @@ t('album name: disc additions over disc folders, bare name, disc number only whe
 t('no track number', function(){
   assert.deepStrictEqual(r.noTrack.map(function(x){ return [x.dir, x.missing]; }), [['USB/C/NDW', 1]]);
 });
+t('missing basic tags: per folder, counted per tag, file names of the tracks', function(){
+  assert.deepStrictEqual(r.noTags.map(function(x){ return [x.dir, x.title, x.artist, x.album]; }),
+    [['USB/C/Mix', 2, 0, 0], ['USB/D/Cafe', 1, 0, 0], ['USB/D/Café', 1, 0, 0]]);
+  assert.deepStrictEqual(r.noTags[0].without, ['01.flac', '02.flac']);
+  assert.strictEqual(lc.missingTags([S('U/a.mp3', {title: ' ', artist: 'A', album: ''})]).album, 1);
+  assert.strictEqual(lc.missingTags([S('U/a.mp3', {title: 'T', artist: 'A', album: 'B'})]), null);
+});
+t('mixed quality: lossless next to lossy in one album (disc folders together), not FLAC next to ALAC', function(){
+  var q = lc.analyze([
+    S('U/X/Alb/CD1/01.flac', {artist: 'X', album: 'Alb', title: 'a', track: '1', disc: '1', format: '44100:16:2'}),
+    S('U/X/Alb/CD1/02.flac', {artist: 'X', album: 'Alb', title: 'b', track: '2', disc: '1', format: '44100:16:2'}),
+    S('U/X/Alb/CD2/01.mp3', {artist: 'X', album: 'Alb', title: 'c', track: '1', disc: '2', format: '44100:24:2', time: '200', size: 8000000}),
+    S('U/Y/Ok/01.flac', {artist: 'Y', album: 'Ok', title: 'd', track: '1', format: '44100:16:2'}),
+    S('U/Y/Ok/02.m4a', {artist: 'Y', album: 'Ok', title: 'e', track: '2', format: '44100:16:2'})
+  ], function(){ return true; }).mixedQuality;
+  assert.strictEqual(q.length, 1);
+  assert.strictEqual(q[0].dir, 'U/X/Alb');
+  assert.deepStrictEqual(q[0].formats, [{name: 'FLAC 16/44.1', count: 2}, {name: 'MP3', count: 1}]);
+  assert.strictEqual(q[0].lossy, 1);
+  assert.deepStrictEqual(q[0].worse, [{uri: 'U/X/Alb/CD2/01.mp3', name: 'c', format: 'MP3 320 kbps'}]);
+  assert.strictEqual(q[0].files.length, 3);
+  assert.deepStrictEqual(r.mixedQuality, []);
+});
 t('no gaps in the regular test albums', function(){ assert.deepStrictEqual(r.gaps, []); });
 function G(dir, tracks, o) {
   return tracks.map(function(tr, i){ return S(dir + '/' + i + '.flac', Object.assign({album: 'A', track: tr}, o || {})); });
