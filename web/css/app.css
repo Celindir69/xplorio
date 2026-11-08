@@ -46,6 +46,8 @@
   .qBadge.hires, .qBadge.dsd, .qBadge.mqa { display:inline-block; color:var(--gold); }
   .qBadge.lossless { display:inline-block; color:var(--fg); }
   .qBadge.lossy, .qBadge.radio, .qBadge.stream { display:inline-block; color:var(--fg); opacity:.5; }
+  /* where supported, the box hugs the capitals exactly: centered with any font (iOS showed the text too low) */
+  @supports (text-box: trim-both cap alphabetic) { .qBadge { text-box:trim-both cap alphabetic; padding:.5em .7em; } }
 
 #seekWrap { flex:0 0 auto; width:88%; margin-bottom:1.6vh; }
   #seekBar { width:100%; height:4px; background:rgba(var(--fg-rgb),.25);
@@ -1263,6 +1265,7 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 /* album versions (browse.js versionsLayer): quality badge as in the player, path small below */
 #browseBody .verRow .sSub { white-space:normal; }
 #browseBody .verQ .qBadge, #searchResults .verQ .qBadge { font-size:.72em; padding:.4em .55em .22em; border-radius:.35em; margin-right:.6em; vertical-align:.12em; }
+@supports (text-box: trim-both cap alphabetic) { #browseBody .verQ .qBadge, #searchResults .verQ .qBadge { padding:.45em .55em; } }
 #browseBody .verBest { color:var(--gold); }
 #browseBody .verPath, #searchResults .verPath { font-size:.85em; opacity:.45; overflow-wrap:anywhere; }
 .verStack { display:inline-flex; align-items:center; gap:.15em; margin-left:.45em; font-size:.72em; opacity:.6; vertical-align:.08em; white-space:nowrap; }
