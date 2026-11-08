@@ -227,6 +227,7 @@ langRegister('it', 'Italiano', {
   'controls.rotel.off': 'Spegni Rotel',
   'controls.rotel.on': 'Accendi Rotel',
   'controls.rotel.unreachable': 'Servizio Rotel non raggiungibile',
+  'controls.rotel.locked': 'Il Rotel sta riproducendo {input}: volume e accensione bloccati finché lo stream è attivo',
   'rotel.standby': 'standby',
 
   'disc.ago.album': {one: 'Ascoltato un anno fa', other: 'Ascoltato {n} anni fa'},

@@ -227,6 +227,7 @@ langRegister('de', 'Deutsch', {
   'controls.rotel.off': 'Rotel ausschalten',
   'controls.rotel.on': 'Rotel einschalten',
   'controls.rotel.unreachable': 'Rotel-Dienst nicht erreichbar',
+  'controls.rotel.locked': 'Rotel spielt gerade {input} – Lautstärke und Ein/Aus sind gesperrt, solange der Stream läuft',
   'rotel.standby': 'Standby',
 
   'disc.ago.album': {one: 'Vor einem Jahr gehört', other: 'Vor {n} Jahren gehört'},

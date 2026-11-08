@@ -1300,6 +1300,9 @@ button.sySvcBtn { font-family:inherit; color:var(--fg); }
 @media (orientation:portrait) and (max-width:600px) { #amChip { top:calc(var(--sat) + 34px); } }
 html.amPlay #seekBar, html.amPlay #cRepeat, html.amPlay #cPrev, html.amPlay #cPlay, html.amPlay #cNext, html.amPlay #cRandom,
 html.amPlay #volWrap, html.amPlay #btnRotelPower, html.amPlay .remoteIcon { opacity:.25; pointer-events:none; }
+/* stream plays here, the amplifier plays another input at home: its controls stay locked (controls.js rotelLockPaint) */
+html.rotelLock #volWrap, html.rotelLock #btnRotelPower { opacity:.3; }
+html.rotelLock #vSlider { pointer-events:none; }
 
 /* album editor: "Move album" (into Xplorio Trash), below the tracks */
 .tagMoveBox { margin-top:1.6em; padding-top:1em; border-top:1px solid rgba(var(--fg-rgb),.15); }

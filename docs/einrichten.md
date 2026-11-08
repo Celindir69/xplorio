@@ -787,7 +787,8 @@ Knopf gedimmt, und ein Tipp dort hört mit, ohne etwas umzuschalten. Auf iPhone 
 Tipp irgendwo in Xplorio. Hört eine Minute lang niemand zu, schaltet der Player von selbst zurück auf die Anlage, damit
 er nie stumm bleibt. Startet Volumio MPD neu (etwa beim Speichern im Plugin), sind danach Anlage und Stream beide an; auch
 dann schaltet Xplorio den Stream nach einer Minute ohne Zuhörer wieder ab. Solange ein Gerät mithört, zeigt die Qualitätsanzeige dort
-„Stream“ und das Format des Streams (z. B. MP3 · 192 kbps) statt der Werte der Datei.
+„Stream“ und das Format des Streams (z. B. MP3 · 192 kbps) statt der Werte der Datei. Steht der Rotel dabei auf einem
+anderen Eingang (jemand daheim hört etwa Phono), sind Lautstärke und Ein/Aus im Player gesperrt; ein Tipp sagt nur, warum.
 
 **Einrichten unter Volumio 4:** das Plugin „MPD HTTP & Icecast output“ ([mpd-output](https://github.com/foonerd/mpd-output))
 aus dem Plugin-Store installieren und in seinen Einstellungen den HTTP-Stream einschalten, am besten mit Encoder MP3

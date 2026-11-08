@@ -228,6 +228,7 @@ langRegister('fr', 'Français', {
   'controls.rotel.off': 'Éteindre le Rotel',
   'controls.rotel.on': 'Allumer le Rotel',
   'controls.rotel.unreachable': 'Service Rotel injoignable',
+  'controls.rotel.locked': 'Le Rotel joue {input} – volume et marche/arrêt sont verrouillés tant que le flux est actif',
   'rotel.standby': 'veille',
 
   'disc.ago.album': {one: 'Écouté il y a un an', other: 'Écouté il y a {n} ans'},
