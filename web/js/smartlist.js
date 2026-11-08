@@ -16,6 +16,7 @@ var SMART_SORTS = [['', 'sp.sort.random'], ['year+album+track+', 'sp.sort.album'
                    ['added+', 'sp.sort.added'], ['artist+album+track+', 'sp.sort.artist'], ['title+', 'sp.sort.title']];
 var SMART_BAD = /;|\||::/;        /* would break the rule syntax in an artist name */
 var SMART_SVG = '<svg viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12z"/></svg>';
+var SMART_NEW_SVG = '<svg viewBox="0 0 24 24"><path d="M8 9h2.2v4.4h4.4v2.2h-4.4V20H8v-4.4H3.6v-2.2H8z"/><path d="M18 1.5l1.3 3.2 3.2 1.3-3.2 1.3L18 10.5l-1.3-3.2L13.5 6l3.2-1.3z"/><path d="M20.5 12l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
 var TRASH_SVG = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
 function smartCall(data) {
@@ -116,12 +117,19 @@ function smartDecorate(items, container) {
       nm.insertBefore(badge, nm.firstChild);
       row.appendChild(tagPenButton('tagEditMini', T('sp.edit'), function(){ openSmartEditor(rule); }));
     });
+    /* the note becomes "classic playlists …", next to it + with stars for a new smart playlist */
+    var bar = document.createElement('div'), hint = container.querySelector('.listLink');
+    bar.className = 'plSmartBar';
+    if (hint) { hint.textContent = T('sp.manageHint'); bar.appendChild(hint); }
     var add = document.createElement('div');
-    add.className = 'sHint listLink plSmartNew';
+    add.className = 'plSmartNew';
     add.setAttribute('role', 'button');
-    add.textContent = T('sp.new');
+    add.title = T('sp.new');
+    add.setAttribute('aria-label', T('sp.new'));
+    add.innerHTML = SMART_NEW_SVG;
     add.addEventListener('click', function(){ openSmartEditor(null); });
-    container.insertBefore(add, container.firstChild);
+    bar.appendChild(add);
+    container.insertBefore(bar, container.firstChild);
   });
 }
 

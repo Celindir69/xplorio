@@ -566,7 +566,7 @@ Without AutoDJ, ∞ switches MyVolumio Premium's Continuous Play (Volumio 4) if 
 
 ## Smart playlists
 
-With the [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) plugin (version 1.1 or later), its rules can be edited in Xplorio. In the "Playlists" tab, the playlists the plugin created carry their own symbol before the name and a pen on the right; "+ New smart playlist" is at the top. Without the plugin none of this appears.
+With the [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) plugin (version 1.1 or later), its rules can be edited in Xplorio. In the "Playlists" tab, the playlists the plugin created carry their own symbol before the name and a pen on the right; a plus with stars at the top right opens a new smart playlist. Without the plugin none of this appears.
 
 In the editor:
 - **Name**: required. Xplorio proposes one from the chosen artists (with "All artists", from genre and years) until you change it by hand.
