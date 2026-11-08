@@ -15,9 +15,11 @@ T=/tmp/mpdoutput-build
 
 die() { echo "ERROR: $*"; exit 1; }
 [ "$(id -u)" = 0 ] || die "please run with sudo"
-[ -x /usr/bin/node ] || die "/usr/bin/node is missing (the plugin's install.sh needs it)"
+NODE=$(command -v node || true); [ -n "$NODE" ] || for n in /usr/local/bin/node /usr/bin/node; do [ -x "$n" ] && NODE=$n && break; done
+[ -n "$NODE" ] || die "node not found"
+MPD=$(command -v mpd || echo /usr/bin/mpd)
 grep -q registeredCallbacks "$MPD_JS" || die "Volumio's MPD plugin has no registeredCallbacks: outputs cannot be added"
-mpd --version | sed -n '/Output plugins/,/^$/p' | grep -qw httpd || die "MPD has no httpd output"
+"$MPD" --version | sed -n '/Output plugins/,/^$/p' | grep -qw httpd || die "MPD has no httpd output"
 [ -d "$XPLORIO_MODULES/kew" ] && [ -d "$XPLORIO_MODULES/v-conf" ] || die "kew/v-conf not found in $XPLORIO_MODULES"
 [ -d /data/plugins/audio_interface/mpdoutput ] && die "the plugin is already installed"
 
@@ -25,9 +27,12 @@ rm -rf "$T"; mkdir -p "$T/mpdoutput"; cd "$T/mpdoutput"
 echo "Downloading mpd-output …"
 curl -fsSL "https://codeload.github.com/foonerd/mpd-output/tar.gz/$COMMIT" | tar xz --strip-components=1
 rm -rf .github test
+# Node and MPD where this Volumio has them (Volumio 2: /usr/local/bin/node), not where Volumio 4 has them
+sed -i "s|/usr/bin/node|$NODE|g; s|/usr/bin/mpd|$MPD|g" install.sh
+sed -i "s|/usr/bin/node|$NODE|g" systemd/mpd-output-relay.service
 grep -q "fs.mkdirSync(BACKUP_DIR, { recursive: true, mode: 0o700 });" index.js || die "index.js differs from the checked version"
 sed -i "s|fs.mkdirSync(BACKUP_DIR, { recursive: true, mode: 0o700 });|try { fs.mkdirSync(path.dirname(BACKUP_DIR)); } catch (e) { /* exists */ } try { fs.mkdirSync(BACKUP_DIR, 0o700); } catch (e) { if (e.code !== 'EEXIST') throw e; }   /* Node 8 (Volumio 2) */|" index.js
-/usr/bin/node --check index.js || die "index.js does not run on this Node"
+"$NODE" --check index.js || die "index.js does not run on this Node"
 cp -R "$XPLORIO_MODULES" node_modules
 
 echo "Packing …"
@@ -47,7 +52,7 @@ install -o volumio -g volumio -m 644 ../mpdoutput.zip /tmp/plugins/mpdoutput.zip
 curl -fsSL https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/plugin-install.js -o /tmp/plugins/mpdoutput-install.js
 chown volumio:volumio /tmp/plugins/mpdoutput-install.js
 echo "Installing through Volumio …"
-sudo -u volumio /usr/bin/node /tmp/plugins/mpdoutput-install.js install mpdoutput.zip || die "Volumio did not finish the install (log: sudo journalctl -u volumio -n 100)"
+sudo -u volumio "$NODE" /tmp/plugins/mpdoutput-install.js install mpdoutput.zip || die "Volumio did not finish the install (log: sudo journalctl -u volumio -n 100)"
 rm -f /tmp/plugins/mpdoutput-install.js /tmp/plugins/mpdoutput.zip; rm -rf "$T"
 echo
 echo "Done. Now in Volumio: Plugins > Installed plugins > MPD HTTP & Icecast output: switch on, open the settings,"
