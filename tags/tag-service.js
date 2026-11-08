@@ -754,8 +754,22 @@ function doTrashGet(cb) {
 }
 /* GET /trashfiles?p=<entry>: the files of a folder entry, to put back or delete one by one */
 function doTrashFiles(query, cb) {
-  try { cb(200, trash.files(MUSIC_ROOT, String(query.p || ''))); }
-  catch (e) { cb(200, {ok: false, error: e.message}); }
+  var r;
+  try { r = trash.files(MUSIC_ROOT, String(query.p || '')); }
+  catch (e) { return cb(200, {ok: false, error: e.message}); }
+  if (!r.ok) return cb(200, r);
+  /* track number and title from the tags (the trash is not in MPD's database); without them the list still comes */
+  var audio = r.files.filter(function(f){ return /\.(flac|mp3|m4a|ogg|opus|wav|aiff?|dsf|wv|ape)$/i.test(f.name); }).slice(0, 200);
+  if (!audio.length) return cb(200, r);
+  runPyMany(audio.map(function(f){ return {op: 'read', path: path.join(MUSIC_ROOT, f.path)}; }), function(res){
+    res.forEach(function(x, i){
+      if (!x || !x.ok || !x.tags) return;
+      var m = /^\s*(\d+)/.exec(x.tags.track || '');
+      if (m) audio[i].track = +m[1];
+      if (x.tags.title) audio[i].title = String(x.tags.title);
+    });
+    cb(200, r);
+  });
 }
 /* POST /trashrestore {path, token}: back to the old place (never overwrites); MPD reads exactly that folder again */
 function doTrashRestore(body, cb) {

@@ -165,6 +165,7 @@ function trashFiles(e, list) {
       var meta = histEl('div', 'sMeta');
       meta.appendChild(histEl('div', 'sTitle', f.name));
       meta.appendChild(histEl('div', 'sSub', trashSize(f.bytes)));
+      if (f.title) meta.appendChild(histEl('div', 'sSub', (f.track ? (f.track < 10 ? '0' : '') + f.track + ' ' : '') + f.title));   /* from the tags */
       row.appendChild(meta);
       row.appendChild(trashActions(f, meta, f.name));
       list.appendChild(row);
