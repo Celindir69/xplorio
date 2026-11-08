@@ -6,6 +6,7 @@ var overlayTrash = document.getElementById('overlayTrash');
 var trashBody = document.getElementById('trashBody');
 var trashSeq = 0;
 var trashOpen = {};                                /* folder entries whose files are shown (path -> true), kept over reloads */
+var trashFilter = '';                              /* search terms of the filter field, kept over reloads */
 var TRASH_ICON = 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z';
 var TRASH_DIR = 'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z';
 var TRASH_FILE = 'M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z';
@@ -29,7 +30,7 @@ function trashSummary(r) {
 
 function openTrash() {
   closeAllOverlays();
-  trashOpen = {};
+  trashOpen = {}; trashFilter = '';
   overlayTrash.classList.add('on');
   trashLoad();
 }
@@ -64,8 +65,13 @@ function trashRender(r, note) {
   head.appendChild(histEl('div', 'ckInfo', r.count ? T('trash.info', {n: r.count, size: trashSize(r.bytes)}) + (dirs ? ' ' + T('trash.tapFiles') : '') : T('trash.none')));
   trashBody.appendChild(head);
   if (note) trashBody.appendChild(histEl('div', 'ckDupMsg trMsg', note));
+  var groups = [];                                         /* per drive: heading and entries, for the filter */
+  if (r.count) trashBody.appendChild(trashFilterField(groups));
+  var none = histEl('div', 'sHint', T('trash.noMatch'));
   r.drives.forEach(function(d){
     var dh = histEl('div', 'trDrive');
+    var g = {head: dh, rows: []};
+    groups.push(g);
     dh.appendChild(histEl('div', 'trDriveName', '/mnt/' + d.drive + ' · ' + trashSize(d.bytes)));
     var all = histEl('button', 'ckBtn', T('trash.emptyDrive'));
     all.addEventListener('click', function(){
@@ -78,9 +84,49 @@ function trashRender(r, note) {
     });
     dh.appendChild(all);
     trashBody.appendChild(dh);
-    d.entries.forEach(function(e){ trashBody.appendChild(trashRow(e)); });
+    d.entries.forEach(function(e){
+      var row = trashRow(e);
+      g.rows.push({el: row, text: [e.path, e.from, e.reason ? T('trash.why.' + e.reason) : '', trashWhen(e.at)].join(' ').toLowerCase()});
+      trashBody.appendChild(row);
+    });
   });
+  groups.none = none;
+  none.style.display = 'none';
+  trashBody.appendChild(none);
+  trashApplyFilter(groups);
   trashBody.appendChild(histEl('div', 'ckCatHint', T('trash.hint')));
+}
+
+/* filter field: every word must appear in the name, the old place, the reason or the date; x clears it */
+function trashFilterField(groups) {
+  var sf = histEl('div', 'spSearchField trFilter');
+  var inp = histEl('input', 'tagIn');
+  inp.type = 'search'; inp.placeholder = T('trash.filter');
+  inp.autocapitalize = 'off'; inp.autocomplete = 'off'; inp.spellcheck = false;
+  inp.value = trashFilter;
+  var clr = histEl('div', 'spClear');
+  clr.title = T('html.searchClear'); clr.setAttribute('role', 'button'); clr.setAttribute('aria-label', T('html.searchClear'));
+  clr.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
+  function paint() { clr.style.display = inp.value ? 'block' : 'none'; }
+  inp.addEventListener('input', function(){ trashFilter = inp.value; paint(); trashApplyFilter(groups); });
+  clr.addEventListener('click', function(){ inp.value = ''; trashFilter = ''; paint(); trashApplyFilter(groups); inp.focus(); });
+  paint();
+  sf.appendChild(inp); sf.appendChild(clr);
+  return sf;
+}
+function trashApplyFilter(groups) {
+  var words = trashFilter.toLowerCase().split(/\s+/).filter(Boolean), any = false;
+  groups.forEach(function(g){
+    var shown = 0;
+    g.rows.forEach(function(x){
+      var ok = words.every(function(w){ return x.text.indexOf(w) >= 0; });
+      x.el.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    g.head.style.display = shown ? '' : 'none';
+    if (shown) any = true;
+  });
+  if (groups.none) groups.none.style.display = any ? 'none' : '';
 }
 
 /* the buttons of an entry or of a single file: put back, delete for good; messages under the name */
