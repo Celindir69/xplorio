@@ -119,7 +119,8 @@ progress of the mood tags.
   played and new albums, random mix; birthdays, recently played and new also in Discover.
 - Menu behind the gear at the top right: welcome screen, history and stats, check library, playback (crossfade, volume levelling, Rotel remote), system (CPU load, temperature, memory, drives, services with restart, restart or shut down the player, logs), update library, and the original Volumio
   interface (home page, browse, queue, plugins, system = Volumio's /dev page) and a help page on how to use the app; at the bottom the logo, the installed version and the license.
-- While the library is being read in or the album list rebuilt, a small symbol turns to the left of the gear; tapping it says what is going on (the player often responds more slowly then).
+- Edit smart playlists: with the [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) plugin (1.1 or later), its playlists get their own symbol and a pen in the "Playlists" tab. The editor picks artists from the library, offers filters for years, genre, album, recently added and order, shows the rule for direct editing, and tells in advance how many tracks match (see [Setup](docs/setup.md#smart-playlists)).
+- While the library is being read in or the album list rebuilt, a small symbol turns at the top left (right of the Rotel power button), also while a panel is open; tapping it says what is going on (the player often responds more slowly then).
 - Light and dark, following the device setting or set explicitly.
 - German, English, French, Spanish and Italian, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).

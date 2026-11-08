@@ -132,6 +132,7 @@ function loadPlaylists() {
       renderPlList(items, playlistResults, function(pl){
         openBrowse({kind:'playlist', name:pl.title || pl.name || '', uri:pl.uri, service:pl.service || 'mpd'});   /* playlist tracks; back arrow leads here */
       }, true, T('pl.manageHint'));
+      if (typeof smartDecorate === 'function') smartDecorate(items, playlistResults);   /* rules of the Smart Playlists plugin */
     }).catch(function(){
       while (playlistResults.firstChild) playlistResults.removeChild(playlistResults.firstChild);
       var err = document.createElement('div');

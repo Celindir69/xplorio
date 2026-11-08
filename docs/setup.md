@@ -564,6 +564,19 @@ With the [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (version 1
 
 Without AutoDJ, ∞ switches MyVolumio Premium's Continuous Play (Volumio 4) if it is available. If both are there, AutoDJ takes precedence, and turning ∞ on switches Continuous Play off so that they do not both append tracks. To use Continuous Play with ∞ instead, disable the AutoDJ plugin in Volumio under "Installed Plugins".
 
+## Smart playlists
+
+With the [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) plugin (version 1.1 or later), its rules can be edited in Xplorio. In the "Playlists" tab, the playlists the plugin created carry their own symbol before the name and a pen on the right; "+ New smart playlist" is at the top. Without the plugin none of this appears.
+
+In the editor:
+- **Name**: required. Xplorio proposes one from the chosen artists (with "All artists", from genre and years) until you change it by hand.
+- **Artists**: search in your own library; tapping a result adds it to the list, the bin removes it again. "All artists" for lists such as "70s rock" or "Recently added".
+- **Filters**: years from–to (optionally the original release year), genre (several with `;`, any of them), "Album title does not contain" (e.g. Live), added in the last days, tracks on compilations, remove duplicate titles, order, and the maximum number of tracks.
+- **Rule**: shows the generated line and can be edited directly, with the plugin's syntax below. If a rule uses filters the fields cannot show (e.g. `title~Love`), the fields stay grey and only the line can be edited.
+- **Preview**: has the plugin try out just this rule and shows how many tracks match. The real playlists stay untouched.
+
+"Save" writes the rule to the plugin and starts a run, which is what creates the playlist. "Delete" removes the rule and the playlist. The rules stay in the plugin; its settings page in Volumio shows the same lines. A run overwrites changes made by hand to a smart playlist's tracks.
+
 ## Playback on the phone (stream output)
 
 If MPD has a stream output (`httpd`), a headphones button appears top right. A tap switches between **system** and **this device only**: the amplifier output goes off and the music comes from the phone, tablet or computer Xplorio is open on. The next tap switches back to the system. Everything else works as usual: queue, play, pause, and volume on the device. The setting belongs to the player; every open Xplorio shows it (within 10 seconds). Sound only comes from devices that chose it themselves; on the others the button is dimmed, and a tap there joins in without switching anything. On iPhone and iPad, sound starts only after a tap anywhere in Xplorio. If nobody listens for a minute, the player switches back to the system by itself, so it is never left silent. When Volumio restarts MPD (for example when the plugin's settings are saved), the system and the stream are both on afterwards; then, too, Xplorio switches the stream off after a minute without listeners.

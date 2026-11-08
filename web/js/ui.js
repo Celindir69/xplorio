@@ -28,6 +28,8 @@ function closeAllOverlays() {
   if (ow) ow.classList.remove('on');
   var ot = document.getElementById('overlayTags');
   if (ot) ot.classList.remove('on');
+  var osm = document.getElementById('overlaySmart');
+  if (osm) osm.classList.remove('on');
   if (window.closeVolumioFrame) closeVolumioFrame();
 }
 function toggleOverlay(overlay) {
@@ -37,12 +39,12 @@ function toggleOverlay(overlay) {
 }
 
 /* Tapping a free spot next to the overlay closes it. Not on controls (they switch the overlay as before),
-   not in the tag editor (unsaved changes) and not for the fixed panels of the stage view. */
+   not in the tag and smart playlist editors (unsaved changes) and not for the fixed panels of the stage view. */
 function overlayFreeTap(t) {
   var open = [].filter.call(document.querySelectorAll('.overlay.on'), function(o){
     return !(document.documentElement.classList.contains('stage') && (o.id === 'overlayInfo' || o.id === 'overlayLyrics'));
   });
-  if (!open.length || open.some(function(o){ return o.id === 'overlayTags'; })) return false;
+  if (!open.length || open.some(function(o){ return o.id === 'overlayTags' || o.id === 'overlaySmart'; })) return false;
   return !(t && t.closest && t.closest('.overlay, .topBtn, #meta, #seekWrap, #ctrl, #volWrap, #actions, #toast, button, a, input, iframe'));
 }
 var overlayDownFree = false;                       /* press and release both free: dragging out of the overlay does not count */
@@ -119,6 +121,7 @@ document.addEventListener('touchend', function(e){
   var land = window.matchMedia('(orientation:landscape)').matches;   /* landscape: sidebar, swipe right */
   if (!(land ? dx > 80 && dx > Math.abs(dy) * 1.5 : dy > 80)) return;
   if (overlayTags.classList.contains('on')) return overlayTags.classList.remove('on');   /* like the X: only the editor, the page below stays */
+  if (overlaySmart.classList.contains('on')) return overlaySmart.classList.remove('on');
   closeAllOverlays();
 }, {passive:true});
 
@@ -180,6 +183,7 @@ function showToast(text) {
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape' && e.key !== 'Esc') return;
   if (overlayTags && overlayTags.classList.contains('on')) { overlayTags.classList.remove('on'); return; }
+  if (overlaySmart.classList.contains('on')) { overlaySmart.classList.remove('on'); return; }
   if (overlayBrowse.classList.contains('on') && browseStack.length > 1) { browseBack.click(); return; }
   closeAllOverlays();
 });

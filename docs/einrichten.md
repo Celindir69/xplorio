@@ -740,6 +740,29 @@ AutoDJ Vorrang, und beim Einschalten von ∞ schaltet Xplorio Continuous Play au
 Wer stattdessen Continuous Play über ∞ nutzen will, deaktiviert das AutoDJ-Plugin in Volumio unter „Installierte
 Plugins“.
 
+## Smart-Playlisten
+Mit dem Plugin [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) (ab Version 1.1) lassen sich
+dessen Regeln in Xplorio bearbeiten. Im Reiter „Playlisten“ tragen die vom Plugin erstellten Playlisten ein eigenes
+Symbol vor dem Namen und rechts einen Stift; oben steht „+ Neue Smart-Playlist“. Ohne Plugin erscheint nichts davon.
+
+Im Editor:
+- **Name**: Pflicht. Xplorio schlägt ihn aus den gewählten Künstlern vor (bei „Alle Künstler“ aus Genre und Jahren),
+  bis er von Hand geändert wird.
+- **Künstler**: Suche in der eigenen Bibliothek; ein Tipp auf einen Treffer nimmt ihn in die Liste, der Mülleimer
+  nimmt ihn wieder heraus. „Alle Künstler“ für Listen wie „70er Rock“ oder „Neu hinzugefügt“.
+- **Filter**: Jahre von–bis (wahlweise das ursprüngliche Erscheinungsjahr), Genre (mehrere mit `;`, eines genügt),
+  „Albumtitel enthält nicht“ (z. B. Live), hinzugefügt in den letzten Tagen, Titel auf Compilations, doppelte Titel
+  entfernen, Reihenfolge und Höchstzahl der Titel.
+- **Regel**: zeigt die erzeugte Zeile und lässt sich direkt bearbeiten, mit der Syntax des Plugins darunter. Nutzt
+  eine Regel Filter, die die Felder nicht darstellen können (z. B. `title~Love`), bleiben die Felder grau und nur die
+  Zeile ist bearbeitbar.
+- **Vorschau**: lässt das Plugin nur diese Regel probeweise durchrechnen und zeigt, wie viele Titel passen. Die
+  echten Playlisten bleiben dabei unberührt.
+
+„Speichern“ schreibt die Regel ins Plugin und startet einen Lauf, erst der erstellt die Playlist. „Löschen“ entfernt
+Regel und Playlist. Die Regeln bleiben im Plugin; dessen Einstellungsseite in Volumio zeigt dieselben Zeilen. Von Hand
+geänderte Inhalte einer Smart-Playlist überschreibt der nächste Lauf.
+
 ## Wiedergabe auf dem Handy (Stream-Ausgang)
 Hat MPD einen Stream-Ausgang (`httpd`), erscheint oben rechts ein Kopfhörer-Knopf. Ein Tipp schaltet zwischen
 **Anlage** und **nur dieses Gerät** um: Der Verstärker-Ausgang geht aus, und die Musik kommt aus dem Handy, Tablet oder

@@ -113,7 +113,8 @@ Fortschritt der Stimmungs-Tags.
   Alben, Zufallsmix; Geburtstage, zuletzt gehört und neu auch unter Entdecken.
 - Menü hinter dem Zahnrad oben rechts: Begrüßungsschirm, Verlauf und Statistik, Bibliothek prüfen, Wiedergabe (Crossfade, Lautstärke angleichen, Rotel-Fernbedienung), System (Prozessorlast, Temperatur, Speicher, Laufwerke, Dienste mit Neustart, Player neu starten oder ausschalten, Protokolle), Bibliothek aktualisieren und die
   originale Volumio-Oberfläche (Hauptseite, Durchsuchen, Warteschlange, Plugins, System = Volumios Seite /dev) und eine Hilfe zur Bedienung; unten Logo, eingespielter Stand und Lizenz.
-- Solange die Bibliothek eingelesen oder die Albenliste neu aufgebaut wird, dreht sich links neben dem Zahnrad ein kleines Symbol; ein Tipp darauf sagt, was gerade läuft (der Player reagiert dann oft langsamer).
+- Smart-Playlisten bearbeiten: Mit dem Plugin [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) (ab 1.1) tragen dessen Playlisten im Reiter „Playlisten“ ein eigenes Symbol und einen Stift. Der Editor wählt Künstler aus der Bibliothek, bietet Filter für Jahre, Genre, Album, neu Hinzugefügtes und Reihenfolge, zeigt die Regel zum direkten Bearbeiten und vorab, wie viele Titel passen (siehe [Einrichten](docs/einrichten.md#smart-playlisten)).
+- Solange die Bibliothek eingelesen oder die Albenliste neu aufgebaut wird, dreht sich oben links (rechts neben dem Rotel-Ein/Aus) ein kleines Symbol, auch bei geöffneten Fenstern; ein Tipp darauf sagt, was gerade läuft (der Player reagiert dann oft langsamer).
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
 - Deutsch, Englisch, Französisch, Spanisch und Italienisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
   (siehe [Einrichten](docs/einrichten.md#sprache)).
