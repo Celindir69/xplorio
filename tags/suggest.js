@@ -29,25 +29,27 @@ function distance(a, b, max) {
   return prev[b.length];
 }
 
-/* album list [{al, ar, …}] -> [{kind: 'artist'|'album', name, ar, n, words, count}] */
+/* album list [{al, ar, dir, …}] -> [{kind: 'artist'|'album', name, ar, dir, n, words, count}] */
 function index(list) {
   var byKey = {}, out = [];
-  function add(kind, name, ar) {
+  function add(kind, name, ar, dir) {
     var n = plays.norm(name);
     if (!n) return;
     var k = kind + '|' + n + (kind === 'album' ? '|' + plays.norm(ar) : '');
     if (byKey[k]) { byKey[k].count++; return; }
     var words = String(name).split(/[\s\/\-–:,(]+/).map(plays.norm).filter(function(w){ return w.length >= 4 && w !== n; });
-    out.push(byKey[k] = {kind: kind, name: name, ar: ar || '', n: n, words: words, count: 1});
+    out.push(byKey[k] = {kind: kind, name: name, ar: ar || '', dir: dir || '', n: n, words: words, count: 1});
   }
   (list || []).forEach(function(a){
     if (a.ar && a.ar !== 'Verschiedene') add('artist', a.ar);
-    if (a.al) add('album', a.al, a.ar === 'Verschiedene' ? '' : a.ar);
+    if (a.al) add('album', a.al, a.ar === 'Verschiedene' ? '' : a.ar, a.dir);
   });
   return out;
 }
 
-/* search term -> up to MAX entries [{kind, name, ar}], best first; [] if nothing is close enough */
+/* search term -> up to MAX entries [{kind, name, ar, dir, exact}], best first; [] if nothing is close enough.
+   exact: the name contains the term (no typo): a hit Volumio's search missed (it lists albums only with an
+   AlbumArtist tag), shown as a hit, not as "Did you mean" */
 function suggest(idx, q, max) {
   var qn = plays.norm(q), lim = limit(qn.length), hits = [];
   if (qn.length < 3) return [];
@@ -71,7 +73,12 @@ function suggest(idx, q, max) {
   return hits.filter(function(h){
     var k = h.e.kind + '|' + h.e.name.toLowerCase();
     return !seen[k] && (seen[k] = true);
-  }).slice(0, max || MAX).map(function(h){ return {kind: h.e.kind, name: h.e.name, ar: h.e.ar}; });
+  }).slice(0, max || MAX).map(function(h){
+    var o = {kind: h.e.kind, name: h.e.name, ar: h.e.ar};
+    if (h.e.dir) o.dir = h.e.dir;
+    if (h.s <= 1) o.exact = true;
+    return o;
+  });
 }
 
 module.exports = {index: index, suggest: suggest, distance: distance};

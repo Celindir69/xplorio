@@ -66,4 +66,10 @@ t('fast enough for a large collection', function(){
   assert.ok(ms < 1000);
 });
 
+t('part of a name is a hit (exact, with folder), a typo is a suggestion', function(){
+  var idx = sg.index([{al: 'Housekeeping – The OLI Years 1990-1994', ar: 'No-Man', dir: 'USB/M/No-Man/Housekeeping'}]);
+  assert.deepStrictEqual(sg.suggest(idx, 'Housekeeping'),
+    [{kind: 'album', name: 'Housekeeping – The OLI Years 1990-1994', ar: 'No-Man', dir: 'USB/M/No-Man/Housekeeping', exact: true}]);
+  assert.strictEqual(sg.suggest(idx, 'Huosekeeping')[0].exact, undefined);
+});
 console.log(n + ' tests passed');
