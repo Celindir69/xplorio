@@ -228,12 +228,32 @@ function inputApply(st) {
 }
 
 var playIconShown = null;                              /* last drawn icon (set again only on change) */
+/* The player's state comes from Volumio's pushState (socket, core.js) as soon as something changes; getState is only the
+   fallback every 10 s, when the page comes back to the foreground and after the socket reconnects. Both go through
+   stateIn: one state at a time (stateFill may still ask for the queue), a state arriving meanwhile is handled after it,
+   only the newest one. */
 var pollBusy = false;                                   /* never several getState at once (Volumio hangs e.g. while scanning) */
+var POLL_MS = 10000;
 function poll() {
   if (document.hidden || pollBusy) return;
   pollBusy = true;
-  if (!volDrag && ROTEL_ON) rotel('/state');  
-withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateFill).then(function(st){
+  withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateIn)
+    .catch(function(){ playing = false; })            /* Volumio unreachable: stop the time from running */
+    .then(function(){ pollBusy = false; });
+}
+var stateBusy = false, statePending = null;
+function stateIn(st) {
+  if (!st || typeof st !== 'object') return Promise.resolve();
+  if (stateBusy) { statePending = st; return Promise.resolve(); }
+  stateBusy = true;
+  return Promise.resolve(st).then(stateFill).then(stateApply).catch(function(e){ console.error('state: ' + (e && e.message || e)); })
+    .then(function(){
+      stateBusy = false;
+      var next = statePending; statePending = null;
+      if (next) return stateIn(next);
+    });
+}
+function stateApply(st) {
 st = inputApply(st);
 if (typeof remoteSync === 'function') remoteSync(st);         /* playback on this device (remote.js) */
 if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* already playing: play back to normal */
@@ -364,8 +384,6 @@ Promise.all([
   ]);
 });
 
-  }).catch(function(){ playing = false; })            /* Volumio unreachable: stop the time from running */
-    .then(function(){ pollBusy = false; });
 }
 
 /* limit small caches in continuous operation (the iPad runs for days): oldest entries first */
@@ -378,6 +396,8 @@ setInterval(function(){
 }, 30 * 60000);
 
 setInterval(function(){ updateSyncedLyrics(); }, 200);
-setInterval(poll, 2000);
+setInterval(poll, POLL_MS);                            /* fallback; changes come by pushState */
+setInterval(function(){ if (!document.hidden && !volDrag && ROTEL_ON) rotel('/state'); }, 2000);   /* amplifier: the bridge answers from memory */
+socket.on('connect', function(){ poll(); });           /* also after a reconnect: whatever changed meanwhile */
 poll();
 

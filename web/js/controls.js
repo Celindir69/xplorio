@@ -144,6 +144,7 @@ function rotelInputRepaint() {
   var i = rotelInput(), k = i ? i.name + '|' + i.icon : '';
   if (k === rotelInputShown) return;
   rotelInputShown = k;
+  if (typeof poll === 'function') poll();            /* another input: Volumio reports nothing, the display follows now (inputApply) */
   if (typeof qualityState !== 'undefined' && qualityState) {
     if (typeof paintQuality === 'function') paintQuality(qualityState);
     if (typeof tagPaintPlayer === 'function') tagPaintPlayer(qualityState);
