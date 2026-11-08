@@ -464,6 +464,7 @@ langRegister('en', 'English', {
   'trash.exists': 'Something is already at the old place ({path}). Nothing is overwritten.',
   'trash.checkRunning': 'The library check is running, please try again afterwards.',
   'trash.error': 'Error: {error}',
+  'trash.tapFiles': 'Tap a folder to see its files and put back or delete them one by one.',
   'trash.hint': 'The trash is the folder "Xplorio Trash" on each drive, also visible over the network (SMB). Volumio does not read it.',
   'menu.system': 'System',
   'menu.systemSub': 'CPU load, temperature, memory and drives',

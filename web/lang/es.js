@@ -462,6 +462,7 @@ langRegister('es', 'Español', {
   'trash.exists': 'Ya hay algo en el sitio anterior ({path}). No se sobrescribe nada.',
   'trash.checkRunning': 'La revisión de la biblioteca está en curso; inténtalo después.',
   'trash.error': 'Error: {error}',
+  'trash.tapFiles': 'Toca una carpeta para ver sus archivos y restaurarlos o borrarlos uno a uno.',
   'trash.hint': 'La papelera es la carpeta «Xplorio Trash» de cada unidad, visible también por la red (SMB). Volumio no la lee.',
   'menu.system': 'Sistema',
   'menu.systemSub': 'Carga de CPU, temperatura, memoria y unidades',

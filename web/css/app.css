@@ -770,6 +770,15 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .trIcon svg { width:55%; height:55%; fill:var(--fg); opacity:.7; }
 .trDel svg { fill:var(--err, var(--fg)); }
 .trMsg { padding:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); }
+.trTap { cursor:pointer; }
+.trMore { flex:0 0 auto; width:calc(6 * var(--vw)); height:calc(10 * var(--vw)); display:flex; align-items:center; justify-content:center; }
+.trMore svg { width:100%; height:auto; fill:var(--fg); opacity:.6; transition:transform .15s; }
+.trTap.open .trMore svg { transform:rotate(180deg); }
+.trFiles { margin-left:calc(8 * var(--vw)); border-left:1px solid rgba(var(--fg-rgb), .2); padding-left:calc(3 * var(--vw)); }
+.trFiles:empty { display:none; }
+.trFile { flex-wrap:nowrap; align-items:center; }
+.trFile .trBtns { flex:0 0 auto; padding-top:0; }
+.trFile .sTitle { font-size:calc(3.6 * var(--vw)); white-space:normal; overflow-wrap:anywhere; }
 
 /* ---------- Library check ---------- */
 #overlayCheck .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }

@@ -211,7 +211,8 @@ Diensten angemeldet sein. Der Tag-Dienst braucht dafür Schreibrecht auf die Mus
 Ordner, aus dem es kam, wann und warum es verschoben wurde (doppeltes Album, doppelter Titel, schlechtere Qualität, aus
 dem Album-Editor) und der Größe; der Menüeintrag zeigt Anzahl und Platz. „Zurücklegen“ bringt ein Album oder einen Titel
 an den alten Ort, und MPD liest genau diesen Ordner neu ein. Liegt dort inzwischen etwas mit gleichem Namen, wird nichts
-überschrieben; ein Album, dessen Ordner wieder da ist, bekommt seine Dateien dazu. Der Mülleimer löscht einen Eintrag
+überschrieben; ein Album, dessen Ordner wieder da ist, bekommt seine Dateien dazu. Ein Tipp auf einen
+Ordner klappt seine einzelnen Dateien auf, jede lässt sich für sich zurücklegen oder löschen. Der Mülleimer löscht einen Eintrag
 endgültig, „Leeren“ den ganzen Papierkorb eines Laufwerks, jeweils nach Rückfrage. Gelöscht wird nur innerhalb von
 `Xplorio Trash`, das Passwort gilt wie beim Verschieben. Grund und Zeit merkt sich der Tag-Dienst ab dieser Version
 (`trash.json` im Datenordner); was schon vorher im Papierkorb lag, erscheint ohne Grund, je Ordner ein Eintrag, mit dem
