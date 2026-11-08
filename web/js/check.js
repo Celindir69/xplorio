@@ -299,7 +299,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'year' || cat.key === 'albumName') box.insertBefore(checkFixRow(cat.key, list[shown], false), moreRow);
       else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
       else if (cat.key === 'spelling') box.insertBefore(checkSpellingRow(list[shown], false), moreRow);
-      else if (cat.key === 'mixedQuality') box.insertBefore(checkQualityRow(list[shown], false), moreRow);
+      else if (cat.key === 'mixedQuality') checkQualityRows(list[shown], false).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
@@ -440,7 +440,7 @@ function checkKeptSection(box, cat) {
     if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
-    if (cat === 'mixedQuality') return list.appendChild(checkQualityRow(it, true));
+    if (cat === 'mixedQuality') return checkQualityRows(it, true).forEach(function(el){ list.appendChild(el); });
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -493,17 +493,19 @@ function checkNoTagsText(it) {
          (it.without && it.without.length ? ' · ' + it.without.slice(0, 3).join(', ') + (it.without.length > 3 ? ' …' : '') : '');
 }
 
-/* ---------- Lossless and lossy tracks in one album: which are worse; pen opens them, "Keep" if it is intended ---------- */
-/* "FLAC 16/44.1 (10), MP3 (2) · worse: Song A (MP3 192 kbps), Song B (MP3 320 kbps)" */
-function checkQualityRow(it, kept) {
+/* ---------- Lossless and lossy tracks in one album: the worse ones with ▶ and "Move", "Keep" if it is intended ---------- */
+/* head "Album · Artist", "FLAC 16/44.1 (10), MP3 (2)" and Keep; below it one row per worse track (as for duplicate tracks) */
+function checkQualityRows(it, kept) {
   var formats = it.formats.map(function(f){ return T('check.fix.value', {name: f.name, n: checkNum(f.count)}); }).join(', ');
-  var worse = it.worse.slice(0, 3).map(function(w){ return w.name + ' (' + w.format + ')'; }).join(', ') + (it.lossy > 3 ? ' …' : '');
-  var row = checkRow('mixedQuality|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''),
-                     formats + ' · ' + T('check.quality.worse', {n: checkNum(it.lossy), list: worse}), function(){
-    openTagEditor(it.files, it.name, {move: true});
-  });
-  checkGenreButtons(row, 'mixedQuality', 'mixedQuality|' + it.dir, it, it.files, kept);
-  return row;
+  var head = document.createElement('div'); head.className = 'sRow ckGenreRow';
+  var meta = document.createElement('div'); meta.className = 'sMeta';
+  var ti = document.createElement('div'); ti.className = 'sTitle'; ti.textContent = it.name + (it.artist ? ' · ' + it.artist : '');
+  var su = document.createElement('div'); su.className = 'sSub'; su.textContent = formats + ' · ' + it.dir;
+  meta.appendChild(ti); meta.appendChild(su); head.appendChild(meta);
+  checkGenreButtons(head, 'mixedQuality', 'mixedQuality|' + it.dir, it, it.files, kept);
+  var rows = [head];
+  if (!kept) it.worse.forEach(function(f){ rows.push(checkDupTrackFile({uri: f.uri, name: f.name, format: f.format, seconds: f.seconds}, 'mixedQuality|')); });
+  return rows;
 }
 
 /* ---------- Year and album name not the same in all tracks: values found -> suggestion, "Apply" / "Keep" ---------- */
@@ -940,8 +942,8 @@ function checkDupTrackRows(a) {
   });
   return rows;
 }
-function checkDupTrackFile(f) {
-  var key = 'dupTracks|' + f.uri;
+function checkDupTrackFile(f, prefix) {                  /* prefix: done mark of the category, 'dupTracks|' by default */
+  var key = (prefix || 'dupTracks|') + f.uri;
   var row = document.createElement('div'); row.className = 'sRow ckDupRow ckDupFile' + (checkDone[key] ? ' done' : '');
   var meta = document.createElement('div'); meta.className = 'sMeta';
   var ti = document.createElement('div'); ti.className = 'sTitle';

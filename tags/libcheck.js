@@ -512,7 +512,7 @@ function mixedQuality(list) {
     var shown = q.format.replace(/ \d+ kbps$/, '');                 /* "MP3", not every data rate on its own */
     formats[shown] = (formats[shown] || 0) + 1;
     if (q.rank >= 2) lossless++;
-    else worse.push({uri: s.file, name: s.title || path.basename(s.file), format: q.format});
+    else worse.push({uri: s.file, name: s.title || path.basename(s.file), format: q.format, seconds: Math.round(secs(s))});
   });
   if (!lossless || !worse.length) return null;
   return {formats: Object.keys(formats).map(function(k){ return {name: k, count: formats[k]}; })

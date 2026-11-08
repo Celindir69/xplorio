@@ -698,7 +698,7 @@ function doTrackNums(query, cb) {
 }
 
 /* POST /filemove {files, token}: move single tracks aside, only files the last check listed as duplicate tracks
-   (dupTracks), into "Xplorio Trash" on the same drive with the rest of the path (like /dupmove for folders) */
+   (dupTracks) or as the worse tracks of an album of mixed quality (mixedQuality), into "Xplorio Trash" on the same drive with the rest of the path (like /dupmove for folders) */
 function dupFile(rel) {
   var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
   if (!p || p.missing) return null;
@@ -713,8 +713,9 @@ function doFileMove(body, cb) {
   var last = readCheck(), listed = {};
   if (!last || !last.dupTracks) return cb(200, {ok: false, error: 'not checked yet'});
   last.dupTracks.forEach(function(a){ a.groups.forEach(function(g){ g.files.forEach(function(f){ listed[f.uri] = 1; }); }); });
+  (last.mixedQuality || []).forEach(function(a){ a.worse.forEach(function(f){ listed[f.uri] = 1; }); });   /* lossy tracks next to lossless ones */
   var bad = files.filter(function(f){ return !listed[f] || !dupFile(f); });
-  if (bad.length) return cb(200, {ok: false, error: 'not a duplicate track: ' + bad[0]});
+  if (bad.length) return cb(200, {ok: false, error: 'not listed by the check: ' + bad[0]});
   var moved = [];
   for (var i = 0; i < files.length; i++) {
     var to = duplicates.trashPath(files[i]), n = 2, ext = path.extname(to);
@@ -728,7 +729,7 @@ function doFileMove(body, cb) {
     }
     moved.push({from: files[i], to: to});
     dupIgnore(duplicates.driveOf(files[i]));
-    markDone(last, ['dupTracks|' + files[i]]);
+    markDone(last, ['dupTracks|' + files[i], 'mixedQuality|' + files[i]]);
   }
   mpdForget(moved.map(function(m){ return path.dirname(m.from); }).filter(function(d, i, all){ return all.indexOf(d) === i; }), function(){});   /* their folders: MPD drops the files */
   cb(200, {ok: true, moved: moved});
