@@ -12,7 +12,7 @@ var smartSaveBtn = SMART_DOM && document.getElementById('smartSave');
 var smartDeleteBtn = SMART_DOM && document.getElementById('smartDelete');
 var smartRules = null;            /* last answer of 'list': {max, rules: [{slot, line, name, playlist}]}; null = no plugin */
 var smartEd = null;               /* the open editor: state, fields, slot */
-var SMART_SORTS = [['', 'sp.sort.random'], ['year+album+track+', 'sp.sort.album'], ['year+', 'sp.sort.year'], ['year-', 'sp.sort.yearDesc'],
+var SMART_SORTS = [['', 'sp.sort.random'], ['mix', 'sp.sort.mix'], ['year+album+track+', 'sp.sort.album'], ['year+', 'sp.sort.year'], ['year-', 'sp.sort.yearDesc'],
                    ['added+', 'sp.sort.added'], ['artist+album+track+', 'sp.sort.artist'], ['title+', 'sp.sort.title']];
 var SMART_BAD = /;|\||::/;        /* would break the rule syntax in an artist name */
 var SMART_SVG = '<svg viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12z"/></svg>';

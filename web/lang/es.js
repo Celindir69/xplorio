@@ -785,6 +785,7 @@ langRegister('es', 'Español', {
   'sp.dedup': 'Quitar títulos duplicados',
   'sp.sort': 'Orden',
   'sp.sort.random': 'Aleatorio',
+  'sp.sort.mix': 'Mezclado (artistas alternados)',
   'sp.sort.album': 'Álbumes por año, pistas en orden',
   'sp.sort.year': 'Las más antiguas primero',
   'sp.sort.yearDesc': 'Las más nuevas primero',

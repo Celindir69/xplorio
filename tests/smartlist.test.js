@@ -24,6 +24,8 @@ t('lines the fields cannot show: only the line', function(){
     assert.strictEqual(s.smartParse(l), null, l);
   });
   assert.ok(s.smartParse('X::Genesis|various=false|duplicate=true|sort=random'));   /* the defaults */
+  assert.strictEqual(s.smartParse('X::Genesis|sort=mix').sort, 'mix');
+  assert.strictEqual(s.smartLine(s.smartParse('X::Genesis|sort=mix')), 'X::Genesis|sort=mix');
 });
 t('name proposal from the artists; with "all artists" from genre and years', function(){
   assert.strictEqual(s.smartNameFor(st({artists: ['Genesis']})), 'Genesis');
