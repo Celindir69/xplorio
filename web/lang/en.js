@@ -787,6 +787,7 @@ langRegister('en', 'English', {
   'sp.dedup': 'Remove duplicate titles',
   'sp.sort': 'Order',
   'sp.sort.random': 'Random',
+  'sp.sort.mix': 'Mixed (artists take turns)',
   'sp.sort.album': 'Albums by year, tracks in order',
   'sp.sort.year': 'Oldest first',
   'sp.sort.yearDesc': 'Newest first',

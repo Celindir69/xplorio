@@ -785,6 +785,7 @@ langRegister('it', 'Italiano', {
   'sp.dedup': 'Rimuovi titoli doppi',
   'sp.sort': 'Ordine',
   'sp.sort.random': 'Casuale',
+  'sp.sort.mix': 'Misto (artisti alternati)',
   'sp.sort.album': 'Album per anno, brani in ordine',
   'sp.sort.year': 'Prima i più vecchi',
   'sp.sort.yearDesc': 'Prima i più recenti',

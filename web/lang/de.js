@@ -785,6 +785,7 @@ langRegister('de', 'Deutsch', {
   'sp.dedup': 'Doppelte Titel entfernen',
   'sp.sort': 'Reihenfolge',
   'sp.sort.random': 'Zufällig',
+  'sp.sort.mix': 'Gemischt (Künstler abwechselnd)',
   'sp.sort.album': 'Alben nach Jahr, Titel in Reihenfolge',
   'sp.sort.year': 'Älteste zuerst',
   'sp.sort.yearDesc': 'Neueste zuerst',

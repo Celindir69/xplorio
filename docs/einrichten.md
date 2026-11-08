@@ -764,7 +764,9 @@ Im Editor:
   nimmt ihn wieder heraus. „Alle Künstler“ für Listen wie „70er Rock“ oder „Neu hinzugefügt“.
 - **Filter**: Jahre von–bis (wahlweise das ursprüngliche Erscheinungsjahr), Genre (mehrere mit `;`, eines genügt),
   „Albumtitel enthält nicht“ (z. B. Live), hinzugefügt in den letzten Tagen, Titel auf Compilations, doppelte Titel
-  entfernen, Reihenfolge und Höchstzahl der Titel.
+  entfernen, Reihenfolge und Höchstzahl der Titel. „Gemischt“ (ab Plugin-Version 1.3) ist Zufall mit Regeln wie beim
+  Würfel: jeder Künstler etwa gleich oft, auch wenn die Höchstzahl kürzt, nie zweimal derselbe hintereinander, seine
+  Alben im Wechsel. „Zufällig“ mischt rein zufällig.
 - **Regel**: zeigt die erzeugte Zeile und lässt sich direkt bearbeiten, mit der Syntax des Plugins darunter. Nutzt
   eine Regel Filter, die die Felder nicht darstellen können (z. B. `title~Love`), bleiben die Felder grau und nur die
   Zeile ist bearbeitbar.

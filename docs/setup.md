@@ -571,7 +571,7 @@ With the [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) 
 In the editor:
 - **Name**: required. Xplorio proposes one from the chosen artists (with "All artists", from genre and years) until you change it by hand.
 - **Artists**: search in your own library; tapping a result adds it to the list, the bin removes it again. "All artists" for lists such as "70s rock" or "Recently added".
-- **Filters**: years from–to (optionally the original release year), genre (several with `;`, any of them), "Album title does not contain" (e.g. Live), added in the last days, tracks on compilations, remove duplicate titles, order, and the maximum number of tracks.
+- **Filters**: years from–to (optionally the original release year), genre (several with `;`, any of them), "Album title does not contain" (e.g. Live), added in the last days, tracks on compilations, remove duplicate titles, order, and the maximum number of tracks. "Mixed" (plugin version 1.3 or later) is random with rules as for the dice: every artist about equally often, also when the maximum cuts the list, never the same one twice in a row, their albums taking turns. "Random" is a pure shuffle.
 - **Rule**: shows the generated line and can be edited directly, with the plugin's syntax below. If a rule uses filters the fields cannot show (e.g. `title~Love`), the fields stay grey and only the line can be edited.
 - **Preview**: has the plugin try out just this rule and shows how many tracks match. The real playlists stay untouched.
 

@@ -786,6 +786,7 @@ langRegister('fr', 'Français', {
   'sp.dedup': 'Retirer les titres en double',
   'sp.sort': 'Ordre',
   'sp.sort.random': 'Aléatoire',
+  'sp.sort.mix': 'Mélangé (artistes en alternance)',
   'sp.sort.album': 'Albums par année, titres dans l’ordre',
   'sp.sort.year': 'Les plus anciens d’abord',
   'sp.sort.yearDesc': 'Les plus récents d’abord',
