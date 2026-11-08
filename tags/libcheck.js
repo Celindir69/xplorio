@@ -379,7 +379,7 @@ function analyze(songs, hasCover, audioOf) {
     if (!dirs[d]) { dirs[d] = []; order.push(d); }
     dirs[d].push(s);
   });
-  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], gaps: [], dupTracks: [], spelling: []};
+  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: []};
   var forGenres = [];
   order.sort().forEach(function(d){
     var list = dirs[d];
@@ -398,6 +398,8 @@ function analyze(songs, hasCover, audioOf) {
     }
     var noTrack = list.filter(function(s){ return !/\d/.test(s.track); });
     if (noTrack.length) res.noTrack.push(item({missing: noTrack.length}));
+    var noTags = missingTags(list);                                  /* title, artist or album tag empty */
+    if (noTags) res.noTags.push(item(noTags));
     trackGaps(d, list).forEach(function(g){
       res.gaps.push(item({disc: g.disc, missing: g.missing, nums: g.nums}, list));
     });
@@ -426,6 +428,8 @@ function analyze(songs, hasCover, audioOf) {
       var most = years.filter(function(x){ return x.name; });
       res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', files: files()}));
     }
+    var mq = mixedQuality(list);
+    if (mq) res.mixedQuality.push(merge(base, merge(mq, {files: files()})));
   });
   /* folders that the duplicate check counts as different versions of an album (e.g. an incomplete copy in the album
      folder next to CD1/CD2): the same track in two versions is listed there, not here */
@@ -483,6 +487,39 @@ function analyze(songs, hasCover, audioOf) {
   return res;
 }
 
+/* tracks of one folder without title, artist or album tag (the player then shows the file name or nothing; such tracks
+   also fall out of the artist and album lists) -> {title: n, artist: n, album: n, without: [file names, at most 8]} or null */
+function missingTags(list) {
+  var o = {title: 0, artist: 0, album: 0}, without = [];
+  list.forEach(function(s){
+    var miss = false;
+    ['title', 'artist', 'album'].forEach(function(k){ if (!String(s[k] || '').trim()) { o[k]++; miss = true; } });
+    if (miss && without.length < 8) without.push(path.basename(s.file));
+  });
+  if (!o.title && !o.artist && !o.album) return null;
+  o.without = without;
+  return o;
+}
+
+/* an album (disc folders together) with lossless and lossy tracks, typically left over after "Fill in" from another
+   version: -> {formats: [{name: 'FLAC 16/44.1', count}], lossy: n, worse: [{uri, name, format}]} or null. Only lossless
+   next to lossy counts; FLAC next to ALAC or different sample rates are fine */
+function mixedQuality(list) {
+  var lossless = 0, worse = [], formats = {};
+  list.forEach(function(s){
+    var q = duplicates.quality([s]);
+    if (!q.rank) return;                                             /* unknown file type */
+    var shown = q.format.replace(/ \d+ kbps$/, '');                 /* "MP3", not every data rate on its own */
+    formats[shown] = (formats[shown] || 0) + 1;
+    if (q.rank >= 2) lossless++;
+    else worse.push({uri: s.file, name: s.title || path.basename(s.file), format: q.format, seconds: Math.round(secs(s))});
+  });
+  if (!lossless || !worse.length) return null;
+  return {formats: Object.keys(formats).map(function(k){ return {name: k, count: formats[k]}; })
+                   .sort(function(a, b){ return b.count - a.count || a.name.localeCompare(b.name); }),
+          lossy: worse.length, worse: worse.slice(0, 50)};
+}
+
 /* folders without an image file (folder.jpg, cover.jpg, …); the caller checks embedded covers afterwards.
    Reads asynchronously, a few folders at a time: the service stays responsive meanwhile. cb(list in song order) */
 function dirsWithoutImage(songs, musicRoot, cb) {
@@ -507,4 +544,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};

@@ -15,15 +15,17 @@ var CHECK_CATS = [
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
   {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
   {key: 'dupTracks', name: T('check.cat.dupTracks'), hint: T('check.cat.dupTracksHint')},
+  {key: 'mixedQuality', name: T('check.cat.mixedQuality'), hint: T('check.cat.mixedQualityHint')},
   {key: 'albumName', name: T('check.cat.albumName'), hint: T('check.cat.albumNameHint')},
   {key: 'year', name: T('check.cat.year'), hint: T('check.cat.yearHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
+  {key: 'noTags', name: T('check.cat.noTags'), hint: T('check.cat.noTagsHint')},
   {key: 'gaps', name: T('check.cat.gaps'), hint: T('check.cat.gapsHint')},
   {key: 'genreMissing', name: T('check.cat.genreMissing'), hint: T('check.cat.genreMissingHint')},
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
-var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1, spelling: 1};   /* categories with "Keep" */
+var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -297,6 +299,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'year' || cat.key === 'albumName') box.insertBefore(checkFixRow(cat.key, list[shown], false), moreRow);
       else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
       else if (cat.key === 'spelling') box.insertBefore(checkSpellingRow(list[shown], false), moreRow);
+      else if (cat.key === 'mixedQuality') checkQualityRows(list[shown], false).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
@@ -322,6 +325,7 @@ function checkKeepOf(cat, it) {
   if (cat === 'duplicates') return {k: 'dupk|' + checkDupDirs(it), v: ''};      /* all versions stay; a new version shows it again */
   if (cat === 'year') return {k: 'year|' + it.dir, v: checkValuesKey(it.years)};  /* as long as the album keeps these years */
   if (cat === 'albumName') return {k: 'albumname|' + it.dir, v: checkValuesKey(it.names)};
+  if (cat === 'mixedQuality') return {k: 'quality|' + it.dir, v: checkValuesKey(it.formats)};   /* as long as the formats stay */
   if (cat === 'spelling') return {k: 'spell|' + (it.key || checkValuesKey(it.variants)), v: checkValuesKey(it.variants)};   /* as long as these spellings stay */
   return {k: it.dir, v: it.tag};
 }
@@ -386,7 +390,8 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
     if (cat === 'spelling') checkSpellingOthers(it).forEach(function(to){       /* another spelling instead of the suggestion */
       apply(T('check.spelling.use', {name: to}), T('check.fix.applyHint', {value: to}), to);
     });
-    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
+    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : cat === 'mixedQuality' ? 'check.quality.keepHint'
+        : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
   row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
@@ -435,6 +440,7 @@ function checkKeptSection(box, cat) {
     if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
+    if (cat === 'mixedQuality') return checkQualityRows(it, true).forEach(function(el){ list.appendChild(el); });
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -468,6 +474,7 @@ function checkAlbumRow(key, it) {
   var sub = it.dir;
   if (key === 'albumArtist') sub = (it.missing ? T('check.albumArtistMissing') : T('check.albumArtistIs', {names: it.albumartists.join(' / ')})) + ' · ' + it.artists.join(', ') + (it.artists.length > 5 ? ' …' : '');
   else if (key === 'noTrack') sub = T('check.noTrackSub', {missing: checkNum(it.missing), count: checkNum(it.count), dir: it.dir});
+  else if (key === 'noTags') sub = checkNoTagsText(it) + ' · ' + it.dir;
   else if (key === 'gaps') sub = [it.disc ? T('check.gapsDisc', {disc: it.disc}) : '', it.nums ? T('check.gapsMissing', {nums: it.nums}) : '',
                                   it.dir].filter(Boolean).join(' · ');
   if (key === 'genreMissing') return checkGenreAlbumRow(key, it);
@@ -475,6 +482,30 @@ function checkAlbumRow(key, it) {
     if (key === 'albumArtist') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
     else openTagEditor(it.files, it.name, {move: true});
   });
+}
+
+/* "ohne Titel: 3, ohne Künstler: 1 von 12 · 01.flac, 02.flac" */
+function checkNoTagsText(it) {
+  var parts = ['title', 'artist', 'album'].filter(function(k){ return it[k]; }).map(function(k){
+    return T('check.noTags.' + k, {n: checkNum(it[k])});
+  });
+  return T('check.noTags.sub', {what: parts.join(', '), count: checkNum(it.count)}) +
+         (it.without && it.without.length ? ' · ' + it.without.slice(0, 3).join(', ') + (it.without.length > 3 ? ' …' : '') : '');
+}
+
+/* ---------- Lossless and lossy tracks in one album: the worse ones with ▶ and "Move", "Keep" if it is intended ---------- */
+/* head "Album · Artist", "FLAC 16/44.1 (10), MP3 (2)" and Keep; below it one row per worse track (as for duplicate tracks) */
+function checkQualityRows(it, kept) {
+  var formats = it.formats.map(function(f){ return T('check.fix.value', {name: f.name, n: checkNum(f.count)}); }).join(', ');
+  var head = document.createElement('div'); head.className = 'sRow ckGenreRow';
+  var meta = document.createElement('div'); meta.className = 'sMeta';
+  var ti = document.createElement('div'); ti.className = 'sTitle'; ti.textContent = it.name + (it.artist ? ' · ' + it.artist : '');
+  var su = document.createElement('div'); su.className = 'sSub'; su.textContent = formats + ' · ' + it.dir;
+  meta.appendChild(ti); meta.appendChild(su); head.appendChild(meta);
+  checkGenreButtons(head, 'mixedQuality', 'mixedQuality|' + it.dir, it, it.files, kept);
+  var rows = [head];
+  if (!kept) it.worse.forEach(function(f){ rows.push(checkDupTrackFile({uri: f.uri, name: f.name, format: f.format, seconds: f.seconds}, 'mixedQuality|')); });
+  return rows;
 }
 
 /* ---------- Year and album name not the same in all tracks: values found -> suggestion, "Apply" / "Keep" ---------- */
@@ -911,8 +942,8 @@ function checkDupTrackRows(a) {
   });
   return rows;
 }
-function checkDupTrackFile(f) {
-  var key = 'dupTracks|' + f.uri;
+function checkDupTrackFile(f, prefix) {                  /* prefix: done mark of the category, 'dupTracks|' by default */
+  var key = (prefix || 'dupTracks|') + f.uri;
   var row = document.createElement('div'); row.className = 'sRow ckDupRow ckDupFile' + (checkDone[key] ? ' done' : '');
   var meta = document.createElement('div'); meta.className = 'sMeta';
   var ti = document.createElement('div'); ti.className = 'sTitle';
