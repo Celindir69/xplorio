@@ -5,7 +5,7 @@ function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 
 var CONF = 'audio_output {\n  type "alsa"\n  name "alsa"\n  device "hw:1,0"\n}\n' +
            'audio_output {\n    type "fifo"\n    enabled "no"\n    name "multiroom"\n    path "/tmp/snapfifo"\n}\n' +
-           '# audio_output { type "httpd" }\naudio_output {\n  type      "httpd"\n  name      "Mobile"\n  encoder   "lame"\n  port      "8000"  # mp3\n}\n';
+           '# audio_output { type "httpd" }\naudio_output {\n  type      "httpd"\n  name      "Mobile"\n  encoder   "lame"\n  bitrate   "320"\n  port      "8000"  # mp3\n}\n';
 var LINES = ['outputid: 0', 'outputname: alsa', 'outputenabled: 1', 'outputid: 1', 'outputname: multiroom', 'outputenabled: 0',
              'outputid: 2', 'outputname: Mobile', 'outputenabled: 0'];
 
@@ -13,7 +13,7 @@ t('mpd.conf and outputs: stream output found by its type, amplifier output, port
   var c = r.confOutputs(CONF);
   assert.deepStrictEqual(c.map(function(o){ return [o.type, o.name, o.port]; }), [['alsa', 'alsa', 8000], ['fifo', 'multiroom', 8000], ['httpd', 'Mobile', 8000]]);
   var f = r.find(r.parseOutputs(LINES), c);
-  assert.deepStrictEqual(f.stream, {id: 2, port: 8000, enabled: false, name: 'Mobile', encoder: 'lame'});
+  assert.deepStrictEqual(f.stream, {id: 2, port: 8000, enabled: false, name: 'Mobile', encoder: 'lame', bitrate: 320});
   assert.deepStrictEqual(f.alsa, [{id: 0, enabled: true}]);
   assert.strictEqual(r.modeOf(f), 'lokal');
   assert.strictEqual(r.find(r.parseOutputs(LINES.slice(0, 6)), c), null);       /* no stream output -> nothing */
@@ -30,7 +30,7 @@ t('mpdoutput plugin (Volumio 4): its HTTP stream, not the local Icecast feed', f
              'audio_output {\n    type            "httpd"\n    name            "Volumio"\n    encoder         "opus"\n    port            "8001"\n}\n';
   var f = r.find(r.parseOutputs(['outputid: 0', 'outputname: alsa', 'outputenabled: 1', 'outputid: 1', 'outputname: mpdoutput-icecast-feed', 'outputenabled: 1',
                                  'outputid: 2', 'outputname: Volumio', 'outputenabled: 1']), r.confOutputs(CONF.split('# audio_output')[0] + conf));
-  assert.deepStrictEqual(f.stream, {id: 2, port: 8001, enabled: true, name: 'Volumio', encoder: 'opus'});
+  assert.deepStrictEqual(f.stream, {id: 2, port: 8001, enabled: true, name: 'Volumio', encoder: 'opus', bitrate: 0});
   assert.strictEqual(r.rangeAnswer('bytes=0-', 'opus').headers['Content-Type'], 'audio/ogg');
   assert.strictEqual(r.rangeAnswer('bytes=0-', 'lame').headers['Content-Type'], 'audio/mpeg');
   assert.strictEqual(r.rangeAnswer('bytes=0-').headers['Content-Type'], 'audio/mpeg');

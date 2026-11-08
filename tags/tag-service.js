@@ -2085,7 +2085,8 @@ function remoteState(cb) {
 function doRemoteGet(cb) {
   remoteState(function(err, f){
     if (err) return cb(200, {ok: false, error: err.message});
-    cb(200, {ok: true, available: !!f, mode: f ? remote.modeOf(f) : 'lokal', listeners: remoteListeners});
+    cb(200, {ok: true, available: !!f, mode: f ? remote.modeOf(f) : 'lokal', listeners: remoteListeners,
+             encoder: f ? f.stream.encoder : '', bitrate: f ? f.stream.bitrate : 0});   /* for the quality display while listening */
   });
 }
 function doRemoteSet(body, cb) {
