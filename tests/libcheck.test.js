@@ -360,9 +360,40 @@ function service(mpdPort) {
                       t('service: after moving, MPD rescans exactly the moved folder, not its parent or the drive', function(){
                         assert.strictEqual(fs.readFileSync(mpcLog, 'utf8'), 'update USB/S/Help\nupdate USB/S/Abbey Road (Remastered)\nupdate USB/S/Abbey Road\nupdate USB/S/Let It Be\n');
                       });
+                      call('GET', '/trash', function(g1){
+                      t('service: Papierkorb lists what was moved, with the reason', function(){
+                        assert.ok(g1.ok, g1.error);
+                        var e = {};
+                        g1.drives[0].entries.forEach(function(x){ e[x.path] = [x.kind, x.reason, x.from]; });
+                        assert.deepStrictEqual(e, {
+                          'USB/S/Xplorio Trash/Help/1 (1).flac': ['file', 'dupTrack', 'USB/S/Help/1 (1).flac'],
+                          'USB/S/Xplorio Trash/Abbey Road': ['dir', 'dupAlbum', 'USB/S/Abbey Road'],
+                          'USB/S/Xplorio Trash/Let It Be': ['dir', 'albumEditor', 'USB/S/Let It Be']});
+                      });
+                      call('POST', '/trashrestore', function(g2){
+                      t('service: put back: the album is in its old place again and MPD reads exactly it', function(){
+                        assert.ok(g2.ok, g2.error);
+                        assert.ok(fs.statSync(path.join(root, 'USB/S/Let It Be')).isDirectory());
+                      });
+                      call('POST', '/trashdelete', function(g3){
+                      call('GET', '/trash', function(g4){
+                      t('service: delete for good; the list and the journal follow', function(){
+                        assert.ok(g3.ok, g3.error);
+                        assert.ok(!fs.existsSync(path.join(root, 'USB/S/Xplorio Trash/Abbey Road')));
+                        assert.deepStrictEqual(g4.drives[0].entries.map(function(x){ return x.path; }), ['USB/S/Xplorio Trash/Help/1 (1).flac']);
+                      });
+                      setTimeout(function(){
+                      t('service: after putting back MPD is asked for the folder', function(){
+                        assert.ok(/update USB\/S\/Let It Be\n$/.test(fs.readFileSync(mpcLog, 'utf8')));
+                      });
                       s2.close(); srv.close();
                       console.log(n + ' checks');
                       process.exit(0);
+                      }, 1500);
+                      });
+                      }, {path: 'USB/S/Xplorio Trash/Abbey Road'});
+                      }, {path: 'USB/S/Xplorio Trash/Let It Be'});
+                      });
                     }, 500);
                   }, {hold: false});
                   }, {dirs: ['USB/S/Fremd']});

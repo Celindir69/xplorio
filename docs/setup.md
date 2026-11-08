@@ -185,13 +185,11 @@ large albums, and the folder is visible over the network share. So that MPD does
 drive's `.mpdignore` file (e.g. `/mnt/INTERNAL/.mpdignore`); the album disappears from the library with the next scan.
 Xplorio's own album list (welcome screen, random album, library check) always leaves the folder out. Earlier versions
 called it `.duplicates` or `Xplorio Duplicates`; the Tag Service renames it once at the start. If moved albums were already in the library, run
-"Update library" in Volumio once ("Update", not "Rescan") and they are gone. Moving an album back with `mv` restores it.
-If a password for the services is set, the device must be logged in once under System at the services. Xplorio deletes
-nothing; to delete for good, use the command the category offers to copy, via ssh, e.g.:
-```bash
-sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'
-```
-The Tag Service needs write access to the music folders for this, as for the Tag Editor.
+"Update library" in Volumio once ("Update", not "Rescan") and they are gone. If a password for the services is set, the
+device must be logged in once under System at the services. The Tag Service needs write access to the music folders for
+this, as for the Tag Editor.
+
+**Trash** (menu → Trash, below "Check library"): shows everything in `Xplorio Trash` per drive, with the folder it came from, when and why it was moved (duplicate album, duplicate track, lower quality, from the album editor) and its size; the menu entry shows the count and space. "Put back" returns an album or track to its old place, and MPD reads exactly that folder again. If something with the same name is there by now, nothing is overwritten; an album whose folder is there again gets its files added. The bin deletes one entry for good, "Empty" the whole trash of a drive, each after asking. Only things inside `Xplorio Trash` are deleted, and the password applies as for moving. The Tag Service records reason and time from this version on (`trash.json` in the data folder); what was in the trash before shows without a reason, one entry per folder, with the path without `Xplorio Trash` as its old place. Via ssh, the command the category offers to copy still works, e.g. `sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'`.
 
 **Add missing tracks:** if another version has tracks that do not occur in the best one (same artist and title, compared
 as for duplicate tracks; a title cut short such as “The More You Live, The More Yo” counts as the same, an addition such

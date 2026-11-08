@@ -12,6 +12,8 @@ var MENU_ITEMS = [
    icon: 'M13 3a9 9 0 0 0-9 9H1l3.9 3.9.1.1L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z'},
   {id: 'check', needsTags: true, title: T('menu.check'), sub: T('menu.checkSub'), open: function(){ openCheck(); },
    icon: 'M2 5h11v2H2zm0 4h11v2H2zm0 4h7v2H2zm15.3 1.3l-2.8-2.8-1.4 1.4 4.2 4.2 6.7-6.7-1.4-1.4z'},
+  {id: 'trash', needsTags: true, title: T('trash.title'), sub: T('trash.menuSub'), open: function(){ openTrash(); },
+   icon: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z'},
   {id: 'update', needsTags: true, title: T('check.db.button'), action: true, open: function(){ libUpdStart(); },
    icon: 'M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'},
   {id: 'system', needsTags: true, title: T('menu.system'), sub: T('menu.systemSub'), open: function(){ openSystem(); },
@@ -49,6 +51,7 @@ function menuRender() {
     row.appendChild(icon); row.appendChild(text);
     if (!it.action) row.appendChild(menuSvg(MENU_CHEVRON, 'menuChev'));
     row.addEventListener('click', function(){ if (!row.classList.contains('busy')) it.open(); });
+    if (it.id === 'trash' && typeof trashSummary === 'function') tagGetJson('/trash').then(function(r){ sub.textContent = trashSummary(r); }).catch(function(){});
     if (it.id === 'update') libUpdWatch('menu', function(st){ sub.textContent = libUpdText(st); row.classList.toggle('busy', st === 'running'); });
     listEl.appendChild(row);
   });

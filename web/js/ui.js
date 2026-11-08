@@ -20,6 +20,8 @@ function closeAllOverlays() {
   if (oh) oh.classList.remove('on');
   var osy = document.getElementById('overlaySystem');
   if (osy) osy.classList.remove('on');
+  var otr = document.getElementById('overlayTrash');
+  if (otr) otr.classList.remove('on');
   var opb = document.getElementById('overlayPlayback');
   if (opb) opb.classList.remove('on');
   var ohl = document.getElementById('overlayHelp');

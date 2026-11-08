@@ -752,6 +752,25 @@ html.manyStreams #searchSources { order:10; flex-basis:100%; margin:calc(2 * var
 html.noTidal #searchSources .srcTidal, html.noQobuz #searchSources .srcQobuz,
 html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { display:none; }
 
+/* ---------- Papierkorb (trash.js) ---------- */
+#overlayTrash .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
+#trashBack { cursor:pointer; opacity:.7; display:flex; }
+#trashBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
+#trashBody { padding:0 calc(5 * var(--vw)) calc(6 * var(--vw)); }
+.trDrive { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(4 * var(--vw)) 0 calc(1.5 * var(--vw));
+  border-bottom:1px solid rgba(var(--fg-rgb),.15); }
+.trDriveName { flex:1 1 auto; min-width:0; font-size:calc(3.6 * var(--vw)); font-weight:600; overflow-wrap:anywhere; }
+.trDrive .ckBtn { font-size:calc(3 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(3 * var(--vw)); }
+.trRow { cursor:default; align-items:flex-start; flex-wrap:wrap; }
+.trRow .sMeta { flex:1 1 0; min-width:0; }
+.trBtns { flex:1 0 100%; display:flex; justify-content:flex-end; gap:calc(2 * var(--vw)); padding-top:calc(1.5 * var(--vw)); }
+.trRow .sSub { white-space:normal; overflow-wrap:anywhere; }
+.trIcon { flex:0 0 auto; width:calc(10 * var(--vw)); height:calc(10 * var(--vw)); border-radius:calc(1.5 * var(--vw)); margin-right:calc(3 * var(--vw));
+  background:rgba(var(--fg-rgb),.1); display:flex; align-items:center; justify-content:center; }
+.trIcon svg { width:55%; height:55%; fill:var(--fg); opacity:.7; }
+.trDel svg { fill:var(--err, var(--fg)); }
+.trMsg { padding:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); }
+
 /* ---------- Library check ---------- */
 #overlayCheck .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 #checkBack { cursor:pointer; opacity:.7; display:flex; }
