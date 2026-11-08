@@ -583,7 +583,12 @@ If MPD has a stream output (`httpd`), a headphones button appears top right. A t
 
 **Setting it up on Volumio 4:** install the "MPD HTTP & Icecast output" plugin ([mpd-output](https://github.com/foonerd/mpd-output)) from the plugin store and turn on the HTTP stream in its settings, preferably with the MP3 encoder (plays on every device, Safari included). Xplorio finds the stream in `/etc/mpd.conf` by itself and skips the internal feed the plugin adds for Icecast. The same stream can also be played without Xplorio at `http://<player>:<port>/`, for example in VLC, while it is on; it stays on with "system and this device" (open with `?player=both`).
 
-**On Volumio 2** (MX-Stream) the plugin is not available. There, add the output by hand to Volumio's template `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (not to `/etc/mpd.conf`, which Volumio rewrites) and restart Volumio:
+**On Volumio 2** (MX-Stream) the plugin is not in the store. `tools/mpdoutput-volumio2.sh` downloads it from GitHub, adjusts two places for Node 8 and installs it through Volumio (needs Xplorio installed):
+```
+curl -fsSLO https://raw.githubusercontent.com/Celindir69/xplorio/main/tools/mpdoutput-volumio2.sh
+sudo bash mpdoutput-volumio2.sh
+```
+Then continue as on Volumio 4. Without the plugin, add the output by hand to Volumio's template `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (not to `/etc/mpd.conf`, which Volumio rewrites) and restart Volumio:
 ```
 audio_output {
   type      "httpd"
