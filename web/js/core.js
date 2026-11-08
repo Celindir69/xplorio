@@ -108,6 +108,7 @@ socket.on('closeAllModals', function(){
   if (audioGone) { audioGone = false; audioToast('audio.connected'); }
 });
 socket.on('pushState', function(st){
+  if (typeof stateIn === 'function' && !document.hidden) return stateIn(st);   /* the whole display (poll.js) */
   if (typeof showVolumio === 'function') showVolumio(st);
   if (typeof st.random === 'boolean') { stRandom = st.random; updateCtrlUI(); }
   if (typeof st.repeat === 'boolean') {
