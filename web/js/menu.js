@@ -12,8 +12,6 @@ var MENU_ITEMS = [
    icon: 'M13 3a9 9 0 0 0-9 9H1l3.9 3.9.1.1L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z'},
   {id: 'check', needsTags: true, title: T('menu.check'), sub: T('menu.checkSub'), open: function(){ openCheck(); },
    icon: 'M2 5h11v2H2zm0 4h11v2H2zm0 4h7v2H2zm15.3 1.3l-2.8-2.8-1.4 1.4 4.2 4.2 6.7-6.7-1.4-1.4z'},
-  {id: 'trash', needsTags: true, title: T('trash.title'), sub: T('trash.menuSub'), open: function(){ openTrash(); },
-   icon: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z'},
   {id: 'update', needsTags: true, title: T('check.db.button'), action: true, open: function(){ libUpdStart(); },
    icon: 'M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'},
   {id: 'system', needsTags: true, title: T('menu.system'), sub: T('menu.systemSub'), open: function(){ openSystem(); },
@@ -22,6 +20,8 @@ var MENU_ITEMS = [
    icon: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z'},
   {id: 'volumio', title: T('menu.volumio'), sub: T('menu.volumioSub'), open: function(){ openVolumio(); },
    icon: 'M3 4h4.2l4.8 11.3L16.8 4H21l-7 16h-4L3 4z'},
+  {id: 'trash', needsTags: true, title: T('trash.title'), sub: T('trash.menuSub'), open: function(){ openTrash(); },
+   icon: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z'},
   {id: 'help', title: T('menu.help'), sub: T('menu.helpSub'), open: function(){ openHelp(); },
    icon: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4z'}
 ];
