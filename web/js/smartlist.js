@@ -205,7 +205,21 @@ function smartRender() {
     searchTimer = setTimeout(smartSearch, 350);
   });
   f.search.addEventListener('keydown', function(e){ if (e.key === 'Enter') { clearTimeout(searchTimer); smartSearch(); } });
-  ed.searchBox.appendChild(f.search);
+  var sf = smartEl('div', 'spSearchField');                  /* x clears the input, as in the main search */
+  var clr = smartEl('div', 'spClear');
+  clr.title = T('html.searchClear'); clr.setAttribute('role', 'button'); clr.setAttribute('aria-label', T('html.searchClear'));
+  clr.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
+  function paintClear() { clr.style.display = f.search.value ? 'block' : 'none'; }
+  f.search.addEventListener('input', paintClear);
+  clr.addEventListener('click', function(){
+    clearTimeout(searchTimer);
+    f.search.value = ''; paintClear();
+    smartSearch();                                           /* empties the hits, discards a running search */
+    f.search.focus();
+  });
+  sf.appendChild(f.search); sf.appendChild(clr);
+  ed.searchBox.appendChild(sf);
+  paintClear();
   ed.hits = smartEl('div', 'spHits');
   ed.searchBox.appendChild(ed.hits);
   fields.appendChild(ed.searchBox);

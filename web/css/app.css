@@ -431,6 +431,13 @@
   .spArtistName { flex:1 1 auto; min-width:0; font-size:calc(4 * var(--vw)); overflow-wrap:anywhere; }
   .spDel { opacity:.7; cursor:pointer; }
   .spSearch { margin-bottom:calc(4 * var(--vw)); }
+  .spSearchField { position:relative; }
+  .spSearchField input { padding-right:calc(10 * var(--vw)); }
+  .spSearchField input::-webkit-search-cancel-button { -webkit-appearance:none; }
+  .spClear { display:none; position:absolute; right:calc(2 * var(--vw)); top:50%; transform:translateY(-50%);
+    cursor:pointer; opacity:.6; padding:calc(1.2 * var(--vw)); }
+  .spClear:active { opacity:1; }
+  .spClear svg { display:block; fill:var(--fg); width:calc(5 * var(--vw)); height:calc(5 * var(--vw)); max-width:22px; max-height:22px; }
   .spHits .sRow { cursor:pointer; }
   .spHits .sRow.spHave { opacity:.45; cursor:default; }
   .tagRow .spNum, .tagField .spNum { flex:0 0 auto; width:calc(22 * var(--vw)); max-width:120px; text-align:center; }
