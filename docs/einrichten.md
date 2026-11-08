@@ -721,6 +721,11 @@ auf der Einstellungsseite unter „Funktionen“ (automatisch, immer oder nie). 
 mehrere Dienste aktiv, zeigt die Suche ihre Treffer in eigenen Abschnitten. Spotify braucht Volumios Spotify-Plugin
 mit Suche (Premium-Konto); Spotify Connect allein bringt keine Suche mit. Der TIDAL-Wächter unten gilt nur für TIDAL.
 
+In der Albumansicht eines eigenen Albums sucht Xplorio kurz nach dem Öffnen bei den aktiven Diensten nach demselben
+Album. Hat ein Dienst es mit mehr Titeln (etwa weil hier Titel fehlen), erscheint unter „Abspielen“ eine zweite Zeile
+„Vollständig bei Qobuz“, die das Album beim Dienst spielt. Gesucht wird einmal je Album und Sitzung; auch eine
+Deluxe-Ausgabe mit Bonustiteln kann so erscheinen, wenn der Dienst nur sie anbietet.
+
 ## TIDAL-Wächter (optional)
 Gehört nicht zum Plugin, sondern wird bei Bedarf per ssh eingerichtet (aus dem Ordner des Repos):
 ```bash

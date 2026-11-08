@@ -16,6 +16,8 @@ langRegister('de', 'Deutsch', {
   'browse.noTracks': 'Keine Titel gefunden',
   'browse.play': 'Abspielen',
   'browse.playAlbum': 'Ganzes Album abspielen',
+  'browse.playFull': 'Vollständig bei {service}',
+  'browse.fullMore': {one: '{total} Titel, 1 mehr als hier', other: '{total} Titel, {n} mehr als hier'},
   'browse.playAll': 'Alle abspielen',
   'browse.tab.albums': 'Alben & Titel',
   'browse.tab.more': 'Entdecken',
