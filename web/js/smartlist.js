@@ -467,7 +467,7 @@ else {
       smartSaveBtn.disabled = false;
       if (!r.ok) { smartStatus.textContent = smartError(r); return; }
       smartClose();
-      showToast(T('sp.building'));
+      showToast(T('sp.building'), true);                    /* with spinner until the plugin is done */
       smartWaitBuilt(r.playlist);
     });
   });
