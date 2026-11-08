@@ -15,7 +15,8 @@ function confOutputs(text) {
       var k = /^\s*([a-z_]+)\s+"([^"]*)"/i.exec(l);
       if (k) o[k[1].toLowerCase()] = k[2];
     });
-    out.push({type: o.type || '', name: o.name || '', port: parseInt(o.port, 10) || 8000, enabled: o.enabled !== 'no', encoder: o.encoder || 'lame'});
+    out.push({type: o.type || '', name: o.name || '', port: parseInt(o.port, 10) || 8000, enabled: o.enabled !== 'no', encoder: o.encoder || 'lame',
+              bitrate: parseInt(o.bitrate, 10) || 0});
   }
   return out;
 }
@@ -47,7 +48,7 @@ function find(outs, conf) {
     var type = o.plugin || (types[o.name] && types[o.name].type) || '';
     if (o.name === PLUGIN_FEED) return;                  /* the feed of the "MPD HTTP & Icecast output" plugin for its Icecast relay */
     var c = types[o.name] || {};
-    if (type === 'httpd' && !stream) stream = {id: o.id, port: c.port || 8000, enabled: o.enabled, name: o.name, encoder: c.encoder || 'lame'};
+    if (type === 'httpd' && !stream) stream = {id: o.id, port: c.port || 8000, enabled: o.enabled, name: o.name, encoder: c.encoder || 'lame', bitrate: c.bitrate || 0};
     if (type === 'alsa') alsa.push({id: o.id, enabled: o.enabled});
   });
   return stream ? {stream: stream, alsa: alsa} : null;

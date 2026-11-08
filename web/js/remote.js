@@ -12,6 +12,7 @@
 var REMOTE_KEY = 'xplorioPlayer';
 var REMOTE_CHECK_MS = 10000;
 var remoteMode = 'lokal', remoteListen = false, remoteAudio = null, remoteIcon = null, remoteWant = false, remoteHinted = false;
+var remoteEnc = {encoder: 'lame', bitrate: 0};       /* encoder of the stream output (GET /remote), for the quality display */
 var remoteCheckAt = 0, remoteHold = 0;            /* after pausing: ignore "play" reports still on their way */
 var REMOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/></svg>';   /* headphones */
 
@@ -66,6 +67,23 @@ function remoteApply(mode) {
   if (mode === 'lokal' || !remoteListen) remoteStop();
   else if (remoteWant) remoteStart();
   if (typeof rotelInputRepaint === 'function') rotelInputRepaint();   /* other input on the amplifier: matters only with the amplifier */
+  remoteQualityRepaint();
+}
+
+/* listening here: the quality display shows the stream, not the file ("Stream", MP3 with lame) */
+var REMOTE_FORMATS = {lame: 'MP3', shine: 'MP3', vorbis: 'Ogg Vorbis', opus: 'Opus', flac: 'FLAC', wave: 'WAV'};
+function remoteQuality() {
+  if (!remotePlaying()) return null;
+  var tech = [REMOTE_FORMATS[remoteEnc.encoder] || String(remoteEnc.encoder || 'MP3').toUpperCase()];
+  if (remoteEnc.bitrate) tech.push(remoteEnc.bitrate + ' kbps');
+  return {kind: 'stream', label: 'Stream', tech: tech};
+}
+function remoteQualityRepaint() { if (typeof qualityState !== 'undefined' && qualityState && typeof paintQuality === 'function') paintQuality(qualityState); }
+function remoteEncoder(r) {
+  if (r && r.encoder && (r.encoder !== remoteEnc.encoder || (r.bitrate || 0) !== remoteEnc.bitrate)) {
+    remoteEnc = {encoder: r.encoder, bitrate: r.bitrate || 0};
+    remoteQualityRepaint();
+  }
 }
 
 /* pause the player, so that Play (a tap, which iOS needs for sound) continues with the new output; true if it was playing */
@@ -78,7 +96,7 @@ function remoteInterrupt(lead) {
   return true;
 }
 
-function remoteHide() { remoteMode = 'lokal'; remoteListen = false; remoteStop(); if (remoteIcon) remoteIcon.style.display = 'none'; }
+function remoteHide() { remoteMode = 'lokal'; remoteListen = false; remoteStop(); if (remoteIcon) remoteIcon.style.display = 'none'; remoteQualityRepaint(); }
 
 function remotePlaying() { return remoteMode !== 'lokal' && remoteListen; }
 
@@ -131,6 +149,7 @@ function remoteCheck(now) {
   tagGetJson('/remote').then(function(r){
     if (!r || !r.ok) return;
     if (!r.available) return remoteHide();
+    remoteEncoder(r);
     if (r.mode !== remoteMode) remoteApply(r.mode);
   }).catch(function(){});
 }
@@ -165,6 +184,7 @@ document.addEventListener('visibilitychange', function(){
   if (typeof TAGS === 'undefined') return;
   tagGetJson('/remote').then(function(r){
     if (!r || !r.ok || !r.available) return;
+    remoteEncoder(r);
     var m = /[?&]player=(lokal|local|remote|both)\b/.exec(location.search);
     if (m) { remoteApply(r.mode); return remoteSet(m[1] === 'local' ? 'lokal' : m[1]); }
     remoteListen = !!remoteStored() && r.mode !== 'lokal';

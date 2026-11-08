@@ -52,10 +52,11 @@ function paintQuality(st) {
   if (inp) { mTech.dataset.key = ''; mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
   mqaAttach(st);
-  var q = classifyQuality(st, window.APP_CONFIG);
+  var rq = typeof remoteQuality === 'function' ? remoteQuality() : null;   /* listening here: the stream (MP3 etc.) */
+  var q = rq || classifyQuality(st, window.APP_CONFIG);
   rgFetch(st);
   var tech = q.tech.slice();
-  var gain = rgState.uri === st.uri && rgState.gain;
+  var gain = !rq && rgState.uri === st.uri && rgState.gain;
   if (gain) tech.push((rgPicked ? 'ReplayGain (' + T('pb.rg.' + gain.mode) + '): ' : '') + qGainText(gain.db));
   /* each value unbreakable, a line break only after a "·": "−8.6 dB" never splits */
   var key = tech.join('|') + (gain ? '|rg' : '');
