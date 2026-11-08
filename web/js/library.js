@@ -315,7 +315,15 @@ function searchSuggestAsk(q, seq) {
   if (searchData.artists.length || searchData.albums.length || searchData.songs.length || typeof tagGetJson !== 'function') return;
   tagGetJson('/suggest?q=' + encodeURIComponent(q)).then(function(r){
     if (seq !== searchSeq || !r || !r.ok || !r.items || !r.items.length) return;
-    searchSuggest = {q: q, items: r.items};
+    /* the name contains the term: a real hit Volumio's search missed (albums without AlbumArtist tag); a typo: a suggestion */
+    var typos = [];
+    r.items.forEach(function(it){
+      if (!it.exact) return typos.push(it);
+      if (it.kind === 'artist') searchData.artists.push({type: 'folder', service: 'mpd', title: it.name, uri: 'artists://' + encodeURIComponent(it.name)});
+      else if (it.dir) searchData.albums.push({type: 'folder', service: 'mpd', title: it.name, artist: it.ar || '', uri: 'music-library/' + it.dir,
+                                               albumart: typeof histAlbumArt === 'function' ? histAlbumArt(it.ar, it.name, it.dir) : ''});
+    });
+    searchSuggest = typos.length ? {q: q, items: typos} : null;
     renderSearchResults();
   }).catch(function(){ /* without tag service: no suggestions */ });
 }
