@@ -504,7 +504,10 @@ function checkQualityRows(it, kept) {
   meta.appendChild(ti); meta.appendChild(su); head.appendChild(meta);
   checkGenreButtons(head, 'mixedQuality', 'mixedQuality|' + it.dir, it, it.files, kept);
   var rows = [head];
-  if (!kept) it.worse.forEach(function(f){ rows.push(checkDupTrackFile({uri: f.uri, name: f.name, format: f.format, seconds: f.seconds}, 'mixedQuality|')); });
+  if (!kept) it.worse.forEach(function(f){
+    var nr = f.track ? (f.disc ? f.disc + '-' : '') + (f.track < 10 ? '0' : '') + f.track + ' ' : '';   /* "03 Title", "2-03 Title" */
+    rows.push(checkDupTrackFile({uri: f.uri, name: nr + f.name, format: f.format, seconds: f.seconds}, 'mixedQuality|'));
+  });
   return rows;
 }
 

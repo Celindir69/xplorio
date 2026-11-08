@@ -60,7 +60,7 @@ t('mixed quality: lossless next to lossy in one album (disc folders together), n
   assert.strictEqual(q[0].dir, 'U/X/Alb');
   assert.deepStrictEqual(q[0].formats, [{name: 'FLAC 16/44.1', count: 2}, {name: 'MP3', count: 1}]);
   assert.strictEqual(q[0].lossy, 1);
-  assert.deepStrictEqual(q[0].worse, [{uri: 'U/X/Alb/CD2/01.mp3', name: 'c', format: 'MP3 320 kbps', seconds: 200}]);
+  assert.deepStrictEqual(q[0].worse, [{uri: 'U/X/Alb/CD2/01.mp3', name: 'c', format: 'MP3 320 kbps', seconds: 200, track: 1, disc: 2}]);
   assert.strictEqual(q[0].files.length, 3);
   assert.deepStrictEqual(r.mixedQuality, []);
 });

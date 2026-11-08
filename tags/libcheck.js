@@ -502,18 +502,24 @@ function missingTags(list) {
 }
 
 /* an album (disc folders together) with lossless and lossy tracks, typically left over after "Fill in" from another
-   version: -> {formats: [{name: 'FLAC 16/44.1', count}], lossy: n, worse: [{uri, name, format}]} or null. Only lossless
+   version: -> {formats: [{name: 'FLAC 16/44.1', count}], lossy: n, worse: [{uri, name, format, seconds, track, disc}]} or null
+   (track and disc as numbers, 0 if not tagged; disc only if the album has more than one; sorted by disc and track). Only lossless
    next to lossy counts; FLAC next to ALAC or different sample rates are fine */
 function mixedQuality(list) {
-  var lossless = 0, worse = [], formats = {};
+  var lossless = 0, worse = [], formats = {}, discs = {};
+  function n(v) { var m = /^\s*(\d+)/.exec(v || ''); return m ? +m[1] : 0; }
+  list.forEach(function(s){ discs[n(s.disc)] = 1; });
+  var multi = Object.keys(discs).length > 1;
   list.forEach(function(s){
     var q = duplicates.quality([s]);
     if (!q.rank) return;                                             /* unknown file type */
     var shown = q.format.replace(/ \d+ kbps$/, '');                 /* "MP3", not every data rate on its own */
     formats[shown] = (formats[shown] || 0) + 1;
     if (q.rank >= 2) lossless++;
-    else worse.push({uri: s.file, name: s.title || path.basename(s.file), format: q.format, seconds: Math.round(secs(s))});
+    else worse.push({uri: s.file, name: s.title || path.basename(s.file), format: q.format, seconds: Math.round(secs(s)),
+                     track: n(s.track), disc: multi ? n(s.disc) : 0});
   });
+  worse.sort(function(a, b){ return a.disc - b.disc || a.track - b.track || (a.uri < b.uri ? -1 : 1); });
   if (!lossless || !worse.length) return null;
   return {formats: Object.keys(formats).map(function(k){ return {name: k, count: formats[k]}; })
                    .sort(function(a, b){ return b.count - a.count || a.name.localeCompare(b.name); }),
