@@ -227,6 +227,7 @@ langRegister('es', 'Español', {
   'controls.rotel.off': 'Apagar Rotel',
   'controls.rotel.on': 'Encender Rotel',
   'controls.rotel.unreachable': 'Servicio Rotel no disponible',
+  'controls.rotel.locked': 'El Rotel está reproduciendo {input}: volumen y encendido bloqueados mientras suena el stream',
   'rotel.standby': 'standby',
 
   'disc.ago.album': {one: 'Escuchado hace un año', other: 'Escuchado hace {n} años'},

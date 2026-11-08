@@ -139,8 +139,36 @@ function rotelInput() {
   var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];
   return hit ? {name: hit.name, icon: hit.icon} : {name: rotelSource, icon: 'aux'};
 }
+/* name of the amplifier's input while the stream plays here and the amplifier plays another input (someone at home
+   listens to that): then volume, mute and power stay locked in the player; '' otherwise */
+function rotelForeignWhileStream() {
+  if (!ROTEL_ON || !rotelReachable || !rotelOn || !rotelProf || !rotelLinked || !rotelSource) return '';
+  if (typeof remoteMode === 'undefined' || remoteMode === 'lokal') return '';
+  var src = rotelNorm(rotelSource);
+  if (src === rotelNorm(rotelProf.player)) return '';
+  var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];
+  return hit ? hit.name : rotelSource;
+}
+var rotelLockName = '';
+function rotelLockPaint() {
+  rotelLockName = rotelForeignWhileStream();
+  document.documentElement.classList.toggle('rotelLock', !!rotelLockName);
+  var t = rotelLockName ? T('controls.rotel.locked', {input: rotelLockName}) : '';
+  volWrap.title = t;
+  if (t) btnRotelPower.title = t; else paintRotelPower();
+}
+/* locked: a tap only says why */
+function rotelLockGuard(ev) {
+  if (!rotelLockName) return;
+  ev.stopPropagation(); ev.preventDefault();
+  showToast(T('controls.rotel.locked', {input: rotelLockName}));
+}
+volWrap.addEventListener('click', rotelLockGuard, true);
+btnRotelPower.addEventListener('click', rotelLockGuard, true);
+
 var rotelInputShown = '';
 function rotelInputRepaint() {
+  rotelLockPaint();
   var i = rotelInput(), k = i ? i.name + '|' + i.icon : '';
   if (k === rotelInputShown) return;
   rotelInputShown = k;

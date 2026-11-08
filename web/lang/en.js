@@ -229,6 +229,7 @@ langRegister('en', 'English', {
   'controls.rotel.off': 'Turn Rotel off',
   'controls.rotel.on': 'Turn Rotel on',
   'controls.rotel.unreachable': 'Rotel service unreachable',
+  'controls.rotel.locked': 'The Rotel is playing {input} – volume and power are locked while the stream is on',
   'rotel.standby': 'standby',
 
   'disc.ago.album': {one: 'Played a year ago', other: 'Played {n} years ago'},
