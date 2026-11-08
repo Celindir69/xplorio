@@ -111,6 +111,7 @@
   #btnRotelPower.on { opacity:1; }
   #btnRotelPower.on svg { fill:#4bbe87; }
   #btnRotelPower.na { opacity:.2; cursor:default; }
+  #topLeft { display:flex; align-items:center; gap:12px; pointer-events:none; }
   #topRight { margin-left:auto; display:flex; align-items:center; gap:12px; pointer-events:none; }
   #btnStage { display:none; }
   @media (orientation:landscape) and (min-width:900px) and (min-height:560px) { #btnStage { display:flex; } }
@@ -118,11 +119,11 @@
   #btnMenu { opacity:.75; }
   /* while an overlay is open, the gear does not show through the sidebar (it would otherwise sit above the close cross) */
   body.ovOn #btnMenu { visibility:hidden; }
-  /* library is being read in (check.js): turns slowly, a tap says what is going on */
+  /* library is being read in (check.js): turns slowly, a tap says what is going on; on the left (next to the amplifier's
+     power button), so it stays visible while an overlay is open */
   #scanBusy { opacity:.75; }
   #scanBusy svg { animation:mxSpin 2.4s linear infinite; }
   @media (prefers-reduced-motion:reduce) { #scanBusy svg { animation:none; } }
-  body.ovOn #scanBusy { visibility:hidden; }   /* ovOn/ovMain is set by ui.js (instead of :has, missing in Safari < 15.4) */
 
   #toast { position:fixed; z-index:20; left:50%; bottom:max(env(safe-area-inset-bottom,0px), 24px);
     transform:translate(-50%, 20px); opacity:0; pointer-events:none; max-width:86%; text-align:center;
