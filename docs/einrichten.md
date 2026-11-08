@@ -743,7 +743,7 @@ Plugins“.
 ## Smart-Playlisten
 Mit dem Plugin [Smart Playlists](https://github.com/Celindir69/smart-playlist-plugin) (ab Version 1.1) lassen sich
 dessen Regeln in Xplorio bearbeiten. Im Reiter „Playlisten“ tragen die vom Plugin erstellten Playlisten ein eigenes
-Symbol vor dem Namen und rechts einen Stift; oben steht „+ Neue Smart-Playlist“. Ohne Plugin erscheint nichts davon.
+Symbol vor dem Namen und rechts einen Stift; oben rechts öffnet ein Plus mit Sternen eine neue Smart-Playlist. Ohne Plugin erscheint nichts davon.
 
 Im Editor:
 - **Name**: Pflicht. Xplorio schlägt ihn aus den gewählten Künstlern vor (bei „Alle Künstler“ aus Genre und Jahren),
