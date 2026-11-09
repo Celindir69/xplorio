@@ -881,6 +881,7 @@ langRegister('it', 'Italiano', {
   'tag.bulk.set': 'Imposta valore',
   'tag.bulk.skipped': {one: '{n} brano non corrisponde allo schema e resta invariato', other: '{n} brani non corrispondono allo schema e restano invariati'},
   'tag.bulk.split': 'Suddividi per schema',
+  'tag.bulk.number': 'Rinumerare le tracce (01, 02 …)',
   'tag.bulk.tracks': {one: '{n} brano', other: '{n} brani'},
   'tag.bulk.showUnreadable': 'Quali file e perché?',
   'tag.bulk.unreadable': {one: ' · {n} file illeggibile', other: ' · {n} file illeggibili'},

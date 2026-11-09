@@ -881,6 +881,7 @@ langRegister('es', 'Español', {
   'tag.bulk.set': 'Establecer valor',
   'tag.bulk.skipped': {one: '{n} canción no coincide con el patrón y no se modifica', other: '{n} canciones no coinciden con el patrón y no se modifican'},
   'tag.bulk.split': 'Dividir por patrón',
+  'tag.bulk.number': 'Numerar pistas (01, 02 …)',
   'tag.bulk.tracks': {one: '{n} canción', other: '{n} canciones'},
   'tag.bulk.showUnreadable': '¿Qué archivos y por qué?',
   'tag.bulk.unreadable': {one: ' · {n} archivo ilegible', other: ' · {n} archivos ilegibles'},

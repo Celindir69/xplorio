@@ -635,6 +635,7 @@ var artSeq = 0;                                       /* discards answers for a 
 var artUi = null;                                     /* input elements of the view */
 var artChanges = [];                                  /* preview: [{from, to, tags:{field:value}, files:[f], check}] */
 var artReload = null;                                 /* reloads the editor after undo */
+var artUris = null;                                   /* bulk editing of given files (album editor): their order, for numbering */
 var artPreset = null;                                 /* preset {field, value} (genre suggestion from the check) */
 var TAG_LABELS = {title: T('tag.field.title'), track: T('tag.field.track')};
 TAG_COMMON.forEach(function(fd){ TAG_LABELS[fd[0]] = fd[1]; });
@@ -742,7 +743,7 @@ function tagBulkLoad(seq, uris) {
 /* all local tracks of an artist (pen in the artist view) */
 function openArtistEditor(name) {
   var seq = tagBulkStart(name);
-  artName = name;
+  artName = name; artUris = null;
   artReload = function(){ openArtistEditor(name); };
   tagMsg(T('tag.searchingTracks'), true);
   tagGetJson('/artist?name=' + encodeURIComponent(name)).then(function(res){
@@ -757,6 +758,7 @@ function openArtistEditor(name) {
 function openBulkEditor(uris, heading, preset) {
   var seq = tagBulkStart(heading);
   artPreset = preset || null;
+  artUris = uris.slice();
   artReload = function(){ openBulkEditor(uris, heading); };
   tagBulkLoad(seq, uris).catch(function(e){ tagBulkFail(seq, e); });
 }
@@ -810,7 +812,7 @@ function artistRender() {
 
   var ui = artUi = {
     field: tagSelect(TAG_BULK_FIELDS, artUi ? artUi.field.value : 'artist'),
-    action: tagSelect(TAG_BULK_ACTIONS, artUi ? artUi.action.value : 'words'),
+    action: tagSelect(artUris ? TAG_BULK_ACTIONS.concat([['number', T('tag.bulk.number')]]) : TAG_BULK_ACTIONS, artUi ? artUi.action.value : 'words'),
     value: tagInput(''), find: tagInput(''), repl: tagInput(''), pattern: tagInput(artUi ? artUi.pattern.value : '%TITLE% - %ARTIST%'),
     preview: document.createElement('button'),
     list: document.createElement('div')
@@ -837,6 +839,7 @@ function artistRender() {
   function sync() {
     var a = ui.action.value;
     fValue.style.display = a === 'set' ? '' : 'none';
+    fField.style.display = a === 'number' ? 'none' : '';             /* numbering: always the track number */
     genreMenu.style.display = ui.field.value === 'genre' ? '' : 'none';
     fFind.style.display = fRepl.style.display = a === 'replace' ? '' : 'none';
     fPattern.style.display = a === 'split' ? '' : 'none';
@@ -896,6 +899,12 @@ function artistChanges(f, field, pat) {
   return [{from: from, to: to, tags: t}];
 }
 
+/* numbering: the n-th track (from 0) gets "01" … "09", "10" … */
+function artistNumber(f, n) {
+  var from = f.tags.track || '', to = (n < 9 ? '0' : '') + (n + 1);
+  return to === from ? [] : [{from: from, to: to, tags: {track: to}}];
+}
+
 /* compute changes and show them grouped (same change "old -> new" = one row) */
 function artistPreview() {
   var field = artUi.field.value, action = artUi.action.value, groups = {}, order = [], pat = null, skipped = 0;
@@ -904,8 +913,13 @@ function artistPreview() {
     pat = textPattern(artUi.pattern.value);
     if (pat.error) { tagStatus.textContent = T('tag.bulk.patternError', {error: pat.error}); return; }
   }
-  artFiles.forEach(function(f, n){
-    var cs = artistChanges(f, field, pat);
+  var files = artFiles;
+  if (action === 'number') {                              /* 01, 02 … in the order of the album editor */
+    field = 'track';
+    files = artFiles.slice().sort(function(a, b){ return artUris.indexOf(a.uri) - artUris.indexOf(b.uri); });
+  }
+  files.forEach(function(f, n){
+    var cs = action === 'number' ? artistNumber(f, n) : artistChanges(f, field, pat);
     if (!cs) { skipped++; return; }
     cs.forEach(function(c){
       var key = c.ambiguous ? n + '\u0000' + c.ambiguous : c.from + '\u0000' + c.to;    /* do not merge variants */
@@ -915,7 +929,7 @@ function artistPreview() {
   });
   artChanges = order.map(function(k){ return groups[k]; });
   artChanges.forEach(function(g, k){ g.order = k; });
-  artChanges.sort(function(x, y){ return x.from.localeCompare(y.from) || x.order - y.order; });
+  if (action !== 'number') artChanges.sort(function(x, y){ return x.from.localeCompare(y.from) || x.order - y.order; });
   var list = artUi.list;
   list.innerHTML = '';
   if (skipped) list.appendChild(browseNote(T('tag.bulk.skipped', {n: skipped})));

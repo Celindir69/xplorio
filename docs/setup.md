@@ -162,7 +162,7 @@ scan follows when the check is closed), "Keep" leaves the current tag and no lon
 the data folder; for contradictions per album as long as it keeps this tag, for merging per change, e.g. "Hard Rock →
 Rock"). Kept entries are listed folded at the end and can be brought back there with "Suggest again".
 
-Rows covering several albums have a fold-out "▸ n albums" listing all affected albums (album · artist, number of tracks). In the batch editor's preview every change can be folded out the same way: each album has a checkbox there (unticked ones stay unchanged), tapping the album name shows its tracks.
+Rows covering several albums have a fold-out "▸ n albums" listing all affected albums (album · artist, number of tracks). In the batch editor's preview every change can be folded out the same way: each album has a checkbox there (unticked ones stay unchanged), tapping the album name shows its tracks. Opened from the album editor, the batch editor also offers "Renumber tracks": all tracks get consecutive numbers 01, 02 … in the order of the album editor (without the total).
 
 The pencil opens the batch editor with the suggestion; nothing is written until you save, and Undo works as usual. Next to every genre field in the Tag Editor a "Main genre" menu offers the 15 top categories; custom values can still be typed. The
 sub-styles ("Trip Hop", "Downtempo") are not written to the files but stay in the Tag Service: `GET /genres?dir=<folder>`
