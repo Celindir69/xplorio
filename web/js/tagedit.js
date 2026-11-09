@@ -625,6 +625,7 @@ var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag
                        ['comment', T('tag.field.comment')]];                 /* comment: e.g. NoMix (nomix.js) */
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
+var TAG_TRACK_ACTIONS = [['number', T('tag.bulk.number')]];   /* field "Track number" (bulk editing from the album editor) */
 var TAG_CHUNK = 100;                                 /* files per request to the tag service */
 var TAG_WRITE_CHUNK = 20;                            /* files per write request: rewriting m4a on a NAS is slow, and
                                                         Safari gives up on a request that stays silent for about a minute */
@@ -811,12 +812,13 @@ function artistRender() {
   if (artBad.length) tagBody.appendChild(tagBadList(artBad));
 
   var ui = artUi = {
-    field: tagSelect(TAG_BULK_FIELDS, artUi ? artUi.field.value : 'artist'),
-    action: tagSelect(artUris ? TAG_BULK_ACTIONS.concat([['number', T('tag.bulk.number')]]) : TAG_BULK_ACTIONS, artUi ? artUi.action.value : 'words'),
+    field: tagSelect(artUris ? TAG_BULK_FIELDS.concat([['track', T('tag.bulk.fieldTrack')]]) : TAG_BULK_FIELDS, artUi ? artUi.field.value : 'artist'),
+    action: tagSelect(TAG_BULK_ACTIONS, artUi ? artUi.action.value : 'words'),
     value: tagInput(''), find: tagInput(''), repl: tagInput(''), pattern: tagInput(artUi ? artUi.pattern.value : '%TITLE% - %ARTIST%'),
     preview: document.createElement('button'),
     list: document.createElement('div')
   };
+  if (!ui.field.value) ui.field.value = 'artist';          /* track number from the album editor, now elsewhere */
   ui.value.placeholder = T('tag.bulk.valuePh');
   ui.find.placeholder = T('tag.bulk.findPh');
   ui.repl.placeholder = T('tag.bulk.replPh');
@@ -836,10 +838,19 @@ function artistRender() {
   ui.list.className = 'tagPreview';
   tagBody.appendChild(ui.list);
 
+  /* the actions depend on the field: the track number (album editor only) can only be renumbered */
+  function actions() {
+    var list = ui.field.value === 'track' ? TAG_TRACK_ACTIONS : TAG_BULK_ACTIONS, keep = ui.action.value;
+    if (ui.action.list === list) return;
+    ui.action.list = list;
+    while (ui.action.firstChild) ui.action.removeChild(ui.action.firstChild);
+    list.forEach(function(x){ var o = document.createElement('option'); o.value = x[0]; o.textContent = x[1]; ui.action.appendChild(o); });
+    ui.action.value = list.some(function(x){ return x[0] === keep; }) ? keep : list[0][0];
+  }
   function sync() {
+    actions();
     var a = ui.action.value;
     fValue.style.display = a === 'set' ? '' : 'none';
-    fField.style.display = a === 'number' ? 'none' : '';             /* numbering: always the track number */
     genreMenu.style.display = ui.field.value === 'genre' ? '' : 'none';
     fFind.style.display = fRepl.style.display = a === 'replace' ? '' : 'none';
     fPattern.style.display = a === 'split' ? '' : 'none';
@@ -915,7 +926,6 @@ function artistPreview() {
   }
   var files = artFiles;
   if (action === 'number') {                              /* 01, 02 … in the order of the album editor */
-    field = 'track';
     files = artFiles.slice().sort(function(a, b){ return artUris.indexOf(a.uri) - artUris.indexOf(b.uri); });
   }
   files.forEach(function(f, n){
