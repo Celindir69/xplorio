@@ -133,7 +133,7 @@ Notes: Only files under `/mnt/INTERNAL`, `/mnt/USB`, and `/mnt/NAS` are allowed.
 
 ### Search for Cover Art Online
 
-In the Album Editor, "Search online" searches iTunes, Last.fm (using the Last.fm key from `keys.json`), and the Cover Art Archive (MusicBrainz) for the album artist (otherwise the artist) and album currently entered in the fields. You can temporarily change the fields for searching without saving them.
+In the Album Editor, "Search online" searches iTunes, Last.fm (using the Last.fm key from `keys.json`), and the Cover Art Archive (MusicBrainz) for the album artist (otherwise the artist) and album currently entered in the fields. You can temporarily change the fields for searching without saving them. Without a suitable cover, "Create cover" draws a replacement image: a calm random colour, the album title large and the artist below (1000 × 1000, from the same fields). Each tap gives a new colour; it is saved like a chosen image, with "as folder.jpg" already ticked. It needs no internet and nothing extra on the player.
 
 Suggestions appear side by side; tapping one applies the image just like a manually selected image (embed and/or `folder.jpg`, with Undo support).
 
