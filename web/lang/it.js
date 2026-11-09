@@ -4,6 +4,7 @@ langRegister('it', 'Italiano', {
   'audio.connected': 'Uscita audio connessa',
   'audio.disconnected': 'Uscita audio disconnessa',
   'audio.unreachable': 'Uscita audio non raggiungibile',
+  'audio.fileMissing': 'Brano non trovato: {name}',
   'audio.otherInput': 'L’amplificatore è su {name}',
   'play.queuedInput': 'In coda · l’amplificatore è su {name}',
   'browse.albums': 'Album',

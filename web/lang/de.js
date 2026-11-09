@@ -4,6 +4,7 @@ langRegister('de', 'Deutsch', {
   'audio.connected': 'Audioziel verbunden',
   'audio.disconnected': 'Audioziel getrennt',
   'audio.unreachable': 'Audioziel nicht erreichbar',
+  'audio.fileMissing': 'Titel nicht gefunden: {name}',
   'audio.otherInput': 'Verstärker steht auf {name}',
   'play.queuedInput': 'In der Warteschlange · Verstärker steht auf {name}',
   'browse.albums': 'Alben',
