@@ -438,6 +438,46 @@ function tagPrepareImage(blob) {
   });
 }
 
+/* replacement cover drawn in the browser: calm random colour, album title large, album artist below (square JPEG) */
+var TAG_GEN_SIZE = 1000;
+function tagMakeCover(artist, album) {
+  var c = document.createElement('canvas'), S = TAG_GEN_SIZE, g;
+  c.width = c.height = S;
+  g = c.getContext('2d');
+  var hue = Math.floor(Math.random() * 360), sat = 18 + Math.random() * 17, light = 30 + Math.random() * 14;   /* muted, darkish */
+  var grad = g.createLinearGradient(0, 0, S, S);
+  grad.addColorStop(0, 'hsl(' + hue + ',' + sat + '%,' + (light + 6) + '%)');
+  grad.addColorStop(1, 'hsl(' + ((hue + 25) % 360) + ',' + sat + '%,' + (light - 6) + '%)');
+  g.fillStyle = grad; g.fillRect(0, 0, S, S);
+  var FONT = '-apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif', pad = S * 0.1, maxW = S - 2 * pad;
+  /* words into lines of at most maxW; the font shrinks until at most `lines` lines fit */
+  function wrap(text, weight, size, min, lines) {
+    var words = String(text || '').split(/\s+/).filter(Boolean), out;
+    for (; size >= min; size -= 4) {
+      g.font = weight + ' ' + size + 'px ' + FONT;
+      out = []; var line = '';
+      words.forEach(function(w){
+        var t = line ? line + ' ' + w : w;
+        if (line && g.measureText(t).width > maxW) { out.push(line); line = w; } else line = t;
+      });
+      if (line) out.push(line);
+      if (out.length <= lines && out.every(function(l){ return g.measureText(l).width <= maxW; })) break;
+    }
+    if (out.length > lines) { out = out.slice(0, lines); out[lines - 1] += '…'; }
+    return {lines: out, size: size, font: g.font};
+  }
+  var a = wrap(album || '?', '600', 110, 44, 4), b = artist ? wrap(artist, '400', 64, 32, 2) : {lines: [], size: 0};
+  var gap = b.lines.length ? a.size * 0.6 : 0;
+  var h = a.lines.length * a.size * 1.15 + gap + b.lines.length * b.size * 1.2, y = (S - h) / 2;
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillStyle = 'rgba(255,255,255,0.94)'; g.font = a.font;
+  a.lines.forEach(function(l){ g.fillText(l, S / 2, y); y += a.size * 1.15; });
+  y += gap;
+  g.fillStyle = 'rgba(255,255,255,0.72)'; if (b.font) g.font = b.font;
+  b.lines.forEach(function(l){ g.fillText(l, S / 2, y); y += b.size * 1.2; });
+  return {b64: c.toDataURL('image/jpeg', 0.9).split(',')[1], w: S, h: S};
+}
+
 function tagThumb(caption) {
   var box = document.createElement('div');
   box.className = 'tagThumb';
@@ -474,7 +514,8 @@ function tagCoverSection(good) {
   var pick = document.createElement('button'); pick.textContent = T('tag.cover.pick');
   var toFolder = document.createElement('button'); toFolder.textContent = T('tag.cover.toFolder');
   var online = document.createElement('button'); online.textContent = T('tag.cover.online');
-  btns.appendChild(pick); btns.appendChild(online); btns.appendChild(toFolder); btns.appendChild(file);
+  var make = document.createElement('button'); make.textContent = T('tag.cover.generate'); make.title = T('tag.cover.generateHint');
+  btns.appendChild(pick); btns.appendChild(online); btns.appendChild(make); btns.appendChild(toFolder); btns.appendChild(file);
   wrap.appendChild(btns);
   var found = document.createElement('div');               /* suggestions from the online search */
   found.className = 'tagOnline'; found.style.display = 'none';
@@ -521,10 +562,22 @@ function tagCoverSection(good) {
   /* Search covers online (iTunes, Last.fm, Cover Art Archive via the tag service): album artist (otherwise artist)
      and album as they currently are in the fields (change them briefly for searching, without saving); empty fields
      ("various") take the first track's value. Suggestions side by side, a tap puts the image into the preview. */
-  online.addEventListener('click', function(){
+  /* album artist (otherwise artist) and album as they currently are in the fields; empty fields take the first track's value */
+  function curNames() {
     var t = good[0].tags || {};
     function cur(k) { var c = tagCommon[k]; var v = c && c.input.value.trim(); return v || t[k] || ''; }
-    var artist = cur('albumartist') || cur('artist'), album = cur('album');
+    return {artist: cur('albumartist') || cur('artist'), album: cur('album')};
+  }
+  /* replacement cover: each tap a new colour; saved like a chosen image (also as folder.jpg, preselected) */
+  make.addEventListener('click', function(){
+    var nm = curNames();
+    if (!nm.album) { tagStatus.textContent = T('tag.cover.noAlbum'); return; }
+    useImage(tagMakeCover(nm.artist, nm.album), T('tag.cover.generated'));
+    cFolder.checked = true;
+  });
+
+  online.addEventListener('click', function(){
+    var nm = curNames(), artist = nm.artist, album = nm.album;
     if (!album) { tagStatus.textContent = T('tag.cover.noAlbum'); return; }
     tagStatus.textContent = T('tag.cover.searching', {album: album});
     online.disabled = true;

@@ -143,6 +143,9 @@ Cover Art Archive (MusicBrainz) nach Album-Künstler (sonst Künstler) und Album
 (zum Suchen kurz ändern, ohne zu speichern). Die Vorschläge erscheinen
 nebeneinander; ein Tipp übernimmt das Bild wie ein gewähltes (einbetten und/oder folder.jpg, mit Rückgängig).
 Die Abfragen macht der Tag-Dienst; der Player braucht dafür Internetzugang.
+Gibt es kein passendes Cover, zeichnet „Cover erzeugen“ ein Ersatzbild: ruhige Zufallsfarbe, Albumtitel groß,
+Interpret darunter (1000 × 1000, aus denselben Feldern). Jeder Tipp ergibt eine neue Farbe; gespeichert wird es wie ein
+gewähltes Bild, „als folder.jpg“ ist dabei schon angehakt. Es braucht kein Internet und nichts Zusätzliches auf dem Player.
 
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
