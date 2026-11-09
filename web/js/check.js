@@ -307,7 +307,7 @@ function checkFill(box, cat, list) {
     moreRow.style.display = shown < list.length ? '' : 'none';
     moreRow.textContent = T('check.more', {k: checkNum(Math.min(CHECK_PAGE, list.length - shown)), left: checkNum(list.length - shown)});
   }
-  if (cat.key === 'duplicates' && list.length) checkDupTrash(box, list);
+  if (cat.key === 'duplicates' && list.length) checkDupTrash(box);
   if (cat.key === 'artistFix') checkArtistStatus(box);
   var moreRow = document.createElement('div'); moreRow.className = 'ckMore';
   moreRow.addEventListener('click', more);
@@ -706,41 +706,18 @@ function checkSpellingOthers(g) {
 
 /* ---------- Duplicate albums: move a version into "Xplorio Trash" on the same drive (tag service POST /dupmove) ---------- */
 var CHECK_TRASH = 'Xplorio Trash';                     /* duplicates.TRASH in the tag service */
-function checkShellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 function checkDupTrashPath(dir) {                       /* same rule as duplicates.trashPath in the tag service */
   var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
   return drive + '/' + CHECK_TRASH + '/' + dir.slice(drive.length + 1);
 }
-/* copy text: the clipboard API only exists on https, on http the old way via a selected text field */
-function checkCopy(text) {
-  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
-  var ta = document.createElement('textarea');
-  ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select(); ta.setSelectionRange(0, text.length);
-  var ok = false;
-  try { ok = document.execCommand('copy'); } catch (e) { /* not allowed */ }
-  document.body.removeChild(ta);
-  return ok ? Promise.resolve() : Promise.reject(new Error('copy'));
-}
-function checkCmdRow(cmd) {
+/* what was moved aside: put back or delete for good in the trash view (trash.js) */
+function checkDupTrash(box) {
   var row = document.createElement('div'); row.className = 'ckCmdRow';
-  var code = document.createElement('div'); code.className = 'ckCmd'; code.textContent = cmd;
-  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.copy');
-  btn.addEventListener('click', function(){
-    checkCopy(cmd).then(function(){ btn.textContent = T('check.dup.copied'); }, function(){ btn.textContent = T('check.dup.copyFailed'); });
-    setTimeout(function(){ btn.textContent = T('check.dup.copy'); }, 2500);
-  });
-  row.appendChild(code); row.appendChild(btn);
-  return row;
-}
-/* delete what was moved aside for good: one command per drive, only via ssh */
-function checkDupTrash(box, list) {
-  var drives = {};
-  list.forEach(function(g){ g.versions.forEach(function(v){ drives[v.drive] = 1; }); });
-  var note = document.createElement('div'); note.className = 'ckCatHint'; note.textContent = T('check.dup.trash');
-  box.appendChild(note);
-  Object.keys(drives).sort().forEach(function(d){ box.appendChild(checkCmdRow('sudo rm -rf ' + checkShellQuote('/mnt/' + d + '/' + CHECK_TRASH))); });
+  var note = document.createElement('div'); note.className = 'ckCatHint ckTrashNote'; note.textContent = T('check.dup.trash');
+  var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dup.openTrash');
+  btn.addEventListener('click', function(){ openTrash(); });
+  row.appendChild(note); row.appendChild(btn);
+  box.appendChild(row);
 }
 /* play one version (all its folders) in place of the queue; the check stays open to compare */
 function checkDupPlay(g, v) {
