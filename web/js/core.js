@@ -75,7 +75,8 @@ function audioErrorText(m) {
   var s = String((m && m.message) || '');
   if (!m || m.type !== 'error') return '';
   if (/resource busy|device is busy/i.test(s)) return T('audio.busy');
-  if (/failed to open|alsa|no such device|output device/i.test(s)) {
+  /* only the output: "Failed to open" alone is also MPD's message for a missing or unreadable music file */
+  if (/alsa|no such device|output device|audio output/i.test(s)) {
     var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* amplifier on another input: say so */
     return inp ? T('audio.otherInput', {name: inp.name}) : T('audio.unreachable');
   }
