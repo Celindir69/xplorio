@@ -217,8 +217,8 @@ Ordner klappt seine einzelnen Dateien auf, jede lässt sich für sich zurückleg
 endgültig, „Leeren“ den ganzen Papierkorb eines Laufwerks, jeweils nach Rückfrage. Gelöscht wird nur innerhalb von
 `Xplorio Trash`, das Passwort gilt wie beim Verschieben. Grund und Zeit merkt sich der Tag-Dienst ab dieser Version
 (`trash.json` im Datenordner); was schon vorher im Papierkorb lag, erscheint ohne Grund, je Ordner ein Eintrag, mit dem
-Pfad ohne `Xplorio Trash` als altem Ort. Per ssh geht es weiterhin mit dem Befehl, den die Kategorie zum Kopieren
-anbietet, z. B. `sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'`.
+Pfad ohne `Xplorio Trash` als altem Ort. Unter „Doppelte Alben“ führt „Papierkorb öffnen“ direkt hierher. Per ssh geht es auch von Hand, z. B.
+`sudo rm -rf '/mnt/INTERNAL/Xplorio Trash'`.
 
 **Fehlende Titel ergänzen:** Hat eine andere Fassung Titel, die in der besten nicht vorkommen (gleicher Künstler und
 Titel, verglichen wie bei den doppelten Titeln; ein abgeschnittener Titel wie „The More You Live, The More Yo“ zählt als

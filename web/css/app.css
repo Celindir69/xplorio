@@ -826,9 +826,8 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .ckDupFill > .ckBtn { margin:calc(2 * var(--vw)) 0 0 auto; }
 .ckDupFillLine { display:flex; align-items:flex-start; gap:calc(2 * var(--vw)); padding:calc(1 * var(--vw)) 0; cursor:pointer; }
 .ckDupFillLine input { flex:none; width:calc(4.4 * var(--vw)); height:calc(4.4 * var(--vw)); margin:0; accent-color:var(--fg); }
+.ckTrashNote { flex:1 1 auto; min-width:0; margin:0; }
 .ckCmdRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1 * var(--vw)) 0; }
-.ckCmd { flex:1 1 auto; min-width:0; font-family:ui-monospace, Menlo, monospace; font-size:calc(2.9 * var(--vw)); padding:calc(1.2 * var(--vw)) calc(2 * var(--vw));
-  background:rgba(var(--fg-rgb),.08); border-radius:calc(1.5 * var(--vw)); overflow-wrap:anywhere; user-select:all; -webkit-user-select:all; }
 .ckMoodCat { margin-top:calc(4 * var(--vw)); }
 .ckMoodLine { font-size:calc(3.2 * var(--vw)); opacity:.8; line-height:1.4; padding:calc(1 * var(--vw)) 0; }
 .ckMoodBar { height:calc(1.2 * var(--vw)); background:rgba(var(--fg-rgb),.12); border-radius:999px; overflow:hidden; margin:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); }
