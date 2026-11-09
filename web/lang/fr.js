@@ -916,6 +916,7 @@ langRegister('fr', 'Français', {
   'tag.cover.suggestions': {one: '{n} résultat – touche pour l\'utiliser', other: '{n} résultats – touche pour en utiliser un'},
   'tag.cover.toFolder': 'Pochette intégrée en folder.jpg',
   'tag.cover.writing': 'Écriture de la pochette…',
+  'tag.cover.writingProgress': 'Écriture de la pochette… partie {done} sur {total}',
   'tag.cover.written': 'Écrit : {parts}',
   'tag.edit': 'Modifier les tags',
   'tag.editArtist': 'Modifier tous les titres de cet artiste',

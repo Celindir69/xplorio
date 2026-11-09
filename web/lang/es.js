@@ -915,6 +915,7 @@ langRegister('es', 'Español', {
   'tag.cover.suggestions': {one: '{n} resultado: toca para usarlo', other: '{n} resultados: toca para usar uno'},
   'tag.cover.toFolder': 'Incrustada como folder.jpg',
   'tag.cover.writing': 'Escribiendo portada…',
+  'tag.cover.writingProgress': 'Escribiendo portada… parte {done} de {total}',
   'tag.cover.written': 'Escrito: {parts}',
   'tag.edit': 'Editar etiquetas',
   'tag.editArtist': 'Editar todas las canciones de este artista',

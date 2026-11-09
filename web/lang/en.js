@@ -917,6 +917,7 @@ langRegister('en', 'English', {
   'tag.cover.suggestions': {one: '{n} result – tap to use', other: '{n} results – tap to use'},
   'tag.cover.toFolder': 'Embedded as folder.jpg',
   'tag.cover.writing': 'Writing cover…',
+  'tag.cover.writingProgress': 'Writing cover… part {done} of {total}',
   'tag.cover.written': 'Wrote {parts}',
   'tag.edit': 'Edit tags',
   'tag.editArtist': 'Edit all of this artist\'s tracks',
