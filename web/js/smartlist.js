@@ -453,16 +453,28 @@ function smartPreview() {
 
 function smartClose() { overlaySmart.classList.remove('on'); smartEd = null; }
 
-/* the plugin's run creates the playlist: ask until it is done, then show the list again */
-function smartWaitBuilt(name, tries) {
-  tries = tries || 0;
+/* the plugin's run creates the playlist: ask until it is done, then show the list again.
+   smartBuild: the build being waited for. Coming back to the window asks again at once (a browser may freeze
+   timers and requests of a hidden window, so the old chain can be stuck); a newer chain makes older ones stop. */
+var smartBuild = null;
+function smartWaitBuilt(name) {
+  smartBuild = {name: name, until: Date.now() + 240000, seq: 0};
+  smartBuildAsk(1500);
+}
+function smartBuildAsk(delay) {
+  var b = smartBuild;
+  if (!b) return;
+  var seq = ++b.seq;
   setTimeout(function(){
+    if (smartBuild !== b || b.seq !== seq) return;
     smartCall({action: 'status'}).then(function(r){
-      if (r.ok && r.running && tries < 120) return smartWaitBuilt(name, tries + 1);
-      showToast(r.ok && r.lastRun && !r.lastRun.ok ? T('sp.err.failed') : T('sp.built', {name: name}));
+      if (smartBuild !== b || b.seq !== seq) return;
+      if (r.ok && r.running && Date.now() < b.until) return smartBuildAsk(2000);
+      smartBuild = null;
+      showToast(r.ok && r.lastRun && !r.lastRun.ok ? T('sp.err.failed') : T('sp.built', {name: b.name}));
       smartListRefresh();
     });
-  }, tries ? 2000 : 1500);
+  }, delay);
 }
 
 function smartListRefresh() {
@@ -498,4 +510,5 @@ else {
   });
 
   document.getElementById('closeSmart').addEventListener('click', smartClose);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && smartBuild) smartBuildAsk(0); });
 }
