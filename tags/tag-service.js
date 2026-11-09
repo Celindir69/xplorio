@@ -1934,9 +1934,11 @@ function doImage(query, res) {
 
 /* POST /cover {uris, image:<base64 JPEG>, embed:bool, folder:bool, overwrite:bool}
    embed: image as front cover into all files; folder: image as folder.jpg into their folders.
-   An existing folder.jpg is only replaced with overwrite (otherwise {ok:false, exists:[folders]}). */
+   An existing folder.jpg is only replaced with overwrite (otherwise {ok:false, exists:[folders]}).
+   batch: pass an ID so that several requests (large albums in parts) are undone together. */
 function doCover(body, cb) {
   var uris = body.uris;
+  if (body.batch !== undefined && !BATCH_RE.test(String(body.batch))) return cb(400, {ok: false, error: 'invalid batch'});
   if (!Array.isArray(uris) || !uris.length || uris.length > MAX_ITEMS) return cb(400, {ok: false, error: 'uris missing or too many'});
   if (typeof body.image !== 'string' || !body.image) return cb(400, {ok: false, error: 'image missing'});
   if (!body.embed && !body.folder) return cb(400, {ok: false, error: 'nothing to do'});
@@ -1950,7 +1952,8 @@ function doCover(body, cb) {
   var exists = dirs.filter(function(d){ return fs.existsSync(path.join(d.full, FOLDER_JPG)); });
   if (exists.length && !body.overwrite) return cb(200, {ok: false, exists: exists.map(function(d){ return d.rel; })});
 
-  var batch = newBatch(), bdir = path.join(COVER_DIR, batch), tmp = path.join(bdir, 'neu.jpg');
+  var batch = body.batch ? String(body.batch) : newBatch(), bdir = path.join(COVER_DIR, batch), tmp = path.join(bdir, 'neu.jpg');
+  var part = newBatch();                                        /* backups of this request: own names, also within a shared batch */
   try { mkdirs(bdir); fs.writeFileSync(tmp, buf); } catch (e) { return cb(500, {ok: false, error: 'backup folder not writable: ' + e.message}); }
 
   var results = bad.map(function(u){ return {uri: u, ok: false, error: 'path not allowed or file missing'}; });
@@ -1961,7 +1964,7 @@ function doCover(body, cb) {
       var lst = null;
       try { lst = fs.lstatSync(target); } catch (e) { /* none yet */ }
       if (lst && !lst.isFile()) throw new Error(FOLDER_JPG + ' is a link or folder');
-      if (lst) { backup = path.join(bdir, 'folder-' + i + '.jpg'); fs.writeFileSync(backup, fs.readFileSync(target)); }
+      if (lst) { backup = path.join(bdir, 'folder-' + part + '-' + i + '.jpg'); fs.writeFileSync(backup, fs.readFileSync(target)); }
       writeFolderJpg(target, buf);
       logEntry({batch: batch, time: new Date().toISOString(), folder: d.rel, cover: {backup: backup}});
       folders.push({dir: d.rel, ok: true});
@@ -1970,7 +1973,7 @@ function doCover(body, cb) {
   if (!body.embed) return finish();
   var i = 0;
   mapSeq(paths, function(p, done){
-    runPy({op: 'cover_set', path: p.full, image: tmp, mime: 'image/jpeg', backup: path.join(bdir, String(i++))}, function(r){
+    runPy({op: 'cover_set', path: p.full, image: tmp, mime: 'image/jpeg', backup: path.join(bdir, part + '-' + (i++))}, function(r){
       r.uri = p.uri;
       if (r.ok && r.changed) {
         changedRel.push(p.rel);

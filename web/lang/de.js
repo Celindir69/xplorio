@@ -915,6 +915,7 @@ langRegister('de', 'Deutsch', {
   'tag.cover.suggestions': {one: '{n} Vorschlag – zum Übernehmen antippen', other: '{n} Vorschläge – zum Übernehmen antippen'},
   'tag.cover.toFolder': 'Eingebettetes als folder.jpg',
   'tag.cover.writing': 'Cover wird geschrieben…',
+  'tag.cover.writingProgress': 'Cover schreiben… Teil {done} von {total}',
   'tag.cover.written': '{parts} geschrieben',
   'tag.edit': 'Tags bearbeiten',
   'tag.editArtist': 'Alle Titel des Künstlers bearbeiten',

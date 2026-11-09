@@ -915,6 +915,7 @@ langRegister('it', 'Italiano', {
   'tag.cover.suggestions': {one: '{n} risultato – tocca per usarlo', other: '{n} risultati – tocca per usarne uno'},
   'tag.cover.toFolder': 'Incorporata come folder.jpg',
   'tag.cover.writing': 'Scrittura copertina…',
+  'tag.cover.writingProgress': 'Scrittura copertina… parte {done} di {total}',
   'tag.cover.written': 'Scritto: {parts}',
   'tag.edit': 'Modifica tag',
   'tag.editArtist': 'Modifica tutti i brani di questo artista',

@@ -229,13 +229,20 @@ function openTagEditor(files, heading, opts) {
   tagBatch = null; tagUndo.style.display = 'none'; tagSave.disabled = true; tagStatus.textContent = '';
   tagMsg(T('tag.loading'), true);
   overlayTags.classList.add('on');
-  tagPost('/read', {uris: files.map(function(f){ return f.uri; })}).then(function(res){
-    if (seq !== artSeq) return;
-    if (!res.ok) { tagMsg(T('tag.error', {error: res.error || T('tag.unknown')})); return; }
-    tagRender(files, res.items);
-  }).catch(function(){
-    if (seq !== artSeq) return;
-    tagMsg(T('tag.serviceDownPort', {port: (window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766}));
+  var uris = files.map(function(f){ return f.uri; }), items = [];
+  tagInChunks(uris, TAG_CHUNK * 2, function(part, done){   /* in parts: the tag service takes at most 500 per request */
+    if (seq !== artSeq) return Promise.reject(new Error('abgebrochen'));
+    if (uris.length > part.length) tagMsg(T('tag.readingProgress', {done: langNum(Math.min(done, uris.length)), total: langNum(uris.length)}), true);
+    return tagPost('/read', {uris: part}).then(function(res){
+      if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+      items = items.concat(res.items);
+    });
+  }).then(function(){
+    if (seq === artSeq) tagRender(files, items);
+  }).catch(function(e){
+    if (seq !== artSeq || e.message === 'abgebrochen') return;
+    tagMsg(e instanceof TypeError ? T('tag.serviceDownPort', {port: (window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766})
+                                  : T('tag.error', {error: e.message}));
   });
 }
 
@@ -617,35 +624,62 @@ function tagCoverSection(good) {
     }).catch(function(){ online.disabled = false; tagStatus.textContent = T('tag.serviceDown'); });
   });
 
+  /* one /cover request; an existing folder.jpg is replaced only after asking -> res, or null when declined */
+  function post(body) {
+    return tagPost('/cover', body).then(function(res){
+      if (res.ok || !res.exists) return res;
+      if (!window.confirm(T('tag.cover.exists', {n: res.exists.length}))) return null;
+      body.overwrite = true;
+      return tagPost('/cover', body);
+    });
+  }
+  /* more than TAG_COVER_PART files: in parts under one batch (one Undo); folder.jpg once, with one file per folder */
+  var TAG_COVER_PART = 100;
   function send(body, done) {
     tagStatus.textContent = T('tag.cover.writing');
     pick.disabled = toFolder.disabled = apply.disabled = true;
-    tagPost('/cover', body).then(function(res){
-      if (!res.ok && res.exists) {
-        var q = T('tag.cover.exists', {n: res.exists.length});
-        if (window.confirm(q)) { body.overwrite = true; return send(body, done); }
-        tagStatus.textContent = T('tag.nothingChanged');
-        pick.disabled = toFolder.disabled = apply.disabled = false;
-        return;
+    var parts = [], files = 0, dirs = 0, errs = [], batch = null, declined = false;
+    if (body.uris.length <= TAG_COVER_PART) parts.push(body);
+    else {
+      batch = Date.now().toString(36);
+      if (body.folder) {
+        var seen = {}, perDir = body.uris.filter(function(u){ var d = u.replace(/\/[^\/]*$/, ''); return seen[d] ? false : (seen[d] = 1); });
+        parts.push({uris: perDir, image: body.image, embed: false, folder: true, batch: batch});
       }
+      if (body.embed) for (var i = 0; i < body.uris.length; i += TAG_COVER_PART)
+        parts.push({uris: body.uris.slice(i, i + TAG_COVER_PART), image: body.image, embed: true, folder: false, batch: batch});
+    }
+    var k = 0;
+    function next() {
+      if (k >= parts.length) return Promise.resolve();
+      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
+      return post(parts[k++]).then(function(res){
+        if (!res) { declined = true; return next(); }          /* folder.jpg kept: go on with embedding */
+        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+        dirs += (res.folders || []).filter(function(f){ return f.ok; }).length;
+        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }), (res.folders || []).filter(function(f){ return !f.ok; }));
+        if (res.batch) batch = batch || res.batch;
+        return next();
+      });
+    }
+    function end() {
       pick.disabled = toFolder.disabled = apply.disabled = false;
-      if (!res.ok) { tagStatus.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); return; }
-      var files = (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
-      var errs = (res.items || []).filter(function(r){ return !r.ok; }).concat((res.folders || []).filter(function(f){ return !f.ok; }));
-      var dirs = (res.folders || []).filter(function(f){ return f.ok; }).length;
-      var parts = [];
-      if (files) parts.push(T('tag.cover.partFiles', {n: files}));
-      if (dirs) parts.push(T('tag.cover.partFolders', {n: dirs}));
-      tagStatus.textContent = (parts.length ? T('tag.cover.written', {parts: parts.join(', ')}) : T('tag.nothingChanged')) +
-        (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0].error}) : '');
-      tagBatch = res.batch;
+      var parts2 = [];
+      if (files) parts2.push(T('tag.cover.partFiles', {n: files}));
+      if (dirs) parts2.push(T('tag.cover.partFolders', {n: dirs}));
+      tagBatch = files || dirs ? batch : null;
       tagUndo.style.display = tagBatch ? '' : 'none';
-      if (done) done();
-      refresh();
-      if (files || dirs) tagRefreshView();
-    }).catch(function(){
-      tagStatus.textContent = T('tag.serviceDown');
-      pick.disabled = toFolder.disabled = apply.disabled = false;
+      if (files || dirs) { if (done) done(); refresh(); tagRefreshView(); }
+      return parts2;
+    }
+    next().then(function(){
+      var p2 = end();
+      tagStatus.textContent = (p2.length ? T('tag.cover.written', {parts: p2.join(', ')}) : T('tag.nothingChanged')) +
+        (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0].error}) : '');
+    }).catch(function(e){
+      end();
+      tagStatus.textContent = e instanceof TypeError ? T('tag.serviceDown') : T('tag.error', {error: e.message});
     });
   }
 
@@ -1134,6 +1168,38 @@ function artistSave() {
   }).then(function(){ tagWriting--; });
 }
 
+/* large album (more than TAG_ALBUM_PARTS tracks): write in parts under one batch (one Undo), then let MPD rescan once */
+var TAG_ALBUM_PARTS = 100;
+function tagSaveParts(items) {
+  var batch = Date.now().toString(36), changed = [], errs = [];
+  tagSave.disabled = true;
+  tagWriting++;
+  tagInChunks(items, TAG_WRITE_CHUNK, function(part, done){
+    tagStatus.textContent = T('tag.savingProgress', {done: langNum(Math.min(done, items.length)), total: langNum(items.length)});
+    return tagPostRetry('/write', {items: part, batch: batch, scan: false}).then(function(res){
+      if (!res.ok) throw new Error(res.error || T('tag.writeFailed'));
+      res.items.forEach(function(r, k){
+        if (!r.ok) errs.push(r.error); else if (r.changed || res.retried) changed.push(part[k].uri);
+      });
+    });
+  }).then(function(){
+    return changed.length ? tagPost('/scan', {uris: changed}).catch(function(){ return {ok: false}; }) : {ok: true};
+  }).then(function(scan){
+    tagBatch = changed.length ? batch : null;
+    tagUndo.style.display = tagBatch ? '' : 'none';
+    tagStatus.textContent = (changed.length ? T('tag.filesChanged', {n: changed.length}) : T('tag.nothingChanged')) +
+      (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0]}) : '') +
+      (changed.length && !(scan && scan.ok && scan.scan !== false) ? T('tag.rescanHint') : '');
+    if (changed.length) tagRefreshView();
+  }).catch(function(e){
+    tagBatch = changed.length ? batch : null;            /* what was already written stays undoable */
+    tagUndo.style.display = tagBatch ? '' : 'none';
+    tagStatus.textContent = (e instanceof TypeError ? T('tag.serviceDown') : T('tag.error', {error: e.message})) +
+      (changed.length ? T('tag.alreadyChanged', {n: changed.length}) : '');
+    if (changed.length) tagPost('/scan', {uris: changed}).catch(function(){});
+  }).then(function(){ tagWriting--; tagSave.disabled = false; });
+}
+
 /* after changes, reload the view as soon as MPD has rescanned the files */
 function tagRefreshView() {
   setTimeout(function(){
@@ -1146,6 +1212,8 @@ function tagRefreshView() {
 
 tagSave.addEventListener('click', function(){
   if (tagMode === 'artist') return artistSave();
+  var all = tagCollect();
+  if (all.length > TAG_ALBUM_PARTS) return tagSaveParts(all);
   tagSave.disabled = true; tagStatus.textContent = T('tag.saving');
   tagPost('/write', {items: tagCollect()}).then(function(res){
     if (!res.ok) { tagStatus.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); tagSave.disabled = false; return; }
