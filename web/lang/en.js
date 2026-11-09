@@ -6,6 +6,7 @@ langRegister('en', 'English', {
   'audio.connected': 'Audio output connected',
   'audio.disconnected': 'Audio output disconnected',
   'audio.unreachable': 'Audio output not reachable',
+  'audio.fileMissing': 'Track not found: {name}',
   'audio.otherInput': 'Amplifier is set to {name}',
   'play.queuedInput': 'Queued · amplifier is set to {name}',
   'browse.albums': 'Albums',

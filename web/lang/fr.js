@@ -5,6 +5,7 @@ langRegister('fr', 'Français', {
   'audio.connected': 'Sortie audio connectée',
   'audio.disconnected': 'Sortie audio déconnectée',
   'audio.unreachable': 'Sortie audio injoignable',
+  'audio.fileMissing': 'Titre introuvable : {name}',
   'audio.otherInput': 'L’amplificateur est sur {name}',
   'play.queuedInput': 'Dans la file d’attente · l’amplificateur est sur {name}',
   'browse.albums': 'Albums',

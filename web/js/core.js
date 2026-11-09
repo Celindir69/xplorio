@@ -80,6 +80,11 @@ function audioErrorText(m) {
     var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* amplifier on another input: say so */
     return inp ? T('audio.otherInput', {name: inp.name}) : T('audio.unreachable');
   }
+  /* music file gone (e.g. deleted or renamed by a sync, MPD's database not yet updated): name the file */
+  if (/no such file|failed to (open|decode)/i.test(s)) {
+    var f = s.match(/\/([^\/]+?\.[a-z0-9]{2,4})\b/i);
+    return T('audio.fileMissing', {name: f ? f[1] : ''}).replace(/:\s*$/, '');
+  }
   return '';
 }
 /* Output device disconnected: Volumio opens a confirmation dialog for it (openModal, title "Kein Audio-Gerät
