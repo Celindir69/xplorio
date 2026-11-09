@@ -882,6 +882,7 @@ langRegister('fr', 'Français', {
   'tag.bulk.set': 'Définir la valeur',
   'tag.bulk.skipped': {one: '{n} titre ne correspond pas au modèle et reste inchangé', other: '{n} titres ne correspondent pas au modèle et restent inchangés'},
   'tag.bulk.split': 'Découper selon un modèle',
+  'tag.bulk.number': 'Renuméroter les pistes (01, 02 …)',
   'tag.bulk.tracks': {one: '{n} titre', other: '{n} titres'},
   'tag.bulk.showUnreadable': 'Quels fichiers et pourquoi ?',
   'tag.bulk.unreadable': {one: ' · {n} fichier illisible', other: ' · {n} fichiers illisibles'},

@@ -179,6 +179,8 @@ mit „Wieder vorschlagen“ zurückholen.
 Zeilen mit mehreren Alben haben einen Aufklapper „▸ n Alben“ mit allen betroffenen Alben (Album · Künstler, Zahl der Titel).
 In der Vorschau der Mehrfachbearbeitung lässt sich jede Änderung ebenso aufklappen: jedes Album hat dort ein Häkchen
 (abgewählte bleiben unverändert), ein Tipp auf den Albumnamen zeigt seine Titel.
+Aus dem Album-Editor geöffnet, bietet die Mehrfachbearbeitung zusätzlich die Aktion „Tracknummern durchnummerieren“:
+alle Titel bekommen in der Reihenfolge des Album-Editors fortlaufende Nummern 01, 02 … (ohne Gesamtzahl).
 
 Der Stift öffnet die Mehrfachbearbeitung mit dem Vorschlag; geschrieben wird erst mit Speichern, Rückgängig geht wie
 gewohnt. Neben jedem Genre-Feld im Tag-Editor steht eine Auswahl „Hauptgenre“ mit den 15 Oberkategorien; eigene Werte

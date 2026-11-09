@@ -883,6 +883,7 @@ langRegister('en', 'English', {
   'tag.bulk.set': 'Set value',
   'tag.bulk.skipped': {one: '{n} track doesn\'t match the pattern and stays unchanged', other: '{n} tracks don\'t match the pattern and stay unchanged'},
   'tag.bulk.split': 'Split by pattern',
+  'tag.bulk.number': 'Renumber tracks (01, 02 …)',
   'tag.bulk.tracks': {one: '{n} track', other: '{n} tracks'},
   'tag.bulk.showUnreadable': 'Which files and why?',
   'tag.bulk.unreadable': {one: ' · {n} file unreadable', other: ' · {n} files unreadable'},
