@@ -580,6 +580,22 @@ function genreOkLoad() {
   if (!genreOk || typeof genreOk !== 'object' || Array.isArray(genreOk)) genreOk = {};
   return genreOk;
 }
+/* Patterns of "Split by pattern" that were saved with (bulk editor): GET /patterns -> {ok, patterns: [newest first]};
+   POST /patterns {pattern} puts it first (patterns.json, at most PATTERNS_MAX) */
+var PATTERNS_FILE = path.join(DATA_DIR, 'patterns.json'), PATTERNS_MAX = 20;
+function patternsLoad() {
+  try { var l = JSON.parse(fs.readFileSync(PATTERNS_FILE, 'utf8')); return Array.isArray(l) ? l.filter(function(x){ return typeof x === 'string'; }) : []; }
+  catch (e) { return []; }
+}
+function doPatterns(body, cb) {
+  var pat = body && typeof body.pattern === 'string' ? body.pattern.trim() : '';
+  if (!pat || pat.length > 300 || !/%[a-zA-Z]+%/.test(pat)) return cb(400, {ok: false, error: 'pattern missing'});
+  var list = [pat].concat(patternsLoad().filter(function(x){ return x !== pat; })).slice(0, PATTERNS_MAX);
+  try { writeAtomic(PATTERNS_FILE, JSON.stringify(list)); }
+  catch (e) { return cb(500, {ok: false, error: e.message}); }
+  cb(200, {ok: true, patterns: list});
+}
+
 function doGenreOk(body, cb) {
   var dir = body && body.dir, tag = body && body.tag;
   if (typeof dir !== 'string' || !dir || dir.length > 1000 || typeof tag !== 'string' || tag.length > 300) return cb(400, {ok: false, error: 'dir or tag missing'});
@@ -2362,6 +2378,7 @@ function handle(req, res) {
   if (req.method === 'GET' && ['/genrelist', '/genrealbums', '/albumgenre', '/versions', '/decades', '/decadealbums', '/yearalbums', '/decadeprofile'].indexOf(route) >= 0)
     return doGenreLib(route, url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/tracknums') return doTrackNums(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/patterns') return send(res, 200, {ok: true, patterns: patternsLoad()});
   if (req.method === 'GET' && route === '/genres')  return doGenres(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/stationlogo') return doStationLogo(url.parse(req.url, true).query, res);
@@ -2390,7 +2407,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -2398,7 +2415,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

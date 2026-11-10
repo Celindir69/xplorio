@@ -936,6 +936,8 @@ langRegister('it', 'Italiano', {
   'tag.bulk.patternError': 'Schema: {error}',
   'tag.bulk.patternHint': 'Il contenuto del campo selezionato viene suddiviso. Segnaposto: %TITLE% %ARTIST% %ALBUM% %ALBUMARTIST% %GENRE% %COMPOSER% %YEAR% %TRACK% %DISC%, più %DUMMY% per il testo da scartare.',
   'tag.bulk.pathHint': 'Del percorso contano solo tante cartelle dalla fine quante sono le «/» del modello, p. es. %ARTIST%/%ALBUM%/%TRACK% %TITLE%; l’estensione viene ignorata.',
+  'tag.bulk.patterns': 'Salvati',
+  'tag.bulk.patternsHint': 'Modelli già usati per salvare; il proprio modello si aggiunge dopo il salvataggio',
   'tag.bulk.preview': 'Anteprima',
   'tag.bulk.repl': 'Sostituisci con',
   'tag.bulk.replPh': 'sostituisci con',

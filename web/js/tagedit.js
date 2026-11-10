@@ -950,7 +950,7 @@ function artistRender() {
   ui.repl.placeholder = T('tag.bulk.replPh');
   var genreMenu = tagGenreMenu(ui.value);
   var fValue = tagField(T('tag.bulk.value'), ui.value, genreMenu), fFind = tagField(T('tag.bulk.find'), ui.find), fRepl = tagField(T('tag.bulk.repl'), ui.repl);
-  var fPattern = tagField(T('tag.bulk.pattern'), ui.pattern);
+  var fPattern = tagField(T('tag.bulk.pattern'), ui.pattern, tagPatternMenu(ui.pattern));
   var hint = document.createElement('div');
   hint.className = 'tagHint';
   hint.textContent = T('tag.bulk.patternHint');
@@ -996,6 +996,37 @@ function artistRender() {
     artPreset = null;
     if (ui.value.value) artistPreview(); else ui.value.focus();
   }
+}
+
+/* patterns saved with before (tag service GET/POST /patterns), as a menu next to the pattern field like "Main genre";
+   own input is always possible and is remembered after saving */
+var tagPatterns = null;
+function tagPatternMenu(input) {
+  var sel = document.createElement('select');
+  sel.className = 'tagAa tagGenre';
+  sel.title = T('tag.bulk.patternsHint');
+  function fill(list) {
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    [''].concat(list).forEach(function(p){
+      var o = document.createElement('option'); o.value = p; o.textContent = p || T('tag.bulk.patterns'); sel.appendChild(o);
+    });
+    sel.disabled = !list.length;
+  }
+  fill(tagPatterns || []);
+  tagGetJson('/patterns').then(function(r){ if (r && r.ok) { tagPatterns = r.patterns; fill(tagPatterns); } }).catch(function(){});
+  sel.addEventListener('click', function(e){ e.stopPropagation(); });
+  sel.addEventListener('change', function(){
+    var p = sel.value;
+    sel.value = '';
+    if (!p) return;
+    input.value = p;
+    input.dispatchEvent(new Event('input'));
+  });
+  return sel;
+}
+function tagPatternRemember(pat) {
+  if (!pat) return;
+  tagPost('/patterns', {pattern: pat}).then(function(r){ if (r && r.ok) tagPatterns = r.patterns; }).catch(function(){});
 }
 
 /* new value of a field after the chosen action */
@@ -1187,6 +1218,7 @@ function artistSave() {
   var items = artistSelected();
   if (!items.length) return;
   var batch = Date.now().toString(36), changed = [], errs = [];
+  var pat = artUi.action.value === 'split' ? artUi.pattern.value.trim() : '';   /* remembered once something was written */
   tagSave.disabled = true; artUi.preview.disabled = true;
   tagWriting++;
   tagInChunks(items, TAG_WRITE_CHUNK, function(part, done){
@@ -1206,6 +1238,7 @@ function artistSave() {
   }).then(function(scan){
     tagBatch = changed.length ? batch : null;
     tagUndo.style.display = tagBatch ? '' : 'none';
+    if (changed.length) tagPatternRemember(pat);
     artistRender();
     tagStatus.textContent = (changed.length ? T('tag.filesChanged', {n: changed.length}) : T('tag.nothingChanged')) +
       (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0]}) : '') +

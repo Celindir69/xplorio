@@ -936,6 +936,8 @@ langRegister('es', 'Español', {
   'tag.bulk.patternError': 'Patrón: {error}',
   'tag.bulk.patternHint': 'Se divide el contenido del campo seleccionado. Marcadores: %TITLE% %ARTIST% %ALBUM% %ALBUMARTIST% %GENRE% %COMPOSER% %YEAR% %TRACK% %DISC%, además de %DUMMY% para el texto que se descarta.',
   'tag.bulk.pathHint': 'De la ruta solo cuentan tantas carpetas desde el final como «/» tenga el patrón, p. ej. %ARTIST%/%ALBUM%/%TRACK% %TITLE%; la extensión se omite.',
+  'tag.bulk.patterns': 'Guardados',
+  'tag.bulk.patternsHint': 'Patrones ya usados al guardar; tu propio patrón se añade tras guardar',
   'tag.bulk.preview': 'Vista previa',
   'tag.bulk.repl': 'Reemplazar por',
   'tag.bulk.replPh': 'reemplazar por',
