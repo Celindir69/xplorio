@@ -156,6 +156,14 @@ und löscht die dabei gespeicherten Dateien. Wichtig bei **DSF**: Das MPD von Vo
 Tags, wenn der Tag-Block größer als 1 MB ist. Ein großes eingebettetes Cover reicht dafür; solche Alben erscheinen dann
 ohne Künstler, Album und Genre. Nach dem Entfernen liest MPD die Tags beim Neueinlesen.
 
+### Compilations
+Zeigt der Album-Editor mehrere Titel, gibt es unter den gemeinsamen Feldern den Haken **„Compilation“**. Er ist gesetzt,
+wenn ein Titel schon das Compilation-Tag hat (m4a `cpil`, MP3/DSF `TCMP`, FLAC `COMPILATION`) oder die Titel verschiedene
+Künstler haben. Mit Haken zeigt die Titelliste pro Titel **Nr. · Titel · Künstler** mit eigenem Aa-Menü für die
+Künstlerspalte; das gemeinsame Feld „Künstler“ entfällt. Wird der Haken gesetzt und ist „Album-Künstler“ leer, steht dort
+„Various Artists“. Speichern schreibt das Compilation-Tag so, wie der Haken steht, in alle Titel (mit Rückgängig).
+MPD 0.20 wertet das Tag nicht aus; andere Player wie die Musik-App oder Roon schon.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,

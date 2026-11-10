@@ -266,8 +266,10 @@ function tagRender(files, items) {
     tagCommon[fd[0]] = {input: inp, mixed: !same};
     var aa = fd[0] === 'date' || fd[0] === 'disc' ? null : fd[0] === 'comment' ? tagNoMixButton(tagCommon.comment) : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
     if (fd[0] === 'genre') { var both = document.createDocumentFragment(); both.appendChild(tagGenreMenu(inp)); both.appendChild(aa); aa = both; }
-    tagBody.appendChild(tagField(fd[1], inp, aa));
+    tagCommon[fd[0]].field = tagBody.appendChild(tagField(fd[1], inp, aa));
   });
+  tagCompil = null;
+  if (good.length > 1) tagBody.appendChild(tagCompilationBox(good));
 
   if (good.length > 1) {                                /* pattern, replace etc. for the whole album */
     var bulk = document.createElement('button');
@@ -283,9 +285,18 @@ function tagRender(files, items) {
   var hl = document.createElement('span');
   hl.textContent = good.length > 1 ? T('tag.tracks') : T('tag.titleAndNumber');
   h.appendChild(hl);
-  h.appendChild(tagAaMenu(function(fn){                  /* to all tracks of the album */
+  var menus = document.createElement('div');
+  menus.className = 'tagAaPair';
+  menus.appendChild(tagAaMenu(function(fn){              /* to all tracks of the album */
     tagFiles.forEach(function(f){ if (f.titleIn) tagApplyFn(f.titleIn, fn); });
   }, T('tag.textFnAll')));
+  if (tagCompil) {                                       /* compilation: the artist column has its own menu */
+    tagCompil.label = hl; tagCompil.labelOff = hl.textContent;
+    tagCompil.aa = menus.appendChild(tagAaMenu(function(fn){
+      tagFiles.forEach(function(f){ if (f.artistIn) tagApplyFn(f.artistIn, fn); });
+    }, T('tag.textFnArtists')));
+  }
+  h.appendChild(menus);
   tagBody.appendChild(h);
   tagFiles.forEach(function(f){
     var row = document.createElement('div');
@@ -297,11 +308,48 @@ function tagRender(files, items) {
       f.trackIn = tagInput(f.tags.track, 'tagNum');
       f.titleIn = tagInput(f.tags.title, 'tagTit');
       row.appendChild(f.trackIn); row.appendChild(f.titleIn);
+      if (tagCompil) {
+        f.artistIn = tagInput(f.tags.artist, 'tagArt');
+        f.artistIn.placeholder = T('tag.field.artist');
+        row.appendChild(f.artistIn);
+      }
     }
     tagBody.appendChild(row);
   });
   if (tagMoveDirs && tagMoveDirs.length) tagBody.appendChild(tagMoveSection(tagMoveDirs));
+  tagCompilShow();
   tagSave.disabled = false;
+}
+
+/* "Compilation" in the album editor: the compilation tag (m4a cpil, ID3 TCMP, Vorbis COMPILATION) for all tracks.
+   Ticked, the track list shows the artist per track and the common artist field goes. Ticked from the start
+   when a track has the tag or the tracks have different artists; saving then writes the tag as shown. */
+var tagCompil = null;     /* {box, aa} while the album editor shows several tracks */
+function tagCompilationBox(good) {
+  var artists = good.map(function(f){ return f.tags.artist || ''; });
+  var l = document.createElement('label'), c = document.createElement('input');
+  l.className = 'tagCompil'; l.title = T('tag.compilationHint');
+  c.type = 'checkbox';
+  c.checked = good.some(function(f){ return f.tags.compilation === '1'; }) ||
+              artists.some(function(a){ return a !== artists[0]; });
+  l.appendChild(c); l.appendChild(document.createTextNode(' ' + T('tag.compilation')));
+  tagCompil = {box: c, aa: null};
+  c.addEventListener('change', function(){
+    var aa = tagCommon.albumartist;                      /* empty album artist: suggest "Various Artists" */
+    if (c.checked && aa && !aa.mixed && !aa.input.value.trim()) {
+      aa.input.value = 'Various Artists'; aa.input.setAttribute('data-dirty', '1');
+    }
+    tagCompilShow();
+  });
+  return l;
+}
+function tagCompilShow() {
+  var on = !!(tagCompil && tagCompil.box.checked);
+  tagBody.classList.toggle('tagCompilOn', on);
+  if (tagCommon.artist && tagCommon.artist.field) tagCommon.artist.field.style.display = on ? 'none' : '';
+  if (tagCompil && tagCompil.aa) tagCompil.aa.style.display = on ? '' : 'none';
+  if (tagCompil && tagCompil.label) tagCompil.label.textContent = on ? T('tag.tracksArtists') : tagCompil.labelOff;
+  tagFiles.forEach(function(f){ if (f.artistIn) f.artistIn.style.display = on ? '' : 'none'; });
 }
 
 /* the album folder of these files (disc folders such as "CD2": their parent, as albums.albumDir in the tag service);
@@ -368,9 +416,12 @@ function tagCollect() {
     if (c.mixed && v === '') return;            /* do not accidentally clear "(various)" */
     common[k] = v;
   });
+  var compil = tagCompil ? (tagCompil.box.checked ? '1' : '') : null;
   return tagFiles.filter(function(f){ return f.ok; }).map(function(f){
     var t = {title: f.titleIn.value, track: f.trackIn.value};
     Object.keys(common).forEach(function(k){ t[k] = common[k]; });
+    if (compil !== null) t.compilation = compil;
+    if (compil && f.artistIn) t.artist = f.artistIn.value;   /* compilation: the artist of each track */
     if (nm && common.comment === undefined) t.comment = noMixAdd(f.tags.comment);   /* different comments: each keeps its own */
     return {uri: f.uri, tags: t};
   });

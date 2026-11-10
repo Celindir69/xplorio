@@ -42,7 +42,7 @@ import mutagen  # noqa: E402
 from mutagen.dsf import DSF  # noqa: E402
 from mutagen.flac import FLAC  # noqa: E402
 from mutagen.flac import Picture  # noqa: E402
-from mutagen.id3 import (APIC, COMM, TALB, TCOM, TCON, TDRC, TIT2, TPE1, TPE2,  # noqa: E402
+from mutagen.id3 import (APIC, COMM, TALB, TCMP, TCOM, TCON, TDRC, TIT2, TPE1, TPE2,  # noqa: E402
                          TPOS, TRCK)
 from mutagen.mp3 import MP3  # noqa: E402
 from mutagen.mp4 import MP4, MP4Cover  # noqa: E402
@@ -50,15 +50,17 @@ from mutagen.mp4 import MP4, MP4Cover  # noqa: E402
 PY2 = sys.version_info[0] == 2
 text_type = unicode if PY2 else str  # noqa: F821
 
-FIELDS = ['title', 'artist', 'album', 'albumartist', 'genre', 'date', 'composer', 'track', 'disc', 'comment']
+FIELDS = ['title', 'artist', 'album', 'albumartist', 'genre', 'date', 'composer', 'track', 'disc', 'comment',
+          'compilation']
+# compilation: u'1' when set, u'' otherwise (m4a cpil, ID3 TCMP, Vorbis COMPILATION)
 
 MP4_KEYS = {'title': '\xa9nam', 'artist': '\xa9ART', 'album': '\xa9alb', 'albumartist': 'aART',
             'genre': '\xa9gen', 'date': '\xa9day', 'composer': '\xa9wrt', 'comment': '\xa9cmt'}
 FLAC_KEYS = {'title': 'title', 'artist': 'artist', 'album': 'album', 'albumartist': 'albumartist',
              'genre': 'genre', 'date': 'date', 'composer': 'composer',
-             'track': 'tracknumber', 'disc': 'discnumber', 'comment': 'comment'}
+             'track': 'tracknumber', 'disc': 'discnumber', 'comment': 'comment', 'compilation': 'compilation'}
 ID3_FRAMES = {'title': TIT2, 'artist': TPE1, 'album': TALB, 'albumartist': TPE2,
-              'genre': TCON, 'date': TDRC, 'composer': TCOM, 'track': TRCK, 'disc': TPOS}
+              'genre': TCON, 'date': TDRC, 'composer': TCOM, 'track': TRCK, 'disc': TPOS, 'compilation': TCMP}
 
 SEP = u'; '
 
@@ -141,6 +143,8 @@ def read_tags(audio, kind):
             out['track'] = num_pair(tags['trkn'][0])
         if 'disk' in tags and tags['disk']:
             out['disc'] = num_pair(tags['disk'][0])
+        if tags.get('cpil'):
+            out['compilation'] = u'1'
     elif kind == 'flac':
         for f, k in FLAC_KEYS.items():
             if k in tags:
@@ -153,7 +157,13 @@ def read_tags(audio, kind):
         com = id3_comments(tags)
         if com:
             out['comment'] = join(com[0].text)
+    out['compilation'] = flag(out['compilation'])
     return out
+
+
+def flag(v):
+    """compilation value -> u'1' or u'' ('1', 'true', 'yes' count as set; '0' or empty not)"""
+    return u'1' if txt(v).strip().lower() in (u'1', u'true', u'yes') else u''
 
 
 def gain_of(v):
@@ -208,8 +218,15 @@ def write_tags(audio, kind, new):
     tags = audio.tags
     for f, v in new.items():
         v = txt(v).strip()
+        if f == 'compilation':
+            v = flag(v)
         if kind == 'm4a':
-            if f in ('track', 'disc'):
+            if f == 'compilation':
+                if v:
+                    tags['cpil'] = True
+                elif 'cpil' in tags:
+                    del tags['cpil']
+            elif f in ('track', 'disc'):
                 k = 'trkn' if f == 'track' else 'disk'
                 if v:
                     tags[k] = [parse_pair(v)]
@@ -476,7 +493,8 @@ def run_job(job):
         if op == 'read':
             return {'ok': True, 'format': kind, 'tags': before}
         new = dict((f, v) for f, v in (job.get('tags') or {}).items() if f in FIELDS and plain(v))
-        new = dict((f, v) for f, v in new.items() if txt(v).strip() != before[f])
+        new = dict((f, v) for f, v in new.items()
+                   if (flag(v) if f == 'compilation' else txt(v).strip()) != before[f])
         if not new:
             return {'ok': True, 'changed': False, 'before': {}, 'after': {}}
         write_tags(audio, kind, new)
