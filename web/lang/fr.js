@@ -934,6 +934,7 @@ langRegister('fr', 'Français', {
   'tag.bulk.skipped': {one: '{n} titre ne correspond pas au modèle et reste inchangé', other: '{n} titres ne correspondent pas au modèle et restent inchangés'},
   'tag.bulk.split': 'Découper selon un modèle',
   'tag.bulk.number': 'Renuméroter (01, 02 …)',
+  'tag.bulk.numberRandom': 'Renuméroter au hasard (01 … nombre)',
   'tag.bulk.fieldTrack': 'Numéro de piste',
   'tag.bulk.tracks': {one: '{n} titre', other: '{n} titres'},
   'tag.bulk.showUnreadable': 'Quels fichiers et pourquoi ?',

@@ -184,6 +184,8 @@ In der Vorschau der Mehrfachbearbeitung lässt sich jede Änderung ebenso aufkla
 (abgewählte bleiben unverändert), ein Tipp auf den Albumnamen zeigt seine Titel.
 Aus dem Album-Editor geöffnet, bietet die Mehrfachbearbeitung zusätzlich das Feld „Tracknummer“ mit der Aktion „Durchnummerieren“:
 alle Titel bekommen in der Reihenfolge des Album-Editors fortlaufende Nummern 01, 02 … (ohne Gesamtzahl).
+„Durchnummerieren zufällig“ vergibt dieselben Nummern 01 bis zur Anzahl der Titel in zufälliger Reihenfolge, z. B. für
+einen Ordner mit gesammelten Einzeltiteln, der sonst immer alphabetisch spielt. Jede Vorschau würfelt neu.
 
 Der Stift öffnet die Mehrfachbearbeitung mit dem Vorschlag; geschrieben wird erst mit Speichern, Rückgängig geht wie
 gewohnt. Neben jedem Genre-Feld im Tag-Editor steht eine Auswahl „Hauptgenre“ mit den 15 Oberkategorien; eigene Werte
