@@ -262,6 +262,34 @@ Albumkünstler aller betroffenen Titel (mit Rückgängig), „Ignorieren“ beh�
 erscheint nicht noch einmal unter „Künstler in mehreren Schreibweisen“. Ergebnisse liegen in `artistnames.jsonl`; Namen
 ohne Treffer werden nach 90 Tagen erneut gesucht. Abschalten mit `ARTISTNAMES: false` in `config.local.js`.
 
+### Dateimanager
+
+Menü → Dateimanager: zwei Spalten mit den Ordnern unter INTERNAL, USB und NAS, um zur Not in die Ablage einzugreifen,
+z. B. einzelne Titel aus verschiedenen Alben in eigene Ordner zu sortieren. Er ist mit dem Passwort für die Dienste
+geschützt (siehe System → Dienste); ohne gesetztes Passwort öffnet er sich nicht, und der Tag-Dienst lehnt jeden Zugriff ab.
+Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fragt der Dateimanager einmal nach dem Passwort.
+
+- **Auswählen:** Häkchen vor Dateien und Ordnern; ein Tipp auf eine Datei hakt sie an, ein Tipp auf einen Ordner öffnet ihn.
+  Ausgewählt wird immer nur in einer Spalte, die andere ist das Ziel.
+- **Kopieren, Verschieben:** Die Knöpfe unten wirken auf den Ordner, der in der anderen Spalte offen ist. Am Computer geht es
+  auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
+  ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.
+- **Neuer Ordner:** das Ordnersymbol mit Plus oben in jeder Spalte.
+- **Papierkorb, leere Ordner:** Der Mülleimer legt die Auswahl in `Xplorio Trash` ihres Laufwerks (zurücklegen über den
+  Papierkorb). „Leere Ordner löschen“ erscheint, wenn nur Ordner ausgewählt sind; gelöscht wird nur, was leer ist
+  (`.DS_Store` und `._`-Dateien vom Mac zählen nicht).
+
+Regeln: Es wird nichts überschrieben; gibt es einen Namen im Ziel schon, bekommt die Kopie „(2)“, „(3)“ usw. Verschieben
+innerhalb eines Laufwerks ist ein Umbenennen und sofort fertig. Zwischen Laufwerken (z. B. USB → NAS) wird zuerst kopiert,
+jede Datei auf ihre Größe geprüft, und erst danach kommt das Original in den Papierkorb seines Laufwerks; bricht die
+Verbindung ab, fehlt also nichts. Kopiert wird im Hintergrund mit niedriger Festplatten-Priorität (`ionice`), immer nur ein
+Auftrag zugleich, mit Fortschritt und „Abbrechen“ (hält nach der aktuellen Datei an). `Xplorio Trash` und versteckte Dateien
+zeigt der Dateimanager nicht, Verknüpfungen, die aus dem Laufwerk herausführen, auch nicht.
+
+Danach liest MPD genau die betroffenen Ordner neu ein. Beim Verschieben ziehen Bewertungen, NoMix-Markierungen, die
+„Behalten“-Markierungen der Bibliotheksprüfung und der Verlauf mit an den neuen Ort. Volumio-Playlisten und
+Favoriten merken sich dagegen den alten Pfad: Verschobene Titel fehlen dort und müssen neu hinzugefügt werden.
+
 ### Webradio: Cover und Senderlogos
 Sendet ein Webradio „Künstler - Titel“, sucht der Tag-Dienst das Cover dazu bei iTunes (sonst Deezer) und zeigt es in der
 App; ohne Titel oder ohne Treffer bleibt das Senderlogo. Die Radio-Liste zeigt die Senderlogos

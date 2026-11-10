@@ -22,6 +22,8 @@ function closeAllOverlays() {
   if (osy) osy.classList.remove('on');
   var otr = document.getElementById('overlayTrash');
   if (otr) otr.classList.remove('on');
+  var ofl = document.getElementById('overlayFiles');
+  if (ofl) ofl.classList.remove('on');
   var opb = document.getElementById('overlayPlayback');
   if (opb) opb.classList.remove('on');
   var ohl = document.getElementById('overlayHelp');

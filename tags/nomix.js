@@ -30,6 +30,16 @@ Store.prototype.noteComment = function(file, comment) {
   return true;
 };
 
+/* after files or folders were moved: rename(obj) renames the path keys (fileops.moveObjectKeys) -> number changed */
+Store.prototype.relocate = function(rename) {
+  var n = rename(this.load().files);
+  if (!n) return 0;
+  this.rev++;
+  try { fs.writeFileSync(this.file + '.neu', JSON.stringify(this.data)); fs.renameSync(this.file + '.neu', this.file); }
+  catch (e) { console.log('nomix.json: ' + e.message); }
+  return n;
+};
+
 /* files excluded from mixes: {file: true}; disliked: ratings' "don't like" {file: true};
    tracks [[artist, title, file, sec., album], …] with audioOf(artist, title, album) -> analysis entry (field nomix) */
 Store.prototype.excluded = function(disliked, tracks, audioOf) {

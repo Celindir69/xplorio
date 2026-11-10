@@ -792,6 +792,56 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .trFile .trBtns { flex:0 0 auto; padding-top:0; }
 .trFile .sTitle { font-size:calc(3.6 * var(--vw)); white-space:normal; overflow-wrap:anywhere; }
 
+/* ---------- Dateimanager (files.js) ---------- */
+#overlayFiles .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
+#filesBack { cursor:pointer; opacity:.7; display:flex; }
+#filesBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
+#filesBody { padding:0 calc(5 * var(--vw)) calc(6 * var(--vw)); container-type:inline-size; }
+.fmLogin { padding-top:calc(2 * var(--vw)); }
+.fmLoginRow { display:flex; gap:calc(2 * var(--vw)); align-items:center; margin:calc(2 * var(--vw)) 0; }
+.fmLoginRow .tagIn { flex:1 1 auto; min-width:0; }
+.fmPanes { display:flex; flex-direction:column; gap:calc(3 * var(--vw)); margin-top:calc(2 * var(--vw)); }
+@container (min-width: 620px) { .fmPanes { flex-direction:row; } .fmPane { flex:1 1 0; } .fmList { height:min(58vh, 640px); } }
+.fmPane { min-width:0; display:flex; flex-direction:column; border:1px solid rgba(var(--fg-rgb),.15);
+  border-radius:calc(2 * var(--vw)); overflow:hidden; }
+.fmPane.fmActive { border-color:rgba(var(--fg-rgb),.45); }
+.fmHead { display:flex; align-items:center; gap:calc(1.5 * var(--vw)); padding:calc(1.5 * var(--vw));
+  background:rgba(var(--fg-rgb),.06); border-bottom:1px solid rgba(var(--fg-rgb),.12); }
+.fmTool { flex:0 0 auto; background:none; border:0; padding:calc(1 * var(--vw)); cursor:pointer; display:flex; border-radius:6px; }
+.fmTool svg { width:calc(5.5 * var(--vw)); height:calc(5.5 * var(--vw)); min-width:20px; min-height:20px; fill:var(--fg); opacity:.75; }
+.fmTool:disabled { cursor:default; opacity:.3; }
+.fmCrumbs { flex:1 1 auto; min-width:0; overflow-x:auto; white-space:nowrap; font-size:calc(3.4 * var(--vw)); scrollbar-width:none; }
+.fmCrumbs::-webkit-scrollbar { display:none; }
+.fmCrumb { cursor:pointer; opacity:.75; }
+.fmCrumb:last-child { opacity:1; font-weight:600; }
+.fmSep { opacity:.4; margin:0 .35em; }
+.fmList { height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:calc(1 * var(--vw)) 0; }
+.fmRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1.6 * var(--vw)) calc(2 * var(--vw));
+  cursor:pointer; user-select:none; -webkit-user-select:none; border-radius:6px; margin:0 calc(1 * var(--vw)); }
+.fmRow:hover { background:rgba(var(--fg-rgb),.06); }
+.fmRow.fmSel { background:rgba(var(--fg-rgb),.14); }
+.fmRow.fmDragging { opacity:.45; }
+.fmDrop, .fmRow.fmDrop { outline:2px solid var(--accent, #4a90e2); outline-offset:-2px; background:rgba(var(--fg-rgb),.1); }
+.fmCheck { flex:0 0 auto; width:18px; height:18px; margin:0; cursor:pointer; }
+.fmIcon { flex:0 0 auto; display:flex; }
+.fmIcon svg { width:calc(5.5 * var(--vw)); height:calc(5.5 * var(--vw)); min-width:20px; min-height:20px; fill:var(--fg); opacity:.6; }
+.fm-dir .fmIcon svg, .fm-drive .fmIcon svg { opacity:.85; }
+.fmName { flex:1 1 auto; min-width:0; font-size:calc(3.5 * var(--vw)); overflow-wrap:anywhere; }
+.fmSize { flex:0 0 auto; font-size:calc(3 * var(--vw)); opacity:.55; font-variant-numeric:tabular-nums; }
+.fmEmpty { padding:calc(3 * var(--vw)); }
+.fmBar { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:calc(2 * var(--vw));
+  padding:calc(2.5 * var(--vw)) 0; margin-top:calc(2 * var(--vw)); background:var(--sheet); }
+.fmBarInfo { flex:1 1 100%; font-size:calc(3.3 * var(--vw)); opacity:.75; }
+.fmBar .ckBtn:disabled { opacity:.4; cursor:default; }
+.fmBar .trDel { margin-left:auto; }
+.fmJob { margin-top:calc(2 * var(--vw)); padding:calc(2.5 * var(--vw)); border-radius:calc(2 * var(--vw)); background:rgba(var(--fg-rgb),.07);
+  display:flex; flex-direction:column; gap:calc(1.5 * var(--vw)); align-items:flex-start; }
+.fmJobText { font-size:calc(3.5 * var(--vw)); }
+.fmProg { align-self:stretch; height:6px; border-radius:3px; background:rgba(var(--fg-rgb),.15); overflow:hidden; }
+.fmProgFill { height:100%; background:var(--fg); opacity:.7; transition:width .4s; }
+.fmCur { overflow-wrap:anywhere; white-space:normal; }
+.fmMsg { padding:calc(1.5 * var(--vw)) 0 0; }
+
 /* ---------- Library check ---------- */
 #overlayCheck .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 #checkBack { cursor:pointer; opacity:.7; display:flex; }

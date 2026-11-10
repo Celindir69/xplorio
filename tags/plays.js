@@ -63,6 +63,22 @@ Store.prototype.add = function(entries) {
   return ok;
 };
 
+/* after files or folders were moved: the uri of the plays follows (album history, "last played" of an album).
+   moveUri(u) -> new uri or null. The file is rewritten line by line (order and unreadable lines stay) -> number changed */
+Store.prototype.relocate = function(moveUri) {
+  var lines = [], n = 0;
+  jsonl.eachLine(this.file, function(line){
+    var e = jsonl.parse(line), nu = e && e.u ? moveUri(e.u) : null;
+    if (nu !== null && nu !== e.u) { e.u = nu; n++; lines.push(JSON.stringify(e)); } else lines.push(line);
+  });
+  if (!n) return 0;
+  var tmp = this.file + '.neu';
+  fs.writeFileSync(tmp, lines.join('\n') + '\n');
+  fs.renameSync(tmp, this.file);
+  (this.list || []).forEach(function(e){ var nu = e.u ? moveUri(e.u) : null; if (nu !== null) e.u = nu; });
+  return n;
+};
+
 /* only the entries not yet in the history (same track within 5 min) */
 Store.prototype.fresh = function(entries) {
   var idx = this.idx, seen = {};
