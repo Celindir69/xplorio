@@ -14,6 +14,7 @@ var CHECK_CATS = [
   {key: 'artistFix', name: T('check.cat.artistFix'), hint: T('check.cat.artistFixHint')},
   {key: 'spelling', name: T('check.cat.spelling'), hint: T('check.cat.spellingHint')},
   {key: 'duplicates', name: T('check.cat.duplicates'), hint: T('check.cat.duplicatesHint')},
+  {key: 'splitAlbums', name: T('check.cat.splitAlbums'), hint: T('check.cat.splitAlbumsHint')},
   {key: 'dupTracks', name: T('check.cat.dupTracks'), hint: T('check.cat.dupTracksHint')},
   {key: 'mixedQuality', name: T('check.cat.mixedQuality'), hint: T('check.cat.mixedQualityHint')},
   {key: 'albumName', name: T('check.cat.albumName'), hint: T('check.cat.albumNameHint')},
@@ -25,7 +26,7 @@ var CHECK_CATS = [
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
-var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1};   /* categories with "Keep" */
+var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, splitAlbums: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -301,6 +302,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'spelling') box.insertBefore(checkSpellingRow(list[shown], false), moreRow);
       else if (cat.key === 'mixedQuality') checkQualityRows(list[shown], false).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
+      else if (cat.key === 'splitAlbums') checkSplitRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
     }
@@ -323,6 +325,7 @@ function checkKeepOf(cat, it) {
   if (cat === 'genreMerge') return {k: 'merge|' + it.from + '|' + it.genre, v: it.genre};
   if (cat === 'genreMissing') return {k: 'missing|' + it.dir, v: ''};            /* stays without a genre */
   if (cat === 'duplicates') return {k: 'dupk|' + checkDupDirs(it), v: ''};      /* all versions stay; a new version shows it again */
+  if (cat === 'splitAlbums') return {k: 'split|' + checkDupDirs(it), v: ''};    /* folders stay apart; another folder shows it again */
   if (cat === 'year') return {k: 'year|' + it.dir, v: checkValuesKey(it.years)};  /* as long as the album keeps these years */
   if (cat === 'albumName') return {k: 'albumname|' + it.dir, v: checkValuesKey(it.names)};
   if (cat === 'mixedQuality') return {k: 'quality|' + it.dir, v: checkValuesKey(it.formats)};   /* as long as the formats stay */
@@ -438,6 +441,7 @@ function checkKeptSection(box, cat) {
   list.style.display = checkOkOpen[cat] ? '' : 'none';
   kept.forEach(function(it){
     if (cat === 'duplicates') return checkDupRows(it, true).forEach(function(el){ list.appendChild(el); });
+    if (cat === 'splitAlbums') return checkSplitRows(it, true).forEach(function(el){ list.appendChild(el); });
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
     if (cat === 'mixedQuality') return checkQualityRows(it, true).forEach(function(el){ list.appendChild(el); });
@@ -800,6 +804,51 @@ function checkDupRows(g, kept) {
     row.appendChild(btn);
     rows.push(row);
     if (v.keep && g.missing) rows.push(checkDupFillRow(g));
+  });
+  return rows;
+}
+
+/* album split over folders (libcheck.splitAlbum): head with "Keep", one line per folder; the first has the most tracks
+   (target). "File manager" opens the Dateimanager with that folder on the left and the target on the right; back goes
+   to the check */
+function checkSplitRows(g, kept) {
+  var head = document.createElement('div'); head.className = 'ckDupHead ckDupTrHead';
+  head.appendChild(document.createTextNode(g.name + (g.artist ? ' · ' + g.artist : '')));
+  var keep = document.createElement('button'); keep.className = 'ckBtn ckOkBtn';
+  keep.textContent = T(kept ? 'check.conflict.undoKeep' : 'check.conflict.keep');
+  keep.title = T(kept ? 'check.conflict.undoKeepHint' : 'check.split.keepHint');
+  keep.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    keep.disabled = true;
+    var o = checkKeepOf('splitAlbums', g);
+    tagPost('/genreok', {dir: o.k, tag: o.v, ok: !kept}).then(function(r){
+      if (!r || !r.ok) throw new Error((r && r.error) || 'genreok');
+      if (kept) delete checkGenreOk[o.k]; else checkGenreOk[o.k] = o.v;
+      if (checkShown && checkShown.res) checkRender(checkShown.res);
+    }).catch(function(){ keep.disabled = false; showToast(T('check.conflict.failed')); });
+  });
+  head.appendChild(keep);
+  var rows = [head], target = g.versions[0].dirs[0];
+  g.versions.forEach(function(v, i){
+    var key = 'split|' + v.dirs[0];
+    var row = document.createElement('div'); row.className = 'sRow ckDupRow' + (checkDone[key] ? ' done' : '');
+    var meta = document.createElement('div'); meta.className = 'sMeta';
+    var ti = document.createElement('div'); ti.className = 'sTitle';
+    ti.textContent = T('check.split.sub', {format: v.format, n: checkNum(v.tracks)}) + (i ? '' : ' · ' + T('check.split.target'));
+    var su = document.createElement('div'); su.className = 'sSub'; su.textContent = v.dirs.map(function(d){ return '/mnt/' + d; }).join(' + ');
+    meta.appendChild(ti); meta.appendChild(su);
+    row.appendChild(meta);
+    if (i && !kept) {
+      var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.split.open');
+      btn.title = T('check.split.openHint');
+      btn.addEventListener('click', function(){
+        row.classList.add('done'); checkMarkDone(key);
+        clearTimeout(checkTimer);
+        openFiles(v.dirs[0], target, openCheck);
+      });
+      row.appendChild(btn);
+    }
+    rows.push(row);
   });
   return rows;
 }

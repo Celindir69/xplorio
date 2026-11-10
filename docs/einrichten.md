@@ -244,6 +244,14 @@ in der Suche oder in der Bibliotheksprüfung), steht unter den Titeln „Album v
 (mit CD-Unterordnern) genauso in `Xplorio Trash`, auch wenn es keine Dublette ist. Verschieben lassen sich nur
 Albumordner, die der Tag-Dienst aus der Bibliothek kennt.
 
+**Album auf mehrere Ordner verteilt:** Gleicher Album-Künstler und Albumname in mehreren Ordnern, die aber keine Kopien
+sind, sondern Teile eines Albums: Jeder Ordner enthält nur Titel dieses Albums (Sammelordner mit anderen Alben zählen nicht),
+alle haben dasselbe Format, und kein Titel und keine Titelnummer kommt in zwei Ordnern vor. Solche Fälle stehen hier und
+nicht mehr unter „Doppelte Alben“. Der Ordner mit den meisten Titeln ist das Ziel. „Dateimanager“ neben einem anderen
+Ordner öffnet den Dateimanager (Passwort der Dienste) mit diesem Ordner links und dem Ziel rechts; dort die Dateien
+hinüberziehen. Der Pfeil zurück führt wieder in die Bibliotheksprüfung, beim nächsten Prüflauf ist der Eintrag weg.
+„Behalten“ lässt gewollt getrennte Ordner in Ruhe.
+
 **Doppelte Titel im Album:** Titel, die in einem Album (mit CD-Unterordnern) mehrfach vorkommen. Sicher doppelt: Kopie-Namen
 wie `01 Song (1).flac` oder `01 Song Kopie.flac` neben `01 Song.flac`, derselbe Titel in zwei Formaten (`01.flac` und
 `01.mp3`) und gleicher Künstler und Titel mit gleicher Spielzeit (±2 s). Gedämpft als Hinweis: gleicher Titel mit anderer

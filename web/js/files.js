@@ -35,8 +35,17 @@ function filesError(r) {
   return T('trash.error', {error: e});
 }
 
-function openFiles() {
+/* openFiles(): from the menu, the panes as last left. openFiles(left, right, back): these two folders (library check:
+   album split over folders), the back arrow then calls back() instead of opening the menu */
+var filesBackTo = null;
+function openFiles(left, right, back) {
   closeAllOverlays();
+  filesBackTo = typeof back === 'function' ? back : null;
+  if (typeof left === 'string') {
+    filesPanes[0] = {path: left, sel: {}}; filesPanes[1] = {path: right || '', sel: {}}; filesActive = 0;
+  }
+  var b = document.getElementById('filesBack');
+  if (b) b.title = T(filesBackTo ? 'files.backToCheck' : 'html.backToMenu');
   overlayFiles.classList.add('on');
   filesStart();
 }
@@ -634,4 +643,4 @@ function filesPoll() {
 
 function filesClose() { filesSeq++; clearTimeout(filesJobTimer); filesEls = null; }
 document.getElementById('closeFiles').addEventListener('click', function(){ filesClose(); closeAllOverlays(); });
-document.getElementById('filesBack').addEventListener('click', function(){ filesClose(); openMenu(); });
+document.getElementById('filesBack').addEventListener('click', function(){ var to = filesBackTo; filesClose(); if (to) to(); else openMenu(); });
