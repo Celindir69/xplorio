@@ -147,6 +147,15 @@ Gibt es kein passendes Cover, zeichnet „Cover erzeugen“ ein Ersatzbild: ruhi
 Interpret darunter (1000 × 1000, aus denselben Feldern). Jeder Tipp ergibt eine neue Farbe; gespeichert wird es wie ein
 gewähltes Bild, „als folder.jpg“ ist dabei schon angehakt. Es braucht kein Internet und nichts Zusätzliches auf dem Player.
 
+### Eingebettete Bilder entfernen
+„Bilder entfernen“ im Cover-Bereich des Album-Editors nimmt alle eingebetteten Bilder aus den angezeigten Dateien. Vorher
+landet jedes Bild als Datei im Ordner: das Cover als `folder.jpg` (gibt es die schon mit anderem Inhalt, als `cover.jpg`),
+dazu `back.jpg`, `booklet.jpg`, `cd.jpg` oder `image.jpg`. Ein Bild, das schon genauso im Ordner liegt, wird nicht noch
+einmal gespeichert; eine vorhandene Datei wird nie überschrieben (dann mit „ (2)“). Rückgängig setzt die Bilder wieder ein
+und löscht die dabei gespeicherten Dateien. Wichtig bei **DSF**: Das MPD von Volumio 2 (0.20) liest bei DSF gar keine
+Tags, wenn der Tag-Block größer als 1 MB ist. Ein großes eingebettetes Cover reicht dafür; solche Alben erscheinen dann
+ohne Künstler, Album und Genre. Nach dem Entfernen liest MPD die Tags beim Neueinlesen.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,

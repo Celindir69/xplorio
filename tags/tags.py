@@ -14,6 +14,15 @@ Cover (embedded front cover):
       replaces the front cover with the image file; without "image" it is removed. With "backup" the old cover
       is first saved to <backup>.jpg/.png. Response: {"ok":true, "changed":true, "backup":"<file>"|null}
 
+All embedded images (DSF: MPD 0.20 ignores all tags of a file whose ID3 block is larger than 1 MB, big covers do that):
+  {"op":"images_strip", "path":"...", "backup":"/path/backup"}
+      saves every embedded image into the file's folder first (front cover as folder.jpg, else cover.jpg;
+      back.jpg, booklet.jpg, cd.jpg, image.jpg; an image already there with the same content is not saved again,
+      a name taken by another image gets " (2)"), keeps a copy of all of them for undo (<backup>-<k>.jpg/.png and
+      <backup>.json), then removes them from the file.
+      Response: {"ok":true, "changed":true, "manifest":"<backup>.json", "saved":[files], "images":n}
+  {"op":"images_restore", "path":"...", "manifest":"<backup>.json"}  -> puts these images back (undo)
+
 ReplayGain values (for the player view, read only):
   {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null, "mqa":{"orig":192000|null}|null}
                                        (gain in dB; mqa: MQA file per its tags, orig = original sample rate)
@@ -292,6 +301,113 @@ def set_cover(audio, kind, data, mime):
             audio.tags.add(APIC(encoding=3, mime=mime, type=FRONT, desc=u'', data=data))
 
 
+# picture types (ID3 APIC / FLAC): file names when saved into the folder; front cover first as folder.jpg
+IMAGE_NAMES = {3: ['folder', 'cover'], 4: ['back'], 5: ['booklet'], 6: ['cd'], 0: ['image']}
+
+
+def all_images(audio, kind):
+    """-> [{'type', 'mime', 'desc', 'data'}] of all embedded images"""
+    if kind == 'm4a':
+        covr = audio.tags.get('covr') if audio.tags is not None else None
+        return [{'type': FRONT if k == 0 else OTHER, 'desc': u'', 'data': bytes(c),
+                 'mime': 'image/png' if c.imageformat == MP4Cover.FORMAT_PNG else 'image/jpeg'}
+                for k, c in enumerate(covr or [])]
+    pics = audio.pictures if kind == 'flac' else (audio.tags.getall('APIC') if audio.tags is not None else [])
+    return [{'type': p.type, 'mime': p.mime or mime_of(p.data), 'desc': p.desc or u'', 'data': p.data} for p in pics]
+
+
+def put_images(audio, kind, imgs):
+    """replace all embedded images by imgs (empty: remove all)"""
+    if kind == 'm4a':
+        if audio.tags is None:
+            audio.add_tags()
+        if 'covr' in audio.tags:
+            del audio.tags['covr']
+        if imgs:
+            audio.tags['covr'] = [MP4Cover(i['data'], imageformat=MP4Cover.FORMAT_PNG if i['mime'] == 'image/png'
+                                           else MP4Cover.FORMAT_JPEG) for i in imgs]
+    elif kind == 'flac':
+        audio.clear_pictures()
+        for i in imgs:
+            pic = Picture()
+            pic.type = i['type']
+            pic.mime = i['mime']
+            pic.desc = i['desc']
+            pic.data = i['data']
+            audio.add_picture(pic)
+    else:
+        if audio.tags is None:
+            audio.add_tags()
+        audio.tags.delall('APIC')
+        for i in imgs:
+            audio.tags.add(APIC(encoding=3, mime=i['mime'], type=i['type'], desc=i['desc'], data=i['data']))
+
+
+def ext_of(mime):
+    return '.png' if mime == 'image/png' else '.jpg'
+
+
+def save_image(folder, img):
+    """write the image into the folder under its name, unless the same image is already there -> file or None"""
+    ext = ext_of(img['mime'])
+    names = IMAGE_NAMES.get(img['type'], ['image-%d' % img['type']])
+    tries = [n + ext for n in names] + ['%s (%d)%s' % (names[-1], k, ext) for k in range(2, 100)]
+    for name in tries:
+        target = os.path.join(folder, native(name))
+        if os.path.lexists(target):
+            if os.path.isfile(target) and not os.path.islink(target):
+                with open(target, 'rb') as f:
+                    if f.read() == img['data']:
+                        return None                       # already there
+            continue
+        with open(target + native('.neu'), 'wb') as f:
+            f.write(img['data'])
+        os.rename(target + native('.neu'), target)
+        return target
+    raise ValueError('no free name for the image')
+
+
+def strip_job(job, path, kind, audio):
+    imgs = all_images(audio, kind)
+    if not imgs:
+        return {'ok': True, 'changed': False, 'saved': [], 'images': 0}
+    base = native(job['backup'])
+    d = os.path.dirname(base)
+    if not os.path.isdir(d):
+        os.makedirs(d)
+    manifest = []
+    for k, img in enumerate(imgs):                    # copy for undo, before anything changes
+        f = base + native('-%d' % k + ext_of(img['mime']))
+        with open(f, 'wb') as out:
+            out.write(img['data'])
+        manifest.append({'file': f.decode('utf-8') if PY2 else f,
+                         'type': img['type'], 'mime': img['mime'], 'desc': img['desc']})
+    with open(base + native('.json'), 'w') as out:
+        out.write(json.dumps(manifest))
+    saved = []
+    for img in imgs:                                  # into the folder (fails before the file is changed)
+        t = save_image(os.path.dirname(path), img)
+        if t:
+            saved.append(t.decode('utf-8') if PY2 else t)
+    put_images(audio, kind, [])
+    save(audio, kind)
+    m = base + native('.json')
+    return {'ok': True, 'changed': True, 'manifest': m.decode('utf-8') if PY2 else m,
+            'saved': saved, 'images': len(imgs)}
+
+
+def restore_job(job, path, kind, audio):
+    with open(native(job['manifest'])) as f:
+        manifest = json.loads(f.read())
+    imgs = []
+    for m in manifest:
+        with open(native(m['file']), 'rb') as f:
+            imgs.append({'type': m['type'], 'mime': m['mime'], 'desc': m['desc'], 'data': f.read()})
+    put_images(audio, kind, imgs)
+    save(audio, kind)
+    return {'ok': True, 'changed': True}
+
+
 def save(audio, kind):
     if kind == 'mp3':
         ver = audio.tags.version[1] if audio.tags.version[1] in (3, 4) else 4
@@ -336,7 +452,8 @@ def cover_job(job, path, kind, audio):
 def run_job(job):
     path = job.get('path')
     op = job.get('op')
-    if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set', 'replaygain'):
+    if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set', 'replaygain',
+                              'images_strip', 'images_restore'):
         fail('invalid job')
     if PY2 and isinstance(path, text_type):
         path = path.encode('utf-8')
@@ -349,6 +466,10 @@ def run_job(job):
         audio = open_file(path, kind)
         if op.startswith('cover_'):
             return cover_job(job, path, kind, audio)
+        if op == 'images_strip':
+            return strip_job(job, path, kind, audio)
+        if op == 'images_restore':
+            return restore_job(job, path, kind, audio)
         if op == 'replaygain':
             return dict(read_replaygain(audio, kind), ok=True)
         before = read_tags(audio, kind)
