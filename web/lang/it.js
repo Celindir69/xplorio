@@ -933,6 +933,7 @@ langRegister('it', 'Italiano', {
   'tag.bulk.skipped': {one: '{n} brano non corrisponde allo schema e resta invariato', other: '{n} brani non corrispondono allo schema e restano invariati'},
   'tag.bulk.split': 'Suddividi per schema',
   'tag.bulk.number': 'Rinumerare (01, 02 …)',
+  'tag.bulk.numberRandom': 'Rinumerare a caso (01 … numero)',
   'tag.bulk.fieldTrack': 'Numero di traccia',
   'tag.bulk.tracks': {one: '{n} brano', other: '{n} brani'},
   'tag.bulk.showUnreadable': 'Quali file e perché?',

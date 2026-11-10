@@ -933,6 +933,7 @@ langRegister('de', 'Deutsch', {
   'tag.bulk.skipped': {one: '{n} Titel passt nicht zum Muster und bleibt unverändert', other: '{n} Titel passen nicht zum Muster und bleiben unverändert'},
   'tag.bulk.split': 'Aufteilen nach Muster',
   'tag.bulk.number': 'Durchnummerieren (01, 02 …)',
+  'tag.bulk.numberRandom': 'Durchnummerieren zufällig (01 … Anzahl)',
   'tag.bulk.fieldTrack': 'Tracknummer',
   'tag.bulk.tracks': {one: '{n} Titel', other: '{n} Titel'},
   'tag.bulk.showUnreadable': 'Welche Dateien und warum?',

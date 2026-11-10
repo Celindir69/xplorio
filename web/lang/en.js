@@ -935,6 +935,7 @@ langRegister('en', 'English', {
   'tag.bulk.skipped': {one: '{n} track doesn\'t match the pattern and stays unchanged', other: '{n} tracks don\'t match the pattern and stay unchanged'},
   'tag.bulk.split': 'Split by pattern',
   'tag.bulk.number': 'Renumber (01, 02 …)',
+  'tag.bulk.numberRandom': 'Renumber randomly (01 … count)',
   'tag.bulk.fieldTrack': 'Track number',
   'tag.bulk.tracks': {one: '{n} track', other: '{n} tracks'},
   'tag.bulk.showUnreadable': 'Which files and why?',
