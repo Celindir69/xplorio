@@ -495,6 +495,7 @@ langRegister('it', 'Italiano', {
   'files.rmdir': 'Elimina cartelle vuote',
   'files.editTags': 'Modifica tag',
   'files.preview': 'Anteprima',
+  'files.all': 'Seleziona tutto',
   'files.toTrash': 'Sposta nel cestino',
   'files.untick': 'Annulla selezione',
   'files.entries': {one: '1 voce', other: '{n} voci'},

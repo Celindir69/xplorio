@@ -495,6 +495,7 @@ langRegister('es', 'Español', {
   'files.rmdir': 'Borrar carpetas vacías',
   'files.editTags': 'Editar etiquetas',
   'files.preview': 'Vista previa',
+  'files.all': 'Marcar todo',
   'files.toTrash': 'Mover a la papelera',
   'files.untick': 'Quitar selección',
   'files.entries': {one: '1 entrada', other: '{n} entradas'},

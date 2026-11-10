@@ -270,7 +270,9 @@ geschützt (siehe System → Dienste); ohne gesetztes Passwort öffnet er sich n
 Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fragt der Dateimanager einmal nach dem Passwort.
 
 - **Auswählen:** Häkchen vor Dateien und Ordnern; ein Tipp auf eine Datei hakt sie an, ein Tipp auf einen Ordner öffnet ihn.
-  Ausgewählt wird immer nur in einer Spalte, die andere ist das Ziel.
+  Ausgewählt wird immer nur in einer Spalte, die andere ist das Ziel. Das Kästchen oben links in der Spalte hakt alles
+  im offenen Ordner an oder ab. Ist der Pfad zu lang, werden die vorderen Abschnitte auf drei Zeichen gekürzt
+  (der volle Name erscheint beim Darüberfahren).
 - **Kopieren, Verschieben:** Die Knöpfe unten wirken auf den Ordner, der in der anderen Spalte offen ist. Am Computer geht es
   auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
   ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.

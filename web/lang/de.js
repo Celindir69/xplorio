@@ -495,6 +495,7 @@ langRegister('de', 'Deutsch', {
   'files.rmdir': 'Leere Ordner löschen',
   'files.editTags': 'Tags bearbeiten',
   'files.preview': 'Vorschau',
+  'files.all': 'Alle anhaken',
   'files.toTrash': 'In den Papierkorb',
   'files.untick': 'Auswahl aufheben',
   'files.entries': {one: '1 Eintrag', other: '{n} Einträge'},
