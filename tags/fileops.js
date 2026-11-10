@@ -112,13 +112,27 @@ function list(root, rel) {
       try { st = fs.statSync(path.join(p.full, name)); } catch (e) { return; }
     }
     if (st.isDirectory()) dirs.push({name: name});
-    else if (st.isFile()) files.push({name: name, bytes: st.size, audio: AUDIO_RE.test(name)});
+    else if (st.isFile()) files.push({name: name, bytes: st.size, audio: AUDIO_RE.test(name), image: /\.(jpe?g|png|gif|webp|bmp)$/i.test(name)});
   });
   dirs.sort(function(a, b){ return cmpName(a.name, b.name); });
   files.sort(function(a, b){ return cmpName(a.name, b.name); });
   var more = dirs.length + files.length > MAX_LIST;
   if (more) { dirs = dirs.slice(0, MAX_LIST); files = files.slice(0, Math.max(0, MAX_LIST - dirs.length)); }
   return {ok: true, path: rel, dirs: dirs, files: files, more: more};
+}
+
+/* an image for the preview: rel -> {ok, full, mime, bytes} or {ok: false, error} */
+var IMAGE_TYPES = {jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp'};
+var MAX_IMAGE = 20 * 1024 * 1024;
+function image(root, rel) {
+  var p = check(root, rel, true, false), ext = (/\.([a-z]+)$/i.exec(String(rel)) || [])[1];
+  var mime = ext && IMAGE_TYPES[ext.toLowerCase()];
+  if (!p || !mime) return {ok: false, error: 'not found'};
+  var st;
+  try { st = fs.statSync(p.full); } catch (e) { return {ok: false, error: 'not found'}; }
+  if (!st.isFile()) return {ok: false, error: 'not found'};
+  if (st.size > MAX_IMAGE) return {ok: false, error: 'too large'};
+  return {ok: true, full: p.full, mime: mime, bytes: st.size};
 }
 
 /* ---------- simple operations ---------- */
@@ -353,7 +367,7 @@ function scanPaths(changes) {
   return out.filter(function(p){ return !out.some(function(q){ return q !== p && p.indexOf(q + '/') === 0; }); });
 }
 
-module.exports = {MAX_ITEMS: MAX_ITEMS, check: check, goodName: goodName, freeName: freeName, numbered: numbered, list: list,
+module.exports = {MAX_ITEMS: MAX_ITEMS, image: image, check: check, goodName: goodName, freeName: freeName, numbered: numbered, list: list,
   mkdir: mkdir, rmdir: rmdir, toTrash: toTrash, plan: plan, run: run, copyFile: copyFile, moveKey: moveKey,
   movePartsKey: movePartsKey, moveObjectKeys: moveObjectKeys, scanPaths: scanPaths, driveOf: driveOf,
   setUseCp: function(on){ useCp = !!on; }};

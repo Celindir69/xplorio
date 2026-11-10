@@ -155,6 +155,18 @@ t('mkdir, rmdir (only empty, Mac leftovers do not count), trash', function(done)
   done();
 });
 
+t('image: only image files on a drive', function(done){
+  var root = setup();
+  mk(root, 'USB/S/Beatles/Help/folder.jpg', 'jpg');
+  var r = fileops.image(root, 'USB/S/Beatles/Help/folder.jpg');
+  assert.ok(r.ok); assert.strictEqual(r.mime, 'image/jpeg'); assert.strictEqual(r.bytes, 3);
+  ['USB/S/Beatles/Help/01 Help.flac', 'USB/S/Xplorio Trash/Old/x.jpg', 'USB/S/nothing.png', 'USB/S/../S/Beatles/Help/folder.jpg'].forEach(function(p){
+    assert.strictEqual(fileops.image(root, p).ok, false, p);
+  });
+  assert.strictEqual(fileops.list(root, 'USB/S/Beatles/Help').files.filter(function(f){ return f.image; }).map(function(f){ return f.name; }).join(), 'folder.jpg');
+  done();
+});
+
 t('moved paths: keys, keys of parts, Volumio URIs; scan paths', function(done){
   var mv = [{from: 'USB/S/Beatles/Help', to: 'NAS/N/Help'}, {from: 'USB/S/Mix/a.mp3', to: 'USB/S/a.mp3'}];
   assert.strictEqual(fileops.moveKey('USB/S/Beatles/Help/01.flac', mv), 'NAS/N/Help/01.flac');

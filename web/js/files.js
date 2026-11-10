@@ -199,7 +199,7 @@ function filesList(i, r) {
     return filesPaint();
   }
   r.dirs.forEach(function(d){ p.list.appendChild(filesRow(i, {name: d.name, path: rel + '/' + d.name, kind: 'dir'})); });
-  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio})); });
+  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio, image: f.image})); });
   if (!r.dirs.length && !r.files.length) p.list.appendChild(histEl('div', 'sHint fmEmpty', T('files.emptyDir')));
   if (r.more) p.list.appendChild(histEl('div', 'sHint', T('files.more')));
   filesPaint();
@@ -218,6 +218,7 @@ function filesRow(i, it) {
   }
   var icon = histEl('div', 'fmIcon');
   icon.innerHTML = trashSvg(it.kind === 'drive' ? FILES_DRIVE : it.kind === 'dir' ? TRASH_DIR : it.audio ? TRASH_FILE : FILES_DOC);
+  if (it.image) filesThumb(icon, it);
   row.appendChild(icon);
   row.appendChild(histEl('div', 'fmName', it.name));
   if (it.kind === 'file') row.appendChild(histEl('div', 'fmSize', trashSize(it.bytes)));
@@ -460,6 +461,60 @@ function filesEditTags(paths) {
 if (window.MutationObserver) new MutationObserver(function(){
   if (!overlayTags.classList.contains('on') && overlayFiles.classList.contains('on')) filesReload();
 }).observe(overlayTags, {attributes: true, attributeFilter: ['class']});
+
+/* ---------- images: small preview instead of the icon, tap on it shows it large ---------- */
+
+var filesImgCache = {};                                   /* path|bytes -> object URL, while the page is open */
+var filesImgQueue = [], filesImgBusy = false;
+var filesImgSeen = window.IntersectionObserver ? new IntersectionObserver(function(list){
+  list.forEach(function(e){ if (e.isIntersecting) { filesImgSeen.unobserve(e.target); filesImgWant(e.target); } });
+}) : null;
+function filesImgUrl(it) {
+  var key = it.path + '|' + it.bytes;
+  if (filesImgCache[key]) return Promise.resolve(filesImgCache[key]);
+  return filesPost({op: 'image', path: it.path}).then(function(r){
+    if (!r || !r.ok) throw new Error((r && r.error) || 'no image');
+    var bin = atob(r.data), buf = new Uint8Array(bin.length);
+    for (var k = 0; k < bin.length; k++) buf[k] = bin.charCodeAt(k);
+    return (filesImgCache[key] = URL.createObjectURL(new Blob([buf], {type: r.mime})));
+  });
+}
+/* one image at a time (the player has little memory), only those scrolled into view */
+function filesImgWant(icon) { filesImgQueue.push(icon); filesImgNext(); }
+function filesImgNext() {
+  if (filesImgBusy || !filesImgQueue.length) return;
+  var icon = filesImgQueue.shift();
+  if (!document.body.contains(icon)) return filesImgNext();
+  filesImgBusy = true;
+  filesImgUrl(icon.fmItem).then(function(u){
+    var img = histEl('img', 'fmThumb');
+    img.alt = ''; img.src = u;
+    filesClear(icon); icon.appendChild(img);
+  }).catch(function(){ /* keeps the file icon */ }).then(function(){ filesImgBusy = false; filesImgNext(); });
+}
+function filesThumb(icon, it) {
+  icon.fmItem = it;
+  icon.classList.add('fmImgIcon');
+  icon.title = T('files.preview');
+  icon.addEventListener('click', function(ev){ ev.stopPropagation(); filesPreview(it); });
+  if (filesImgSeen) filesImgSeen.observe(icon); else filesImgWant(icon);
+}
+function filesPreview(it) {
+  var box = histEl('div', 'fmLightbox');
+  var img = histEl('img', 'fmLightImg'), cap = histEl('div', 'fmLightCap', it.name + ' · ' + trashSize(it.bytes));
+  img.alt = it.name;
+  box.appendChild(browseNote(T('hist.loading')));
+  function close() { document.removeEventListener('keydown', key); if (box.parentNode) box.parentNode.removeChild(box); }
+  function key(ev) { if (ev.key === 'Escape') close(); }
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', key);
+  document.body.appendChild(box);
+  filesImgUrl(it).then(function(u){
+    img.onload = function(){ cap.textContent = it.name + ' · ' + img.naturalWidth + ' × ' + img.naturalHeight + ' · ' + trashSize(it.bytes); };
+    img.src = u;
+    filesClear(box); box.appendChild(img); box.appendChild(cap);
+  }).catch(function(e){ filesClear(box); box.appendChild(browseNote(filesError({error: e.message}))); });
+}
 
 function filesReload() { if (filesEls) { filesLoad(0); filesLoad(1); } }
 

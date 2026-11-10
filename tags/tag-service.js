@@ -801,6 +801,7 @@ function doTrashDelete(body, cb) {
 /* Only with the password (System page, adminpass.js): without one set, nothing works, not even the listing.
    POST /files {op, token, …}:
      list {path}              -> the drives (path '') or the folders and files of a folder
+     image {path}             -> {mime, data}: an image (jpg, png, gif, webp, bmp) as base64, for the preview
      mkdir {dest, name}, rmdir {path}, trash {items}: right away
      copy / move {items, dest} -> runs as a job in the background (one at a time)
      job                      -> {ok, job}: the running or last job; cancel: stop it after the current file */
@@ -841,6 +842,14 @@ function doFiles(body, cb) {
   if (!adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   var op = String(body.op || ''), r;
   if (op === 'list') return cb(200, fileops.list(MUSIC_ROOT, String(body.path || '')));
+  if (op === 'image') {                                   /* preview: the image as base64 (no token in a URL) */
+    var im = fileops.image(MUSIC_ROOT, String(body.path || ''));
+    if (!im.ok) return cb(200, im);
+    return fs.readFile(im.full, function(e, buf){
+      if (e) return cb(200, {ok: false, error: 'not found'});
+      cb(200, {ok: true, mime: im.mime, data: buf.toString('base64')});
+    });
+  }
   if (op === 'job' || op === 'cancel') {
     if (op === 'cancel' && filesJob && filesJob.state === 'running') filesJob.cancel = true;
     return cb(200, {ok: true, job: filesJobView()});
