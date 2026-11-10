@@ -125,7 +125,11 @@ function filesPaneEl(i) {
   p.mk.title = T('files.newDir'); p.mk.setAttribute('aria-label', T('files.newDir'));
   p.mk.innerHTML = trashSvg(FILES_NEWDIR);
   p.mk.addEventListener('click', function(){ filesMkdir(i); });
-  head.appendChild(p.up); head.appendChild(p.crumbs); head.appendChild(p.mk);
+  p.all = histEl('input', 'fmCheck fmAll');                     /* ticks all entries of the open folder, or none */
+  p.all.type = 'checkbox';
+  p.all.title = T('files.all'); p.all.setAttribute('aria-label', T('files.all'));
+  p.all.addEventListener('click', function(ev){ ev.stopPropagation(); filesTickAll(i, p.all.checked); });
+  head.appendChild(p.all); head.appendChild(p.up); head.appendChild(p.crumbs); head.appendChild(p.mk);
   p.list = histEl('div', 'fmList');
   p.idx = histEl('div', 'fmIdx');                              /* # 0-9 A … Z at the outer edge, for long lists */
   var wrap = histEl('div', 'fmListWrap');
@@ -186,7 +190,30 @@ function filesCrumbs(i) {
       p.crumbs.appendChild(c);
     })(parts.slice(0, k).join('/'), k === n ? parts.slice(0, n).join('/') : parts[k - 1]);
   }
-  p.crumbs.scrollLeft = p.crumbs.scrollWidth;
+  filesCrumbsFit(p);
+}
+/* too long for the head: shorten the parts from the left to three characters + "…" (the drive keeps "USB/"),
+   the last part stays (cut at the end only if it alone is too long); the full name shows on hover. No scrollbar */
+function filesShort(label) {
+  var m = /^((?:USB|NAS)\/)?(.*)$/.exec(label), rest = m[2];
+  return (m[1] || '') + (rest.length > 4 ? rest.slice(0, 3) + '…' : rest);
+}
+function filesCrumbsFit(p) {
+  var cs = p.crumbs.querySelectorAll('.fmCrumb');
+  function over() { return p.crumbs.scrollWidth > p.crumbs.clientWidth + 1; }
+  Array.prototype.forEach.call(p.crumbs.children, function(c){ c.style.display = ''; });
+  Array.prototype.forEach.call(cs, function(c){ if (c.dataset.full) c.textContent = c.dataset.full; c.dataset.full = c.textContent; c.title = ''; });
+  var k;
+  for (k = 0; k < cs.length - 1 && over(); k++) { cs[k].textContent = filesShort(cs[k].dataset.full); cs[k].title = cs[k].dataset.full; }
+  /* still too long (narrow window): the parts before the last one become "…", then leave the head from the left,
+     so that the folder that is open stays readable */
+  for (k = 0; k < cs.length - 1 && over(); k++) cs[k].textContent = '…';
+  for (k = 0; k < cs.length - 1 && over(); k++) {
+    cs[k].style.display = 'none';
+    if (cs[k].nextSibling) cs[k].nextSibling.style.display = 'none';
+  }
+  var last = cs[cs.length - 1];
+  if (last && p.crumbs.scrollWidth > p.crumbs.clientWidth + 1) last.title = last.dataset.full;
 }
 
 function filesList(i, r) {
@@ -300,13 +327,21 @@ function filesIndexEvents(p) {
   ['pointerup', 'pointercancel'].forEach(function(t){ p.idx.addEventListener(t, function(){ on = false; }); });
   p.idx.addEventListener('click', function(ev){ ev.stopPropagation(); });
 }
-window.addEventListener('resize', function(){ if (filesEls) filesEls.panes.forEach(filesIndex); });
+window.addEventListener('resize', function(){ if (filesEls) filesEls.panes.forEach(function(p){ filesIndex(p); filesCrumbsFit(p); }); });
 
 /* ---------- ticks ---------- */
 
 function filesTick(i, name, on) {
   if (filesActive !== i) { filesPanes[filesActive].sel = {}; filesActive = i; }   /* ticks in one pane only */
   if (on) filesPanes[i].sel[name] = true; else delete filesPanes[i].sel[name];
+  filesPaint();
+}
+function filesTickAll(i, on) {
+  if (filesActive !== i) { filesPanes[filesActive].sel = {}; filesActive = i; }
+  filesPanes[i].sel = {};
+  if (on) Array.prototype.forEach.call(filesEls.panes[i].list.querySelectorAll('.fmRow'), function(row){
+    if (row.querySelector('.fmCheck')) filesPanes[i].sel[row.dataset.name] = true;
+  });
   filesPaint();
 }
 function filesCount(i) { return Object.keys(filesPanes[i].sel).length; }
@@ -323,6 +358,10 @@ function filesPaint() {
     p.el.classList.toggle('fmActive', i === filesActive);
     filesIndex(p);
     p.mk.disabled = !filesPanes[i].path;
+    var n = p.list.querySelectorAll('.fmCheck').length, k = filesCount(i);
+    p.all.disabled = !n;
+    p.all.checked = !!n && k >= n;
+    p.all.indeterminate = k > 0 && k < n;
     Array.prototype.forEach.call(p.list.querySelectorAll('.fmRow'), function(row){
       var on = !!filesPanes[i].sel[row.dataset.name], box = row.querySelector('.fmCheck');
       row.classList.toggle('fmSel', on);

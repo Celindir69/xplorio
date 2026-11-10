@@ -235,7 +235,9 @@ the services (see System → Services); without a password set it does not open,
 A device already logged in under System goes straight in, otherwise the file manager asks for the password once.
 
 - **Select:** tick files and folders; tapping a file ticks it, tapping a folder opens it. Only one column holds a
-  selection at a time, the other one is the target.
+  selection at a time, the other one is the target. The box at the top left of a column ticks everything in the open
+  folder, or nothing. A path too long for the head has its front parts cut to three characters (the full name shows
+  on hover).
 - **Copy, move:** the buttons at the bottom act on the folder open in the other column. On a computer drag & drop works
   too, onto a folder or onto the empty part of a column: dropping moves, holding ⌥ (Windows: Alt or Ctrl) copies. There is
   always a question before anything happens.

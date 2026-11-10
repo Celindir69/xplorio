@@ -810,8 +810,9 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmTool { flex:0 0 auto; background:none; border:0; padding:calc(1 * var(--vw)); cursor:pointer; display:flex; border-radius:6px; }
 .fmTool svg { width:calc(5.5 * var(--vw)); height:calc(5.5 * var(--vw)); min-width:20px; min-height:20px; fill:var(--fg); opacity:.75; }
 .fmTool:disabled { cursor:default; opacity:.3; }
-.fmCrumbs { flex:1 1 auto; min-width:0; overflow-x:auto; white-space:nowrap; font-size:calc(3.4 * var(--vw)); scrollbar-width:none; }
-.fmCrumbs::-webkit-scrollbar { display:none; }
+.fmCrumbs { flex:1 1 auto; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:calc(3.4 * var(--vw)); }
+.fmAll { margin:0 calc(1 * var(--vw)) 0 calc(.5 * var(--vw)); }
+.fmAll:disabled { opacity:.3; cursor:default; }
 .fmCrumb { cursor:pointer; opacity:.75; }
 .fmCrumb:last-child { opacity:1; font-weight:600; }
 .fmSep { opacity:.4; margin:0 .35em; }
