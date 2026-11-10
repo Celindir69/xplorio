@@ -278,6 +278,8 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
 - **Tags:** Der Stift neben einer Audiodatei öffnet den Tag-Editor für sie, der Dateimanager bleibt dahinter offen
   und liest beide Spalten neu ein, wenn der Editor schließt. Sind nur Audiodateien angehakt, bearbeitet „Tags bearbeiten“
   unten alle zusammen.
+- **Album und Album-Künstler** stehen klein unter dem Namen einer Audiodatei. Sie kommen aus der Datenbank von MPD,
+  es wird also keine Datei geöffnet; Dateien, die MPD noch nicht eingelesen hat, haben die Zeile nicht.
 - **Bilder:** JPG, PNG, GIF, WebP und BMP (z. B. `folder.jpg`) zeigen statt des Symbols eine kleine Vorschau; ein Tipp
   darauf zeigt das Bild groß mit Größe in Pixeln, ein Tipp daneben oder Esc schließt es.
 - **Lange Listen:** Passt eine Liste nicht in die Spalte, erscheint am äußeren Rand (links in der linken, rechts in der

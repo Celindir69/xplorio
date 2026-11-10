@@ -53,7 +53,7 @@ function mpdWalk(opts, cb, onProgress) {
     if (i < 0) return;
     var k = l.slice(0, i).toLowerCase(), v = l.slice(i + 2);
     if (k === 'directory') {                             /* moved-aside duplicates are not part of the library */
-      if (!duplicates.isTrash(path.basename(v))) queue.push(v);
+      if (!opts.flat && !duplicates.isTrash(path.basename(v))) queue.push(v);   /* flat: only the folders asked for */
       song = null; return;
     }
     if (k === 'file') { song = {file: v, artist: '', albumartist: '', album: '', title: '', track: '', date: '', genre: '', time: '', 'last-modified': '', disc: '', format: ''}; songs.push(song); return; }
