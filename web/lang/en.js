@@ -1054,9 +1054,11 @@ langRegister('en', 'English', {
   'textfn.err.none': 'pattern needs at least one placeholder like %TITLE%',
   'textfn.err.separator': 'two placeholders need a separator between them',
   'textfn.err.unknown': 'unknown placeholder {name}',
+  'textfn.func.dash': '- to space',
   'textfn.func.lower': 'lowercase',
   'textfn.func.spaces': 'Clean up spaces',
   'textfn.func.title': 'Title Case (English)',
+  'textfn.func.underscore': '_ to space',
   'textfn.func.upper': 'UPPERCASE',
   'textfn.func.words': 'Capitalize Words',
 

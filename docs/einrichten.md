@@ -199,7 +199,9 @@ einen Ordner mit gesammelten Einzeltiteln, der sonst immer alphabetisch spielt. 
 Endung), z. B. `%TRACK% - %ARTIST% - %TITLE%`. Beim Pfad zählen nur so viele Ordner von hinten, wie das Muster „/“
 enthält: `%ARTIST%/%ALBUM%/%TRACK% %TITLE%` nimmt Künstler- und Albumordner, davor liegende Ordner brauchen kein %DUMMY%.
 Muster, mit denen gespeichert wurde, merkt sich der Player (`patterns.json` im Datenordner, die letzten 20); die Auswahl
-„Gespeichert“ neben dem Musterfeld setzt eines davon ein. Eigene Muster lassen sich immer eintippen.
+„Gespeichert“ neben dem Musterfeld setzt eines davon ein. Eigene Muster lassen sich immer eintippen. Unter den Textfunktionen
+(Aa) machen „_ zu Leerzeichen“ und „- zu Leerzeichen“ aus `Tears_For_Fears` oder `Tears-For-Fears` wieder „Tears For
+Fears“, etwa nach dem Aufteilen eines Dateinamens; doppelte Leerzeichen werden dabei bereinigt.
 
 Der Stift öffnet die Mehrfachbearbeitung mit dem Vorschlag; geschrieben wird erst mit Speichern, Rückgängig geht wie
 gewohnt. Neben jedem Genre-Feld im Tag-Editor steht eine Auswahl „Hauptgenre“ mit den 15 Oberkategorien; eigene Werte

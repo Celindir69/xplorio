@@ -1052,9 +1052,11 @@ langRegister('de', 'Deutsch', {
   'textfn.err.none': 'Muster braucht mindestens einen Platzhalter wie %TITLE%',
   'textfn.err.separator': 'zwischen zwei Platzhaltern muss ein Trennzeichen stehen',
   'textfn.err.unknown': 'unbekannter Platzhalter {name}',
+  'textfn.func.dash': '- zu Leerzeichen',
   'textfn.func.lower': 'alles klein',
   'textfn.func.spaces': 'Leerzeichen bereinigen',
   'textfn.func.title': 'Title Case (englisch)',
+  'textfn.func.underscore': '_ zu Leerzeichen',
   'textfn.func.upper': 'ALLES GROSS',
   'textfn.func.words': 'Wortanfänge groß',
 

@@ -1053,9 +1053,11 @@ langRegister('fr', 'Français', {
   'textfn.err.none': 'le modèle doit contenir au moins une variable comme %TITLE%',
   'textfn.err.separator': 'deux variables doivent être séparées par un séparateur',
   'textfn.err.unknown': 'variable inconnue {name}',
+  'textfn.func.dash': '- en espace',
   'textfn.func.lower': 'minuscules',
   'textfn.func.spaces': 'Nettoyer les espaces',
   'textfn.func.title': 'Title Case (anglais)',
+  'textfn.func.underscore': '_ en espace',
   'textfn.func.upper': 'MAJUSCULES',
   'textfn.func.words': 'Majuscule À Chaque Mot',
 

@@ -1052,9 +1052,11 @@ langRegister('it', 'Italiano', {
   'textfn.err.none': 'lo schema richiede almeno un segnaposto come %TITLE%',
   'textfn.err.separator': 'tra due segnaposto serve un separatore',
   'textfn.err.unknown': 'segnaposto sconosciuto {name}',
+  'textfn.func.dash': '- in spazio',
   'textfn.func.lower': 'minuscolo',
   'textfn.func.spaces': 'Pulisci gli spazi',
   'textfn.func.title': 'Title Case (inglese)',
+  'textfn.func.underscore': '_ in spazio',
   'textfn.func.upper': 'MAIUSCOLO',
   'textfn.func.words': 'Iniziali Maiuscole',
 
