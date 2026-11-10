@@ -748,7 +748,10 @@ var TAG_BULK_FIELDS = [['artist', T('tag.field.artist')], ['albumartist', T('tag
                        ['comment', T('tag.field.comment')]];                 /* comment: e.g. NoMix (nomix.js) */
 var TAG_BULK_ACTIONS = [['set', T('tag.bulk.set')], ['replace', T('tag.bulk.replace')], ['split', T('tag.bulk.split')]].concat(
   TEXT_FUNCS.map(function(f){ return [f[0], f[1]]; }));
-var TAG_TRACK_ACTIONS = [['number', T('tag.bulk.number')], ['numberRandom', T('tag.bulk.numberRandom')]];   /* field "Track number" (bulk editing from the album editor) */
+var TAG_TRACK_ACTIONS = [['number', T('tag.bulk.number')], ['numberRandom', T('tag.bulk.numberRandom')]];
+/* sources that are not tags: the file name, or the path with the file name (both without extension); only for splitting */
+var TAG_FILE_FIELDS = [['@file', T('tag.bulk.fieldFile')], ['@path', T('tag.bulk.fieldPath')]];
+var TAG_SPLIT_ACTIONS = [['split', T('tag.bulk.split')]];   /* field "Track number" (bulk editing from the album editor) */
 var TAG_CHUNK = 100;                                 /* files per request to the tag service */
 var TAG_WRITE_CHUNK = 20;                            /* files per write request: rewriting m4a on a NAS is slow, and
                                                         Safari gives up on a request that stays silent for about a minute */
@@ -935,7 +938,7 @@ function artistRender() {
   if (artBad.length) tagBody.appendChild(tagBadList(artBad));
 
   var ui = artUi = {
-    field: tagSelect(artUris ? TAG_BULK_FIELDS.concat([['track', T('tag.bulk.fieldTrack')]]) : TAG_BULK_FIELDS, artUi ? artUi.field.value : 'artist'),
+    field: tagSelect((artUris ? TAG_BULK_FIELDS.concat([['track', T('tag.bulk.fieldTrack')]]) : TAG_BULK_FIELDS).concat(TAG_FILE_FIELDS), artUi ? artUi.field.value : 'artist'),
     action: tagSelect(TAG_BULK_ACTIONS, artUi ? artUi.action.value : 'words'),
     value: tagInput(''), find: tagInput(''), repl: tagInput(''), pattern: tagInput(artUi ? artUi.pattern.value : '%TITLE% - %ARTIST%'),
     preview: document.createElement('button'),
@@ -963,7 +966,7 @@ function artistRender() {
 
   /* the actions depend on the field: the track number (album editor only) can only be renumbered */
   function actions() {
-    var list = ui.field.value === 'track' ? TAG_TRACK_ACTIONS : TAG_BULK_ACTIONS, keep = ui.action.value;
+    var list = ui.field.value === 'track' ? TAG_TRACK_ACTIONS : ui.field.value.charAt(0) === '@' ? TAG_SPLIT_ACTIONS : TAG_BULK_ACTIONS, keep = ui.action.value;
     if (ui.action.list === list) return;
     ui.action.list = list;
     while (ui.action.firstChild) ui.action.removeChild(ui.action.firstChild);
@@ -978,6 +981,7 @@ function artistRender() {
     fFind.style.display = fRepl.style.display = a === 'replace' ? '' : 'none';
     fPattern.style.display = a === 'split' ? '' : 'none';
     fField.firstChild.textContent = a === 'split' ? T('tag.bulk.fieldSplit') : T('tag.bulk.field');
+    hint.textContent = T('tag.bulk.patternHint') + (ui.field.value === '@path' ? ' ' + T('tag.bulk.pathHint') : '');
     artChanges = []; ui.list.innerHTML = ''; tagSave.disabled = true; tagStatus.textContent = '';
   }
   [ui.field, ui.action].forEach(function(el){ el.addEventListener('change', sync); });
@@ -1016,7 +1020,7 @@ function artistSplitTags(f, values) {
 /* changes to one file after the chosen action -> [{from, to, tags}] (empty: no change);
    when splitting, null if the pattern does not match; ambiguous: two mutually exclusive variants */
 function artistChanges(f, field, pat) {
-  var from = f.tags[field] || '';
+  var from = field.charAt(0) === '@' ? tagFileText(f.uri, field, pat) : f.tags[field] || '';
   if (pat) {
     var r = textSplit(from, pat);
     if (!r) return null;
@@ -1033,6 +1037,15 @@ function artistChanges(f, field, pat) {
   return [{from: from, to: to, tags: t}];
 }
 
+/* file name without extension (@file), or path and file name (@path): only as many folders from the end as the pattern
+   has "/" ("%ARTIST%/%ALBUM%/%TRACK% %TITLE%" -> "Artist/Album/01 Title"), so leading folders never need %DUMMY% */
+function tagFileText(uri, field, pat) {
+  var parts = String(uri || '').replace(/^music-library\//, '').split('/'), name = parts.pop().replace(/\.[^.]+$/, '');
+  if (field === '@file') return name;
+  var k = pat && pat.slashes ? Math.min(pat.slashes, parts.length) : parts.length;
+  return parts.slice(parts.length - k).concat([name]).join('/');
+}
+
 /* numbering: the n-th track (from 0) gets "01" … "09", "10" … */
 function artistNumber(f, n) {
   var from = f.tags.track || '', to = (n < 9 ? '0' : '') + (n + 1);
@@ -1046,6 +1059,7 @@ function artistPreview() {
   if (action === 'split') {
     pat = textPattern(artUi.pattern.value);
     if (pat.error) { tagStatus.textContent = T('tag.bulk.patternError', {error: pat.error}); return; }
+    pat.slashes = (artUi.pattern.value.match(/\//g) || []).length;        /* folders of the path the pattern covers */
   }
   var files = artFiles;
   if (action === 'number') {                              /* 01, 02 … in the order of the album editor */
@@ -1084,13 +1098,13 @@ function artistPreview() {
     });
     var txt = document.createElement('div');
     txt.className = 'tagChangeText';
-    var a = document.createElement('div'); a.className = 'tagOld'; a.textContent = g.from || T('tag.empty');
+    var a = document.createElement('div'); a.className = 'tagOld' + (field.charAt(0) === '@' ? ' tagSrc' : ''); a.textContent = g.from || T('tag.empty');   /* file name: stays */
     var b = document.createElement('div'); b.className = 'tagNew'; b.textContent = '→ ' + (g.to || T('tag.empty'));
     txt.appendChild(a); txt.appendChild(b);
     var sub = document.createElement('div');
     sub.className = 'tagChangeSub';
     sub.textContent = (g.ambiguous ? T('tag.bulk.ambiguous', {k: g.ambiguous}) : '') + (g.files.length > 1 ? T('tag.bulk.tracks', {n: g.files.length})
-      : (field === 'title' ? (g.files[0].tags.album || '') : (g.files[0].tags.title || '')));
+      : (field === 'title' || field.charAt(0) === '@' ? (g.files[0].tags.album || '') : (g.files[0].tags.title || '')));
     if (sub.textContent) txt.appendChild(sub);
     row.appendChild(g.check); row.appendChild(txt);
     list.appendChild(row);

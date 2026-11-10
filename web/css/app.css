@@ -400,6 +400,7 @@
   .tagChange input { margin-top:calc(1 * var(--vw)); width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); flex:0 0 auto; }
   .tagChangeText { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
   .tagOld { font-size:calc(3.6 * var(--vw)); opacity:.55; text-decoration:line-through; }
+  .tagOld.tagSrc { text-decoration:none; }                 /* split from the file name: the name stays */
   .tagNew { font-size:calc(4 * var(--vw)); }
   .tagHint { font-size:calc(3 * var(--vw)); opacity:.5; margin-top:calc(1.2 * var(--vw)); line-height:1.35; }
   .tagChange.unsure .tagChangeSub { color:var(--warn); opacity:.9; }
