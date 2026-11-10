@@ -431,9 +431,14 @@ function browseAlbum(e, seq) {
     meta.className = 'sMeta';
     /* artist (small) – album (large) – genre (small); artist and genre open their page */
     var who = info.artist || e.artist || '';
+    /* compilation without album artist: Volumio names the album after one of its artists; show "Various Artists" instead
+       (who stays the album's key for plays, ratings and Discover) */
+    var trackArtists = {};
+    tracks.forEach(function(t){ if (t.artist) trackArtists[t.artist] = 1; });
+    var mixed = Object.keys(trackArtists).length > 1 && (!who || trackArtists[who] === 1);
     var ar = document.createElement('div');
-    ar.className = 'sSub bArtist'; ar.textContent = who;
-    if (who && !streamOf(e.uri) && who !== 'Verschiedene' && !/^various( artists)?$/i.test(who)) {   /* local: the artist's albums */
+    ar.className = 'sSub bArtist'; ar.textContent = mixed ? 'Various Artists' : who;
+    if (who && !mixed && !streamOf(e.uri) && who !== 'Verschiedene' && !/^various( artists)?$/i.test(who)) {   /* local: the artist's albums */
       ar.classList.add('bLink');
       ar.addEventListener('click', function(){
         browseStack.push({kind:'artist', artist:who});
