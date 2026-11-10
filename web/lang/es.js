@@ -504,7 +504,7 @@ langRegister('es', 'Español', {
   'files.newDirName': 'Nombre de la nueva carpeta en {dir}:',
   'files.confirmTrash': '¿Mover {what} a la papelera? Desde allí se puede restaurar todo.',
   'files.trashed': {one: '1 entrada está en la papelera.', other: '{n} entradas están en la papelera.'},
-  'files.notEmptyList': 'No borradas por no estar vacías: {names}',
+  'files.notEmptyList': 'No borradas porque aún contienen archivos: {names}',
   'files.removed': {one: '1 carpeta vacía borrada.', other: '{n} carpetas vacías borradas.'},
   'files.copying': 'Copiando',
   'files.moving': 'Moviendo',

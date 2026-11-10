@@ -504,7 +504,7 @@ langRegister('de', 'Deutsch', {
   'files.newDirName': 'Name des neuen Ordners in {dir}:',
   'files.confirmTrash': '{what} in den Papierkorb legen? Von dort lässt sich alles zurücklegen.',
   'files.trashed': {one: '1 Eintrag liegt im Papierkorb.', other: '{n} Einträge liegen im Papierkorb.'},
-  'files.notEmptyList': 'Nicht gelöscht, weil nicht leer: {names}',
+  'files.notEmptyList': 'Nicht gelöscht, weil darin noch Dateien liegen: {names}',
   'files.removed': {one: '1 leerer Ordner gelöscht.', other: '{n} leere Ordner gelöscht.'},
   'files.copying': 'Kopiere',
   'files.moving': 'Verschiebe',

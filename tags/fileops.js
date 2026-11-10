@@ -147,14 +147,27 @@ function mkdir(root, dest, name) {
   return {ok: true, path: dest + '/' + name};
 }
 
-/* delete an empty folder (Mac leftovers in it go along) -> {ok} */
+/* left behind by Mac and Windows: does not make a folder "not empty" */
+function junk(name) { return macJunk(name) || /^(thumbs\.db|desktop\.ini)$/i.test(name); }
+/* the first real file below a folder (relative), '' if there are only folders and junk; a link counts as a file */
+function firstFile(full, pre) {
+  var names = children(full).sort();
+  for (var i = 0; i < names.length; i++) {
+    var f = path.join(full, names[i]), r = pre ? pre + '/' + names[i] : names[i], st;
+    try { st = fs.lstatSync(f); } catch (e) { return r; }
+    if (st.isDirectory()) { var x = firstFile(f, r); if (x) return x; }
+    else if (!st.isFile() || !junk(names[i])) return r;
+  }
+  return '';
+}
+/* delete a folder that holds no real file at any depth (only folders and junk, which goes along) -> {ok} or
+   {ok: false, error: 'not empty', file: the first file found, relative to the folder} */
 function rmdir(root, rel) {
   var p = check(root, rel, true, false);
   if (!p || !isDir(p.full)) return {ok: false, error: 'not found'};
-  var left = children(p.full);
-  if (left.some(function(c){ return !macJunk(c); })) return {ok: false, error: 'not empty'};
-  left.forEach(function(c){ fs.unlinkSync(path.join(p.full, c)); });
-  fs.rmdirSync(p.full);
+  var file = firstFile(p.full, '');
+  if (file) return {ok: false, error: 'not empty', file: file};
+  rmrf(p.full);
   return {ok: true};
 }
 
