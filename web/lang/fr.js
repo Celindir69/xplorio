@@ -494,6 +494,7 @@ langRegister('fr', 'Français', {
   'files.moveToNone': 'Déplacer',
   'files.pickTarget': 'Ouvrez d’abord le dossier cible dans l’autre colonne.',
   'files.rmdir': 'Supprimer les dossiers vides',
+  'files.editTags': 'Modifier les tags',
   'files.toTrash': 'Mettre à la corbeille',
   'files.untick': 'Annuler la sélection',
   'files.entries': {one: '1 entrée', other: '{n} entrées'},

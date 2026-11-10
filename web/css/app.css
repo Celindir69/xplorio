@@ -839,6 +839,9 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmName { flex:1 1 auto; min-width:0; font-size:calc(3.5 * var(--vw)); overflow-wrap:anywhere; }
 .fmSize { flex:0 0 auto; font-size:calc(3 * var(--vw)); opacity:.55; font-variant-numeric:tabular-nums; }
 .fmEmpty { padding:calc(3 * var(--vw)); }
+.fmPen { padding:calc(.6 * var(--vw)); opacity:.55; }
+.fmPen:hover { opacity:1; }
+.fmPen svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); min-width:16px; min-height:16px; }
 .fmBar { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:calc(2 * var(--vw));
   padding:calc(2.5 * var(--vw)) 0; margin-top:calc(2 * var(--vw)); background:var(--sheet); }
 .fmBarInfo { flex:1 1 100%; font-size:calc(3.3 * var(--vw)); opacity:.75; }

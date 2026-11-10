@@ -240,6 +240,9 @@ A device already logged in under System goes straight in, otherwise the file man
   too, onto a folder or onto the empty part of a column: dropping moves, holding ⌥ (Windows: Alt or Ctrl) copies. There is
   always a question before anything happens.
 - **New folder:** the folder icon with a plus at the top of each column.
+- **Tags:** the pencil next to an audio file opens the tag editor for it; the file manager stays open behind it and
+  rereads both columns when the editor closes. If only audio files are ticked, "Edit tags" at the bottom edits them
+  all together.
 - **Long lists:** if a list does not fit the column, a bar #, 0–9, A–Z appears at the outer edge (left in the left
   column, right in the right one). Tapping jumps to the first entry with that start (accented letters count as their
   base letter, # for other characters); sliding along the bar works too.
