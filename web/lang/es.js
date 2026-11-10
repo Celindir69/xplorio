@@ -493,6 +493,7 @@ langRegister('es', 'Español', {
   'files.moveToNone': 'Mover',
   'files.pickTarget': 'Abre primero la carpeta de destino en la otra columna.',
   'files.rmdir': 'Borrar carpetas vacías',
+  'files.editTags': 'Editar etiquetas',
   'files.toTrash': 'Mover a la papelera',
   'files.untick': 'Quitar selección',
   'files.entries': {one: '1 entrada', other: '{n} entradas'},

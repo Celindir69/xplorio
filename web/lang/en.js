@@ -495,6 +495,7 @@ langRegister('en', 'English', {
   'files.moveToNone': 'Move',
   'files.pickTarget': 'First open the target folder in the other column.',
   'files.rmdir': 'Delete empty folders',
+  'files.editTags': 'Edit tags',
   'files.toTrash': 'Move to trash',
   'files.untick': 'Clear selection',
   'files.entries': {one: '1 entry', other: '{n} entries'},

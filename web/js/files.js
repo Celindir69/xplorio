@@ -9,6 +9,7 @@ var FILES_UP = 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z';
 var FILES_NEWDIR = 'M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z';
 var FILES_DRIVE = 'M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z';
 var FILES_DOC = 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z';
+var FILES_PEN = 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z';
 var filesSeq = 0;
 var filesPanes = [{path: '', sel: {}}, {path: '', sel: {}}];   /* folder and ticked names per pane, kept while the page is open */
 var filesActive = 0;                                         /* the pane whose ticks the buttons act on */
@@ -220,6 +221,13 @@ function filesRow(i, it) {
   row.appendChild(icon);
   row.appendChild(histEl('div', 'fmName', it.name));
   if (it.kind === 'file') row.appendChild(histEl('div', 'fmSize', trashSize(it.bytes)));
+  if (it.kind === 'file' && TAG_EXT_RE.test(it.name)) {        /* pencil: tag editor on top, the file manager stays open behind it */
+    var pen = histEl('button', 'fmTool fmPen');
+    pen.title = T('files.editTags'); pen.setAttribute('aria-label', T('files.editTags'));
+    pen.innerHTML = trashSvg(FILES_PEN);
+    pen.addEventListener('click', function(ev){ ev.stopPropagation(); filesEditTags([it.path]); });
+    row.appendChild(pen);
+  }
   /* tap: a folder opens, a file is ticked */
   row.addEventListener('click', function(){
     if (it.kind === 'file') { filesTick(i, it.name, !filesPanes[i].sel[it.name]); return; }
@@ -343,6 +351,12 @@ function filesBar() {
     rm.addEventListener('click', function(){ filesRmdir(i); });
     bar.appendChild(rm);
   }
+  var tagItems = filesItems(i).filter(function(f){ return TAG_EXT_RE.test(f); });
+  if (tagItems.length && tagItems.length === n) {                 /* only audio files ticked: their tags together */
+    var ed = histEl('button', 'ckBtn', T('files.editTags'));
+    ed.addEventListener('click', function(){ filesEditTags(tagItems); });
+    bar.appendChild(ed);
+  }
   var tr = histEl('button', 'ckBtn ckDupPlay trDel');
   tr.title = T('files.toTrash'); tr.setAttribute('aria-label', T('files.toTrash'));
   tr.innerHTML = trashSvg(TRASH_ICON);
@@ -436,6 +450,15 @@ function filesRmdir(i) {
       .catch(function(){ bad.push(filesName(it)); next(); });
   })();
 }
+
+/* tag editor (tagedit.js) over the file manager; when it closes, both panes are read again (folder.jpg, names) */
+function filesEditTags(paths) {
+  openTagEditor(paths.map(function(f){ return {uri: 'music-library/' + f, title: filesName(f)}; }),
+                paths.length === 1 ? filesName(paths[0]) : T('files.entries', {n: paths.length}));
+}
+if (window.MutationObserver) new MutationObserver(function(){
+  if (!overlayTags.classList.contains('on') && overlayFiles.classList.contains('on')) filesReload();
+}).observe(overlayTags, {attributes: true, attributeFilter: ['class']});
 
 function filesReload() { if (filesEls) { filesLoad(0); filesLoad(1); } }
 
