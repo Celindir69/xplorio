@@ -419,6 +419,11 @@ function browseAlbum(e, seq) {
     var info = (j && j.navigation && j.navigation.info) || {};
     var tracks = browseItems(j).filter(function(it){ return it.uri && !/^folder/.test(it.type || ''); });
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
+    if (!tracks.length && e.file && !e.fromFolder) {      /* opened from the player: album not under this artist, e.g. a */
+      e.fromFolder = true;                                  /* compilation filed by Volumio under another of its artists */
+      e.uri = 'music-library/' + e.file.replace(/^\/?(music-library\/|mnt\/)?/, '').replace(/\/[^\/]*$/, '');
+      return browseAlbum(e, seq);                           /* -> the folder of the playing track */
+    }
     if (!tracks.length) { browseBody.appendChild(browseNote(T('browse.noTracks'))); return; }
 
     var art = info.albumart || e.albumart || tracks[0].albumart || (e.album === curAlbum ? lastArt : '');
@@ -767,7 +772,8 @@ mArtist.addEventListener('click', function(){
 mAlbum.addEventListener('click', function(){
   var a = mArtist.textContent, al = curAlbumTitle;
   if (curRadio || !a || !al) return;
-  openBrowse({kind:'album', artist:a, album:al, stream:curStream ? curStream.id : undefined});
+  openBrowse({kind:'album', artist:a, album:al, stream:curStream ? curStream.id : undefined,
+              file:!curStream && curUri && typeof TAG_LOCAL_RE !== 'undefined' && TAG_LOCAL_RE.test(curUri) ? curUri : undefined});   /* fallback: its folder */
 });
 mTitle.addEventListener('click', function(){       /* web radio: click on "artist - title"; own file: More like this track */
   if (curRadio && radioArtist) return openBrowse({kind:'artist', artist:radioArtist});
