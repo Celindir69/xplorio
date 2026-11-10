@@ -498,6 +498,8 @@ langRegister('en', 'English', {
   'files.editTags': 'Edit tags',
   'files.preview': 'Preview',
   'files.all': 'Tick all',
+  'files.rename': 'Rename',
+  'files.renameTo': 'New name for "{name}":',
   'files.toTrash': 'Move to trash',
   'files.untick': 'Clear selection',
   'files.entries': {one: '1 entry', other: '{n} entries'},

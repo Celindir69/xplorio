@@ -242,6 +242,8 @@ A device already logged in under System goes straight in, otherwise the file man
   too, onto a folder or onto the empty part of a column: dropping moves, holding ⌥ (Windows: Alt or Ctrl) copies. There is
   always a question before anything happens.
 - **New folder:** the folder icon with a plus at the top of each column.
+- **Rename:** shows at the bottom when exactly one entry is ticked. A name that already exists in the folder is refused;
+  changing only upper and lower case works on USB drives and NAS too. Ratings, NoMix and the history follow.
 - **Tags:** the pencil next to an audio file opens the tag editor for it; the file manager stays open behind it and
   rereads both columns when the editor closes. If only audio files are ticked, "Edit tags" at the bottom edits them
   all together.

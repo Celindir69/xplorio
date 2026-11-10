@@ -496,6 +496,8 @@ langRegister('it', 'Italiano', {
   'files.editTags': 'Modifica tag',
   'files.preview': 'Anteprima',
   'files.all': 'Seleziona tutto',
+  'files.rename': 'Rinomina',
+  'files.renameTo': 'Nuovo nome per «{name}»:',
   'files.toTrash': 'Sposta nel cestino',
   'files.untick': 'Annulla selezione',
   'files.entries': {one: '1 voce', other: '{n} voci'},

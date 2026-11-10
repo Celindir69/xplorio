@@ -496,6 +496,8 @@ langRegister('es', 'Español', {
   'files.editTags': 'Editar etiquetas',
   'files.preview': 'Vista previa',
   'files.all': 'Marcar todo',
+  'files.rename': 'Renombrar',
+  'files.renameTo': 'Nuevo nombre para «{name}»:',
   'files.toTrash': 'Mover a la papelera',
   'files.untick': 'Quitar selección',
   'files.entries': {one: '1 entrada', other: '{n} entradas'},

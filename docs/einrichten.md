@@ -277,6 +277,9 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
   ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.
 - **Neuer Ordner:** das Ordnersymbol mit Plus oben in jeder Spalte.
+- **Umbenennen:** erscheint unten, wenn genau ein Eintrag angehakt ist. Ein Name, den es im Ordner schon gibt, wird
+  abgelehnt; nur Groß- und Kleinschreibung zu ändern geht auch auf USB-Platten und NAS. Bewertungen, NoMix und der
+  Verlauf ziehen mit.
 - **Tags:** Der Stift neben einer Audiodatei öffnet den Tag-Editor für sie, der Dateimanager bleibt dahinter offen
   und liest beide Spalten neu ein, wenn der Editor schließt. Sind nur Audiodateien angehakt, bearbeitet „Tags bearbeiten“
   unten alle zusammen.

@@ -803,7 +803,7 @@ function doTrashDelete(body, cb) {
      list {path}              -> the drives (path '') or the folders and files of a folder; audio files with album (al) and
                                  album artist (aa) from MPD's database, if MPD knows them
      image {path}             -> {mime, data}: an image (jpg, png, gif, webp, bmp) as base64, for the preview
-     mkdir {dest, name}, rmdir {path}, trash {items}: right away
+     mkdir {dest, name}, rename {path, name}, rmdir {path}, trash {items}: right away
      copy / move {items, dest} -> runs as a job in the background (one at a time)
      job                      -> {ok, job}: the running or last job; cancel: stop it after the current file */
 var fileops = require('./fileops.js');
@@ -871,6 +871,16 @@ function doFiles(body, cb) {
     return cb(200, {ok: true, job: filesJobView()});
   }
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
+  if (op === 'rename') {
+    if (filesJob && filesJob.state === 'running') return cb(200, {ok: false, error: 'busy'});
+    try { r = fileops.rename(MUSIC_ROOT, String(body.path || ''), body.name); }
+    catch (e) { return cb(200, {ok: false, error: filesErr(e, body.path)}); }
+    if (r.ok) {
+      filesScan([{path: r.from, dir: r.dir}, {path: r.to, dir: r.dir}]);
+      filesRelocate([{from: r.from, to: r.to}]);                    /* ratings, NoMix, history follow */
+    }
+    return cb(200, r);
+  }
   if (op === 'mkdir') {
     try { r = fileops.mkdir(MUSIC_ROOT, String(body.dest || ''), body.name); }
     catch (e) { return cb(200, {ok: false, error: filesErr(e, body.dest)}); }
