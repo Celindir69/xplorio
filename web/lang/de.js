@@ -936,6 +936,8 @@ langRegister('de', 'Deutsch', {
   'tag.bulk.patternError': 'Muster: {error}',
   'tag.bulk.patternHint': 'Der Inhalt des gewählten Feldes wird zerlegt. Platzhalter: %TITLE% %ARTIST% %ALBUM% %ALBUMARTIST% %GENRE% %COMPOSER% %YEAR% %TRACK% %DISC%, dazu %DUMMY% für Text, der wegfallen soll.',
   'tag.bulk.pathHint': 'Vom Pfad zählen nur so viele Ordner von hinten, wie das Muster „/“ enthält, z. B. %ARTIST%/%ALBUM%/%TRACK% %TITLE%; die Dateiendung fällt weg.',
+  'tag.bulk.patterns': 'Gespeichert',
+  'tag.bulk.patternsHint': 'Muster, mit denen schon gespeichert wurde; ein eigenes Muster kommt nach dem Speichern dazu',
   'tag.bulk.preview': 'Vorschau',
   'tag.bulk.repl': 'Ersetzen durch',
   'tag.bulk.replPh': 'ersetzen durch',

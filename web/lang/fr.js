@@ -937,6 +937,8 @@ langRegister('fr', 'Français', {
   'tag.bulk.patternError': 'Modèle : {error}',
   'tag.bulk.patternHint': 'Le contenu du champ choisi est découpé. Variables : %TITLE% %ARTIST% %ALBUM% %ALBUMARTIST% %GENRE% %COMPOSER% %YEAR% %TRACK% %DISC%, plus %DUMMY% pour le texte à supprimer.',
   'tag.bulk.pathHint': 'Du chemin, seuls comptent autant de dossiers depuis la fin que le modèle contient de « / », p. ex. %ARTIST%/%ALBUM%/%TRACK% %TITLE% ; l’extension est ignorée.',
+  'tag.bulk.patterns': 'Enregistrés',
+  'tag.bulk.patternsHint': 'Modèles déjà utilisés pour enregistrer ; votre propre modèle s’ajoute après l’enregistrement',
   'tag.bulk.preview': 'Aperçu',
   'tag.bulk.repl': 'Remplacer par',
   'tag.bulk.replPh': 'remplacer par',

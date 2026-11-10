@@ -938,6 +938,8 @@ langRegister('en', 'English', {
   'tag.bulk.patternError': 'Pattern: {error}',
   'tag.bulk.patternHint': 'The selected field\'s content is split up. Placeholders: %TITLE% %ARTIST% %ALBUM% %ALBUMARTIST% %GENRE% %COMPOSER% %YEAR% %TRACK% %DISC%, plus %DUMMY% for text to drop.',
   'tag.bulk.pathHint': 'Of the path, only as many folders from the end count as the pattern has “/”, e.g. %ARTIST%/%ALBUM%/%TRACK% %TITLE%; the file extension is left out.',
+  'tag.bulk.patterns': 'Saved',
+  'tag.bulk.patternsHint': 'Patterns already saved with; your own pattern is added after saving',
   'tag.bulk.preview': 'Preview',
   'tag.bulk.repl': 'Replace with',
   'tag.bulk.replPh': 'replace with',
