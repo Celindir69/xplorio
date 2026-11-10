@@ -275,6 +275,9 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
   ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.
 - **Neuer Ordner:** das Ordnersymbol mit Plus oben in jeder Spalte.
+- **Lange Listen:** Passt eine Liste nicht in die Spalte, erscheint am äußeren Rand (links in der linken, rechts in der
+  rechten Spalte) eine Leiste #, 0–9, A–Z. Ein Tipp springt zum ersten Eintrag mit diesem Anfang (Umlaute wie der
+  Grundbuchstabe, # für Sonderzeichen); Wischen über die Leiste geht auch.
 - **Papierkorb, leere Ordner:** Der Mülleimer legt die Auswahl in `Xplorio Trash` ihres Laufwerks (zurücklegen über den
   Papierkorb). „Leere Ordner löschen“ erscheint, wenn nur Ordner ausgewählt sind; gelöscht wird nur, was leer ist
   (`.DS_Store` und `._`-Dateien vom Mac zählen nicht).

@@ -815,7 +815,17 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmCrumb { cursor:pointer; opacity:.75; }
 .fmCrumb:last-child { opacity:1; font-weight:600; }
 .fmSep { opacity:.4; margin:0 .35em; }
-.fmList { height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:calc(1 * var(--vw)) 0; }
+.fmListWrap { position:relative; }
+.fmList { position:relative; height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:calc(1 * var(--vw)) 0; }
+.fmList.fmHasIdx { padding-right:24px; }
+.fmIdx { position:absolute; top:4px; right:2px; bottom:4px; width:22px; display:flex; flex-direction:column; justify-content:space-between;
+  align-items:center; cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; }
+.fmIdxKey { flex:1 1 0; min-height:0; display:flex; align-items:center; justify-content:center; width:100%;
+  font-size:min(11px, calc(2.6 * var(--vw))); font-weight:600; line-height:1; opacity:.75; overflow:hidden; }
+.fmIdxKey.off { opacity:.25; }
+.fmLeft .fmList.fmHasIdx { padding-right:0; padding-left:24px; }
+.fmLeft .fmIdx { right:auto; left:2px; }
+.fmIdxKey:hover { opacity:1; }
 .fmRow { display:flex; align-items:center; gap:calc(2 * var(--vw)); padding:calc(1.6 * var(--vw)) calc(2 * var(--vw));
   cursor:pointer; user-select:none; -webkit-user-select:none; border-radius:6px; margin:0 calc(1 * var(--vw)); }
 .fmRow:hover { background:rgba(var(--fg-rgb),.06); }
