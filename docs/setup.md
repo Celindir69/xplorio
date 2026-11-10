@@ -227,6 +227,33 @@ spelling. Names listed here do not appear again under “Artists with several sp
 `artistnames.jsonl`; names without a hit are looked up again after 90 days. Turn off with `ARTISTNAMES: false` in
 `config.local.js`.
 
+### File Manager
+
+Menu → File manager: two columns with the folders below INTERNAL, USB and NAS, for stepping into the file layout when
+needed, e.g. sorting single tracks from different albums into folders of their own. It is protected by the password for
+the services (see System → Services); without a password set it does not open, and the Tag Service refuses every request.
+A device already logged in under System goes straight in, otherwise the file manager asks for the password once.
+
+- **Select:** tick files and folders; tapping a file ticks it, tapping a folder opens it. Only one column holds a
+  selection at a time, the other one is the target.
+- **Copy, move:** the buttons at the bottom act on the folder open in the other column. On a computer drag & drop works
+  too, onto a folder or onto the empty part of a column: dropping moves, holding ⌥ (Windows: Alt or Ctrl) copies. There is
+  always a question before anything happens.
+- **New folder:** the folder icon with a plus at the top of each column.
+- **Trash, empty folders:** the bin puts the selection into `Xplorio Trash` of its drive (put it back from the Trash page).
+  "Delete empty folders" shows when only folders are selected; only empty ones are deleted (`.DS_Store` and `._` files
+  from the Mac do not count).
+
+Rules: nothing is overwritten; if a name already exists in the target, the copy gets "(2)", "(3)" and so on. Moving within
+a drive is a rename and done at once. Between drives (e.g. USB → NAS) everything is copied first, each file checked for its
+size, and only then does the original go into the trash of its drive; if the connection drops, nothing is missing. Copies
+run in the background at low disk priority (`ionice`), one job at a time, with progress and "Cancel" (stops after the
+current file). The file manager does not show `Xplorio Trash`, hidden files, or links that lead off the drive.
+
+Afterwards MPD rereads exactly the affected folders. When moving, ratings, NoMix marks, the "keep" marks of the library
+check and the history follow to the new place. Volumio playlists and favorites keep the old path, though: moved tracks
+are missing there and have to be added again.
+
 ### Web Radio: Cover Art and Station Logos
 
 If a web radio station broadcasts "Artist - Title", the Tag Service searches iTunes for the corresponding cover art (falling back to Deezer) and displays it in the app; if no title is available or no match is found, the station logo remains.

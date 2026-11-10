@@ -1,5 +1,5 @@
 /* Menu behind the gear at the top right: tools that do not belong to the search.
-   Classic script, shared global scope; loaded after check.js, history.js, system.js, playback.js and volumio.js (help.js after it, openHelp only on tap).
+   Classic script, shared global scope; loaded after check.js, history.js, system.js, trash.js, files.js, playback.js and volumio.js (help.js after it, openHelp only on tap).
    More entries: one line in MENU_ITEMS (needsTags: only when the tag service is running). */
 var overlayMenu = document.getElementById('overlayMenu');
 var menuBody    = document.getElementById('menuBody');
@@ -22,6 +22,8 @@ var MENU_ITEMS = [
    icon: 'M3 4h4.2l4.8 11.3L16.8 4H21l-7 16h-4L3 4z'},
   {id: 'trash', needsTags: true, title: T('trash.title'), sub: T('trash.menuSub'), open: function(){ openTrash(); },
    icon: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z'},
+  {id: 'files', needsTags: true, title: T('files.title'), sub: T('files.menuSub'), open: function(){ openFiles(); },
+   icon: 'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2zm4 13v-3h-4v-2h4V9l4 4-4 4z'},
   {id: 'help', title: T('menu.help'), sub: T('menu.helpSub'), open: function(){ openHelp(); },
    icon: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4z'}
 ];

@@ -797,6 +797,101 @@ function doTrashDelete(body, cb) {
   cb(200, r);
 }
 
+/* ---------- Dateimanager: file management (fileops.js, menu "Dateimanager", web/js/files.js) ---------- */
+/* Only with the password (System page, adminpass.js): without one set, nothing works, not even the listing.
+   POST /files {op, token, …}:
+     list {path}              -> the drives (path '') or the folders and files of a folder
+     mkdir {dest, name}, rmdir {path}, trash {items}: right away
+     copy / move {items, dest} -> runs as a job in the background (one at a time)
+     job                      -> {ok, job}: the running or last job; cancel: stop it after the current file */
+var fileops = require('./fileops.js');
+var filesJob = null, filesJobSeq = 0;
+function filesErr(e, rel) {
+  if (e && (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS')) return 'no write permission: /mnt/' + rel;
+  return (e && e.message) || String(e);
+}
+function filesJobView() {
+  if (!filesJob) return null;
+  var j = filesJob;
+  return {id: j.id, op: j.op, state: j.state, dest: j.dest, n: j.steps.length, files: j.r.files, filesDone: j.r.filesDone,
+          bytes: j.r.bytes, bytesDone: j.r.bytesDone, current: j.r.current, done: j.r.done, errors: j.r.errors, skipped: j.skipped,
+          started: j.started, ended: j.ended || 0};
+}
+/* after moving: Xplorio's own data follows the new paths (ratings, NoMix, "keep" marks of the check, history) */
+function filesRelocate(moves) {
+  if (!moves.length) return;
+  function rename(obj) { return fileops.moveObjectKeys(obj, moves); }
+  try { ratingStore.relocate(rename); } catch (e) { console.error('ratings not moved along: ' + e.message); }
+  try { nomixStore.relocate(rename); } catch (e) { console.error('nomix not moved along: ' + e.message); }
+  try {
+    var m = genreOkLoad();
+    if (rename(m)) { genreOkRev++; writeAtomic(GENRE_OK_FILE, JSON.stringify(m)); }
+  } catch (e) { console.error('genre-ok not moved along: ' + e.message); }
+  try { playStore.relocate(function(u){ return fileops.movePartsKey(u, moves); }); } catch (e) { console.error('history not moved along: ' + e.message); }
+}
+/* MPD reads the old and the new places again (exactly these paths, see mpdForget) */
+function filesScan(changes) { if (changes.length) mpdForget(fileops.scanPaths(changes), function(){}); }
+function filesTrashNote(moved) {
+  if (!moved.length) return;
+  moved.forEach(function(m){ dupIgnore(duplicates.driveOf(m.from)); });
+  trashNote(moved, function(){ return 'files'; });
+}
+function doFiles(body, cb) {
+  if (!adminAuth.isSet()) return cb(200, {ok: false, error: 'nopw'});
+  if (!adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  var op = String(body.op || ''), r;
+  if (op === 'list') return cb(200, fileops.list(MUSIC_ROOT, String(body.path || '')));
+  if (op === 'job' || op === 'cancel') {
+    if (op === 'cancel' && filesJob && filesJob.state === 'running') filesJob.cancel = true;
+    return cb(200, {ok: true, job: filesJobView()});
+  }
+  if (checkRun) return cb(200, {ok: false, error: 'check running'});
+  if (op === 'mkdir') {
+    try { r = fileops.mkdir(MUSIC_ROOT, String(body.dest || ''), body.name); }
+    catch (e) { return cb(200, {ok: false, error: filesErr(e, body.dest)}); }
+    return cb(200, r);
+  }
+  if (op === 'rmdir') {
+    try { r = fileops.rmdir(MUSIC_ROOT, String(body.path || '')); }
+    catch (e) { return cb(200, {ok: false, error: filesErr(e, body.path)}); }
+    if (r.ok) filesScan([{path: String(body.path), dir: true}]);
+    return cb(200, r);
+  }
+  var items = Array.isArray(body.items) ? body.items.map(String) : [];
+  if (!items.length || items.length > fileops.MAX_ITEMS) return cb(400, {ok: false, error: 'items missing or too many'});
+  if (filesJob && filesJob.state === 'running') return cb(200, {ok: false, error: 'busy'});
+  if (op === 'trash') {
+    try { r = fileops.toTrash(MUSIC_ROOT, items); }
+    catch (e) { r = {ok: false, error: filesErr(e, items[0]), moved: []}; }
+    filesTrashNote(r.moved);
+    filesScan(r.moved.map(function(m){ return {path: m.from, dir: m.dir}; }));
+    return cb(200, r);
+  }
+  if (op !== 'copy' && op !== 'move') return cb(400, {ok: false, error: 'unknown op'});
+  var p = fileops.plan(MUSIC_ROOT, items, String(body.dest || ''), op);
+  if (!p.ok) return cb(200, p);
+  var job = filesJob = {id: ++filesJobSeq, op: op, dest: String(body.dest), steps: p.steps, skipped: p.skipped, state: 'running',
+                        started: Date.now(), cancel: false, r: {done: [], errors: [], files: 0, filesDone: 0, bytes: 0, bytesDone: 0, current: ''}};
+  var trashed = [];
+  fileops.run(MUSIC_ROOT, p.steps, op, {
+    progress: function(r){ job.r = r; },
+    cancelled: function(){ return job.cancel; },
+    toTrash: function(rel){ var t = fileops.toTrash(MUSIC_ROOT, [rel]).moved[0]; trashed.push(t); return t; }
+  }, function(r){
+    job.r = r; job.ended = Date.now();
+    job.state = r.cancelled ? 'cancelled' : r.errors.length ? (r.done.length ? 'partly' : 'error') : 'done';
+    var changes = [];
+    r.done.forEach(function(d){
+      changes.push({path: d.to, dir: d.dir});
+      if (op === 'move') changes.push({path: d.from, dir: d.dir});
+    });
+    filesTrashNote(trashed);
+    filesScan(changes);
+    if (op === 'move') filesRelocate(r.done.filter(function(d){ return !d.copyOnly; }).map(function(d){ return {from: d.from, to: d.to}; }));
+  });
+  cb(200, {ok: true, job: filesJobView()});
+}
+
 /* POST /dupfill {dir, files, token}: duplicate albums: copy the tracks the best version lacks (files: the ones ticked of
    missing in the last check, the group whose best version starts with dir; without files the sure ones) from the other versions into its folders; album, album artist, date and
    genre then come from the best version (written with an undo ID). Never overwrites a file.
@@ -2219,7 +2314,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -2227,7 +2322,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

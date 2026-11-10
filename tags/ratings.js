@@ -66,6 +66,14 @@ Store.prototype.set = function(b, now) {
   return v;
 };
 
+/* after files or folders were moved: keys of albums and tracks follow; rename(obj) renames the keys of an object and
+   returns how many (fileops.moveObjectKeys). Returns the number changed */
+Store.prototype.relocate = function(rename) {
+  var d = this.load(), n = rename(d.albums) + rename(d.tracks);
+  if (n) { this.rev++; this.save(); }
+  return n;
+};
+
 /* keys of all tracks with "don't like" -> true (for dice, Mood Mix and Discover) */
 Store.prototype.disliked = function() {
   var t = this.load().tracks, out = {};
