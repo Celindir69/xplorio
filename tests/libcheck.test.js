@@ -172,6 +172,23 @@ t('duplicate albums: tracks the best version lacks, with the folder to copy them
                        V('USB/M/Hits/2-3.mp3', {title: 'Northern Skies (Remix)', track: '3', disc: '2'})], function(){ return true; });
   assert.deepStrictEqual(r5.duplicates[0].missing.map(function(m){ return m.title; }), ['Northern Skies (Remix)']);   /* addition: another track */
 });
+t('album split over folders: parts of one album, not copies', function(){
+  function V(f, o) { o.album = 'Hits'; o.albumartist = 'Band'; o.format = '44100:16:2'; return D(f, o); }
+  var r = lc.analyze([V('USB/S/Hits/01.flac', {title: 'One', track: '1'}), V('USB/S/Hits/02.flac', {title: 'Two', track: '2'}),
+                      V('USB/S/Hits/03.flac', {title: 'Three', track: '3'}), V('USB/S/Unknown Album/04.flac', {title: 'Four', track: '4'})],
+                     function(){ return true; });
+  assert.strictEqual(r.duplicates.length, 0);                        /* not listed as duplicate album */
+  assert.strictEqual(r.splitAlbums.length, 1);
+  assert.deepStrictEqual(r.splitAlbums[0].versions.map(function(v){ return [v.dirs[0], v.tracks]; }),
+    [['USB/S/Hits', 3], ['USB/S/Unknown Album', 1]]);                  /* the folder with the most tracks first: the target */
+  var c = lc.analyze([V('USB/S/Hits/01.flac', {title: 'One', track: '1'}), V('USB/C/Hits/01.flac', {title: 'One', track: '1'})], function(){ return true; });
+  assert.strictEqual(c.splitAlbums.length, 0); assert.strictEqual(c.duplicates.length, 1);   /* same track twice: copies */
+  var n = lc.analyze([V('USB/S/Hits/01.flac', {title: 'One', track: '1'}), V('USB/C/Hits/01.flac', {title: 'Uno', track: '1'})], function(){ return true; });
+  assert.strictEqual(n.splitAlbums.length, 0);                       /* same number: perhaps another album of that name */
+  var m = lc.analyze([V('USB/S/Hits/01.flac', {title: 'One', track: '1'}), V('USB/C/Mix/02.flac', {title: 'Two', track: '2'}),
+                      D('USB/C/Mix/05.flac', {title: 'Else', album: 'Other', track: '5'})], function(){ return true; });
+  assert.strictEqual(m.splitAlbums.length, 0);                       /* folder with other albums: whole folders only */
+});
 t('spellings: case, The, accents', function(){
   var g = r.spelling.map(function(x){ return x.variants.map(function(v){ return v.name; }).sort().join('|'); });
   assert.ok(g.indexOf('SPLIFF|Spliff') >= 0);

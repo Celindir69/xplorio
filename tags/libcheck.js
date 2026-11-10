@@ -326,6 +326,36 @@ function missingTracks(g, songsOf) {
   return out.sort(function(a, b){ return (parseInt(a.disc, 10) || 0) - (parseInt(b.disc, 10) || 0) || (parseInt(a.track, 10) || 0) - (parseInt(b.track, 10) || 0); });
 }
 
+/* An album split over folders: a group of duplicates.find whose versions are parts of one album, not copies of it.
+   Each folder holds only tracks of this album (whole folders, no collection folders), all versions have the same format,
+   and no title and no disc/track number is in two versions. -> {name, artist, versions: [{dirs, tracks, format}]}, the one
+   with the most tracks first (the folder to move the others into), or null.
+   g: entry of duplicates.find; songsOf(dir) -> songs */
+function splitAlbum(g, songsOf) {
+  if (g.versions.length < 2) return null;
+  var fmt = g.versions[0].format, seenT = {}, seenN = {}, ok = true;
+  g.versions.forEach(function(v, i){
+    if (!ok) return;
+    if (v.format !== fmt) { ok = false; return; }
+    v.dirs.forEach(function(d){
+      var list = songsOf(d), keys = {};
+      list.forEach(function(s){ keys[duplicates.albumKey(s.album, artistKey)] = 1; });
+      if (!list.length || Object.keys(keys).length !== 1 || !Object.keys(keys)[0]) ok = false;    /* not a whole folder of this album */
+      list.forEach(function(s){
+        var t = titleKey(s.title), tk = t ? artistKey(s.artist || s.albumartist) + '|' + t : '';
+        var tm = /^\s*(\d+)/.exec(s.track || ''), dm = /^\s*(\d+)/.exec(s.disc || ''), fm = DISC_DIR_RE.exec(path.basename(d));
+        var nk = tm && +tm[1] ? ((dm ? +dm[1] : fm ? +fm[3] : 0) || 1) + '|' + (+tm[1]) : '';
+        if ((tk && seenT[tk] !== undefined && seenT[tk] !== i) || (nk && seenN[nk] !== undefined && seenN[nk] !== i)) ok = false;
+        if (tk) seenT[tk] = i;
+        if (nk) seenN[nk] = i;
+      });
+    });
+  });
+  if (!ok) return null;
+  return {name: g.name, artist: g.artist, versions: g.versions.map(function(v){ return {dirs: v.dirs, tracks: v.tracks, format: v.format}; })
+    .sort(function(a, b){ return b.tracks - a.tracks || (a.dirs[0] < b.dirs[0] ? -1 : 1); })};
+}
+
 /* best first: lossless before lossy, the higher data rate (lossy, from s.size), more bits, higher rate, then without
    copy name, then the older file */
 function rank(files) {
@@ -435,6 +465,12 @@ function analyze(songs, hasCover, audioOf) {
      folder next to CD1/CD2): the same track in two versions is listed there, not here */
   var verOf = {};
   res.duplicates = duplicates.find(songs, artistKey);
+  res.splitAlbums = [];                                  /* parts of one album in several folders: not copies */
+  res.duplicates = res.duplicates.filter(function(g){
+    var sp = splitAlbum(g, function(d){ return dirs[d] || []; });
+    if (sp) res.splitAlbums.push(sp);
+    return !sp;
+  });
   res.duplicates.forEach(function(g){
     var m = missingTracks(g, function(d){ return dirs[d] || []; });
     if (m.length) g.missing = m;
@@ -550,4 +586,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, splitAlbum: splitAlbum, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};

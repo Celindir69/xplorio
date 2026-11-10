@@ -207,6 +207,14 @@ search or in the library check), “Move album” sits below the tracks. It puts
 subfolders) into `Xplorio Trash` the same way, even if it is no duplicate. Only album folders the Tag Service knows from
 the library can be moved.
 
+**Album split across folders:** the same album artist and album name in several folders that are not copies but parts
+of one album: each folder holds only tracks of this album (collection folders with other albums do not count), all have
+the same format, and no title and no track number is in two folders. Such cases are listed here and no longer under
+"Duplicate albums". The folder with the most tracks is the target. "File manager" next to another folder opens the file
+manager (services password) with that folder on the left and the target on the right; drag the files across there. The
+back arrow leads to the library check again; after the next check the entry is gone. "Keep" leaves folders that are
+meant to be apart alone.
+
 **Duplicate tracks in an album:** tracks that occur more than once in an album (with disc subfolders). Certain: copy names
 such as `01 Song (1).flac` or `01 Song Kopie.flac` next to `01 Song.flac`, the same track in two formats (`01.flac` and
 `01.mp3`), and the same artist and title with the same length (±2 s). Dimmed as a hint: the same title with another
