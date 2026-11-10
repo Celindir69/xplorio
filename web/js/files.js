@@ -448,7 +448,7 @@ function filesRmdir(i) {
       return filesReload();
     }
     var it = items[k++];
-    filesPost({op: 'rmdir', path: it}).then(function(r){ if (!r || !r.ok) bad.push(filesName(it)); next(); })
+    filesPost({op: 'rmdir', path: it}).then(function(r){ if (!r || !r.ok) bad.push(filesName(it) + (r && r.file ? ' (' + r.file + ')' : '')); next(); })
       .catch(function(){ bad.push(filesName(it)); next(); });
   })();
 }

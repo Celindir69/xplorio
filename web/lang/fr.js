@@ -505,7 +505,7 @@ langRegister('fr', 'Français', {
   'files.newDirName': 'Nom du nouveau dossier dans {dir} :',
   'files.confirmTrash': 'Mettre {what} à la corbeille ? Tout peut être remis en place depuis là.',
   'files.trashed': {one: '1 entrée est dans la corbeille.', other: '{n} entrées sont dans la corbeille.'},
-  'files.notEmptyList': 'Non supprimés car non vides : {names}',
+  'files.notEmptyList': 'Non supprimés car des fichiers s’y trouvent encore : {names}',
   'files.removed': {one: '1 dossier vide supprimé.', other: '{n} dossiers vides supprimés.'},
   'files.copying': 'Copie',
   'files.moving': 'Déplacement',

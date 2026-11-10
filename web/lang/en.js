@@ -506,7 +506,7 @@ langRegister('en', 'English', {
   'files.newDirName': 'Name of the new folder in {dir}:',
   'files.confirmTrash': 'Move {what} to the trash? Everything can be put back from there.',
   'files.trashed': {one: '1 entry is in the trash.', other: '{n} entries are in the trash.'},
-  'files.notEmptyList': 'Not deleted because not empty: {names}',
+  'files.notEmptyList': 'Not deleted because files are still inside: {names}',
   'files.removed': {one: '1 empty folder deleted.', other: '{n} empty folders deleted.'},
   'files.copying': 'Copying',
   'files.moving': 'Moving',

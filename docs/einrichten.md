@@ -284,8 +284,10 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   rechten Spalte) eine Leiste #, 0–9, A–Z. Ein Tipp springt zum ersten Eintrag mit diesem Anfang (Umlaute wie der
   Grundbuchstabe, # für Sonderzeichen); Wischen über die Leiste geht auch.
 - **Papierkorb, leere Ordner:** Der Mülleimer legt die Auswahl in `Xplorio Trash` ihres Laufwerks (zurücklegen über den
-  Papierkorb). „Leere Ordner löschen“ erscheint, wenn nur Ordner ausgewählt sind; gelöscht wird nur, was leer ist
-  (`.DS_Store` und `._`-Dateien vom Mac zählen nicht).
+  Papierkorb). „Leere Ordner löschen“ erscheint, wenn nur Ordner ausgewählt sind. Gelöscht wird ein Ordner samt Unterordnern
+  nur, wenn darin auf keiner Ebene eine Datei liegt; Reste von Mac und Windows (`.DS_Store`, `._`-Dateien, `Thumbs.db`,
+  `desktop.ini`) zählen nicht und gehen mit. Jede andere Datei, auch eine versteckte wie `.mpdignore`, verhindert das
+  Löschen, und die Meldung nennt sie.
 
 Regeln: Es wird nichts überschrieben; gibt es einen Namen im Ziel schon, bekommt die Kopie „(2)“, „(3)“ usw. Verschieben
 innerhalb eines Laufwerks ist ein Umbenennen und sofort fertig. Zwischen Laufwerken (z. B. USB → NAS) wird zuerst kopiert,

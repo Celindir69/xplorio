@@ -145,6 +145,15 @@ t('mkdir, rmdir (only empty, Mac leftovers do not count), trash', function(done)
   assert.ok(fileops.rmdir(root, 'USB/S/Neu').ok);
   assert.ok(!has(root, 'USB/S/Neu'));
   assert.strictEqual(fileops.rmdir(root, 'USB/S/Mix').error, 'not empty');
+  mk(root, 'USB/S/Tree/a/b/.DS_Store'); mk(root, 'USB/S/Tree/a/Thumbs.db'); mkd(path.join(root, 'USB/S/Tree/c/d'));
+  assert.ok(fileops.rmdir(root, 'USB/S/Tree').ok, 'only folders and junk: the whole tree goes');
+  assert.ok(!has(root, 'USB/S/Tree'));
+  mk(root, 'USB/S/Tree2/a/b/.DS_Store'); mk(root, 'USB/S/Tree2/c/.mpdignore', 'x');
+  assert.deepStrictEqual(fileops.rmdir(root, 'USB/S/Tree2'), {ok: false, error: 'not empty', file: 'c/.mpdignore'});
+  assert.ok(has(root, 'USB/S/Tree2/a/b/.DS_Store'), 'nothing deleted');
+  fs.symlinkSync(path.join(root, 'USB/S/Mix'), path.join(root, 'USB/S/Tree2/a/link'));
+  fs.unlinkSync(path.join(root, 'USB/S/Tree2/c/.mpdignore'));
+  assert.strictEqual(fileops.rmdir(root, 'USB/S/Tree2').file, 'a/link', 'a link is not followed and counts as a file');
   assert.strictEqual(fileops.rmdir(root, 'USB/S').ok, false, 'never the drive');
   mk(root, 'USB/S/Xplorio Trash/Mix/a.mp3', 'older');
   var r = fileops.toTrash(root, ['USB/S/Mix/a.mp3', 'USB/S/Beatles']);

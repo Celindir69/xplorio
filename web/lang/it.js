@@ -504,7 +504,7 @@ langRegister('it', 'Italiano', {
   'files.newDirName': 'Nome della nuova cartella in {dir}:',
   'files.confirmTrash': 'Spostare {what} nel cestino? Da lì si può ripristinare tutto.',
   'files.trashed': {one: '1 voce è nel cestino.', other: '{n} voci sono nel cestino.'},
-  'files.notEmptyList': 'Non eliminate perché non vuote: {names}',
+  'files.notEmptyList': 'Non eliminate perché contengono ancora file: {names}',
   'files.removed': {one: '1 cartella vuota eliminata.', other: '{n} cartelle vuote eliminate.'},
   'files.copying': 'Copia',
   'files.moving': 'Spostamento',
