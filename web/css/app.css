@@ -839,6 +839,12 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmName { flex:1 1 auto; min-width:0; font-size:calc(3.5 * var(--vw)); overflow-wrap:anywhere; }
 .fmSize { flex:0 0 auto; font-size:calc(3 * var(--vw)); opacity:.55; font-variant-numeric:tabular-nums; }
 .fmEmpty { padding:calc(3 * var(--vw)); }
+.fmImgIcon { cursor:zoom-in; width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); min-width:26px; min-height:26px; align-items:center; justify-content:center; }
+.fmThumb { width:100%; height:100%; object-fit:cover; border-radius:3px; display:block; }
+.fmLightbox { position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.82); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px; padding:16px; cursor:zoom-out; color:#fff; }
+.fmLightImg { max-width:100%; max-height:calc(100% - 40px); object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.5); }
+.fmLightCap { font-size:13px; opacity:.85; text-align:center; overflow-wrap:anywhere; }
 .fmPen { padding:calc(.6 * var(--vw)); opacity:.55; }
 .fmPen:hover { opacity:1; }
 .fmPen svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); min-width:16px; min-height:16px; }

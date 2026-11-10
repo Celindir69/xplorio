@@ -243,6 +243,8 @@ A device already logged in under System goes straight in, otherwise the file man
 - **Tags:** the pencil next to an audio file opens the tag editor for it; the file manager stays open behind it and
   rereads both columns when the editor closes. If only audio files are ticked, "Edit tags" at the bottom edits them
   all together.
+- **Images:** JPG, PNG, GIF, WebP and BMP (e.g. `folder.jpg`) show a small preview instead of the icon; tapping it shows
+  the image large with its size in pixels, tapping beside it or Esc closes it.
 - **Long lists:** if a list does not fit the column, a bar #, 0–9, A–Z appears at the outer edge (left in the left
   column, right in the right one). Tapping jumps to the first entry with that start (accented letters count as their
   base letter, # for other characters); sliding along the bar works too.
