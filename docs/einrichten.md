@@ -591,7 +591,8 @@ Genres, nach Künstler sortiert. Je Album zählen bis zu drei Unterstile seines 
 weitere ab 15 %); die Albenliste zeigt sie mit ihrem Anteil, z. B. „Hard Rock 78 % · Heavy Metal 22 %“.
 Alben ohne Analyse stehen nur unter „Alle“. Die Suche findet auch Unterstile. Als Genre eines Albums gilt sein
 häufigstes Genre-Tag (aus der Albenliste). Auf der Albumseite stehen Künstler, Album und Genre untereinander; Künstler und
-Genre öffnen ihre Seite. In Albumlisten steht das Genre klein vor dem Stift, in der Player-Ansicht klein unter der
+Genre öffnen ihre Seite. Stammen die Titel von verschiedenen Künstlern (Compilation) oder weicht ein Titel-Künstler vom
+Album-Künstler ab (z. B. „feat.“), steht der Künstler klein unter jedem Titel. In Albumlisten steht das Genre klein vor dem Stift, in der Player-Ansicht klein unter der
 Qualitätsangabe, mit dem stärksten Stil des Albums in Klammern, z. B. „Rock (Hard Rock)“ (ein Tipp öffnet die
 Genre-Seite, auf den Stil die Alben dieses Stils). Genre-Tags vereinheitlichen und ergänzen hilft
 [Bibliothek prüfen](#bibliothek-prüfen).

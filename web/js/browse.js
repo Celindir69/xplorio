@@ -483,6 +483,9 @@ function browseAlbum(e, seq) {
     var pane = panes.tracks;
 
     var rows = [], nums = [];
+    /* compilation (tracks by different artists, or not by the album artist, e.g. "feat."): artist small below each title */
+    var firstArtist = tracks[0].artist || '';
+    var perArtist = tracks.some(function(t){ return (t.artist || '') !== firstArtist || (t.artist && who && t.artist !== who); });
     pane.appendChild(listHint(T('browse.hintAlbum')));
     tracks.forEach(function(t, i){
       var row = document.createElement('div');
@@ -496,6 +499,11 @@ function browseAlbum(e, seq) {
       var tt = document.createElement('div');
       tt.className = 'sTitle'; tt.textContent = t.title || t.name || '';
       tm.appendChild(tt);
+      if (perArtist && t.artist) {
+        var ta = document.createElement('div');
+        ta.className = 'sSub bTrackArtist'; ta.textContent = t.artist;
+        tm.appendChild(ta);
+      }
       row.appendChild(num); row.appendChild(tm);
       if (t.duration) {
         var du = document.createElement('div');
