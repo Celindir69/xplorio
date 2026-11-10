@@ -407,6 +407,7 @@ function filesTransfer(mode, items, dest) {
   filesPost({op: mode, items: items, dest: dest}).then(function(r){
     if (!r || !r.ok) return filesNote(filesError(r));
     filesPanes[0].sel = {}; filesPanes[1].sel = {};
+    filesMine = r.job && r.job.id;                          /* a move within a drive is often done before the answer comes */
     filesShowJob(r.job);
   }).catch(function(){ filesNote(filesError(null)); });
 }
@@ -465,6 +466,7 @@ function filesReload() { if (filesEls) { filesLoad(0); filesLoad(1); } }
 /* ---------- the running job: progress, cancel, result ---------- */
 
 var filesLastJob = null;
+var filesMine = 0;                                         /* id of the job started here: its end is always shown and reloads */
 function filesBusy() { return !!(filesLastJob && filesLastJob.state === 'running'); }
 function filesShowJob(job) {
   var was = filesLastJob;
@@ -489,7 +491,8 @@ function filesShowJob(job) {
     stop.addEventListener('click', function(){ stop.disabled = true; filesPost({op: 'cancel'}).catch(function(){}); });
     box.appendChild(stop);
     filesJobTimer = setTimeout(filesPoll, 1000);
-  } else if (was && was.id === job.id && was.state === 'running') {
+  } else if ((was && was.id === job.id && was.state === 'running') || job.id === filesMine) {
+    filesMine = 0;
     filesJobResult(job);                                      /* just ended: say what happened, reload */
     filesReload();
   } else box.style.display = 'none';                         /* an old job: nothing to say */

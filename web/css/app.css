@@ -843,17 +843,17 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmPen:hover { opacity:1; }
 .fmPen svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); min-width:16px; min-height:16px; }
 .fmBar { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:calc(2 * var(--vw));
-  padding:calc(2.5 * var(--vw)) 0; margin-top:calc(2 * var(--vw)); background:var(--sheet); }
+  padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); margin-top:calc(2 * var(--vw)); background:var(--sheet); border-radius:calc(2 * var(--vw)); }
 .fmBarInfo { flex:1 1 100%; font-size:calc(3.3 * var(--vw)); opacity:.75; }
 .fmBar .ckBtn:disabled { opacity:.4; cursor:default; }
 .fmBar .trDel { margin-left:auto; }
-.fmJob { margin-top:calc(2 * var(--vw)); padding:calc(2.5 * var(--vw)); border-radius:calc(2 * var(--vw)); background:rgba(var(--fg-rgb),.07);
+.fmJob { margin-top:calc(2 * var(--vw)); padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); border-radius:calc(2 * var(--vw)); background:rgba(var(--fg-rgb),.07);
   display:flex; flex-direction:column; gap:calc(1.5 * var(--vw)); align-items:flex-start; }
 .fmJobText { font-size:calc(3.5 * var(--vw)); }
 .fmProg { align-self:stretch; height:6px; border-radius:3px; background:rgba(var(--fg-rgb),.15); overflow:hidden; }
 .fmProgFill { height:100%; background:var(--fg); opacity:.7; transition:width .4s; }
 .fmCur { overflow-wrap:anywhere; white-space:normal; }
-.fmMsg { padding:calc(1.5 * var(--vw)) 0 0; }
+.fmMsg { padding:calc(1.5 * var(--vw)) calc(3.5 * var(--vw)) 0; }
 
 /* ---------- Library check ---------- */
 #overlayCheck .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
