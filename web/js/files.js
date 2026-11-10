@@ -199,7 +199,7 @@ function filesList(i, r) {
     return filesPaint();
   }
   r.dirs.forEach(function(d){ p.list.appendChild(filesRow(i, {name: d.name, path: rel + '/' + d.name, kind: 'dir'})); });
-  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio, image: f.image})); });
+  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio, image: f.image, al: f.al, aa: f.aa})); });
   if (!r.dirs.length && !r.files.length) p.list.appendChild(histEl('div', 'sHint fmEmpty', T('files.emptyDir')));
   if (r.more) p.list.appendChild(histEl('div', 'sHint', T('files.more')));
   filesPaint();
@@ -220,7 +220,9 @@ function filesRow(i, it) {
   icon.innerHTML = trashSvg(it.kind === 'drive' ? FILES_DRIVE : it.kind === 'dir' ? TRASH_DIR : it.audio ? TRASH_FILE : FILES_DOC);
   if (it.image) filesThumb(icon, it);
   row.appendChild(icon);
-  row.appendChild(histEl('div', 'fmName', it.name));
+  var nm = histEl('div', 'fmName', it.name);
+  if (it.al || it.aa) nm.appendChild(histEl('div', 'fmMeta', [it.al, it.aa].filter(Boolean).join(' – ')));   /* from MPD */
+  row.appendChild(nm);
   if (it.kind === 'file') row.appendChild(histEl('div', 'fmSize', trashSize(it.bytes)));
   if (it.kind === 'file' && TAG_EXT_RE.test(it.name)) {        /* pencil: tag editor on top, the file manager stays open behind it */
     var pen = histEl('button', 'fmTool fmPen');

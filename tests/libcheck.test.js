@@ -249,6 +249,9 @@ srv.listen(0, function(){
       assert.strictEqual(list[1].title, 'Ohne Tags');
       assert.ok(prog.length >= 3);
     });
+    lc.mpdWalk({port: srv.address().port, roots: ['USB/S'], flat: true}, function(err3, flat, n3){
+      t('read MPD flat: only the folder asked for, not the ones below', function(){ assert.ifError(err3); assert.strictEqual(n3, 1); assert.strictEqual(flat.length, 0); });
+    });
     lc.mpdWalk({port: 1}, function(err2){
       t('MPD unreachable: error instead of hanging', function(){ assert.ok(err2); });
       service(srv.address().port);

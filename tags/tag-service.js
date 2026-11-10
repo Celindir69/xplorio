@@ -800,7 +800,8 @@ function doTrashDelete(body, cb) {
 /* ---------- Dateimanager: file management (fileops.js, menu "Dateimanager", web/js/files.js) ---------- */
 /* Only with the password (System page, adminpass.js): without one set, nothing works, not even the listing.
    POST /files {op, token, …}:
-     list {path}              -> the drives (path '') or the folders and files of a folder
+     list {path}              -> the drives (path '') or the folders and files of a folder; audio files with album (al) and
+                                 album artist (aa) from MPD's database, if MPD knows them
      image {path}             -> {mime, data}: an image (jpg, png, gif, webp, bmp) as base64, for the preview
      mkdir {dest, name}, rmdir {path}, trash {items}: right away
      copy / move {items, dest} -> runs as a job in the background (one at a time)
@@ -841,7 +842,22 @@ function doFiles(body, cb) {
   if (!adminAuth.isSet()) return cb(200, {ok: false, error: 'nopw'});
   if (!adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   var op = String(body.op || ''), r;
-  if (op === 'list') return cb(200, fileops.list(MUSIC_ROOT, String(body.path || '')));
+  if (op === 'list') {
+    var l = fileops.list(MUSIC_ROOT, String(body.path || ''));
+    if (!l.ok || !l.files || !l.files.some(function(f){ return f.audio; })) return cb(200, l);
+    /* album and album artist of the audio files from MPD's database (no file is opened), only this folder */
+    return libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT, roots: [l.path], flat: true, timeout: 5000}, function(err, songs){
+      if (!err) {
+        var by = {};
+        songs.forEach(function(x){ by[path.basename(x.file)] = x; });
+        l.files.forEach(function(f){
+          var x = f.audio && by[f.name];
+          if (x) { f.al = x.album || ''; f.aa = x.albumartist || x.artist || ''; }
+        });
+      }
+      cb(200, l);
+    });
+  }
   if (op === 'image') {                                   /* preview: the image as base64 (no token in a URL) */
     var im = fileops.image(MUSIC_ROOT, String(body.path || ''));
     if (!im.ok) return cb(200, im);
