@@ -496,6 +496,8 @@ langRegister('de', 'Deutsch', {
   'files.editTags': 'Tags bearbeiten',
   'files.preview': 'Vorschau',
   'files.all': 'Alle anhaken',
+  'files.rename': 'Umbenennen',
+  'files.renameTo': 'Neuer Name für „{name}“:',
   'files.toTrash': 'In den Papierkorb',
   'files.untick': 'Auswahl aufheben',
   'files.entries': {one: '1 Eintrag', other: '{n} Einträge'},

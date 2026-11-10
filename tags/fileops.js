@@ -147,6 +147,27 @@ function mkdir(root, dest, name) {
   return {ok: true, path: dest + '/' + name};
 }
 
+/* rename a file or folder in its place -> {ok, from, to, dir}; only a change of upper and lower case is possible
+   even on drives that do not tell them apart (exFAT, NTFS, SMB): then over a temporary name */
+function rename(root, rel, name) {
+  var p = check(root, rel, true, false);
+  if (!p) return {ok: false, error: 'not found'};
+  if (!goodName(name)) return {ok: false, error: 'bad name'};
+  var old = path.basename(rel);
+  if (name === old) return {ok: false, error: 'nothing to do'};
+  var to = path.dirname(rel) + '/' + name, full = path.join(root, to), dir = isDir(p.full);
+  if (name.toLowerCase() === old.toLowerCase()) {
+    var tmp = path.join(path.dirname(p.full), '.xplorio-rename-' + process.pid + '-' + Date.now());
+    fs.renameSync(p.full, tmp);
+    try { if (exists(full)) throw new Error('exists'); fs.renameSync(tmp, full); }
+    catch (e) { fs.renameSync(tmp, p.full); return {ok: false, error: e.message === 'exists' ? 'exists' : e.message}; }
+  } else {
+    if (exists(full)) return {ok: false, error: 'exists'};
+    fs.renameSync(p.full, full);
+  }
+  return {ok: true, from: rel, to: to, dir: dir};
+}
+
 /* left behind by Mac and Windows: does not make a folder "not empty" */
 function junk(name) { return macJunk(name) || /^(thumbs\.db|desktop\.ini)$/i.test(name); }
 /* the first real file below a folder (relative), '' if there are only folders and junk; a link counts as a file */
@@ -381,6 +402,6 @@ function scanPaths(changes) {
 }
 
 module.exports = {MAX_ITEMS: MAX_ITEMS, image: image, check: check, goodName: goodName, freeName: freeName, numbered: numbered, list: list,
-  mkdir: mkdir, rmdir: rmdir, toTrash: toTrash, plan: plan, run: run, copyFile: copyFile, moveKey: moveKey,
+  mkdir: mkdir, rename: rename, rmdir: rmdir, toTrash: toTrash, plan: plan, run: run, copyFile: copyFile, moveKey: moveKey,
   movePartsKey: movePartsKey, moveObjectKeys: moveObjectKeys, scanPaths: scanPaths, driveOf: driveOf,
   setUseCp: function(on){ useCp = !!on; }};

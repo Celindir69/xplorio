@@ -384,6 +384,12 @@ function filesBar() {
     b.addEventListener('click', function(){ filesTransfer(x[0], filesItems(i), dest); });
     bar.appendChild(b);
   });
+  if (n === 1) {
+    var rn = histEl('button', 'ckBtn', T('files.rename'));
+    rn.disabled = busy;
+    rn.addEventListener('click', function(){ filesRename(i); });
+    bar.appendChild(rn);
+  }
   var dirsOnly = filesEls.panes[i].data && Object.keys(filesPanes[i].sel).every(function(nm){
     return filesEls.panes[i].data.dirs.some(function(d){ return d.name === nm; });
   });
@@ -465,6 +471,21 @@ function filesMkdir(i) {
     if (!r || !r.ok) return filesNote(filesError(r));
     filesNote('');
     filesLoad(i);
+  }).catch(function(){ filesNote(filesError(null)); });
+}
+
+function filesRename(i) {
+  var it = filesItems(i)[0];
+  if (!it) return;
+  var old = filesName(it), name = prompt(T('files.renameTo', {name: old}), old);
+  if (name === null) return;
+  name = name.trim();
+  if (!name || name === old) return;
+  filesPost({op: 'rename', path: it, name: name}).then(function(r){
+    if (!r || !r.ok) return filesNote(filesError(r));
+    filesNote('');
+    filesPanes[i].sel = {}; filesPanes[i].sel[name] = true;          /* stays ticked under its new name */
+    filesReload();
   }).catch(function(){ filesNote(filesError(null)); });
 }
 

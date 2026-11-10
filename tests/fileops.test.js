@@ -164,6 +164,21 @@ t('mkdir, rmdir (only empty, Mac leftovers do not count), trash', function(done)
   done();
 });
 
+t('rename: in place, never over another name, upper/lower case alone works', function(done){
+  var root = setup();
+  assert.deepStrictEqual(fileops.rename(root, 'USB/S/Mix/a.mp3', 'c.mp3'), {ok: true, from: 'USB/S/Mix/a.mp3', to: 'USB/S/Mix/c.mp3', dir: false});
+  assert.strictEqual(read(root, 'USB/S/Mix/c.mp3'), 'aaa');
+  assert.strictEqual(fileops.rename(root, 'USB/S/Mix/c.mp3', 'b.mp3').error, 'exists');
+  assert.strictEqual(read(root, 'USB/S/Mix/b.mp3'), 'bb');
+  assert.ok(fileops.rename(root, 'USB/S/Beatles', 'BEATLES').ok);
+  assert.ok(has(root, 'USB/S/BEATLES/Help/01 Help.flac'));
+  ['', '.x', 'a/b', '..', 'Xplorio Trash'].forEach(function(n){ assert.strictEqual(fileops.rename(root, 'USB/S/Mix', n).error, 'bad name', n); });
+  assert.strictEqual(fileops.rename(root, 'USB/S/Mix', 'Mix').error, 'nothing to do');
+  assert.strictEqual(fileops.rename(root, 'USB/S', 'T').error, 'not found', 'never a drive');
+  assert.strictEqual(fileops.rename(root, 'USB/S/Xplorio Trash/Old', 'x').error, 'not found');
+  done();
+});
+
 t('image: only image files on a drive', function(done){
   var root = setup();
   mk(root, 'USB/S/Beatles/Help/folder.jpg', 'jpg');
