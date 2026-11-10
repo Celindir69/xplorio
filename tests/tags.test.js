@@ -97,6 +97,14 @@ else {
     run({op: 'write', path: dsf, tags: {comment: ''}});
     assert.strictEqual(run({op: 'read', path: dsf}).tags.comment, '');
   });
+  t('tags.py: compilation flag (ID3 TCMP) set, normalized and removed', function(){
+    assert.strictEqual(run({op: 'read', path: dsf}).tags.compilation, '');
+    var r = run({op: 'write', path: dsf, tags: {compilation: '1'}});
+    assert.ok(r.ok && r.changed); assert.strictEqual(r.before.compilation, ''); assert.strictEqual(r.after.compilation, '1');
+    assert.strictEqual(run({op: 'write', path: dsf, tags: {compilation: 'true'}}).changed, false);   /* same meaning */
+    run({op: 'write', path: dsf, tags: {compilation: ''}});
+    assert.strictEqual(run({op: 'read', path: dsf}).tags.compilation, '');
+  });
   t('tags.py: unsupported extension and missing file', function(){
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'notes.txt')}).ok, false);
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'nix.flac')}).ok, false);
