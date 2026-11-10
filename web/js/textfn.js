@@ -60,6 +60,10 @@ function textT(key, de, vars) {
 function textSpaces(s) {
  return String(s || '').replace(/\s+/g, ' ').trim(); }
 
+/* "Tears_For_Fears" -> "Tears For Fears", "Tears-For-Fears" -> "Tears For Fears"; spaces cleaned up afterwards */
+function textUnderscore(s) { return textSpaces(String(s || '').replace(/_/g, ' ')); }
+function textDash(s)       { return textSpaces(String(s || '').replace(/-/g, ' ')); }
+
 /* plain text, all occurrences; case-sensitive */
 function textReplace(s, find, repl) {
   s = String(s || '');
@@ -109,7 +113,9 @@ var TEXT_FUNCS = [
   ['title', textT('textfn.func.title', 'Title Case (englisch)'), textTitle],
   ['lower', textT('textfn.func.lower', 'alles klein'), textLower],
   ['upper', textT('textfn.func.upper', 'ALLES GROSS'), textUpper],
-  ['spaces', textT('textfn.func.spaces', 'Leerzeichen bereinigen'), textSpaces]
+  ['spaces', textT('textfn.func.spaces', 'Leerzeichen bereinigen'), textSpaces],
+  ['underscore', textT('textfn.func.underscore', '_ zu Leerzeichen'), textUnderscore],
+  ['dash', textT('textfn.func.dash', '- zu Leerzeichen'), textDash]
 ];
 function textFunc(id) {
   for (var i = 0; i < TEXT_FUNCS.length; i++) if (TEXT_FUNCS[i][0] === id) return TEXT_FUNCS[i][2];
@@ -118,6 +124,6 @@ function textFunc(id) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {textWords: textWords, textTitle: textTitle, textLower: textLower, textUpper: textUpper,
-                    textSpaces: textSpaces, textReplace: textReplace, textFunc: textFunc, TEXT_FUNCS: TEXT_FUNCS,
+                    textSpaces: textSpaces, textUnderscore: textUnderscore, textDash: textDash, textReplace: textReplace, textFunc: textFunc, TEXT_FUNCS: TEXT_FUNCS,
                     textPattern: textPattern, textSplit: textSplit};
 }

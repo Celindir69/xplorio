@@ -1052,9 +1052,11 @@ langRegister('es', 'Español', {
   'textfn.err.none': 'el patrón necesita al menos un marcador como %TITLE%',
   'textfn.err.separator': 'dos marcadores necesitan un separador entre ellos',
   'textfn.err.unknown': 'marcador desconocido {name}',
+  'textfn.func.dash': '- a espacio',
   'textfn.func.lower': 'minúsculas',
   'textfn.func.spaces': 'Limpiar espacios',
   'textfn.func.title': 'Title Case (inglés)',
+  'textfn.func.underscore': '_ a espacio',
   'textfn.func.upper': 'MAYÚSCULAS',
   'textfn.func.words': 'Primera Letra En Mayúscula',
 

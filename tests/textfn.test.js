@@ -34,6 +34,10 @@ ok('lower, UPPER, spaces', function(){
   assert.strictEqual(t.textLower('Tears For Fears'), 'tears for fears');
   assert.strictEqual(t.textUpper('Ärzte'), 'ÄRZTE');
   assert.strictEqual(t.textSpaces('  Tears   For\tFears '), 'Tears For Fears');
+  assert.strictEqual(t.textUnderscore('Tears_For__Fears_'), 'Tears For Fears');
+  assert.strictEqual(t.textDash('Lumen-Drift - Polarnacht'), 'Lumen Drift Polarnacht');
+  assert.strictEqual(t.textFunc('underscore'), t.textUnderscore);
+  assert.strictEqual(t.textFunc('dash'), t.textDash);
 });
 ok('replace', function(){
   assert.strictEqual(t.textReplace('Tears & Fears & more', ' & ', ' and '), 'Tears and Fears and more');
