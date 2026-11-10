@@ -496,7 +496,7 @@ function tagThumb(caption) {
   box.appendChild(img); box.appendChild(none); box.appendChild(cap);
   box.show = function(src, text){
     box.classList.remove('empty');
-    img.onerror = function(){ box.classList.add('empty'); if (box.onEmpty) box.onEmpty(); };
+    img.onerror = function(){ box.classList.add('empty'); cap.textContent = caption; if (box.onEmpty) box.onEmpty(); };
     img.onload = function(){ if (text !== undefined) cap.textContent = text; else if (img.naturalWidth) cap.textContent = caption + ' · ' + img.naturalWidth + '×' + img.naturalHeight; };
     img.src = src;
   };
@@ -522,7 +522,8 @@ function tagCoverSection(good) {
   var toFolder = document.createElement('button'); toFolder.textContent = T('tag.cover.toFolder');
   var online = document.createElement('button'); online.textContent = T('tag.cover.online');
   var make = document.createElement('button'); make.textContent = T('tag.cover.generate'); make.title = T('tag.cover.generateHint');
-  btns.appendChild(pick); btns.appendChild(online); btns.appendChild(make); btns.appendChild(toFolder); btns.appendChild(file);
+  var strip = document.createElement('button'); strip.textContent = T('tag.cover.strip'); strip.title = T('tag.cover.stripHint');
+  btns.appendChild(pick); btns.appendChild(online); btns.appendChild(make); btns.appendChild(toFolder); btns.appendChild(strip); btns.appendChild(file);
   wrap.appendChild(btns);
   var found = document.createElement('div');               /* suggestions from the online search */
   found.className = 'tagOnline'; found.style.display = 'none';
@@ -701,6 +702,41 @@ function tagCoverSection(good) {
     }).then(function(r){
       send({uris: uris, image: r.b64, embed: false, folder: true});
     }).catch(function(e){ tagStatus.textContent = e.message; });
+  });
+
+  /* all embedded images out of the files; the tag service saves each into the folder first (folder.jpg, back.jpg, …).
+     DSF: MPD 0.20 drops all tags of a file whose tag block is larger than 1 MB, which big covers cause */
+  strip.addEventListener('click', function(){
+    if (!window.confirm(T('tag.cover.stripConfirm', {n: n}))) return;
+    var batch = Date.now().toString(36), files = 0, saved = 0, errs = [], k = 0, parts = [];
+    for (var i = 0; i < uris.length; i += TAG_COVER_PART) parts.push(uris.slice(i, i + TAG_COVER_PART));
+    pick.disabled = toFolder.disabled = apply.disabled = strip.disabled = true;
+    tagStatus.textContent = T('tag.cover.stripping');
+    function next() {
+      if (k >= parts.length) return Promise.resolve();
+      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
+      return tagPost('/cover', {uris: parts[k++], strip: true, batch: batch}).then(function(res){
+        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+        saved += (res.saved || []).length;
+        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }));
+        return next();
+      });
+    }
+    function end() {
+      pick.disabled = toFolder.disabled = apply.disabled = strip.disabled = false;
+      tagBatch = files ? batch : null;
+      tagUndo.style.display = tagBatch ? '' : 'none';
+      if (files) { refresh(); tagRefreshView(); }
+    }
+    next().then(function(){
+      end();
+      tagStatus.textContent = (files ? T('tag.cover.stripped', {n: files, k: saved}) : T('tag.cover.stripNone')) +
+        (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0].error}) : '');
+    }).catch(function(e){
+      end();
+      tagStatus.textContent = e instanceof TypeError ? T('tag.serviceDown') : T('tag.error', {error: e.message});
+    });
   });
 
   return wrap;

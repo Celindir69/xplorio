@@ -96,7 +96,7 @@ die Ranglisten für diesen Monat.
 
 ### Tag-Editor und „Bibliothek prüfen“
 Tags einzelner Titel, ganzer Alben oder aller Titel eines Künstlers bearbeiten (auch den Kommentar), mit Textfunktionen wie Groß-/Kleinschreibung,
-Rückgängig und Cover (Datei wählen, online suchen, eingebettetes Cover als `folder.jpg`). „Bibliothek prüfen“ im Menü findet
+Rückgängig und Cover (Datei wählen, online suchen, eingebettetes Cover als `folder.jpg`, eingebettete Bilder ausspeichern und entfernen). „Bibliothek prüfen“ im Menü findet
 Alben ohne Cover, fehlende oder uneinheitliche Album-Künstler, Künstler in mehreren oder nicht üblicher Schreibweise (Abgleich mit MusicBrainz/Last.fm), uneinheitliche
 Albumnamen und uneinheitliche oder von MusicBrainz abweichende Jahre (je mit Vorschlag zum Übernehmen), doppelte Alben (mit Qualität und Pfad, zum Ergänzen fehlender Titel und zum Verschieben in einen versteckten Ordner), auf mehrere Ordner verteilte Alben (mit Absprung in den Dateimanager), Titel ohne Tracknummer, unvollständige Alben, doppelte Titel im Album und schlägt je Album ein Genre vor (Discogs-Oberkategorien, aus
 vorhandenen Genre-Tags und der Audio-Analyse); jeder Eintrag öffnet direkt den passenden Editor und bleibt danach bis zur nächsten Prüfung ausgegraut. Dort steht auch der

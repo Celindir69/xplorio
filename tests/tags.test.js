@@ -144,6 +144,30 @@ else {
     assert.ok(run({op: 'cover_set', path: dsf}).changed);
     assert.strictEqual(run({op: 'cover_get', path: dsf}).data, undefined);
   });
+  /* all embedded images out (DSF: MPD 0.20 ignores tags whose ID3 block is over 1 MB): saved into the folder first */
+  function withImages(file) {
+    var set = 'import sys\nsys.path.insert(0, %v)\nfrom mutagen.dsf import DSF\nfrom mutagen.id3 import APIC\n' +
+      'a = DSF(%s)\na.tags.delall("APIC")\na.tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc=u"", data=open(%a,"rb").read()))\n' +
+      'a.tags.add(APIC(encoding=3, mime="image/jpeg", type=4, desc=u"Back", data=open(%b,"rb").read()))\na.save()\n';
+    cp.spawnSync(py, ['-c', set.replace('%v', JSON.stringify(path.join(__dirname, '..', 'tags', 'vendor'))).replace('%s', JSON.stringify(file))
+      .replace('%a', JSON.stringify(jpgA)).replace('%b', JSON.stringify(jpgB))]);
+  }
+  t('tags.py: images_strip saves all images into the folder, removes them, images_restore puts them back', function(){
+    var dir = path.join(root, 'strip'), f = path.join(dir, 's.dsf'), f2 = path.join(dir, 's2.dsf');
+    fs.mkdirSync(dir); fs.writeFileSync(f, fs.readFileSync(dsf)); withImages(f); fs.writeFileSync(f2, fs.readFileSync(f));
+    fs.writeFileSync(path.join(dir, 'folder.jpg'), 'another image');
+    var r = run({op: 'images_strip', path: f, backup: path.join(root, 'bak', 'strip')});
+    assert.ok(r.ok && r.changed); assert.strictEqual(r.images, 2);
+    assert.deepStrictEqual(r.saved.map(function(x){ return path.basename(x); }), ['cover.jpg', 'back.jpg']);   /* folder.jpg taken */
+    assert.ok(fs.readFileSync(path.join(dir, 'cover.jpg')).equals(fs.readFileSync(jpgA)));
+    assert.strictEqual(fs.readFileSync(path.join(dir, 'folder.jpg'), 'utf8'), 'another image');           /* not overwritten */
+    assert.strictEqual(run({op: 'cover_get', path: f}).data, undefined);
+    assert.strictEqual(run({op: 'read', path: f}).tags.title, 'With Cover');                               /* text tags stay */
+    assert.deepStrictEqual(run({op: 'images_strip', path: f2, backup: path.join(root, 'bak', 'strip2')}).saved, []);   /* same images: once */
+    assert.strictEqual(run({op: 'images_strip', path: f, backup: path.join(root, 'bak', 'strip3')}).changed, false);
+    assert.ok(run({op: 'images_restore', path: f, manifest: r.manifest}).ok);
+    assert.ok(Buffer.from(run({op: 'cover_get', path: f}).data, 'base64').equals(fs.readFileSync(jpgA)));
+  });
   t('tags.py: several jobs in one call, one error does not affect the others', function(){
     var r = run({op: 'batch', jobs: [{op: 'read', path: dsf}, {op: 'read', path: path.join(root, 'USB', 'nix.dsf')}, 'broken',
                                      {op: 'write', path: dsf, tags: {genre: 'Batch'}}]});
@@ -244,8 +268,22 @@ else {
                                       assert.ok(g1.ok && g2.ok && g3.ok); assert.strictEqual(g4.ok, false);
                                       assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(root, 'log', 'genre-ok.json'), 'utf8')), {'USB/A': 'Rock'});
                                     });
-                                    s2.close();
-                                    artistTracks(done);
+                                    var sdir = path.join(root, 'USB', 'Strip'), sf = path.join(sdir, 's.dsf');
+                                    fs.mkdirSync(sdir); fs.writeFileSync(sf, fs.readFileSync(dsf)); withImages(sf);
+                                    post(port, '/cover', {uris: ['USB/Strip/s.dsf'], strip: true}, function(st){
+                                      t('service: strip images, saved into the folder', function(){
+                                        assert.ok(st.ok && st.batch); assert.deepStrictEqual(st.saved, ['USB/Strip/folder.jpg', 'USB/Strip/back.jpg']);
+                                        assert.strictEqual(run({op: 'cover_get', path: sf}).data, undefined);
+                                      });
+                                      post(port, '/undo', {batch: st.batch}, function(su){
+                                        t('service: undo puts the images back and removes the saved files', function(){
+                                          assert.ok(su.ok); assert.ok(!fs.existsSync(path.join(sdir, 'folder.jpg')));
+                                          assert.ok(Buffer.from(run({op: 'cover_get', path: sf}).data, 'base64').equals(fs.readFileSync(jpgA)));
+                                        });
+                                        s2.close();
+                                        artistTracks(done);
+                                      });
+                                    });
                                   });
                                   });
                                   });

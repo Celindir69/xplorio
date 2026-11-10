@@ -2067,6 +2067,7 @@ function doImage(query, res) {
    An existing folder.jpg is only replaced with overwrite (otherwise {ok:false, exists:[folders]}).
    batch: pass an ID so that several requests (large albums in parts) are undone together. */
 function doCover(body, cb) {
+  if (body.strip) return doCoverStrip(body, cb);
   var uris = body.uris;
   if (body.batch !== undefined && !BATCH_RE.test(String(body.batch))) return cb(400, {ok: false, error: 'invalid batch'});
   if (!Array.isArray(uris) || !uris.length || uris.length > MAX_ITEMS) return cb(400, {ok: false, error: 'uris missing or too many'});
@@ -2121,12 +2122,46 @@ function doCover(body, cb) {
   }
 }
 
+/* POST /cover {uris, strip: true, batch}: all embedded images out of the files (tags.py images_strip). Each image is
+   saved into the file's folder first (folder.jpg, back.jpg, …; never overwritten, the same image only once) and kept
+   for undo. For DSF: MPD 0.20 drops all tags of a file whose ID3 block is larger than 1 MB, which big covers cause. */
+function doCoverStrip(body, cb) {
+  var uris = body.uris;
+  if (body.batch !== undefined && !BATCH_RE.test(String(body.batch))) return cb(400, {ok: false, error: 'invalid batch'});
+  if (!Array.isArray(uris) || !uris.length || uris.length > MAX_ITEMS) return cb(400, {ok: false, error: 'uris missing or too many'});
+  var paths = [], bad = [];
+  uris.forEach(function(u){ var p = resolveUri(u); if (p && !p.missing) { p.uri = u; paths.push(p); } else bad.push(u); });
+  if (!paths.length) return cb(400, {ok: false, error: 'no valid files'});
+  var batch = body.batch ? String(body.batch) : newBatch(), bdir = path.join(COVER_DIR, batch), part = newBatch();
+  try { mkdirs(bdir); } catch (e) { return cb(500, {ok: false, error: 'backup folder not writable: ' + e.message}); }
+  var results = bad.map(function(u){ return {uri: u, ok: false, error: 'path not allowed or file missing'}; });
+  var changedRel = [], saved = [], i = 0;
+  mapSeq(paths, function(p, done){
+    runPy({op: 'images_strip', path: p.full, backup: path.join(bdir, 'img-' + part + '-' + (i++))}, function(r){
+      r.uri = p.uri;
+      if (r.ok && r.changed) {
+        changedRel.push(p.rel);
+        var mine = (r.saved || []).map(function(f){ return path.relative(MUSIC_ROOT, f); });
+        saved = saved.concat(mine);
+        logEntry({batch: batch, time: new Date().toISOString(), uri: p.uri, images: {manifest: r.manifest, saved: mine}});
+      }
+      delete r.manifest;
+      done(r);
+    });
+  }, function(rs){
+    results = results.concat(rs);
+    var out = {ok: true, batch: changedRel.length ? batch : null, items: results, saved: saved};
+    if (!changedRel.length) return cb(200, out);
+    mpdUpdate(changedRel, function(scanned){ out.scan = scanned; cb(200, out); });
+  });
+}
+
 /* undo: restore text tags (before), embedded covers and folder.jpg of a job */
 function doUndo(body, cb) {
   var entries = readLog().filter(function(e){ return e.batch === body.batch; });
   if (!entries.length) return cb(404, {ok: false, error: 'change not found'});
   var textEntries = entries.filter(function(e){ return e.before; });
-  var coverEntries = entries.filter(function(e){ return e.cover && e.uri; });
+  var coverEntries = entries.filter(function(e){ return (e.cover || e.images) && e.uri; });
   var folderEntries = entries.filter(function(e){ return e.cover && e.folder; });
   var results = [], changedRel = [];
 
@@ -2141,9 +2176,15 @@ function doUndo(body, cb) {
   mapSeq(coverEntries, function(e, done){
     var p = resolveUri(e.uri);
     if (!p || p.missing) return done({uri: e.uri, ok: false, error: 'file not found'});
-    runPy({op: 'cover_set', path: p.full, image: e.cover.backup || null}, function(r){
+    var job = e.images ? {op: 'images_restore', path: p.full, manifest: e.images.manifest}
+                       : {op: 'cover_set', path: p.full, image: e.cover.backup || null};
+    runPy(job, function(r){
       r.uri = e.uri;
       if (r.ok && r.changed) changedRel.push(p.rel);
+      if (r.ok && e.images) (e.images.saved || []).forEach(function(rel){   /* the images it saved into the folder */
+        var f = rel.split('/').indexOf('..') < 0 && path.join(MUSIC_ROOT, rel);
+        try { if (f) fs.unlinkSync(f); } catch (err) { /* gone already */ }
+      });
       done(r);
     });
   }, function(rs){
