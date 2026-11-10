@@ -113,7 +113,7 @@ function filesNote(text) {
 }
 
 function filesPaneEl(i) {
-  var p = {el: histEl('div', 'fmPane'), seq: 0, data: null};
+  var p = {el: histEl('div', 'fmPane' + (i ? '' : ' fmLeft')), seq: 0, data: null};   /* the left pane has its index on the left */
   var head = histEl('div', 'fmHead');
   p.up = histEl('button', 'fmTool');
   p.up.title = T('files.up'); p.up.setAttribute('aria-label', T('files.up'));
@@ -126,7 +126,11 @@ function filesPaneEl(i) {
   p.mk.addEventListener('click', function(){ filesMkdir(i); });
   head.appendChild(p.up); head.appendChild(p.crumbs); head.appendChild(p.mk);
   p.list = histEl('div', 'fmList');
-  p.el.appendChild(head); p.el.appendChild(p.list);
+  p.idx = histEl('div', 'fmIdx');                              /* # 0-9 A … Z at the outer edge, for long lists */
+  var wrap = histEl('div', 'fmListWrap');
+  wrap.appendChild(p.list); wrap.appendChild(p.idx);
+  p.el.appendChild(head); p.el.appendChild(wrap);
+  filesIndexEvents(p);
   /* dropping on the empty part of a pane: into its open folder */
   filesDropTarget(p.list, i, function(){ return filesPanes[i].path; });
   p.el.addEventListener('click', function(){ if (filesActive !== i && !filesCount(i)) { filesActive = i; filesPaint(); } });
@@ -236,6 +240,57 @@ function filesRow(i, it) {
   return row;
 }
 
+/* ---------- index at the outer edge (left pane left, right pane right): # (other), 0-9, A … Z; only when the list does not fit ---------- */
+
+var FILES_INDEX = ['#', '0-9'].concat('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
+/* the group of a name: first letter without accents (Ä -> A), digits, else # */
+function filesGroup(name) {
+  var c = String(name).charAt(0);
+  try { c = c.normalize('NFD').charAt(0); } catch (e) { /* old browser */ }
+  c = c.toUpperCase();
+  if (/[0-9]/.test(c)) return '0-9';
+  return /[A-Z]/.test(c) ? c : '#';
+}
+function filesIndex(p) {
+  var rows = p.list.querySelectorAll('.fmRow'), first = {};
+  Array.prototype.forEach.call(rows, function(row){ var g = filesGroup(row.dataset.name); if (!first[g]) first[g] = row; });
+  p.first = first;
+  var long = rows.length > 1 && p.list.scrollHeight > p.list.clientHeight + 4;
+  p.list.classList.toggle('fmHasIdx', long);
+  p.idx.style.display = long ? '' : 'none';
+  filesClear(p.idx);
+  if (!long) return;
+  FILES_INDEX.forEach(function(g){
+    var el = histEl('div', 'fmIdxKey' + (first[g] ? '' : ' off'), g === '0-9' ? '0–9' : g);
+    el.dataset.g = g;
+    p.idx.appendChild(el);
+  });
+}
+/* jump to the first entry of a group; an empty group: the next one that has entries */
+function filesJump(p, g) {
+  var k = FILES_INDEX.indexOf(g);
+  while (k >= 0 && k < FILES_INDEX.length && !(p.first && p.first[FILES_INDEX[k]])) k++;
+  var row = k >= 0 && k < FILES_INDEX.length ? p.first[FILES_INDEX[k]] : null;
+  if (row) p.list.scrollTop = row.offsetTop - 4;
+}
+/* tap on a key, or slide along the bar (touch too) */
+function filesIndexEvents(p) {
+  var on = false;
+  function at(ev) {
+    var el = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (el && el.dataset && el.dataset.g && p.idx.contains(el)) filesJump(p, el.dataset.g);
+  }
+  p.idx.addEventListener('pointerdown', function(ev){
+    on = true; ev.preventDefault(); ev.stopPropagation();
+    try { p.idx.setPointerCapture(ev.pointerId); } catch (e) { /* not supported */ }
+    at(ev);
+  });
+  p.idx.addEventListener('pointermove', function(ev){ if (on) at(ev); });
+  ['pointerup', 'pointercancel'].forEach(function(t){ p.idx.addEventListener(t, function(){ on = false; }); });
+  p.idx.addEventListener('click', function(ev){ ev.stopPropagation(); });
+}
+window.addEventListener('resize', function(){ if (filesEls) filesEls.panes.forEach(filesIndex); });
+
 /* ---------- ticks ---------- */
 
 function filesTick(i, name, on) {
@@ -255,6 +310,7 @@ function filesPaint() {
   [0, 1].forEach(function(i){
     var p = filesEls.panes[i];
     p.el.classList.toggle('fmActive', i === filesActive);
+    filesIndex(p);
     p.mk.disabled = !filesPanes[i].path;
     Array.prototype.forEach.call(p.list.querySelectorAll('.fmRow'), function(row){
       var on = !!filesPanes[i].sel[row.dataset.name], box = row.querySelector('.fmCheck');
