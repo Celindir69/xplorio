@@ -273,7 +273,7 @@ sind, sondern Teile eines Albums: Jeder Ordner enthält nur Titel dieses Albums 
 alle haben dasselbe Format, und kein Titel und keine Titelnummer kommt in zwei Ordnern vor. Solche Fälle stehen hier und
 nicht mehr unter „Doppelte Alben“. Der Ordner mit den meisten Titeln ist das Ziel. „Dateimanager“ neben einem anderen
 Ordner öffnet den Dateimanager (Passwort der Dienste) mit diesem Ordner links und dem Ziel rechts; dort die Dateien
-hinüberziehen. Der Pfeil zurück führt wieder in die Bibliotheksprüfung, beim nächsten Prüflauf ist der Eintrag weg.
+anhaken und „Verschieben“. Der Pfeil zurück führt wieder in die Bibliotheksprüfung, beim nächsten Prüflauf ist der Eintrag weg.
 „Behalten“ lässt gewollt getrennte Ordner in Ruhe.
 
 **Doppelte Titel im Album:** Titel, die in einem Album (mit CD-Unterordnern) mehrfach vorkommen. Sicher doppelt: Kopie-Namen
@@ -307,9 +307,8 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   Ausgewählt wird immer nur in einer Spalte, die andere ist das Ziel. Das Kästchen oben links in der Spalte hakt alles
   im offenen Ordner an oder ab. Ist der Pfad zu lang, werden die vorderen Abschnitte auf drei Zeichen gekürzt
   (der volle Name erscheint beim Darüberfahren).
-- **Kopieren, Verschieben:** Die Knöpfe unten wirken auf den Ordner, der in der anderen Spalte offen ist. Am Computer geht es
-  auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
-  ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.
+- **Kopieren, Verschieben:** Die Knöpfe unten wirken auf den Ordner, der in der anderen Spalte offen ist. Vor dem Ausführen
+  kommt immer eine Rückfrage.
 - **Neuer Ordner:** das Ordnersymbol mit Plus oben in jeder Spalte.
 - **Umbenennen:** erscheint unten, wenn genau ein Eintrag angehakt ist. Ein Name, den es im Ordner schon gibt, wird
   abgelehnt; nur Groß- und Kleinschreibung zu ändern geht auch auf USB-Platten und NAS. Bewertungen, NoMix und der

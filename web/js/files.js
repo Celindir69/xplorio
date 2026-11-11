@@ -1,5 +1,5 @@
 /* Dateimanager (menu): two folder panes over INTERNAL, USB and NAS. Tick files and folders, then copy or move them into the
-   folder open in the other pane (buttons, or drag & drop: dropping moves, with ⌥/Alt or Ctrl it copies), make folders,
+   folder open in the other pane, make folders,
    put things into "Xplorio Trash", delete empty folders. Only with the password of the System page (tag service
    POST /files, tags/fileops.js); without one nothing is shown.
    Classic script, shared global scope; load order see xplorio.html (after trash.js: trashToken, trashSize, trashSvg). */
@@ -14,7 +14,6 @@ var filesSeq = 0;
 var filesPanes = [{path: '', sel: {}}, {path: '', sel: {}}];   /* folder and ticked names per pane, kept while the page is open */
 var filesActive = 0;                                         /* the pane whose ticks the buttons act on */
 var filesJobTimer = null;
-var filesDrag = null;                                        /* {pane, items} while dragging */
 
 function filesPost(body) { body.token = trashToken(); return tagPostJson('/files', body); }
 function filesName(rel) { var p = String(rel).split('/'); return p[p.length - 1]; }
@@ -145,8 +144,6 @@ function filesPaneEl(i) {
   wrap.appendChild(p.list); wrap.appendChild(p.idx);
   p.el.appendChild(head); p.el.appendChild(wrap);
   filesIndexEvents(p);
-  /* dropping on the empty part of a pane: into its open folder */
-  filesDropTarget(p.list, i, function(){ return filesPanes[i].path; });
   p.el.addEventListener('click', function(){ if (filesActive !== i && !filesCount(i)) { filesActive = i; filesPaint(); } });
   return p;
 }
@@ -272,18 +269,6 @@ function filesRow(i, it) {
     if (it.kind === 'file') { filesTick(i, it.name, !filesPanes[i].sel[it.name]); return; }
     filesOpen(i, it.path);
   });
-  if (it.kind !== 'drive') {
-    row.draggable = true;
-    row.addEventListener('dragstart', function(ev){
-      if (!filesPanes[i].sel[it.name]) { filesPanes[i].sel = {}; filesTick(i, it.name, true); }
-      filesDrag = {pane: i, items: filesItems(i)};
-      try { ev.dataTransfer.setData('text/plain', filesDrag.items.join('\n')); ev.dataTransfer.effectAllowed = 'copyMove'; } catch (e) { /* old browser */ }
-      row.classList.add('fmDragging');
-    });
-    row.addEventListener('dragend', function(){ filesDrag = null; row.classList.remove('fmDragging'); filesDropOff(); });
-  }
-  /* dropping on a folder (or a drive): into it */
-  if (it.kind !== 'file') filesDropTarget(row, i, function(){ return it.path; });
   return row;
 }
 
@@ -423,33 +408,6 @@ function filesBar() {
   var none = histEl('button', 'ckBtn fmNone', T('files.untick'));
   none.addEventListener('click', function(){ filesPanes[i].sel = {}; filesPaint(); });
   bar.appendChild(none);
-}
-
-/* ---------- drag & drop ---------- */
-
-var filesOver = null;
-function filesDropOff() { if (filesOver) { filesOver.classList.remove('fmDrop'); filesOver = null; } }
-function filesCopyKey(ev) { return !!(ev.altKey || ev.ctrlKey); }
-function filesDropTarget(el, i, destOf) {
-  function ok() {
-    var dest = destOf();
-    if (!filesDrag || !dest || filesBusy()) return false;
-    return !filesDrag.items.some(function(it){ return dest === it || dest.indexOf(it + '/') === 0; });   /* not into itself */
-  }
-  el.addEventListener('dragover', function(ev){
-    if (!ok()) return;
-    ev.preventDefault(); ev.stopPropagation();
-    try { ev.dataTransfer.dropEffect = filesCopyKey(ev) ? 'copy' : 'move'; } catch (e) { /* old browser */ }
-    if (filesOver !== el) { filesDropOff(); filesOver = el; el.classList.add('fmDrop'); }
-  });
-  el.addEventListener('dragleave', function(ev){ if (filesOver === el && !el.contains(ev.relatedTarget)) filesDropOff(); });
-  el.addEventListener('drop', function(ev){
-    if (!ok()) return;
-    ev.preventDefault(); ev.stopPropagation();
-    var d = filesDrag, dest = destOf();
-    filesDropOff(); filesDrag = null;
-    filesTransfer(filesCopyKey(ev) ? 'copy' : 'move', d.items, dest);
-  });
 }
 
 /* ---------- actions ---------- */

@@ -493,7 +493,7 @@ langRegister('de', 'Deutsch', {
   'files.noDrives': 'Keine Laufwerke gefunden.',
   'files.emptyDir': 'Leerer Ordner',
   'files.more': 'Nicht alle Einträge werden angezeigt (mehr als 5000).',
-  'files.tickHint': 'Hake Dateien oder Ordner an. Sie lassen sich dann in den Ordner der anderen Spalte kopieren oder verschieben, auch per Drag & Drop.',
+  'files.tickHint': 'Hake Dateien oder Ordner an. Sie lassen sich dann in den Ordner der anderen Spalte kopieren oder verschieben.',
   'files.ticked': {one: '1 ausgewählt', other: '{n} ausgewählt'},
   'files.copyTo': 'Kopieren nach „{dir}“',
   'files.moveTo': 'Verschieben nach „{dir}“',
