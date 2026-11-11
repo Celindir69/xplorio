@@ -445,7 +445,7 @@ function analyze(songs, hasCover, audioOf, extra, done) {
   var each = eachIn(typeof done === 'function', extra.sliceMs === undefined ? SLICE_MS : extra.sliceMs);   /* sliceMs: tests */
   var ctx = extra.ctx && extra.ctx.songs === songs ? extra.ctx : grouping(songs);
   var dirs = ctx.dirs, order = ctx.order.slice();
-  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: [],
+  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], tagText: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: [],
              dsfTags: [], coverQuality: [], folderName: []};
   var forGenres = [], verOf = {};
   var albumsOf = ctx.albumsOf, albumOrder = ctx.albumOrder;   /* duplicate tracks: per album, disc folders ("CD2") together with their album */
@@ -476,6 +476,8 @@ function analyze(songs, hasCover, audioOf, extra, done) {
     if (noTrack.length) res.noTrack.push(item({missing: noTrack.length}));
     var noTags = missingTags(list);                                  /* title, artist or album tag empty */
     if (noTags) res.noTags.push(item(noTags));
+    var tt = tagText(list);                                        /* placeholders, broken umlauts, odd track or date */
+    if (tt) res.tagText.push(item(tt));
     trackGaps(d, list).forEach(function(g){
       res.gaps.push(item({disc: g.disc, missing: g.missing, nums: g.nums}, list));
     });
@@ -576,6 +578,71 @@ function analyze(songs, hasCover, audioOf, extra, done) {
   return done ? undefined : res;
 }
 
+/* ---------- Tag values MPD reads but that are wrong (idea from MPDantic's tag check) ---------- */
+/* placeholder of a ripper or tagger instead of a value */
+var PLACEHOLDER_RE = /^(unknown|unknown (artist|album|title|track)|\[unknown\]|<unknown>|unbekannt|unbekannter (künstler|interpret|titel)|unbekanntes album|untitled|no (title|artist|album)|new (album|artist)|(audio ?)?track ?\d*|titel ?\d*)$/i;
+/* Windows-1252 bytes 0x80-0x9F as their characters (a UTF-8 text read as Windows-1252 shows them) */
+var CP1252 = {0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88,
+  0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94,
+  0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F};
+var MANGLED_RE = /[Â-ô][\u0080-¿ŒœŠšŸŽžƒˆ˜–—‘-„†-•…‰‹›€™]/;
+/* UTF-8 that was read as Latin-1/Windows-1252 ("KÃ¼nstler") -> the text as meant ("Künstler"), or null. Only when the whole
+   text turns back into valid UTF-8; twice mangled is undone twice */
+function unmangle(s) {
+  var out = String(s || ''), changed = false;
+  for (var round = 0; round < 2 && MANGLED_RE.test(out); round++) {
+    var bytes = [];
+    for (var i = 0; i < out.length; i++) {
+      var c = out.charCodeAt(i);
+      if (c < 256) bytes.push(c);
+      else if (CP1252[c]) bytes.push(CP1252[c]);
+      else return changed ? out : null;
+    }
+    var back = Buffer.from(bytes).toString('utf8');
+    if (back.indexOf('�') >= 0 || back === out) break;
+    out = back; changed = true;
+  }
+  return changed ? out : null;
+}
+/* "12.05.1999" -> "1999-05-12"; other forms stay unfixed */
+function dateFix(d) {
+  var m = /^\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s*$/.exec(d);
+  if (!m || +m[2] < 1 || +m[2] > 12 || +m[1] < 1 || +m[1] > 31) return null;
+  return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+}
+var TEXT_FIELDS = ['title', 'artist', 'albumartist', 'album', 'genre'];
+/* songs of one folder -> {found: [{kind, field, value, fix, n}], fixes: [{uri, tags}]} or null.
+   kind: 'mangled' (fix: the text as meant), 'placeholder', 'track' (not a plain number, or 0), 'date' (not starting with a year) */
+function tagText(list) {
+  var found = {}, order = [], fixes = [];
+  function note(kind, field, value, fix) {
+    var k = kind + '\0' + field + '\0' + value;
+    if (!found[k]) { found[k] = {kind: kind, field: field, value: value, n: 0}; if (fix) found[k].fix = fix; order.push(k); }
+    found[k].n++;
+  }
+  list.forEach(function(s){
+    var tags = {};
+    TEXT_FIELDS.forEach(function(f){
+      var v = String(s[f] || '');
+      if (!v.trim()) return;
+      var u = unmangle(v);
+      if (u) { note('mangled', f, v, u); tags[f] = u; return; }
+      if (f !== 'genre' && PLACEHOLDER_RE.test(v.trim())) note('placeholder', f, v);
+    });
+    var tr = String(s.track || '').trim();
+    if (/\d/.test(tr) && !/^[A-Z]\d+$/i.test(tr) && (!/^\d+(\s*\/\s*\d+)?$/.test(tr) || !parseInt(tr, 10))) note('track', 'track', tr);   /* vinyl sides ("B2") are fine */
+    var dt = String(s.date || '').trim();
+    if (dt && (!/^\d{4}/.test(dt) || /^0000/.test(dt))) {
+      var df = dateFix(dt);
+      note('date', 'date', dt, df);
+      if (df) tags.date = df;
+    }
+    if (Object.keys(tags).length) fixes.push({uri: s.file, tags: tags});
+  });
+  if (!order.length) return null;
+  return {found: order.map(function(k){ return found[k]; }), fixes: fixes};
+}
+
 /* tracks of one folder without title, artist or album tag (the player then shows the file name or nothing; such tracks
    also fall out of the artist and album lists) -> {title: n, artist: n, album: n, without: [file names, at most 8]} or null */
 function missingTags(list) {
@@ -641,4 +708,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, splitAlbum: splitAlbum, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, dupTrackSongsAsync: dupTrackSongsAsync, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, splitAlbum: splitAlbum, missingTags: missingTags, tagText: tagText, unmangle: unmangle, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, dupTrackSongsAsync: dupTrackSongsAsync, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};

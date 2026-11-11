@@ -63,6 +63,28 @@ t('missing basic tags: per folder, counted per tag, file names of the tracks', f
   assert.strictEqual(lc.missingTags([S('U/a.mp3', {title: ' ', artist: 'A', album: ''})]).album, 1);
   assert.strictEqual(lc.missingTags([S('U/a.mp3', {title: 'T', artist: 'A', album: 'B'})]), null);
 });
+t('odd tag values: broken umlauts (repaired), placeholders, track and date', function(){
+  assert.strictEqual(lc.unmangle('KÃ¼nstler'), 'Künstler');
+  assert.strictEqual(lc.unmangle('Donâ€™t'), 'Don\u2019t');
+  assert.strictEqual(lc.unmangle('MÃƒÂ¶tley'), 'Mötley');             /* mangled twice */
+  assert.strictEqual(lc.unmangle('Künstler'), null);
+  assert.strictEqual(lc.unmangle('Ã'), null);
+  assert.strictEqual(lc.unmangle('Ãœber Ã'), null);                     /* not valid UTF-8 as a whole: left alone */
+  var tt = lc.tagText([
+    S('U/x/01.mp3', {artist: 'Die Ã„rzte', album: 'Best', title: 'Track 01', track: '1', date: '12.05.1999'}),
+    S('U/x/02.mp3', {artist: 'Die Ã„rzte', album: 'Best', title: 'Unknown', track: '2.1', date: '1999'}),
+    S('U/x/03.mp3', {artist: 'Die Ã„rzte', album: 'Best', title: 'Fine', track: '0', date: 'May 1999'}),
+    S('U/x/04.mp3', {artist: 'Unknown Artist', album: 'Best', title: 'Track', track: '4/12', date: '1999'})
+  ]);
+  assert.deepStrictEqual(tt.found.map(function(f){ return [f.kind, f.field, f.value, f.fix || '', f.n]; }), [
+    ['placeholder', 'title', 'Track 01', '', 1], ['mangled', 'artist', 'Die Ã„rzte', 'Die Ärzte', 3], ['date', 'date', '12.05.1999', '1999-05-12', 1],
+    ['placeholder', 'title', 'Unknown', '', 1], ['track', 'track', '2.1', '', 1], ['track', 'track', '0', '', 1], ['date', 'date', 'May 1999', '', 1],
+    ['placeholder', 'title', 'Track', '', 1], ['placeholder', 'artist', 'Unknown Artist', '', 1]]);
+  assert.deepStrictEqual(tt.fixes, [{uri: 'U/x/01.mp3', tags: {artist: 'Die Ärzte', date: '1999-05-12'}},
+    {uri: 'U/x/02.mp3', tags: {artist: 'Die Ärzte'}}, {uri: 'U/x/03.mp3', tags: {artist: 'Die Ärzte'}}]);
+  assert.strictEqual(lc.tagText([S('U/y/01.flac', {artist: 'Café del Mar', album: 'Unknown Pleasures', title: 'Track Record', track: 'B2', date: '1999-05-12'})]), null);   /* vinyl side: fine */
+  assert.deepStrictEqual(r.tagText, []);
+});
 t('mixed quality: lossless next to lossy in one album (disc folders together), not FLAC next to ALAC', function(){
   var q = lc.analyze([
     S('U/X/Alb/CD1/01.flac', {artist: 'X', album: 'Alb', title: 'a', track: '1', disc: '1', format: '44100:16:2'}),
