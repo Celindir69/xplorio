@@ -139,9 +139,35 @@ fake.listen(0, function(){
           assert.strictEqual(calls.length, before + 1);
         });
         c3.stop();
-        routeTest(dir, function(){
+        /* shared list (libRaw) with stamp: once everything is collected neither the list nor the player is asked again */
+        key = 'KEY';
+        var raw = {m: 7, list: [['Anna', 'Eins', 'USB/a/1.flac'], ['Bert', 'Drei', 'USB/b/3.flac']]}, stamp = 7, asked = 0, rawCalls = 0;
+        var c4 = new mt.Collector({dir: path.join(dir, 'mt'), libFile: libFile, getCfg: function(){ return {key: key}; },
+          libRaw: function(){ rawCalls++; return raw; }, libStamp: function(){ return stamp; },
+          playing: function(cb){ asked++; cb(false); }, stepMs: 5, idleMs: 1, waitMs: 10});
+        c4.start();
+        waitFor(function(){ return c4.status().state === 'fertig'; }, function(){
+          var a = asked, r = rawCalls, k = calls.length;
+          c4.release();
+          setTimeout(function(){
+            t('all collected: list and player no longer asked; released list stays released', function(){
+              assert.strictEqual(asked, a); assert.strictEqual(rawCalls, r); assert.strictEqual(calls.length, k);
+              assert.strictEqual(c4.lib, null);
+              assert.strictEqual(c4.moodOf('Anna', 'Eins').src, 'track');
+            });
+            raw = {m: 8, list: raw.list.concat([['Carl', 'Fünf', 'USB/c/5.flac']])}; stamp = 8;
+            waitFor(function(){ return calls.length > k; }, function(){
+              t('list changed: collecting again', function(){
+                assert.ok(calls.some(function(p){ return p.track === 'Fünf'; }));
+                assert.strictEqual(c4.lib.length, 3);
+              });
+              c4.stop();
+              routeTest(dir, function(){
           fake.close();
           console.log(n + ' checks passed');
+        });
+            });
+          }, 80);
         });
       });
     });

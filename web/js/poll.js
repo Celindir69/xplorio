@@ -230,13 +230,16 @@ function inputApply(st) {
 
 var playIconShown = null;                              /* last drawn icon (set again only on change) */
 /* The player's state comes from Volumio's pushState (socket, core.js) as soon as something changes; getState is only the
-   fallback every 10 s, when the page comes back to the foreground and after the socket reconnects. Both go through
+   fallback: every 10 s while the socket is down, every 30 s while it is connected but silent (POLL_QUIET_MS), when the
+   page comes back to the foreground and after the socket reconnects. Both go through
    stateIn: one state at a time (stateFill may still ask for the queue), a state arriving meanwhile is handled after it,
    only the newest one. */
-var pollBusy = false;                                   /* never several getState at once (Volumio hangs e.g. while scanning) */
-var POLL_MS = 10000;
-function poll() {
+var pollBusy = false, pollAt = 0;                       /* never several getState at once (Volumio hangs e.g. while scanning) */
+var POLL_MS = 10000, POLL_QUIET_MS = 30000;
+function poll(tick) {                                   /* tick: from the interval, otherwise at once */
   if (document.hidden || pollBusy) return;
+  if (tick === 'tick' && socket.connected && Date.now() - Math.max(pushSeen, pollAt) < POLL_QUIET_MS) return;
+  pollAt = Date.now();
   pollBusy = true;
   withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateIn)
     .catch(function(){ playing = false; })            /* Volumio unreachable: stop the time from running */
@@ -397,7 +400,7 @@ setInterval(function(){
 }, 30 * 60000);
 
 setInterval(function(){ updateSyncedLyrics(); }, 200);
-setInterval(poll, POLL_MS);                            /* fallback; changes come by pushState */
+setInterval(function(){ poll('tick'); }, POLL_MS);      /* fallback; changes come by pushState */
 setInterval(function(){ if (!document.hidden && !volDrag && ROTEL_ON) rotel('/state'); }, 2000);   /* amplifier: the bridge answers from memory */
 socket.on('connect', function(){ poll(); });           /* also after a reconnect: whatever changed meanwhile */
 poll();
