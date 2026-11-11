@@ -76,6 +76,8 @@ function textReplace(s, find, repl) {
 var TEXT_PLACEHOLDERS = {title: 'title', artist: 'artist', album: 'album', albumartist: 'albumartist', genre: 'genre',
                          composer: 'composer', date: 'date', year: 'date', track: 'track', disc: 'disc', dummy: null};
 
+/* numbers only: so "%TRACK% %TITLE%" splits "01 A Day In the Life" unambiguously, even with spaces in the title */
+var TEXT_NUMERIC = {track: '([A-Za-z]?\\d+(?:\\s*\\/\\s*\\d+)?)', disc: '(\\d+(?:\\s*\\/\\s*\\d+)?)', date: '(\\d{4}(?:-\\d\\d){0,2})'};
 function textEscRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'); }
 
 /* "%TITLE% - %ARTIST%" -> {names:['title','artist'], lazy:RegExp, greedy:RegExp}; on error {error} */
@@ -87,7 +89,8 @@ function textPattern(pattern) {
     if (!TEXT_PLACEHOLDERS.hasOwnProperty(key)) return {error: textT('textfn.err.unknown', 'unbekannter Platzhalter {name}', {name: '%' + parts[i] + '%'})};
     if (i > 1 && parts[i - 1] === '') return {error: textT('textfn.err.separator', 'zwischen zwei Platzhaltern muss ein Trennzeichen stehen')};
     names.push(TEXT_PLACEHOLDERS[key]);
-    lazy += '(.+?)'; greedy += '(.+)';
+    var num = TEXT_NUMERIC[TEXT_PLACEHOLDERS[key]];
+    lazy += num || '(.+?)'; greedy += num || '(.+)';
   }
   if (!names.some(function(n){ return n; })) return {error: textT('textfn.err.none', 'Muster braucht mindestens einen Platzhalter wie %TITLE%')};
   return {names: names, lazy: new RegExp('^\\s*' + lazy + '\\s*$'), greedy: new RegExp('^\\s*' + greedy + '\\s*$')};
