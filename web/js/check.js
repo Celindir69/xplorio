@@ -405,7 +405,12 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
         : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
-  row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
+  checkBtnBox(row, box);
+}
+/* buttons right of the text, left of the pen (like the duplicate tracks), on the phone too */
+function checkBtnBox(row, box) {
+  var pen = row.lastChild && /\btagEditMini\b/.test(row.lastChild.className) ? row.lastChild : null;
+  row.insertBefore(box, pen);
 }
 
 /* write the genre into all files of the entry, in chunks with one undo ID; the scan follows when the check is closed */
@@ -524,8 +529,113 @@ function checkSimpleRow(cat, it, kept) {
     });
     row.insertBefore(fm, row.lastChild);
   }
+  if (cat === 'coverQuality' && it.why === 'small' && !kept) checkCoverBest(row, it, key);
   if (CHECK_KEEPABLE[cat]) checkGenreButtons(row, cat, key, it, it.files, kept);
+  var bx = row.querySelector('.ckGenreBtns');
+  if (fm && bx) bx.insertBefore(fm, bx.firstChild);       /* file manager with the other buttons */
   return row;
+}
+
+/* ---------- Cover too small: a larger one found online (tag service coverbest.js), "Apply" saves it ---------- */
+/* Rows ask once they are on screen; the tag service searches one album after another, the list asks again every few
+   seconds while any visible row still waits. Apply: into all files of the folder and as folder.jpg (replaced), with Undo */
+var CB_ASK_MS = 4000;
+var cbRows = [], cbTimer = null, cbObs = null;
+function checkCoverBest(row, it, key) {
+  var box = document.createElement('div'); box.className = 'ckCb';
+  var cur = document.createElement('img'); cur.className = 'ckCbImg'; cur.alt = '';
+  cur.src = TAGS + '/coverbestimage?which=cur&dir=' + encodeURIComponent(it.dir);
+  cur.onerror = function(){ cur.style.display = 'none'; arrow.style.display = 'none'; };
+  var arrow = document.createElement('span'); arrow.className = 'ckCbArrow'; arrow.textContent = '→';
+  var neu = document.createElement('img'); neu.className = 'ckCbImg'; neu.alt = '';
+  var txt = document.createElement('span'); txt.className = 'ckCbText'; txt.textContent = T('check.coverq.searching');
+  box.appendChild(cur); box.appendChild(arrow); box.appendChild(neu); box.appendChild(txt);
+  arrow.style.display = neu.style.display = 'none';
+  row.querySelector('.sMeta').appendChild(box);
+  var e = {row: row, it: it, key: key, seen: !window.IntersectionObserver, done: false, show: show};
+  cbRows.push(e);
+  if (window.IntersectionObserver) {
+    if (!cbObs) cbObs = new IntersectionObserver(function(list){
+      list.forEach(function(x){ cbRows.forEach(function(r){ if (r.row === x.target) r.seen = x.isIntersecting; }); });
+      checkCoverBestAsk();
+    });
+    cbObs.observe(row);
+  } else checkCoverBestAsk();
+
+  /* in front of "Keep" (checkGenreButtons), in one line with it */
+  function btn(label, hint, fn, instead) {
+    var b = document.createElement('button'); b.className = 'ckBtn ckOkBtn';
+    b.textContent = label; b.title = hint;
+    b.addEventListener('click', function(ev){ ev.stopPropagation(); b.disabled = true; fn(b); });
+    var boxes = row.querySelectorAll('.ckGenreBtns'), at = boxes[boxes.length - 1];
+    if (instead) instead.parentNode.replaceChild(b, instead);
+    else if (at) at.insertBefore(b, at.firstChild);
+    else { at = document.createElement('div'); at.className = 'ckGenreBtns'; at.appendChild(b); checkBtnBox(row, at); }
+    return b;
+  }
+  function show(st) {
+    if (st.state === 'wait') return;
+    e.done = true;
+    if (st.state !== 'found') { txt.textContent = T('check.coverq.none'); return; }
+    var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
+    neu.src = src; neu.style.display = ''; if (cur.style.display !== 'none') arrow.style.display = '';
+    txt.textContent = T('check.coverq.found', {w: checkNum(st.w), h: checkNum(st.h), src: st.src});
+    btn(T('check.conflict.apply'), T('check.coverq.applyHint'), function(b){
+      txt.textContent = T('tag.cover.preparing');
+      fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
+        .then(tagPrepareImage)
+        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64); })
+        .then(function(batch){
+          row.classList.add('done'); checkMarkDone(key);
+          txt.textContent = T('check.coverq.saved');
+          btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
+            tagPost('/undo', {batch: batch}).then(function(r){
+              if (!r || !r.ok) throw new Error((r && r.error) || 'undo');
+              row.classList.remove('done');
+              u.textContent = T('check.conflict.undone');
+              showToast(T('check.conflict.undone'));
+            }).catch(function(x){ u.disabled = false; showToast(T('tag.error', {error: x.message})); });
+          }, b);
+        }).catch(function(x){ b.disabled = false; txt.textContent = T('tag.error', {error: x.message}); });
+    });
+  }
+}
+/* the visible rows that still wait -> POST /coverbest; again after CB_ASK_MS while any of them waits */
+function checkCoverBestAsk() {
+  cbRows = cbRows.filter(function(r){ return document.body.contains(r.row); });   /* list redrawn or closed */
+  var ask = cbRows.filter(function(r){ return r.seen && !r.done; });
+  clearTimeout(cbTimer); cbTimer = null;
+  if (!ask.length || document.hidden) return;
+  tagPost('/coverbest', {dirs: ask.map(function(r){ return r.it.dir; })}).then(function(res){
+    if (!res || !res.ok) return;
+    var waiting = false;
+    ask.forEach(function(r){
+      var st = res.covers[r.it.dir];
+      if (!st) { r.done = true; return; }
+      if (st.state === 'wait') waiting = true; else r.show(st);
+    });
+    if (waiting && !cbTimer) cbTimer = setTimeout(checkCoverBestAsk, CB_ASK_MS);
+  }).catch(function(){ if (!cbTimer) cbTimer = setTimeout(checkCoverBestAsk, 3 * CB_ASK_MS); });
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && cbRows.length) checkCoverBestAsk(); });
+/* one image into all files and as folder.jpg (replaced): in parts of 100 files under one batch -> batch */
+var CB_PART = 100;
+function checkCoverSave(uris, b64) {
+  var batch = Date.now().toString(36), parts = [], i;
+  for (i = 0; i < uris.length; i += CB_PART) parts.push(uris.slice(i, i + CB_PART));
+  var k = 0;
+  function next() {
+    if (k >= parts.length) return batch;
+    var body = {uris: parts[k], image: b64, embed: true, folder: k === 0, overwrite: true, batch: batch};
+    k++;
+    return tagPost('/cover', body).then(function(res){
+      if (!res || !res.ok) throw new Error((res && res.error) || T('tag.unknown'));
+      var bad = (res.items || []).filter(function(r){ return !r.ok; }).concat((res.folders || []).filter(function(f){ return !f.ok; }));
+      if (bad.length) throw new Error(bad[0].error || T('tag.unknown'));
+      return next();
+    });
+  }
+  return Promise.resolve().then(next);
 }
 
 /* "ohne Titel: 3, ohne Künstler: 1 von 12 · 01.flac, 02.flac" */
@@ -677,7 +787,7 @@ function checkArtistFixRow(g) {
     }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
   });
   row.classList.add('ckGenreRow');
-  row.querySelector('.sMeta').appendChild(box);
+  checkBtnBox(row, box);
   return row;
 }
 
