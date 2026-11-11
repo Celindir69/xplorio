@@ -178,7 +178,12 @@ ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.
 
 **Dateien und Ordner:** Drei Kategorien lesen zusätzlich die Dateien selbst. „DSF-Tags werden nicht gelesen“: DSF-Dateien
 mit einem Tag-Block über 1 MB (siehe „Eingebettete Bilder entfernen“). „Cover zu klein oder zu groß“: das Bild im Ordner
-(`folder`, `cover`, `front`, `albumart`, sonst das erste JPG/PNG) ist kürzer als 500 Pixel oder größer als 2 MB.
+(`folder`, `cover`, `front`, `albumart`, sonst das erste JPG/PNG) ist kürzer als 500 Pixel oder größer als 2 MB. Bei zu
+kleinen Bildern sucht Xplorio für die Einträge, die gerade zu sehen sind, online nach einem größeren Cover (iTunes, Last.fm,
+Cover Art Archive; ein Album nach dem anderen, etwa alle 4 Sekunden) und zeigt es als Miniatur neben dem jetzigen, mit Größe
+und Quelle. „Übernehmen“ speichert es in alle Dateien des Ordners und als `folder.jpg` (ein vorhandenes wird ersetzt);
+„Rückgängig“ stellt den alten Stand wieder her. Die Funde merkt sich der Player (`/data/xplorio/data/cover-best.json`, nur
+Adresse und Größe); wurde nichts Größeres gefunden, sucht er nach 30 Tagen erneut.
 „Ordnername passt nicht zum Album“: Ordner wie „Unknown Album“/„Unbekanntes Album“ oder ein Ordnername, der deutlich vom
 Album-Tag abweicht (Jahr und Künstler vorne im Namen sowie Zusätze in Klammern zählen nicht; Ordner mit mehreren Alben wie
 „Singles“ werden nicht gemeldet, CD-Ordner zählen mit dem Namen darüber). Dort öffnet „Dateimanager“ den Ordner zum
