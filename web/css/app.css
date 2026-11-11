@@ -858,8 +858,12 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 .fmPen:hover { opacity:1; }
 .fmPen svg { width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); min-width:16px; min-height:16px; }
 .fmBar { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:calc(2 * var(--vw));
-  padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); margin-top:calc(2 * var(--vw)); background:var(--sheet); border-radius:calc(2 * var(--vw)); }
-.fmBarInfo { flex:1 1 100%; font-size:calc(3.3 * var(--vw)); opacity:.75; }
+  padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); margin-top:calc(2 * var(--vw)); background:var(--sheet-solid); border-radius:calc(2 * var(--vw));
+  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); box-shadow:0 -1px 0 rgba(var(--fg-rgb),.12); }
+.fmBarInfo { flex:1 1 100%; font-size:calc(3.3 * var(--vw)); opacity:.85; }
+/* hint: panes side by side ("other column") or one above the other ("other area") */
+.fmHintWide { display:none; }
+@container (min-width: 620px) { .fmHintWide { display:inline; } .fmHintNarrow { display:none; } }
 .fmBar .ckBtn:disabled { opacity:.4; cursor:default; }
 .fmBar .trDel { margin-left:auto; }
 .fmJob { margin-top:calc(2 * var(--vw)); padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); border-radius:calc(2 * var(--vw)); background:rgba(var(--fg-rgb),.07);
