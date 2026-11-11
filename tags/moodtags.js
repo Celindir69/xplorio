@@ -99,11 +99,13 @@ function readJsonl(file, into) {
 /* opts: dir, libFile (track list [[artist, title, file], …]), getCfg() -> {key}, playing(cb(true/false));
    audio: essentia.Store (audio analysis from the Mac), optional;
    libRaw() -> {m: modification time, list: track list}, optional: already read list instead of reading libFile itself;
+   libStamp() -> modification time of the list, optional: once everything is collected, only this is asked (the list
+   itself can leave memory meanwhile, see release);
    stepMs, idleMs, waitMs, backoffMs for tests only */
 function Collector(opts) {
   this.t = {step: opts.stepMs || STEP_MS, idle: opts.idleMs || IDLE_MS, wait: opts.waitMs || WAIT_MS, backoff: opts.backoffMs || BACKOFF_MS};
   this.dir = opts.dir; this.libFile = opts.libFile; this.getCfg = opts.getCfg; this.playing = opts.playing;
-  this.audio = opts.audio || null; this.libRaw = opts.libRaw || null;
+  this.audio = opts.audio || null; this.libRaw = opts.libRaw || null; this.libStamp = opts.libStamp || null;
   this.tracks = {}; this.artists = {}; this.lib = null; this.libAt = 0;
   this.pos = 0; this.timer = null; this.running = false; this.state = 'aus'; this.error = null;
   this.lastIdleCheck = 0; this.idle = false; this.fetched = 0; this.summaryCache = null; this.doneLib = 0;
@@ -136,6 +138,9 @@ Collector.prototype.loadLib = function() {
   this.lib = list; this.libAt = m; this.pos = 0; this.summaryCache = null;
   return list;
 };
+
+/* the track list leaves memory (unused for a while); loadLib builds it again when needed */
+Collector.prototype.release = function() { this.lib = null; this._mixIdx = null; this.summaryCache = null; };
 
 Collector.prototype.save = function(file, o) {
   try { fs.mkdirSync(this.dir); } catch (e) { /* already exists */ }
@@ -177,6 +182,7 @@ Collector.prototype.next = function() {
 Collector.prototype.step = function() {
   var self = this, cfg = this.getCfg() || {};
   if (!cfg.key) { this.state = 'fehler'; this.error = 'LASTFM_KEY missing (keys.json in the data folder)'; return this.schedule(this.t.wait); }
+  if (this.doneLib && this.libStamp && this.libStamp() === this.doneLib) return this.schedule(this.t.wait);   /* all done, list unchanged: no player query either */
   if (Date.now() - this.lastIdleCheck > this.t.idle) {
     this.lastIdleCheck = Date.now();
     return this.playing(function(on){

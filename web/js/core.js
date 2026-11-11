@@ -113,7 +113,9 @@ socket.on('openModal', function(m){
 socket.on('closeAllModals', function(){
   if (audioGone) { audioGone = false; audioToast('audio.connected'); }
 });
+var pushSeen = 0;                                       /* last pushState: while the socket speaks, poll.js asks less */
 socket.on('pushState', function(st){
+  pushSeen = Date.now();
   if (typeof stateIn === 'function' && !document.hidden) return stateIn(st);   /* the whole display (poll.js) */
   if (typeof showVolumio === 'function') showVolumio(st);
   if (typeof st.random === 'boolean') { stRandom = st.random; updateCtrlUI(); }

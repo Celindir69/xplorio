@@ -1172,11 +1172,24 @@ function volumioGet(route, max, cb) {
   req.on('error', finish);
 }
 
+/* history: Volumio's state on every MPD change (idle, see rgAuto below) and otherwise every 25 s while local files
+   play. Other sources (Spotify and the like) may report nothing to MPD: every 5 s as before. Stopped: every 15 s */
+var watchTimer = null, watchBusy = false, watchAgain = false, watchSoon = null;
 function watchPlayer() {
+  if (watchBusy) { watchAgain = true; return; }
+  watchBusy = true; clearTimeout(watchTimer);
   playerState(function(e, st){
+    watchBusy = false;
     if (!e && st) tracker.update(st, Date.now());
-    setTimeout(watchPlayer, tracker.cur && tracker.cur.playing ? 5000 : 15000);
+    if (watchAgain) { watchAgain = false; return watchPlayer(); }
+    var playing = tracker.cur && tracker.cur.playing, viaMpd = !e && st && /^(mpd|webradio|)$/.test(st.service || '');
+    watchTimer = setTimeout(watchPlayer, playing ? (viaMpd ? 25000 : 5000) : 15000);
   });
+}
+/* MPD reports a change: Volumio updates its state a moment later */
+function watchPlayerSoon() {
+  if (!recording || watchSoon) return;                  /* several changes in a row: one query */
+  watchSoon = setTimeout(function(){ watchSoon = null; watchPlayer(); }, 1000);
 }
 
 /* Volumio uri -> path relative to the music folder ("USB/…"), otherwise '' */
@@ -1299,6 +1312,7 @@ var audioStore = new essentia.Store(ESSENTIA_FILE);
 var moodCollector = new moodtags.Collector({
   dir: path.join(DATA_DIR, 'moodtags'), libFile: TRACKS_FILE, audio: audioStore,
   libRaw: function(){ return libTracksLoad() ? libTracks : null; },     /* same track list as random and genres */
+  libStamp: function(){ try { return +fs.statSync(TRACKS_FILE).mtime; } catch (e) { return 0; } },   /* changed? without reading it */
   getCfg: function(){ return {key: keys.lastfm().key}; },
   playing: function(cb){ playerState(function(e, st){ cb(!!(e || (st && st.status === 'play'))); }); }   /* when in doubt: playing */
 });
@@ -1537,11 +1551,12 @@ function doMoodmix(query, cb) {
   cb(200, m);
 }
 
-var artistPicks = [], trackPicks = [], libTracks = null, artistList = null;
+var artistPicks = [], trackPicks = [], libTracks = null, artistList = null, libTracksUsed = 0;
 /* library track list (library-tracks.json), reread when the file has changed */
 function libTracksLoad() {
   var st;
   try { st = fs.statSync(TRACKS_FILE); } catch (e) { return null; }
+  libTracksUsed = Date.now();
   if (!libTracks || libTracks.m !== +st.mtime) {
     try { libTracks = {m: +st.mtime, list: JSON.parse(fs.readFileSync(TRACKS_FILE, 'utf8'))}; } catch (e) { return libTracks && libTracks.list; }
   }
@@ -1687,6 +1702,17 @@ function volumioFavs(cb) {
   req.setTimeout(5000, function(){ req.abort(); done(null); });
   req.on('error', function(){ done(null); });
 }
+/* unused for LIB_IDLE_MS: the track list and everything built from it leave memory (20-30 MB with 50,000 tracks);
+   the next dice mix, gems or mood request reads it again (a second or two on the player) */
+var LIB_IDLE_MS = +process.env.LIB_IDLE_MS || 30 * 60000;
+function libRelease(now) {
+  if (!libTracks || now - libTracksUsed < LIB_IDLE_MS) return false;
+  libTracks = null; genreSubs = null; mixEx = null; gemState = null;
+  moodCollector.release();
+  return true;
+}
+setInterval(function(){ libRelease(Date.now()); }, Math.min(60000, LIB_IDLE_MS)).unref();
+
 /* prepared taste for the gems (gems.prepare), rebuilt only when library, history, ratings or favourites change */
 function gemsReady(cb) {
   albumsEnsure(function(list){
@@ -1974,7 +2000,7 @@ function volumioQueue(cb) {
   });
 }
 var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne, queue: volumioQueue,
-  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); }); }});
+  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); watchPlayerSoon(); }); }});
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
