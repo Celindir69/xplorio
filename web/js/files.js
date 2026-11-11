@@ -368,7 +368,13 @@ function filesPaint() {
 function filesBar() {
   var bar = filesEls.bar, i = filesActive, n = filesCount(i), other = 1 - i, dest = filesPanes[other].path, busy = filesBusy();
   filesClear(bar);
-  if (!n) { bar.appendChild(histEl('div', 'fmBarInfo', T('files.tickHint'))); return; }
+  if (!n) {
+    var info = histEl('div', 'fmBarInfo');
+    info.appendChild(histEl('span', 'fmHintWide', T('files.tickHint')));
+    info.appendChild(histEl('span', 'fmHintNarrow', T('files.tickHintNarrow')));
+    bar.appendChild(info);
+    return;
+  }
   bar.appendChild(histEl('div', 'fmBarInfo', T('files.ticked', {n: n})));
   var target = dest ? filesName(dest) : '';
   [['copy', 'files.copyTo'], ['move', 'files.moveTo']].forEach(function(x){

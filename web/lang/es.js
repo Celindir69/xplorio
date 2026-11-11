@@ -495,6 +495,7 @@ langRegister('es', 'Español', {
   'files.emptyDir': 'Carpeta vacía',
   'files.more': 'No se muestran todas las entradas (más de 5000).',
   'files.tickHint': 'Marca archivos o carpetas. Después puedes copiarlos o moverlos a la carpeta de la otra columna.',
+  'files.tickHintNarrow': 'Marca archivos o carpetas. Después puedes copiarlos o moverlos a la carpeta de la otra zona (arriba o abajo).',
   'files.ticked': {one: '1 seleccionado', other: '{n} seleccionados'},
   'files.copyTo': 'Copiar a «{dir}»',
   'files.moveTo': 'Mover a «{dir}»',

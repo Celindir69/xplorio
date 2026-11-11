@@ -496,6 +496,7 @@ langRegister('fr', 'Français', {
   'files.emptyDir': 'Dossier vide',
   'files.more': 'Toutes les entrées ne sont pas affichées (plus de 5000).',
   'files.tickHint': 'Cochez des fichiers ou des dossiers. Vous pouvez ensuite les copier ou les déplacer dans le dossier de l’autre colonne.',
+  'files.tickHintNarrow': 'Cochez des fichiers ou des dossiers. Vous pouvez ensuite les copier ou les déplacer dans le dossier de l’autre zone (au-dessus ou en dessous).',
   'files.ticked': {one: '1 sélectionné', other: '{n} sélectionnés'},
   'files.copyTo': 'Copier vers « {dir} »',
   'files.moveTo': 'Déplacer vers « {dir} »',

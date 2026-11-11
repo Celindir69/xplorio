@@ -497,6 +497,7 @@ langRegister('en', 'English', {
   'files.emptyDir': 'Empty folder',
   'files.more': 'Not all entries are shown (more than 5000).',
   'files.tickHint': 'Tick files or folders. They can then be copied or moved into the folder of the other column.',
+  'files.tickHintNarrow': 'Tick files or folders. They can then be copied or moved into the folder of the other area (above or below).',
   'files.ticked': {one: '1 selected', other: '{n} selected'},
   'files.copyTo': 'Copy to "{dir}"',
   'files.moveTo': 'Move to "{dir}"',

@@ -8,6 +8,7 @@
   --shade-rgb:0,0,0;                        /* darkening surfaces (round buttons at the top, boxes) */
   --page:#111; --ph:#222;                   /* page background, image placeholder */
   --sheet:rgba(15,15,15,.6);                /* Overlays */
+  --sheet-solid:rgba(15,15,15,.94);         /* bars over scrolling lists (file manager) */
   --bg-filter:blur(30px) brightness(.6);    /* cover in the background */
   --scrim:linear-gradient(to bottom, rgba(0,0,0,.2), rgba(0,0,0,.75));
   --glow:0 2px 8px rgba(0,0,0,.95); --glow-soft:0 1px 4px rgba(0,0,0,.8);   /* shadow behind text */
@@ -22,6 +23,7 @@ html.light {
   --shade-rgb:255,255,255;
   --page:#f2f2f0; --ph:#e2e2e0;
   --sheet:rgba(250,250,248,.74);
+  --sheet-solid:rgba(250,250,248,.96);
   --bg-filter:blur(30px) brightness(1.1) saturate(1.15);
   --scrim:linear-gradient(to bottom, rgba(255,255,255,.42), rgba(255,255,255,.80));
   --glow:none; --glow-soft:none;                       /* glow behind text only in dark mode */
