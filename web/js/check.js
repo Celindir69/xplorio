@@ -405,7 +405,12 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
         : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
-  row.querySelector('.sMeta').appendChild(box);            /* below the text: room for it on a phone */
+  checkBtnBox(row, box);
+}
+/* buttons right of the text, left of the pen (like the duplicate tracks), on the phone too */
+function checkBtnBox(row, box) {
+  var pen = row.lastChild && /\btagEditMini\b/.test(row.lastChild.className) ? row.lastChild : null;
+  row.insertBefore(box, pen);
 }
 
 /* write the genre into all files of the entry, in chunks with one undo ID; the scan follows when the check is closed */
@@ -526,6 +531,8 @@ function checkSimpleRow(cat, it, kept) {
   }
   if (cat === 'coverQuality' && it.why === 'small' && !kept) checkCoverBest(row, it, key);
   if (CHECK_KEEPABLE[cat]) checkGenreButtons(row, cat, key, it, it.files, kept);
+  var bx = row.querySelector('.ckGenreBtns');
+  if (fm && bx) bx.insertBefore(fm, bx.firstChild);       /* file manager with the other buttons */
   return row;
 }
 
@@ -563,7 +570,7 @@ function checkCoverBest(row, it, key) {
     var boxes = row.querySelectorAll('.ckGenreBtns'), at = boxes[boxes.length - 1];
     if (instead) instead.parentNode.replaceChild(b, instead);
     else if (at) at.insertBefore(b, at.firstChild);
-    else { at = document.createElement('div'); at.className = 'ckGenreBtns'; at.appendChild(b); row.querySelector('.sMeta').appendChild(at); }
+    else { at = document.createElement('div'); at.className = 'ckGenreBtns'; at.appendChild(b); checkBtnBox(row, at); }
     return b;
   }
   function show(st) {
@@ -780,7 +787,7 @@ function checkArtistFixRow(g) {
     }).catch(function(){ b.disabled = false; showToast(T('check.conflict.failed')); });
   });
   row.classList.add('ckGenreRow');
-  row.querySelector('.sMeta').appendChild(box);
+  checkBtnBox(row, box);
   return row;
 }
 
