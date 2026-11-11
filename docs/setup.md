@@ -256,6 +256,9 @@ A device already logged in under System goes straight in, otherwise the file man
 - **Copy, move:** the buttons at the bottom act on the folder open in the other column. There is always a question before
   anything happens.
 - **New folder:** the folder icon with a plus at the top of each column.
+- **From the tag editor:** the editor for albums and tracks shows the folder's path at the top (shortened at the front if
+  too long), with "File manager" next to it. It opens exactly this folder on the left and its parent on the right, e.g. to
+  move tracks one level up. The back arrow reopens the editor; unsaved changes in the editor are lost.
 - **Rename:** shows at the bottom when exactly one entry is ticked. A name that already exists in the folder is refused;
   changing only upper and lower case works on USB drives and NAS too. Ratings, NoMix and the history follow.
 - **Tags:** the pencil next to an audio file opens the tag editor for it; the file manager stays open behind it and

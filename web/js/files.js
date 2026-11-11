@@ -37,14 +37,14 @@ function filesError(r) {
 /* openFiles(): from the menu, the panes as last left. openFiles(left, right, back): these two folders (library check:
    album split over folders), the back arrow then calls back() instead of opening the menu */
 var filesBackTo = null;
-function openFiles(left, right, back) {
+function openFiles(left, right, back, backTitle) {
   closeAllOverlays();
   filesBackTo = typeof back === 'function' ? back : null;
   if (typeof left === 'string') {
     filesPanes[0] = {path: left, sel: {}}; filesPanes[1] = {path: right || '', sel: {}}; filesActive = 0;
   }
   var b = document.getElementById('filesBack');
-  if (b) b.title = T(filesBackTo ? 'files.backToCheck' : 'html.backToMenu');
+  if (b) b.title = filesBackTo ? backTitle || T('files.backToCheck') : T('html.backToMenu');
   overlayFiles.classList.add('on');
   filesStart();
 }
