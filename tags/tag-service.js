@@ -441,8 +441,49 @@ function doCheckStart(body, cb) {
   libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT}, function(err, songs){
     if (err) { checkError = 'MPD: ' + err.message; checkRun = null; return; }
     checkRun.phase = 'cover';
-    libcheck.dirsWithoutImage(songs, MUSIC_ROOT, function(cand){ checkCovers(songs, cand); });
+    var cache = new filecheck.Cache(CHECK_FILES).load();
+    libcheck.dirsWithoutImage(songs, MUSIC_ROOT, function(cand, images){
+      checkFiles(songs, images, cache, function(extra){ checkCovers(songs, cand, cache, extra); });
+    });
   }, function(done, total){ checkRun.done = done; checkRun.total = total; });
+}
+/* what the last check read about each file and folder (check-files.json): unchanged ones are not read again */
+var CHECK_FILES = path.join(DATA_DIR, 'check-files.json');
+var filecheck = require('./filecheck.js');
+/* ID3 block of DSF files and pixel size of the cover images, from the cache when unchanged -> cb({dsfTag, cover}) */
+function checkFiles(songs, images, cache, cb) {
+  var dsf = {}, covers = {}, jobs = [];
+  songs.forEach(function(s){
+    if (!/\.dsf$/i.test(s.file)) return;
+    var c = cache.get('f', s.file, s['last-modified'], 'dsf');
+    if (c) dsf[s.file] = c.v; else jobs.push({kind: 'dsf', s: s});
+  });
+  Object.keys(images).forEach(function(d){ jobs.push({kind: 'img', d: d, name: images[d]}); });
+  checkRun.phase = 'files'; checkRun.done = 0; checkRun.total = jobs.length;
+  var i = 0;
+  (function next() {
+    if (i >= jobs.length) {
+      return cb({dsfTag: function(f){ return dsf[f] || 0; }, cover: function(d){ return covers[d] || null; }});
+    }
+    var j = jobs[i++];
+    checkRun.done = i;
+    function go() { if (i % 50) next(); else setImmediate(next); }
+    if (j.kind === 'dsf') {
+      return filecheck.dsfTagSize(path.join(MUSIC_ROOT, j.s.file), function(n){
+        dsf[j.s.file] = n; cache.put('f', j.s.file, j.s['last-modified'], 'dsf', n); go();
+      });
+    }
+    var f = path.join(MUSIC_ROOT, j.d, j.name);
+    fs.stat(f, function(e, st){
+      if (e) return go();
+      var stamp = j.name + ':' + st.size + ':' + st.mtime.getTime(), c = cache.get('d', j.d, stamp, 'img');
+      if (c) { covers[j.d] = c.v; return go(); }
+      filecheck.imageSize(f, function(dim){
+        var v = {name: j.name, w: dim ? dim.w : 0, h: dim ? dim.h : 0, bytes: st.size};
+        covers[j.d] = v; cache.put('d', j.d, stamp, 'img', v); go();
+      });
+    });
+  })();
 }
 /* lossy files of duplicate albums: their size (s.size) for the data rate (duplicates.quality), one stat after another */
 function fileSizes(list, cb) {
@@ -453,14 +494,25 @@ function fileSizes(list, cb) {
     fs.stat(path.join(MUSIC_ROOT, s.file), function(e, st){ if (!e) s.size = st.size; if (i % 200) next(); else setImmediate(next); });
   })();
 }
-function checkCovers(songs, cand) {
-  var noCover = {};
-  checkRun.done = 0; checkRun.total = cand.length;
-  var jobs = cand.map(function(c){ return {op: 'cover_has', path: path.join(MUSIC_ROOT, c.file)}; });
+function checkCovers(songs, cand, cache, extra) {
+  var noCover = {}, lm = {};
+  songs.forEach(function(s){ lm[s.file] = s['last-modified']; });
+  checkRun.phase = 'cover'; checkRun.done = 0; checkRun.total = cand.length;
+  /* embedded cover of the first track of each folder without an image: from the cache when the file is unchanged */
+  var known = [], ask = [];
+  cand.forEach(function(c, k){
+    var hit = cache.get('f', c.file, lm[c.file], 'cover');
+    if (hit) known[k] = {ok: true, has: hit.v}; else ask.push(k);
+  });
+  var jobs = ask.map(function(k){ return {op: 'cover_has', path: path.join(MUSIC_ROOT, cand[k].file)}; });
   var i = 0, results = [];
   (function step() {                                   /* in parts so that progress keeps updating */
     if (i >= jobs.length) {
-      cand.forEach(function(c, k){ if (!(results[k] && results[k].ok && results[k].has)) noCover[c.dir] = true; });
+      ask.forEach(function(k, n){
+        known[k] = results[n];
+        if (results[n] && results[n].ok) cache.put('f', cand[k].file, lm[cand[k].file], 'cover', !!results[n].has);
+      });
+      cand.forEach(function(c, k){ if (!(known[k] && known[k].ok && known[k].has)) noCover[c.dir] = true; });
       /* m4a in duplicate albums: codec and resolution from the file, MPD's format is not reliable there */
       var m4aDirs = {};
       var dups = duplicates.find(songs, libcheck.artistKey);
@@ -481,11 +533,13 @@ function checkCovers(songs, cand) {
     }
     var part = jobs.slice(i, i + PY_BATCH);
     i += part.length;
-    runPyMany(part, function(r){ results = results.concat(r); checkRun.done = i; step(); });
+    runPyMany(part, function(r){ results = results.concat(r); checkRun.done = cand.length - jobs.length + i; step(); });
   })();
   function finish() {
     var res = libcheck.analyze(songs, function(d){ return !noCover[d]; },
-      function(s){ return audioStore.get(s.artist, s.title, s.album); });
+      function(s){ return audioStore.get(s.artist, s.title, s.album); }, extra);
+    res.reread = cache.misses; res.cached = cache.hits;  /* how much the cache saved */
+    try { cache.save(writeAtomic); } catch (e) { console.error('check-files.json: ' + e.message); }
     res.releaseDate = releasedates.diffs(albums.fromSongs(songs), songs,
       function(d){ var r = releaseDates.by[d]; return (r && r.d) || ''; }, albums.albumDir);   /* Date tag vs. MusicBrainz */
     res.at = Date.now();

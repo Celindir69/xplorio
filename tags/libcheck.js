@@ -6,6 +6,7 @@ var fs   = require('fs');
 var path = require('path');
 var genres = require('./genres.js');
 var duplicates = require('./duplicates.js');
+var filecheck = require('./filecheck.js');
 
 var IMG_RE = /\.(jpe?g|png)$/i;
 var DISC_DIR_RE = /^(cd|dis[ck]|disco|seite|side|vol(ume)?)[\s._-]*(\d+)\b/i;     /* subfolder of a multi-disc set, as albums.js */
@@ -402,14 +403,17 @@ function dupTrackSongs(songs) {
 
 /* songs: as from mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> audio analysis entry or null (optional).
    Result: lists per category */
-function analyze(songs, hasCover, audioOf) {
+/* extra (optional): dsfTag(file) -> bytes of the ID3 block of a DSF file; cover(dir) -> {name, w, h, bytes} of its image */
+function analyze(songs, hasCover, audioOf, extra) {
+  extra = extra || {};
   var dirs = {}, order = [];
   songs.forEach(function(s){
     var d = path.dirname(s.file);
     if (!dirs[d]) { dirs[d] = []; order.push(d); }
     dirs[d].push(s);
   });
-  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: []};
+  var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: [],
+             dsfTags: [], coverQuality: [], folderName: []};
   var forGenres = [];
   order.sort().forEach(function(d){
     var list = dirs[d];
@@ -422,6 +426,14 @@ function analyze(songs, hasCover, audioOf) {
     function item(extra, files) { var o = {}; for (var k in base) o[k] = base[k]; for (k in extra) o[k] = extra[k]; o.files = filesOf(files || list); return o; }
 
     if (!hasCover(d)) res.noCover.push(item({}));
+    if (extra.dsfTag) {                                  /* DSF whose tags MPD 0.20 ignores (ID3 block over 1 MB) */
+      var big = list.filter(function(s){ return /\.dsf$/i.test(s.file) && extra.dsfTag(s.file) > filecheck.DSF_TAG_LIMIT; });
+      if (big.length) res.dsfTags.push(item({big: big.length, bytes: Math.max.apply(null, big.map(function(s){ return extra.dsfTag(s.file); }))}));
+    }
+    var img = extra.cover ? extra.cover(d) : null, flaw = filecheck.coverFlaw(img);
+    if (flaw) res.coverQuality.push(item({why: flaw, image: img.name, w: img.w || 0, h: img.h || 0, bytes: img.bytes || 0}));
+    var fn = filecheck.folderNameFlaw(d, albums, who);
+    if (fn) res.folderName.push(item(fn));
     var aaFilled = aas.filter(Boolean);
     if (aaFilled.length > 1 || (artists.length > 1 && aaFilled.length < aas.length)) {
       res.albumArtist.push(item({artists: artists.slice(0, 6), albumartists: aaFilled, missing: aaFilled.length < aas.length}));
@@ -564,21 +576,23 @@ function mixedQuality(list) {
 
 /* folders without an image file (folder.jpg, cover.jpg, …); the caller checks embedded covers afterwards.
    Reads asynchronously, a few folders at a time: the service stays responsive meanwhile. cb(list in song order) */
+/* cb(list without image in song order, {dir: cover image name} of the folders with one) */
 function dirsWithoutImage(songs, musicRoot, cb) {
   var seen = Object.create(null), dirs = [];
   songs.forEach(function(s){
     var d = path.dirname(s.file);
     if (!seen[d]) { seen[d] = true; dirs.push({dir: d, file: s.file}); }
   });
-  var missing = [], i = 0, running = 0, left = dirs.length;
-  if (!left) return cb([]);
+  var missing = [], images = Object.create(null), i = 0, running = 0, left = dirs.length;
+  if (!left) return cb([], images);
   function next() {
     while (running < 4 && i < dirs.length) (function(k){
       running++; i++;
       fs.readdir(path.join(musicRoot, dirs[k].dir), function(e, names){   /* folder missing: count as without image */
         if (!(names || []).some(function(n){ return IMG_RE.test(n); })) missing[k] = true;
+        else { var c = filecheck.coverName(names); if (c) images[dirs[k].dir] = c; }
         running--; left--;
-        if (!left) return cb(dirs.filter(function(d, j){ return missing[j]; }));
+        if (!left) return cb(dirs.filter(function(d, j){ return missing[j]; }), images);
         next();
       });
     })(i);
