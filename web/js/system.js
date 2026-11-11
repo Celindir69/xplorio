@@ -740,7 +740,7 @@ function sysPaintWarn() {
   }
   box.appendChild(head);
   items.forEach(function(it){
-    var row = histEl('div', 'syWarn' + (it.read ? ' read' : '') + (it.active ? ' active' : ''));
+    var row = histEl('div', 'syWarnRow' + (it.read ? ' read' : '') + (it.active ? ' active' : ''));
     var top = histEl('div', 'syWarnTop');
     top.appendChild(histEl('span', 'syWarnTitle', sysWarnTitle(it)));
     if (!it.read) {

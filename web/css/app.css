@@ -1425,12 +1425,12 @@ html.rotelLock #vSlider { pointer-events:none; }
 /* Warnings (system.js, tags/syswarn.js): card on the System page, notice at the top, dot on the gear */
 .syWarnHead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .syWarnHead .syTitle { margin-bottom:0; }
-.syWarn { padding:calc(2.5 * var(--vw)) 0; border-top:1px solid rgba(var(--fg-rgb),.08); }
-.syWarnHead + .syWarn { margin-top:calc(2 * var(--vw)); }
+.syWarnRow { padding:calc(2.5 * var(--vw)) 0; border-top:1px solid rgba(var(--fg-rgb),.08); }
+.syWarnHead + .syWarnRow { margin-top:calc(2 * var(--vw)); }
 .syWarnTop { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .syWarnTitle { font-weight:600; color:var(--err); }
-.syWarn.read .syWarnTitle { color:var(--fg); font-weight:500; }
-.syWarn.read { opacity:.75; }
+.syWarnRow.read .syWarnTitle { color:var(--fg); font-weight:500; }
+.syWarnRow.read { opacity:.75; }
 .syWarnLine { margin-top:4px; font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(var(--fg-rgb),.5); overflow-wrap:anywhere; }
 #btnMenu.warn { opacity:1; }
 #btnMenu.warn::after { content:''; position:absolute; top:18%; right:18%; width:9px; height:9px; border-radius:50%;
