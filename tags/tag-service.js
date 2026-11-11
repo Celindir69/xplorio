@@ -521,14 +521,17 @@ function checkCovers(songs, cand, cache, extra) {
       });
       var dupDirs = {}, dupFiles = {};
       dups.forEach(function(g){ g.versions.forEach(function(v){ v.dirs.forEach(function(d){ dupDirs[d] = 1; }); }); });
-      libcheck.dupTrackSongs(songs).forEach(function(s){                   /* duplicate tracks: the same for their files */
-        dupFiles[s.file] = 1;
-        if (/\.(m4a|mp4)$/i.test(s.file)) m4aDirs[path.dirname(s.file)] = 1;
-      });
-      return m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){
-        fileSizes(songs.filter(function(s){
-          return (dupDirs[path.dirname(s.file)] || dupFiles[s.file]) && !/\.(flac|wav|aiff?|ape|wv|dsf|dff)$/i.test(s.file);
-        }), finish);
+      return libcheck.dupTrackSongsAsync(songs, function(dupSongs, ctx){   /* duplicate tracks: the same for their files */
+        dupSongs.forEach(function(s){
+          dupFiles[s.file] = 1;
+          if (/\.(m4a|mp4)$/i.test(s.file)) m4aDirs[path.dirname(s.file)] = 1;
+        });
+        extra.ctx = ctx;                                 /* grouping and duplicate groups: analyze does not build them again */
+        m4aprobe.fixFormats(songs, m4aDirs, MUSIC_ROOT, function(){
+          fileSizes(songs.filter(function(s){
+            return (dupDirs[path.dirname(s.file)] || dupFiles[s.file]) && !/\.(flac|wav|aiff?|ape|wv|dsf|dff)$/i.test(s.file);
+          }), finish);
+        });
       });
     }
     var part = jobs.slice(i, i + PY_BATCH);
@@ -536,8 +539,11 @@ function checkCovers(songs, cand, cache, extra) {
     runPyMany(part, function(r){ results = results.concat(r); checkRun.done = cand.length - jobs.length + i; step(); });
   })();
   function finish() {
-    var res = libcheck.analyze(songs, function(d){ return !noCover[d]; },
-      function(s){ return audioStore.get(s.artist, s.title, s.album); }, extra);
+    /* in portions (libcheck SLICE_MS): the service keeps answering covers, lyrics and history meanwhile */
+    libcheck.analyze(songs, function(d){ return !noCover[d]; },
+      function(s){ return audioStore.get(s.artist, s.title, s.album); }, extra, saved);
+  }
+  function saved(res) {
     res.reread = cache.misses; res.cached = cache.hits;  /* how much the cache saved */
     try { cache.save(writeAtomic); } catch (e) { console.error('check-files.json: ' + e.message); }
     res.releaseDate = releasedates.diffs(albums.fromSongs(songs), songs,
