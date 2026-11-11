@@ -1980,12 +1980,34 @@ var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
 function doPlaybackGet(query, cb) { playCtl.read(function(r){ cb(r.ok ? 200 : 503, r); }); }
 function doPlaybackSet(body, cb) { playCtl.set(body, cb); }
+/* ReplayGain and MQA tags of the playing file: one Python call per file and change, shared by /replaygain and /mqa and by
+   all devices (each asks at every track change). Key: path, stamp: size and modification time (saved tags count as new) */
+var rgTags = new Map(), RG_TAGS_MAX = 200, rgWaiting = {};
+function fileRgTags(full, cb) {
+  fs.stat(full, function(e, st){
+    if (e) return cb({ok: false, error: e.code});
+    var stamp = st.size + ':' + st.mtime.getTime(), hit = rgTags.get(full);
+    if (hit && hit.stamp === stamp) return cb(hit.p);
+    var key = full + '|' + stamp;
+    if (rgWaiting[key]) return rgWaiting[key].push(cb);   /* the same file asked at the same time: one Python call */
+    rgWaiting[key] = [cb];
+    runPy({op: 'replaygain', path: full}, function(p){
+      if (p.ok) {
+        rgTags.delete(full);
+        if (rgTags.size >= RG_TAGS_MAX) rgTags.delete(rgTags.keys().next().value);
+        rgTags.set(full, {stamp: stamp, p: p});
+      }
+      var list = rgWaiting[key]; delete rgWaiting[key];
+      list.forEach(function(f){ f(p); });
+    });
+  });
+}
 /* GET /replaygain?uri=: gain MPD applies to this file (player view), {ok, mode, gain: {mode, db} | null} */
 function doReplayGain(query, cb) {
   var r = resolveUri(query.uri);
   if (!r || r.missing) return cb(200, {ok: true, mode: null, gain: null});
   playCtl.gain(function(done){
-    runPy({op: 'replaygain', path: r.full}, function(p){ done(p.ok ? null : new Error(p.error), p); });
+    fileRgTags(r.full, function(p){ done(p.ok ? null : new Error(p.error), p); });
   }, function(o){ cb(o.ok ? 200 : 503, o); });
 }
 /* POST /applemusic {tracks: [{artist, title, album}]} or {items: [Xplorio items]} -> {ok, tracks: [{id, artist, title, album}], of}: Apple Music entries
@@ -2014,16 +2036,12 @@ function doAppleMusic(body, cb) {
   go(Array.isArray(body && body.tracks) ? body.tracks : []);
 }
 
-/* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; remembered per file */
-var mqaCache = new Map(), MQA_CACHE_MAX = 500;
+/* GET /mqa?uri=: is this FLAC an MQA file (its tags), {ok, mqa: {orig: 192000|null} | null}; same cache as /replaygain */
 function doMqa(query, cb) {
   var r = resolveUri(query.uri);
   if (!r || r.missing || !/\.flac$/i.test(r.full)) return cb(200, {ok: true, mqa: null});
-  if (mqaCache.has(r.full)) return cb(200, {ok: true, mqa: mqaCache.get(r.full)});
-  runPy({op: 'replaygain', path: r.full}, function(p){
+  fileRgTags(r.full, function(p){
     if (!p.ok) return cb(200, {ok: false, mqa: null});
-    if (mqaCache.size >= MQA_CACHE_MAX) mqaCache.delete(mqaCache.keys().next().value);
-    mqaCache.set(r.full, p.mqa || null);
     cb(200, {ok: true, mqa: p.mqa || null});
   });
 }
