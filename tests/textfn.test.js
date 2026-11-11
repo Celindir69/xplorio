@@ -58,13 +58,21 @@ ok('split by pattern', function(){
   assert.deepStrictEqual(t.textSplit('  a  -  b ', p).ambiguous, false);
   var q = t.textPattern('%track%. %Artist% / %title% (%dummy%)');
   assert.deepStrictEqual(t.textSplit('03. A / B (live)', q).tags, {track: '03', artist: 'A', title: 'B'});
-  assert.deepStrictEqual(t.textSplit('x', t.textPattern('%YEAR%')).tags, {date: 'x'});
+  assert.deepStrictEqual(t.textSplit('1999-05', t.textPattern('%YEAR%')).tags, {date: '1999-05'});
+  assert.strictEqual(t.textSplit('x', t.textPattern('%YEAR%')), null);                         /* year, track, disc: numbers only */
 });
 ok('split: ambiguous returns both variants', function(){
   var r = t.textSplit('Relax - Remix - Frankie', t.textPattern('%TITLE% - %ARTIST%'));
   assert.strictEqual(r.ambiguous, true);
   assert.deepStrictEqual(r.tags, {title: 'Relax', artist: 'Remix - Frankie'});
   assert.deepStrictEqual(r.alt, {title: 'Relax - Remix', artist: 'Frankie'});
+});
+ok('split: track number before a title with spaces is not ambiguous', function(){
+  var p = t.textPattern('%ALBUM%/%TRACK% %TITLE%');
+  assert.deepStrictEqual(t.textSplit('Diverse Songs/01 A Day In the Life Live', p), {tags: {album: 'Diverse Songs', track: '01', title: 'A Day In the Life Live'}, ambiguous: false});
+  assert.deepStrictEqual(t.textSplit('B2 Nachtlichter', t.textPattern('%TRACK% %TITLE%')).tags, {track: 'B2', title: 'Nachtlichter'});   /* vinyl side */
+  assert.deepStrictEqual(t.textSplit('3/12 - Glass Hours', t.textPattern('%TRACK% - %TITLE%')).tags, {track: '3/12', title: 'Glass Hours'});
+  assert.strictEqual(t.textSplit('Diverse Songs/A Day', p), null);
 });
 ok('split: invalid patterns', function(){
   assert.ok(t.textPattern('%TITLE%%ARTIST%').error);

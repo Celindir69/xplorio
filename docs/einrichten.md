@@ -219,6 +219,8 @@ einen Ordner mit gesammelten Einzeltiteln, der sonst immer alphabetisch spielt. 
 „Aufteilen nach Muster“ zerlegt außer einem Tag auch den **Dateinamen** oder **Pfad und Dateinamen** (jeweils ohne
 Endung), z. B. `%TRACK% - %ARTIST% - %TITLE%`. Beim Pfad zählen nur so viele Ordner von hinten, wie das Muster „/“
 enthält: `%ARTIST%/%ALBUM%/%TRACK% %TITLE%` nimmt Künstler- und Albumordner, davor liegende Ordner brauchen kein %DUMMY%.
+%TRACK%, %DISC% und %YEAR% nehmen nur Zahlen (Tracknummer auch „3/12“ oder „B2“, Jahr auch „1999-05-01“); so
+zerlegt `%TRACK% %TITLE%` „01 A Day In the Life“ eindeutig, obwohl das Leerzeichen auch im Titel vorkommt.
 Muster, mit denen gespeichert wurde, merkt sich der Player (`patterns.json` im Datenordner, die letzten 20); die Auswahl
 „Gespeichert“ neben dem Musterfeld setzt eines davon ein. Eigene Muster lassen sich immer eintippen. Unter den Textfunktionen
 (Aa) machen „_ zu Leerzeichen“ und „- zu Leerzeichen“ aus `Tears_For_Fears` oder `Tears-For-Fears` wieder „Tears For
