@@ -493,7 +493,7 @@ langRegister('it', 'Italiano', {
   'files.noDrives': 'Nessuna unità trovata.',
   'files.emptyDir': 'Cartella vuota',
   'files.more': 'Non tutte le voci sono mostrate (più di 5000).',
-  'files.tickHint': 'Spunta file o cartelle. Potrai poi copiarli o spostarli nella cartella dell’altra colonna, anche trascinandoli.',
+  'files.tickHint': 'Spunta file o cartelle. Potrai poi copiarli o spostarli nella cartella dell’altra colonna.',
   'files.ticked': {one: '1 selezionato', other: '{n} selezionati'},
   'files.copyTo': 'Copia in «{dir}»',
   'files.moveTo': 'Sposta in «{dir}»',

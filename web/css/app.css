@@ -836,8 +836,6 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
   cursor:pointer; user-select:none; -webkit-user-select:none; border-radius:6px; margin:0 calc(1 * var(--vw)); }
 .fmRow:hover { background:rgba(var(--fg-rgb),.06); }
 .fmRow.fmSel { background:rgba(var(--fg-rgb),.14); }
-.fmRow.fmDragging { opacity:.45; }
-.fmDrop, .fmRow.fmDrop { outline:2px solid var(--accent, #4a90e2); outline-offset:-2px; background:rgba(var(--fg-rgb),.1); }
 .fmCheck { flex:0 0 auto; width:18px; height:18px; margin:0; cursor:pointer; }
 .fmIcon { flex:0 0 auto; display:flex; }
 .fmIcon svg { width:calc(5.5 * var(--vw)); height:calc(5.5 * var(--vw)); min-width:20px; min-height:20px; fill:var(--fg); opacity:.6; }

@@ -218,7 +218,7 @@ the library can be moved.
 of one album: each folder holds only tracks of this album (collection folders with other albums do not count), all have
 the same format, and no title and no track number is in two folders. Such cases are listed here and no longer under
 "Duplicate albums". The folder with the most tracks is the target. "File manager" next to another folder opens the file
-manager (services password) with that folder on the left and the target on the right; drag the files across there. The
+manager (services password) with that folder on the left and the target on the right; tick the files there and "Move". The
 back arrow leads to the library check again; after the next check the entry is gone. "Keep" leaves folders that are
 meant to be apart alone.
 
@@ -253,9 +253,8 @@ A device already logged in under System goes straight in, otherwise the file man
   selection at a time, the other one is the target. The box at the top left of a column ticks everything in the open
   folder, or nothing. A path too long for the head has its front parts cut to three characters (the full name shows
   on hover).
-- **Copy, move:** the buttons at the bottom act on the folder open in the other column. On a computer drag & drop works
-  too, onto a folder or onto the empty part of a column: dropping moves, holding ⌥ (Windows: Alt or Ctrl) copies. There is
-  always a question before anything happens.
+- **Copy, move:** the buttons at the bottom act on the folder open in the other column. There is always a question before
+  anything happens.
 - **New folder:** the folder icon with a plus at the top of each column.
 - **Rename:** shows at the bottom when exactly one entry is ticked. A name that already exists in the folder is refused;
   changing only upper and lower case works on USB drives and NAS too. Ratings, NoMix and the history follow.
