@@ -104,8 +104,22 @@ function tagPaintPlayer(st) {
 /* JSON to the tag service (as text/plain: no browser preflight request needed). No time limit: writing many files can
    take minutes */
 function tagPost(route, body) {
-  return fetch(TAGS + route, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)})
-    .then(tagJson).then(tagNoWrite);
+  var opts = {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: JSON.stringify(body)};
+  var safe = route === '/read' || (route === '/files' && body && /^(job|list)$/.test(body.op));   /* only reads repeat */
+  return (safe ? tagFetchRetry(TAGS + route, opts) : fetch(TAGS + route, opts)).then(tagJson).then(tagNoWrite);
+}
+/* connection broken before an answer (TypeError: closed keep-alive connection, Wi-Fi waking up, service restarting):
+   try again after 1 s and 3 s. Only for requests that change nothing; writing has its own repeat (tagPostRetry). */
+var TAG_FETCH_RETRY = [1000, 3000];
+function tagFetchRetry(url, opts) {
+  var n = 0;
+  function attempt() {
+    return fetch(url, opts).catch(function(e){
+      if (!(e instanceof TypeError) || n >= TAG_FETCH_RETRY.length) throw e;
+      return new Promise(function(ok){ setTimeout(ok, TAG_FETCH_RETRY[n++]); }).then(attempt);
+    });
+  }
+  return attempt();
 }
 /* answer of the tag service; not JSON (e.g. an error page of a proxy): a readable error instead of a JSON parse error */
 function tagJson(r) {
@@ -863,7 +877,7 @@ function tagSelect(list, value) {
 
 var TAG_GET_TIMEOUT = 45000;                         /* a hanging service does not leave the page spinning forever */
 function tagGetJson(route) {
-  return withTimeout(fetch(TAGS + route).then(tagJson), TAG_GET_TIMEOUT);
+  return withTimeout(tagFetchRetry(TAGS + route).then(tagJson), TAG_GET_TIMEOUT);
 }
 
 /* whenTags(fn): fn(health) as soon as the tag service answers. One shared request for all parts; without an answer

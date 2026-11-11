@@ -2428,6 +2428,9 @@ if (require.main === module) {
     logs.appendCrash(CRASH_LOG, e);
     process.exit(1);
   });
+  /* Node closes an idle keep-alive connection after 5 s; Safari often reuses it at that very moment and the request fails
+     ("tag service not reachable", fine again a moment later). Keep idle connections open longer than the browsers do. */
+  server.keepAliveTimeout = 65000;
   server.listen(HTTP_PORT, function(){ console.log('tag-service on port ' + HTTP_PORT + ', music under ' + MUSIC_ROOT); });
   if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); }
   setTimeout(function(){ albumsEnsure(); }, 90000);       /* prepare the album list for the random album */
