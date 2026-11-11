@@ -21,12 +21,16 @@ var CHECK_CATS = [
   {key: 'year', name: T('check.cat.year'), hint: T('check.cat.yearHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
   {key: 'noTags', name: T('check.cat.noTags'), hint: T('check.cat.noTagsHint')},
+  {key: 'dsfTags', name: T('check.cat.dsfTags'), hint: T('check.cat.dsfTagsHint')},
+  {key: 'coverQuality', name: T('check.cat.coverQuality'), hint: T('check.cat.coverQualityHint')},
+  {key: 'folderName', name: T('check.cat.folderName'), hint: T('check.cat.folderNameHint')},
   {key: 'gaps', name: T('check.cat.gaps'), hint: T('check.cat.gapsHint')},
   {key: 'genreMissing', name: T('check.cat.genreMissing'), hint: T('check.cat.genreMissingHint')},
   {key: 'genreMerge', name: T('check.cat.genreMerge'), hint: T('check.cat.genreMergeHint')},
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
-var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, splitAlbums: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1};   /* categories with "Keep" */
+var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, splitAlbums: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1,
+                      coverQuality: 1, folderName: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -96,6 +100,7 @@ function checkStart() {
 function checkRunText(run) {
   return run.phase === 'mpd'
     ? (run.total ? T('check.runFolders', {done: checkNum(run.done), total: checkNum(run.total)}) : T('check.runFoldersNoTotal', {done: checkNum(run.done)}))
+    : run.phase === 'files' ? T('check.runFiles', {done: checkNum(run.done), total: checkNum(run.total)})
     : T('check.runCovers', {done: checkNum(run.done), total: checkNum(run.total)});
 }
 function checkRender(res) {
@@ -304,6 +309,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'duplicates') checkDupRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'splitAlbums') checkSplitRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
       else if (cat.key === 'dupTracks') checkDupTrackRows(list[shown]).forEach(function(el){ box.insertBefore(el, moreRow); });
+      else if (CHECK_SIMPLE[cat.key]) box.insertBefore(checkSimpleRow(cat.key, list[shown], false), moreRow);
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
     }
     moreRow.style.display = shown < list.length ? '' : 'none';
@@ -329,6 +335,8 @@ function checkKeepOf(cat, it) {
   if (cat === 'year') return {k: 'year|' + it.dir, v: checkValuesKey(it.years)};  /* as long as the album keeps these years */
   if (cat === 'albumName') return {k: 'albumname|' + it.dir, v: checkValuesKey(it.names)};
   if (cat === 'mixedQuality') return {k: 'quality|' + it.dir, v: checkValuesKey(it.formats)};   /* as long as the formats stay */
+  if (cat === 'coverQuality') return {k: 'cover|' + it.dir, v: it.image + ':' + it.why};   /* until the image changes */
+  if (cat === 'folderName') return {k: 'folder|' + it.dir, v: it.folder};
   if (cat === 'spelling') return {k: 'spell|' + (it.key || checkValuesKey(it.variants)), v: checkValuesKey(it.variants)};   /* as long as these spellings stay */
   return {k: it.dir, v: it.tag};
 }
@@ -393,7 +401,7 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
     if (cat === 'spelling') checkSpellingOthers(it).forEach(function(to){       /* another spelling instead of the suggestion */
       apply(T('check.spelling.use', {name: to}), T('check.fix.applyHint', {value: to}), to);
     });
-    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : cat === 'mixedQuality' ? 'check.quality.keepHint'
+    btn(T('check.conflict.keep'), T(cat === 'genreMissing' ? 'check.conflict.keepNoneHint' : cat === 'mixedQuality' ? 'check.quality.keepHint' : CHECK_SIMPLE[cat] ? 'check.simple.keepHint'
         : fix ? 'check.fix.keepHint' : 'check.conflict.keepHint'), function(b){ keep(true, b); });
   }
   row.classList.add('ckGenreRow');
@@ -445,6 +453,7 @@ function checkKeptSection(box, cat) {
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
     if (cat === 'mixedQuality') return checkQualityRows(it, true).forEach(function(el){ list.appendChild(el); });
+    if (CHECK_SIMPLE[cat]) return list.appendChild(checkSimpleRow(cat, it, true));
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
   });
   head.addEventListener('click', function(){
@@ -486,6 +495,37 @@ function checkAlbumRow(key, it) {
     if (key === 'albumArtist') openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name);
     else openTagEditor(it.files, it.name, {move: true});
   });
+}
+
+/* ---------- DSF tags too large, cover image too small or too large, folder name does not fit the album ---------- */
+/* pen: album editor (cover section: "Remove images", choose or search an image); folder name: also the file manager
+   with the folder on the left and its parent on the right; cover and folder name can be kept */
+var CHECK_SIMPLE = {dsfTags: 1, coverQuality: 1, folderName: 1};
+function checkMB(bytes) { return langNum(Math.round(bytes / 104857.6) / 10); }
+function checkSimpleRow(cat, it, kept) {
+  var sub;
+  if (cat === 'dsfTags') sub = T('check.dsf.sub', {n: checkNum(it.big), count: checkNum(it.count), mb: checkMB(it.bytes)});
+  else if (cat === 'coverQuality') sub = it.why === 'small' ? T('check.coverq.small', {name: it.image, w: checkNum(it.w), h: checkNum(it.h)})
+                                                            : T('check.coverq.big', {name: it.image, mb: checkMB(it.bytes)});
+  else sub = it.why === 'unknown' ? T('check.folder.unknown', {folder: it.folder}) : T('check.folder.differs', {folder: it.folder, album: it.name});
+  var key = cat + '|' + it.dir;
+  var row = checkRow(key, it.name + (it.artist ? ' · ' + it.artist : ''), sub + ' · /mnt/' + it.dir, function(){
+    openTagEditor(it.files, it.name, {move: true});
+  });
+  if (kept) row.removeChild(row.lastChild);                 /* kept: only "no longer keep" */
+  if (cat === 'folderName' && !kept) {
+    var fm = document.createElement('button'); fm.className = 'ckBtn'; fm.textContent = T('tag.fileManager');
+    fm.title = T('tag.fileManagerHint');
+    fm.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      row.classList.add('done'); checkMarkDone(key);
+      clearTimeout(checkTimer);
+      openFiles(it.dir, it.dir.slice(0, it.dir.lastIndexOf('/')), openCheck);
+    });
+    row.insertBefore(fm, row.lastChild);
+  }
+  if (CHECK_KEEPABLE[cat]) checkGenreButtons(row, cat, key, it, it.files, kept);
+  return row;
 }
 
 /* "ohne Titel: 3, ohne Künstler: 1 von 12 · 01.flac, 02.flac" */
