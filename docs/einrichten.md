@@ -328,8 +328,10 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   Grundbuchstabe, # für Sonderzeichen); Wischen über die Leiste geht auch.
 - **Papierkorb, leere Ordner:** Der Mülleimer legt die Auswahl in `Xplorio Trash` ihres Laufwerks (zurücklegen über den
   Papierkorb). „Leere Ordner löschen“ erscheint, wenn nur Ordner ausgewählt sind. Gelöscht wird ein Ordner samt Unterordnern
-  nur, wenn darin auf keiner Ebene eine Datei liegt; Reste von Mac und Windows (`.DS_Store`, `._`-Dateien, `Thumbs.db`,
-  `desktop.ini`) zählen nicht und gehen mit. Jede andere Datei, auch eine versteckte wie `.mpdignore`, verhindert das
+  nur, wenn darin auf keiner Ebene eine Datei liegt; Reste von Mac und Windows (`.DS_Store`, `._`-Dateien, `Icon`,
+  `.localized`, `Thumbs.db`, `ehthumbs.db`, `desktop.ini` sowie die Ordner `.Trashes`, `.Spotlight-V100`, `.fseventsd`,
+  `.TemporaryItems`, `.AppleDouble` mit Inhalt) zählen nicht und gehen mit; das gilt auch, wenn der Papierkorb leere Ordner
+  aufräumt. `$RECYCLE.BIN` und `System Volume Information` bleiben unangetastet. Jede andere Datei, auch eine versteckte wie `.mpdignore`, verhindert das
   Löschen, und die Meldung nennt sie.
 
 Regeln: Es wird nichts überschrieben; gibt es einen Namen im Ziel schon, bekommt die Kopie „(2)“, „(3)“ usw. Verschieben

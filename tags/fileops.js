@@ -34,7 +34,7 @@ function rmrf(p) {
   else fs.unlinkSync(p);
 }
 /* Mac leftovers: count as nothing in an "empty" folder, never shown */
-function macJunk(name) { return name === '.DS_Store' || name.indexOf('._') === 0; }
+var junkFile = require('./junk.js').junkFile, junkDir = require('./junk.js').junkDir;
 
 /* number of path parts of the drive: INTERNAL 1, USB/<x> and NAS/<x> 2 */
 function driveParts(parts) { return parts[0] === 'INTERNAL' ? 1 : 2; }
@@ -168,16 +168,15 @@ function rename(root, rel, name) {
   return {ok: true, from: rel, to: to, dir: dir};
 }
 
-/* left behind by Mac and Windows: does not make a folder "not empty" */
-function junk(name) { return macJunk(name) || /^(thumbs\.db|desktop\.ini)$/i.test(name); }
-/* the first real file below a folder (relative), '' if there are only folders and junk; a link counts as a file */
+/* the first real file below a folder (relative), '' if there are only folders and leftovers of Mac and Windows (junk.js);
+   a link counts as a file */
 function firstFile(full, pre) {
   var names = children(full).sort();
   for (var i = 0; i < names.length; i++) {
     var f = path.join(full, names[i]), r = pre ? pre + '/' + names[i] : names[i], st;
     try { st = fs.lstatSync(f); } catch (e) { return r; }
-    if (st.isDirectory()) { var x = firstFile(f, r); if (x) return x; }
-    else if (!st.isFile() || !junk(names[i])) return r;
+    if (st.isDirectory()) { if (junkDir(names[i])) continue; var x = firstFile(f, r); if (x) return x; }
+    else if (!st.isFile() || !junkFile(names[i])) return r;
   }
   return '';
 }
@@ -239,7 +238,7 @@ function walk(full, pre, out) {
     var f = path.join(full, c), r = pre ? pre + '/' + c : c, st;
     try { st = fs.lstatSync(f); } catch (e) { return; }
     if (st.isDirectory()) { out.dirs.push(r); walk(f, r, out); }
-    else if (st.isFile() && !macJunk(c)) out.files.push({rel: r, bytes: st.size});
+    else if (st.isFile() && !junkFile(c)) out.files.push({rel: r, bytes: st.size});
   });
   return out;
 }

@@ -6,6 +6,7 @@
 var fs = require('fs');
 var path = require('path');
 var duplicates = require('./duplicates.js');
+var junk = require('./junk.js');
 var TRASH = duplicates.TRASH;
 
 function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } }
@@ -108,15 +109,15 @@ function rmrf(p) {
   else fs.unlinkSync(p);
 }
 
-/* empty folders above rel, up to (not including) the trash folder of its drive; Mac leftovers do not count */
+/* empty folders above rel, up to (not including) the trash folder of its drive; Mac and Windows leftovers do not count */
 function pruneUp(root, rel) {
   var s = split(rel);
   if (!s) return;
   var base = s.drive + '/' + TRASH, cur = path.dirname(rel);
   while (cur.indexOf(base + '/') === 0) {
     var full = path.join(root, cur), left = children(full);
-    if (left.some(function(c){ return c !== '.DS_Store' && c.indexOf('._') !== 0; })) return;
-    left.forEach(function(c){ try { fs.unlinkSync(path.join(full, c)); } catch (e) { /* stays */ } });
+    if (left.some(function(c){ return !junk.junkFile(c) && !junk.junkDir(c); })) return;
+    left.forEach(function(c){ try { rmrf(path.join(full, c)); } catch (e) { /* stays */ } });
     try { fs.rmdirSync(full); } catch (e) { return; }
     cur = path.dirname(cur);
   }
@@ -194,8 +195,7 @@ function files(root, rel) {
   if (!split(rel) || !isDir(path.join(root, rel))) return {ok: false, error: 'gone'};
   if (!inside(root, rel)) return {ok: false, error: 'not in the trash'};
   return {ok: true, files: filesBelow(path.join(root, rel), '').filter(function(f){
-    var b = path.basename(f);
-    return b !== '.DS_Store' && b.indexOf('._') !== 0;
+    return !junk.junkFile(path.basename(f)) && !f.split('/').some(junk.junkDir);
   }).map(function(f){
     var m = measure(path.join(root, rel, f));
     return {path: rel + '/' + f, name: f, bytes: m.bytes};
