@@ -54,6 +54,9 @@ function menuRender() {
     if (!it.action) row.appendChild(menuSvg(MENU_CHEVRON, 'menuChev'));
     row.addEventListener('click', function(){ if (!row.classList.contains('busy')) it.open(); });
     if (it.id === 'trash' && typeof trashSummary === 'function') tagGetJson('/trash').then(function(r){ sub.textContent = trashSummary(r); }).catch(function(){});
+    if (it.id === 'system' && typeof sysWarnUnread === 'function' && sysWarnUnread().length) {
+      sub.textContent = T('warn.menu', {n: sysWarnUnread().length}); row.classList.add('warn');
+    }
     if (it.id === 'update') libUpdWatch('menu', function(st){ sub.textContent = libUpdText(st); row.classList.toggle('busy', st === 'running'); });
     listEl.appendChild(row);
   });

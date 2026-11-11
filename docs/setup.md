@@ -302,6 +302,21 @@ When the page opens (only with the Tag Service), a card in the middle of the win
 
 In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (internal card, USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 10 seconds, and every 2 seconds only while the page is open (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
 
+#### Warnings
+At the very top of the page is the "Warnings" card, as soon as there is something to report. The Tag Service checks once a minute for:
+- **Drive errors** from the kernel log (`dmesg`, else `journalctl -k`): read and write errors, no response from the drive
+  (e.g. `uas_eh_abort_handler`, `Unit Not Ready`, `I/O error`), file system errors, USB connections reset several times (from
+  the third time; once is normal) and under-voltage on the player. Grouped per drive, with the last line from the log.
+- **Drive gone:** a USB drive that was mounted is missing. Unplugged on purpose: "Read", and it is forgotten.
+- **Memory** over 80 % used for 5 minutes (over below 75 %).
+- **Drive space:** a drive (internal card, USB, network) 90 % full or more; checked every 10 minutes.
+
+The app shows new warnings once as a red notice at the top (a tap opens "System"), and the gear gets a red dot until they
+are confirmed with "Read" or "All read". Past events stay in the list for 24 hours, also across a restart of the player
+(`/data/xplorio/data/syswarn.json`; on Volumio the journal lives in RAM). If the service cannot read the kernel log, the card
+says so; the fix is the same as for the logs (group `systemd-journal`, see below). With `SYSWARN=0` in the Tag Service's
+environment the check is off.
+
 #### Services
 Below that, the "Services" card: Volumio, MPD, Xplorio web server, Tag Service and Rotel control with their state (running
 for …, stopped, error) and a "Restart" button. The page asks before restarting. Services that are not running on the player
