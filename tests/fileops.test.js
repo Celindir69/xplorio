@@ -147,6 +147,10 @@ t('mkdir, rmdir (only empty, Mac leftovers do not count), trash', function(done)
   assert.strictEqual(fileops.rmdir(root, 'USB/S/Mix').error, 'not empty');
   mk(root, 'USB/S/Tree/a/b/.DS_Store'); mk(root, 'USB/S/Tree/a/Thumbs.db'); mkd(path.join(root, 'USB/S/Tree/c/d'));
   assert.ok(fileops.rmdir(root, 'USB/S/Tree').ok, 'only folders and junk: the whole tree goes');
+  mk(root, 'USB/S/Tree3/Icon\r'); mk(root, 'USB/S/Tree3/x/desktop.ini'); mk(root, 'USB/S/Tree3/x/ehthumbs.db'); mk(root, 'USB/S/Tree3/.localized');
+  mk(root, 'USB/S/Tree3/.Trashes/501/song.flac'); mk(root, 'USB/S/Tree3/.Spotlight-V100/Store-V2/x'); mk(root, 'USB/S/Tree3/.fseventsd/0001');
+  assert.ok(fileops.rmdir(root, 'USB/S/Tree3').ok, 'Mac and Windows leftovers, also .Trashes and .Spotlight-V100 with content');
+  assert.ok(!fs.existsSync(path.join(root, 'USB/S/Tree3')));
   assert.ok(!has(root, 'USB/S/Tree'));
   mk(root, 'USB/S/Tree2/a/b/.DS_Store'); mk(root, 'USB/S/Tree2/c/.mpdignore', 'x');
   assert.deepStrictEqual(fileops.rmdir(root, 'USB/S/Tree2'), {ok: false, error: 'not empty', file: 'c/.mpdignore'});

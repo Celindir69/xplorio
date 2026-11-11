@@ -277,8 +277,10 @@ A device already logged in under System goes straight in, otherwise the file man
   base letter, # for other characters); sliding along the bar works too.
 - **Trash, empty folders:** the bin puts the selection into `Xplorio Trash` of its drive (put it back from the Trash page).
   "Delete empty folders" shows when only folders are selected. A folder and its subfolders are deleted only if no file
-  lies anywhere inside; leftovers of Mac and Windows (`.DS_Store`, `._` files, `Thumbs.db`, `desktop.ini`) do not count
-  and go along. Any other file, a hidden one such as `.mpdignore` too, prevents it, and the message names it.
+  lies anywhere inside; leftovers of Mac and Windows (`.DS_Store`, `._` files, `Icon`, `.localized`, `Thumbs.db`,
+  `ehthumbs.db`, `desktop.ini`, and the folders `.Trashes`, `.Spotlight-V100`, `.fseventsd`, `.TemporaryItems`, `.AppleDouble`
+  with their content) do not count and go along; the same applies when the trash tidies up empty folders. `$RECYCLE.BIN` and
+  `System Volume Information` are left alone. Any other file, a hidden one such as `.mpdignore` too, prevents it, and the message names it.
 
 Rules: nothing is overwritten; if a name already exists in the target, the copy gets "(2)", "(3)" and so on. Moving within
 a drive is a rename and done at once. Between drives (e.g. USB → NAS) everything is copied first, each file checked for its
