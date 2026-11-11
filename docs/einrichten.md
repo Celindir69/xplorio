@@ -176,6 +176,19 @@ Titel, mit Rückgängig, „Behalten“ legt den Eintrag zugeklappt ans Ende), T
 `/data/xplorio/data/check.json`, bis neu geprüft wird. Einträge, deren Stift benutzt wurde, bleiben dort vermerkt und
 ausgegraut, auch nach dem Schließen, bis zur nächsten Prüfung.
 
+**Dateien und Ordner:** Drei Kategorien lesen zusätzlich die Dateien selbst. „DSF-Tags werden nicht gelesen“: DSF-Dateien
+mit einem Tag-Block über 1 MB (siehe „Eingebettete Bilder entfernen“). „Cover zu klein oder zu groß“: das Bild im Ordner
+(`folder`, `cover`, `front`, `albumart`, sonst das erste JPG/PNG) ist kürzer als 500 Pixel oder größer als 2 MB.
+„Ordnername passt nicht zum Album“: Ordner wie „Unknown Album“/„Unbekanntes Album“ oder ein Ordnername, der deutlich vom
+Album-Tag abweicht (Jahr und Künstler vorne im Namen sowie Zusätze in Klammern zählen nicht; Ordner mit mehreren Alben wie
+„Singles“ werden nicht gemeldet, CD-Ordner zählen mit dem Namen darüber). Dort öffnet „Dateimanager“ den Ordner zum
+Umbenennen. Beide letzten lassen sich mit „Behalten“ ausblenden.
+
+**Schnellere Prüfung:** Was die Prüfung aus den Dateien liest (eingebettetes Cover, DSF-Tag-Block, Bildgröße), merkt sie
+sich in `/data/xplorio/data/check-files.json`. Beim nächsten Mal liest sie nur Dateien neu, deren Änderungsdatum in MPD sich
+geändert hat, und Bilder mit anderer Größe oder anderem Datum. Die MPD-Datenbank selbst wird weiterhin ganz gelesen; das
+geht schnell. Die Datei darf gelöscht werden, dann liest die nächste Prüfung wieder alles.
+
 **Genres:** Zwei weitere Kategorien schlagen je Album genau ein Genre aus den 15 Discogs-Oberkategorien vor (Electronic,
 Rock, Jazz, Classical, Pop, Hip Hop, Funk / Soul, Folk, World, & Country, Latin, Reggae, Blues, Stage & Screen,
 Non-Music, Children's, Brass & Military).

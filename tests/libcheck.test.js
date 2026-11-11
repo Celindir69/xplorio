@@ -214,6 +214,75 @@ t('artistKey', function(){
   assert.notStrictEqual(lc.artistKey('Nena'), lc.artistKey('Nina'));
 });
 
+/* ---------- file checks: DSF tag size, cover image, folder name, cache ---------- */
+var fc = require('../tags/filecheck.js');
+function dsfHead(total, meta) { var b = Buffer.alloc(28); b.write('DSD ', 0, 'latin1'); b.writeUInt32LE(28, 4);
+  b.writeUInt32LE(total % 4294967296, 12); b.writeUInt32LE(Math.floor(total / 4294967296), 16);
+  b.writeUInt32LE(meta % 4294967296, 20); b.writeUInt32LE(Math.floor(meta / 4294967296), 24); return b; }
+t('DSF: size of the ID3 block from the header', function(){
+  assert.strictEqual(fc.dsfTagBytes(dsfHead(5000000000, 5000000000 - 2500000)), 2500000);   /* file over 4 GB */
+  assert.strictEqual(fc.dsfTagBytes(dsfHead(1000, 0)), 0);                                     /* no ID3 block */
+  assert.strictEqual(fc.dsfTagBytes(Buffer.from('fLaC0000000000000000000000000000')), 0);
+  assert.strictEqual(fc.dsfTagBytes(null), 0);
+});
+t('image size: PNG and JPEG (EXIF before the frame), broken file', function(){
+  var png = Buffer.alloc(24); png[0] = 0x89; png.write('PNG', 1, 'latin1'); png.writeUInt32BE(1200, 16); png.writeUInt32BE(1000, 20);
+  assert.deepStrictEqual(fc.imageDims(png), {w: 1200, h: 1000});
+  var jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x06, 1, 2, 3, 4, 0xff, 0xc4, 0x00, 0x04, 0, 0,
+                         0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x2c, 0x01, 0x90, 3, 0, 0, 0, 0, 0, 0]);
+  assert.deepStrictEqual(fc.imageDims(jpg), {w: 400, h: 300});
+  assert.strictEqual(fc.imageDims(Buffer.from('not an image at all, really not')), null);
+});
+t('cover: name as players pick it, small or large image', function(){
+  assert.strictEqual(fc.coverName(['back.jpg', 'Cover.JPG', 'folder.png', '.hidden.jpg']), 'folder.png');
+  assert.strictEqual(fc.coverName(['b.jpg', 'a.png', '01.flac']), 'a.png');
+  assert.strictEqual(fc.coverName(['01.flac']), null);
+  assert.strictEqual(fc.coverFlaw({w: 300, h: 300, bytes: 40000}), 'small');
+  assert.strictEqual(fc.coverFlaw({w: 3000, h: 3000, bytes: 5 * 1024 * 1024}), 'big');
+  assert.strictEqual(fc.coverFlaw({w: 1000, h: 1000, bytes: 300000}), null);
+  assert.strictEqual(fc.coverFlaw({w: 0, h: 0, bytes: 1000}), null);                          /* size unknown: no warning */
+});
+t('folder name vs. album tag', function(){
+  assert.ok(fc.folderFits('1999 - Nachtlichter', 'Nachtlichter', 'Lumen Drift'));
+  assert.ok(fc.folderFits('Lumen Drift - Nachtlichter (Deluxe)', 'Nachtlichter', 'Lumen Drift'));
+  assert.ok(fc.folderFits('The Glass Hours', 'Glass Hours [Remastered 2011]', 'Velvet Static'));
+  assert.ok(fc.folderFits('Cafe Nocturne', 'Café Nocturne', 'Aurora Kite'));
+  assert.ok(!fc.folderFits('Nachtlichter', 'Morning Paper Planes', 'Lumen Drift'));
+  assert.deepStrictEqual(fc.folderNameFlaw('USB/L/Unknown Album', ['Nachtlichter'], 'Lumen Drift'), {why: 'unknown', folder: 'Unknown Album'});
+  assert.deepStrictEqual(fc.folderNameFlaw('USB/L/Unbekanntes Album/CD2', [], ''), {why: 'unknown', folder: 'Unbekanntes Album'});
+  assert.strictEqual(fc.folderNameFlaw('USB/L/Nachtlichter/CD2', ['Nachtlichter'], 'Lumen Drift'), null);
+  assert.strictEqual(fc.folderNameFlaw('USB/L/Singles', ['A', 'B'], 'Verschiedene'), null);   /* collection folder */
+  assert.deepStrictEqual(fc.folderNameFlaw('USB/L/Neu', ['Nachtlichter'], 'Lumen Drift'), {why: 'differs', folder: 'Neu'});
+});
+t('analyze with file checks: DSF, cover quality, folder name', function(){
+  var a = lc.analyze([S('U/L/Nachtlichter/01.dsf', {artist: 'Lumen Drift', album: 'Nachtlichter', track: '1'}),
+                      S('U/L/Nachtlichter/02.dsf', {artist: 'Lumen Drift', album: 'Nachtlichter', track: '2'}),
+                      S('U/V/Unknown Album/01.flac', {artist: 'Velvet Static', album: 'Glass Hours', track: '1'})],
+    function(){ return true; }, null,
+    {dsfTag: function(f){ return /01\.dsf$/.test(f) ? 3 * 1024 * 1024 : 2000; },
+     cover: function(d){ return d === 'U/L/Nachtlichter' ? {name: 'folder.jpg', w: 320, h: 320, bytes: 30000} : null; }});
+  assert.deepStrictEqual(a.dsfTags.map(function(x){ return [x.dir, x.big, x.bytes]; }), [['U/L/Nachtlichter', 1, 3 * 1024 * 1024]]);
+  assert.deepStrictEqual(a.coverQuality.map(function(x){ return [x.dir, x.why, x.image, x.w]; }), [['U/L/Nachtlichter', 'small', 'folder.jpg', 320]]);
+  assert.deepStrictEqual(a.folderName.map(function(x){ return [x.dir, x.why]; }), [['U/V/Unknown Album', 'unknown']]);
+  var none = lc.analyze([S('U/L/Nachtlichter/01.dsf', {album: 'Nachtlichter'})], function(){ return true; });
+  assert.deepStrictEqual([none.dsfTags, none.coverQuality], [[], []]);                        /* without extra: nothing read */
+});
+t('cache: value only with the same stamp, unseen entries leave on save', function(){
+  var f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fc-')), 'c.json');
+  var c = new fc.Cache(f).load();
+  assert.strictEqual(c.get('f', 'a.dsf', 't1', 'dsf'), null);
+  c.put('f', 'a.dsf', 't1', 'dsf', 5); c.put('f', 'b.dsf', 't1', 'dsf', 7); c.put('d', 'L', 'x:1:2', 'img', {w: 1});
+  c.save(function(p, s){ fs.writeFileSync(p, s); });
+  var c2 = new fc.Cache(f).load();
+  assert.deepStrictEqual(c2.get('f', 'a.dsf', 't1', 'dsf'), {v: 5});
+  assert.strictEqual(c2.get('f', 'b.dsf', 't2', 'dsf'), null);                                 /* changed file */
+  assert.deepStrictEqual(c2.get('d', 'L', 'x:1:2', 'img'), {v: {w: 1}});
+  assert.deepStrictEqual([c2.hits, c2.misses], [2, 1]);
+  c2.save(function(p, s){ fs.writeFileSync(p, s); });
+  var j = JSON.parse(fs.readFileSync(f, 'utf8'));
+  assert.deepStrictEqual(Object.keys(j.f), ['a.dsf']);                                         /* b.dsf not seen again */
+});
+
 var root = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
 ['USB/A/Album1', 'USB/C/NDW'].forEach(function(d){ fs.mkdirSync(path.join(root, d), {recursive: true}); });
 fs.writeFileSync(path.join(root, 'USB/A/Album1/folder.JPG'), 'x');
@@ -307,6 +376,8 @@ function service(mpdPort) {
               assert.strictEqual(r.result.songs, 8);
               assert.deepStrictEqual(r.result.noCover.map(function(x){ return x.dir; }), ['USB/A', 'USB/S/Abbey Road', 'USB/S/Abbey Road (Remastered)', 'USB/S/Help', 'USB/S/Let It Be']);     /* Python missing: counts as without cover */
               assert.ok(fs.existsSync(path.join(root, 'log', 'check.json')));
+              assert.ok(fs.existsSync(path.join(root, 'log', 'check-files.json')));                  /* cache for the next check */
+              assert.ok(r.result.reread >= 0 && r.result.cached === 0);
               var d = r.result.duplicates;
               assert.strictEqual(d.length, 1);
               assert.deepStrictEqual(d[0].versions.map(function(v){ return [v.dirs[0], v.format, v.keep]; }),
