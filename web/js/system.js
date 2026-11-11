@@ -672,10 +672,14 @@ function sysWarnTitle(it) {
   if (it.kind === 'kernel') return T('warn.k.' + p.cls, {name: sysWarnName(it), n: it.n});
   if (it.kind === 'gone') return T('warn.gone', {name: sysWarnName(it)});
   if (it.kind === 'mem') return T('warn.mem', {p: p.p});
+  if (it.kind === 'space' && p.kind === 'card') return T('warn.spaceCard', {name: sysWarnName(it), free: sysBytes(p.avail || 0), p: p.p});
   if (it.kind === 'space') return T('warn.space', {name: sysWarnName(it), p: p.p});
   return it.id;
 }
-function sysWarnHint(it) { return T('warn.hint.' + (it.kind === 'kernel' ? it.p.cls : it.kind)); }
+function sysWarnHint(it) {
+  if (it.kind === 'space' && it.p.kind === 'card') return T('warn.hint.spaceCard');
+  return T('warn.hint.' + (it.kind === 'kernel' ? it.p.cls : it.kind));
+}
 function sysWarnWhen(it) {
   var d = new Date(it.last), today = new Date().toDateString() === d.toDateString();
   var at = (today ? '' : d.toLocaleDateString(LANG_LOCALE, {day: 'numeric', month: 'numeric'}) + ' ') + sysTime(it.last);

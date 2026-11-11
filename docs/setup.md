@@ -309,7 +309,8 @@ At the very top of the page is the "Warnings" card, as soon as there is somethin
   the third time; once is normal) and under-voltage on the player. Grouped per drive, with the last line from the log.
 - **Drive gone:** a USB drive that was mounted is missing. Unplugged on purpose: "Read", and it is forgotten.
 - **Memory** over 80 % used for 5 minutes (over below 75 %).
-- **Drive space:** a drive (internal card, USB, network) 90 % full or more; checked every 10 minutes.
+- **Drive space:** USB and network drives from 90 %, the internal card already from 80 % or under 500 MB free (it holds the
+  MPD database, Volumio's settings, Xplorio's data and "Internal music"); checked every 10 minutes.
 
 The app shows new warnings once as a red notice at the top (a tap opens "System"), and the gear gets a red dot until they
 are confirmed with "Read" or "All read". Past events stay in the list for 24 hours, also across a restart of the player

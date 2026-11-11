@@ -387,7 +387,8 @@ Ganz oben auf der Seite steht die Karte „Warnungen“, sobald es etwas zu meld
   letzten Zeile aus dem Protokoll.
 - **Laufwerk weg:** Ein USB-Laufwerk, das eingehängt war, fehlt. Absichtlich abgezogen: „Gelesen“, dann ist es vergessen.
 - **Arbeitsspeicher** 5 Minuten lang über 80 % belegt (vorbei unter 75 %).
-- **Speicherplatz:** ein Laufwerk (interne Karte, USB, Netzwerk) zu 90 % oder mehr voll; geprüft alle 10 Minuten.
+- **Speicherplatz:** USB- und Netzwerk-Laufwerke ab 90 %, die interne Karte schon ab 80 % oder unter 500 MB frei (sie trägt
+  die MPD-Datenbank, die Einstellungen von Volumio, die Daten von Xplorio und „Interne Musik“); geprüft alle 10 Minuten.
 
 Neue Warnungen blendet die App einmal oben rot ein (ein Tipp öffnet „System“), und das Zahnrad bekommt einen roten Punkt,
 bis sie mit „Gelesen“ bzw. „Alle gelesen“ bestätigt sind. Vergangene Ereignisse bleiben 24 Stunden in der Liste, auch über

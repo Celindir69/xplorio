@@ -34,7 +34,7 @@ function run(file, args, cb) {
   if (file === 'dmesg') return dmesg === null ? cb(new Error('Operation not permitted'), '', 'dmesg: read kernel buffer failed: Operation not permitted') : cb(null, dmesg, '');
   cb(null, '[  20.000000] player kernel: Under-voltage detected! (0x00050005)\n', '');
 }
-var disks = [{mount: '/data', kind: 'card', ok: true, size: 1000, used: 500, avail: 500}, {mount: '/media/MX-Media', kind: 'usb', ok: true, size: 1000, used: 950, avail: 50}];
+var disks = [{mount: '/data', kind: 'card', ok: true, size: 8000000, used: 4000000, avail: 4000000}, {mount: '/media/MX-Media', kind: 'usb', ok: true, size: 1000, used: 950, avail: 50}];
 var sys = {diskList: function(cb){ cb(disks); }};
 var file = path.join(root, 'syswarn.json');
 var w = new sw.Warnings({root: root, file: file, run: run, sys: sys});
@@ -56,6 +56,17 @@ w.check(T0, function(){
   t('drive space: 90 % or more', function(){
     var s = w.list().items.filter(function(x){ return x.kind === 'space'; });
     assert.deepStrictEqual(s.map(function(x){ return [x.p.mount, x.p.p, x.active]; }), [['/media/MX-Media', 95, true]]);
+  });
+  t('internal card: from 80 % or under 500 MB free', function(){
+    var c = new sw.Warnings({root: root, run: function(f, a, cb){ cb(null, '', ''); }, sys: {diskList: function(cb){ cb([
+      {mount: '/data', kind: 'card', ok: true, size: 8000000, used: 6500000, avail: 1500000}]); }}});
+    c.space(T0, function(){});
+    assert.strictEqual(c.list().items[0].p.p, 81);
+    var d = new sw.Warnings({root: root, run: function(f, a, cb){ cb(null, '', ''); }, sys: {diskList: function(cb){ cb([
+      {mount: '/data', kind: 'card', ok: true, size: 2000000, used: 1500000, avail: 400000},
+      {mount: '/media/X', kind: 'usb', ok: true, size: 1000000, used: 850000, avail: 150000}]); }}});
+    d.space(T0, function(){});
+    assert.deepStrictEqual(d.list().items.map(function(x){ return x.p.mount; }), ['/data']);   /* 75 %, but only 400 MB free; USB at 85 % is fine */
   });
   dmesg += '[  110.000000] usb 1-1.3: reset high-speed USB device number 4 using dwc_otg\n[  111.000000] usb 1-1.3: reset high-speed USB device number 4 using dwc_otg\n';
   w.check(T0 + 60000, function(){

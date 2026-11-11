@@ -9,6 +9,8 @@ var sysinfo = require('./sysinfo.js');
 
 var CHECK_MS = 60000, SPACE_MS = 600000, KEEP_MS = 24 * 3600000, MAX_ITEMS = 40, MAX_LINES = 4000;
 var MEM_WARN = 80, MEM_CLEAR = 75, MEM_MINUTES = 5, SPACE_WARN = 90, SPACE_CLEAR = 88, RESET_MIN = 3;
+/* internal card (/data, also /mnt/INTERNAL): small and needed by MPD and Volumio -> earlier, also by free space in kB */
+var CARD_WARN = 80, CARD_CLEAR = 78, CARD_MIN_KB = 500 * 1024, CARD_OK_KB = 600 * 1024;
 
 /* kernel lines that point at a drive or its power supply -> class; null: not of interest */
 var KERNEL_RULES = [
@@ -158,7 +160,7 @@ Warnings.prototype.memory = function(now) {
   } else if (it && it.active && p < MEM_CLEAR) this.settle('mem');
 };
 
-/* drive space: every drive (card, USB, network) at SPACE_WARN % or more */
+/* drive space: USB and network at SPACE_WARN % or more; the internal card at CARD_WARN % or under CARD_MIN_KB free */
 Warnings.prototype.space = function(now, cb) {
   var self = this;
   if (!this.sys || now - this.spaceAt < SPACE_MS) return cb();
@@ -166,9 +168,11 @@ Warnings.prototype.space = function(now, cb) {
   this.sys.diskList(function(list){
     (list || []).forEach(function(d){
       if (!d.ok || !d.size) return;
-      var p = Math.round(d.used / d.size * 100), id = 'space:' + d.mount, it = self.find(id);
-      if (p >= SPACE_WARN) { if (!it || !it.active) self.raise(id, 'space', {mount: d.mount, kind: d.kind, p: p, avail: d.avail}, now); else it.p.p = p; }
-      else if (it && it.active && p < SPACE_CLEAR) self.settle(id);
+      var p = Math.round(d.used / d.size * 100), id = 'space:' + d.mount, it = self.find(id), card = d.kind === 'card';
+      var warn = card ? p >= CARD_WARN || d.avail < CARD_MIN_KB : p >= SPACE_WARN;
+      var clear = card ? p < CARD_CLEAR && d.avail >= CARD_OK_KB : p < SPACE_CLEAR;
+      if (warn) { if (!it || !it.active) self.raise(id, 'space', {mount: d.mount, kind: d.kind, p: p, avail: d.avail}, now); else { it.p.p = p; it.p.avail = d.avail; } }
+      else if (it && it.active && clear) self.settle(id);
     });
     cb();
   });
@@ -227,4 +231,4 @@ Warnings.prototype.markRead = function(ids, now) {
 };
 
 module.exports = {Warnings: Warnings, classify: classify, deviceOf: deviceOf, parseKernel: parseKernel,
-                  MEM_WARN: MEM_WARN, SPACE_WARN: SPACE_WARN, RESET_MIN: RESET_MIN};
+                  MEM_WARN: MEM_WARN, SPACE_WARN: SPACE_WARN, CARD_WARN: CARD_WARN, CARD_MIN_KB: CARD_MIN_KB, RESET_MIN: RESET_MIN};
