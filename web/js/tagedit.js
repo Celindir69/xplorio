@@ -221,6 +221,7 @@ function tagBusy(text) {
 var tagMoveDirs = null;
 function openTagEditor(files, heading, opts) {
   tagMode = 'album';
+  tagLastOpen = [files, heading, opts];                   /* back from the file manager */
   tagMoveDirs = opts && opts.move ? (Array.isArray(opts.move) ? opts.move : tagAlbumDir(files)) : null;
   var seq = ++artSeq;                                     /* discard a late answer for a previously opened album */
   tagSave.textContent = T('tag.save');
@@ -255,6 +256,8 @@ function tagRender(files, items) {
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
   if (!good.length) { tagMsg(tagFiles.length ? tagFiles[0].error || T('tag.noTagsReadable') : T('tag.noFiles')); return; }
 
+  var dir = tagFilesDir(good);
+  if (dir) tagBody.appendChild(tagPathBar(dir));
   tagBody.appendChild(tagCoverSection(good));
 
   tagCommon = {};
@@ -364,6 +367,34 @@ function tagAlbumDir(files) {
   });
   var list = Object.keys(dirs);
   return list.length === 1 && list[0] && list[0].indexOf('/') > 0 ? list : null;
+}
+
+/* the folder of these files for the path line: their folder, disc folders ("CD2") as their parent, otherwise the common
+   parent folder (at least drive and one folder); null if there is none */
+function tagFilesDir(files) {
+  var album = tagAlbumDir(files);
+  if (album) return album[0];
+  var dirs = files.map(function(f){ var rel = histRel(f.uri || ''); return rel.slice(0, rel.lastIndexOf('/')).split('/'); });
+  var common = dirs[0] || [];
+  dirs.forEach(function(d){ var n = 0; while (n < common.length && d[n] === common[n]) n++; common = common.slice(0, n); });
+  return common.length >= 2 ? common.join('/') : null;
+}
+
+/* top of the editor: path of the folder (shortened at the front) and "File manager": that folder on the left, its parent
+   on the right (e.g. to move tracks one level up); the back arrow there reopens this editor */
+var tagLastOpen = null;
+function tagPathBar(dir) {
+  var bar = document.createElement('div'), p = document.createElement('div'), b = document.createElement('button');
+  bar.className = 'tagPath';
+  p.className = 'tagPathText'; p.textContent = '\u200e/mnt/' + dir + '\u200e';   /* LRM: the slashes stay in place despite rtl */ p.title = '/mnt/' + dir;
+  b.className = 'tagBtn tagPathBtn'; b.textContent = T('tag.fileManager'); b.title = T('tag.fileManagerHint');
+  b.addEventListener('click', function(){
+    var back = tagLastOpen;
+    openFiles(dir, dir.slice(0, dir.lastIndexOf('/')), back ? function(){ openTagEditor(back[0], back[1], back[2]); } : null,
+              T('files.backToEditor'));
+  });
+  bar.appendChild(p); bar.appendChild(b);
+  return bar;
 }
 
 /* "Move album": into "Xplorio Trash" on the same drive (tag service POST /dupmove), like a duplicate in the library check */

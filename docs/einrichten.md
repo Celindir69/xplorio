@@ -311,6 +311,9 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   auch per Drag & Drop, auf einen Ordner oder in die freie Fläche einer Spalte: Loslassen verschiebt, mit gedrückter
   ⌥-Taste (Windows: Alt oder Strg) wird kopiert. Vor dem Ausführen kommt immer eine Rückfrage.
 - **Neuer Ordner:** das Ordnersymbol mit Plus oben in jeder Spalte.
+- **Aus dem Tag-Editor:** Oben im Editor für Alben und Titel steht der Pfad des Ordners (zu lang: vorne gekürzt), daneben
+  „Dateimanager“. Er öffnet links genau diesen Ordner und rechts den übergeordneten, etwa um Titel eine Ebene höher zu
+  schieben. Der Pfeil zurück öffnet den Editor wieder; nicht gespeicherte Änderungen im Editor gehen dabei verloren.
 - **Umbenennen:** erscheint unten, wenn genau ein Eintrag angehakt ist. Ein Name, den es im Ordner schon gibt, wird
   abgelehnt; nur Groß- und Kleinschreibung zu ändern geht auch auf USB-Platten und NAS. Bewertungen, NoMix und der
   Verlauf ziehen mit.
