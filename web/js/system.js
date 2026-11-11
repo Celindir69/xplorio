@@ -201,6 +201,11 @@ function sysRender(st) {
   sysBody.appendChild(grid);
   sysEls = {};
 
+  /* warnings (drives, memory, space): on top, only when there are any */
+  sysEls.warn = histEl('div', 'syCard syWide syWarnCard');
+  grid.appendChild(sysEls.warn);
+  sysPaintWarn();
+
   /* processor: current load large, history of the last 3 minutes, one bar per core */
   var cpu = sysCard(T('sys.cpu'), 'syWide');
   var hero = histEl('div', 'syHero');
@@ -653,3 +658,113 @@ document.getElementById('closeSystem').addEventListener('click', function(){ sys
 document.getElementById('systemBack').addEventListener('click', function(){ sysStop(); openMenu(); });
 window.addEventListener('resize', function(){ if (sysOpen() && sysEls) { sysPaintLive(); sysPaintHist(); } });
 document.addEventListener('visibilitychange', function(){ if (sysOpen() && sysEls) sysFull(); });
+
+/* ---------- Warnings (GET /warnings, tags/syswarn.js): a notice once per new warning, a dot on the gear, a card on this page ---------- */
+var sysWarnList = null, SYS_WARN_SEEN = 'xplorio.warnSeen', sysWarnTimer = null;
+function sysWarnName(it) {
+  var p = it.p || {};
+  if (p.mount) return sysDiskName({mount: p.mount, kind: p.kind || (/^\/data$|^\/$/.test(p.mount) ? 'card' : 'usb')});
+  if (/^usb /.test(p.dev || '')) return T('warn.usbDev', {port: p.dev.slice(4)});
+  return p.dev || T('warn.drive');
+}
+function sysWarnTitle(it) {
+  var p = it.p || {};
+  if (it.kind === 'kernel') return T('warn.k.' + p.cls, {name: sysWarnName(it), n: it.n});
+  if (it.kind === 'gone') return T('warn.gone', {name: sysWarnName(it)});
+  if (it.kind === 'mem') return T('warn.mem', {p: p.p});
+  if (it.kind === 'space' && p.kind === 'card') return T('warn.spaceCard', {name: sysWarnName(it), free: sysBytes(p.avail || 0), p: p.p});
+  if (it.kind === 'space') return T('warn.space', {name: sysWarnName(it), p: p.p});
+  return it.id;
+}
+function sysWarnHint(it) {
+  if (it.kind === 'space' && it.p.kind === 'card') return T('warn.hint.spaceCard');
+  return T('warn.hint.' + (it.kind === 'kernel' ? it.p.cls : it.kind));
+}
+function sysWarnWhen(it) {
+  var d = new Date(it.last), today = new Date().toDateString() === d.toDateString();
+  var at = (today ? '' : d.toLocaleDateString(LANG_LOCALE, {day: 'numeric', month: 'numeric'}) + ' ') + sysTime(it.last);
+  if (it.active) return T('warn.since', {t: (new Date(it.first).toDateString() === new Date().toDateString() ? '' : new Date(it.first).toLocaleDateString(LANG_LOCALE, {day: 'numeric', month: 'numeric'}) + ' ') + sysTime(it.first)});
+  return it.n > 1 ? T('warn.lastN', {t: at, n: it.n}) : T('warn.last', {t: at});
+}
+function sysWarnUnread() { return sysWarnList ? sysWarnList.items.filter(function(x){ return !x.read; }) : []; }
+function sysWarnBadge() {
+  var n = sysWarnUnread().length;
+  document.getElementById('btnMenu').classList.toggle('warn', n > 0);
+  return n;
+}
+function sysWarnSeen(v) {
+  try { if (v !== undefined) localStorage.setItem(SYS_WARN_SEEN, String(v)); return +localStorage.getItem(SYS_WARN_SEEN) || 0; } catch (e) { return 0; }
+}
+/* new warning (later than the last one shown): notice at the top, tap opens this page */
+function sysWarnNotice() {
+  var seen = sysWarnSeen(), fresh = sysWarnUnread().filter(function(x){ return x.last > seen; });
+  if (!fresh.length) return;
+  sysWarnSeen(Math.max.apply(null, fresh.map(function(x){ return x.last; })));
+  if (sysOpen()) return;                                 /* the card is already in view */
+  var el = document.getElementById('warnNote');
+  el.firstChild.textContent = sysWarnTitle(fresh[0]) + (fresh.length > 1 ? ' ' + T('warn.more', {n: fresh.length - 1}) : '');
+  el.classList.add('on');
+  clearTimeout(sysWarnTimer);
+  sysWarnTimer = setTimeout(function(){ el.classList.remove('on'); }, 15000);
+}
+function sysWarnPoll() {
+  if (document.hidden) return;
+  tagGetJson('/warnings').then(function(r){
+    if (!r || !r.ok) return;
+    sysWarnList = r;
+    sysWarnBadge();
+    sysWarnNotice();
+    if (sysOpen() && sysEls && sysEls.warn) sysPaintWarn();
+  }).catch(function(){});
+}
+function sysWarnRead(ids) {
+  tagPostJson('/warnings', {read: ids}).then(function(r){
+    if (!r || !r.ok) return;
+    sysWarnList = r;
+    sysWarnBadge();
+    if (sysEls && sysEls.warn) sysKeepScroll(sysPaintWarn);
+  }).catch(function(){ showToast(T('hist.offline')); });
+}
+function sysPaintWarn() {
+  var box = sysEls && sysEls.warn;
+  if (!box) return;
+  while (box.firstChild) box.removeChild(box.firstChild);
+  var items = sysWarnList ? sysWarnList.items : [];
+  box.style.display = items.length || (sysWarnList && sysWarnList.source === 'none') ? '' : 'none';
+  var head = histEl('div', 'syWarnHead');
+  head.appendChild(histEl('div', 'syTitle', T('warn.title')));
+  if (sysWarnUnread().length > 1) {
+    var all = histEl('div', 'mxChip mxSmall', T('warn.readAll'));
+    all.addEventListener('click', function(){ sysWarnRead('all'); });
+    head.appendChild(all);
+  }
+  box.appendChild(head);
+  items.forEach(function(it){
+    var row = histEl('div', 'syWarn' + (it.read ? ' read' : '') + (it.active ? ' active' : ''));
+    var top = histEl('div', 'syWarnTop');
+    top.appendChild(histEl('span', 'syWarnTitle', sysWarnTitle(it)));
+    if (!it.read) {
+      var b = histEl('div', 'mxChip mxSmall', T('warn.read'));
+      b.addEventListener('click', function(){ sysWarnRead([it.id]); });
+      top.appendChild(b);
+    }
+    row.appendChild(top);
+    row.appendChild(histEl('div', 'syNote', sysWarnWhen(it) + ' · ' + sysWarnHint(it)));
+    if (it.p && it.p.line) row.appendChild(histEl('div', 'syWarnLine', it.p.line));
+    box.appendChild(row);
+  });
+  if (sysWarnList && sysWarnList.source === 'none') box.appendChild(histEl('div', 'syNote', T('warn.noKernel')));
+}
+(function(){
+  var el = document.getElementById('warnNote');
+  el.addEventListener('click', function(e){
+    el.classList.remove('on');
+    if (e.target.closest && e.target.closest('.warnNoteX')) return;
+    openSystem();
+  });
+  whenTags(function(){                                   /* only with a tag service; then once a minute and on return to the app */
+    setTimeout(sysWarnPoll, 3000);
+    setInterval(sysWarnPoll, 60000);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) sysWarnPoll(); });
+  });
+})();

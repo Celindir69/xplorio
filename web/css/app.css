@@ -1414,3 +1414,26 @@ html.rotelLock #vSlider { pointer-events:none; }
 .ckDupTrTitle { font-size:calc(3.3 * var(--vw)); overflow-wrap:anywhere; }
 .ckDupTrGroup.maybe .ckDupTrTitle { opacity:.6; }
 .ckDupFile .sMeta { cursor:default; padding-left:calc(3 * var(--vw)); }
+
+/* Warnings (system.js, tags/syswarn.js): card on the System page, notice at the top, dot on the gear */
+.syWarnHead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.syWarnHead .syTitle { margin-bottom:0; }
+.syWarn { padding:calc(2.5 * var(--vw)) 0; border-top:1px solid rgba(var(--fg-rgb),.08); }
+.syWarnHead + .syWarn { margin-top:calc(2 * var(--vw)); }
+.syWarnTop { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.syWarnTitle { font-weight:600; color:var(--err); }
+.syWarn.read .syWarnTitle { color:var(--fg); font-weight:500; }
+.syWarn.read { opacity:.75; }
+.syWarnLine { margin-top:4px; font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(var(--fg-rgb),.5); overflow-wrap:anywhere; }
+#btnMenu.warn { opacity:1; }
+#btnMenu.warn::after { content:''; position:absolute; top:18%; right:18%; width:9px; height:9px; border-radius:50%;
+  background:var(--err); box-shadow:0 0 0 2px var(--page); }
+#btnMenu { position:relative; }
+.menuRow.warn .menuSub { color:var(--err); }
+#warnNote { position:fixed; z-index:21; left:50%; top:max(env(safe-area-inset-top,0px), 12px); transform:translate(-50%, -20px);
+  opacity:0; pointer-events:none; display:flex; align-items:center; gap:14px; width:max-content; max-width:min(92vw, 560px); box-sizing:border-box;
+  padding:12px 14px 12px 18px; border-radius:14px; background:#b3261e; color:#fff; font-size:15px; line-height:1.35;
+  box-shadow:0 6px 24px rgba(0,0,0,.35); cursor:pointer; transition:opacity .25s, transform .25s; }
+#warnNote.on { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+.warnNoteX { flex:0 0 auto; font-size:22px; line-height:1; opacity:.8; padding:0 4px; }
+@media (prefers-reduced-motion:reduce) { #warnNote { transition:none; } }

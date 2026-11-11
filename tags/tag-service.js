@@ -2031,6 +2031,15 @@ function doMqa(query, cb) {
 function doSysinfo(query, res) {
   sysInfo.report(query.full === '1', function(r){ send(res, 200, r); });
 }
+/* GET /warnings: drive errors, drive gone, memory, drive space (syswarn.js); POST /warnings {read: [id …] | 'all'} */
+var syswarn = require('./syswarn.js');
+var sysWarn = new syswarn.Warnings({file: path.join(DATA_DIR, 'syswarn.json'), sys: sysInfo});
+function doWarningsRead(body, cb) {
+  var ids = body && body.read;
+  if (ids !== 'all' && !(Array.isArray(ids) && ids.length <= 100)) return cb(400, {ok: false, error: 'read missing'});
+  sysWarn.markRead(ids);
+  cb(200, sysWarn.list());
+}
 
 /* GET /services: state of the player services; POST /service {unit, action}: restart */
 /* actions only with password (adminpass.js): POST /servicelogin {password} -> {token}, the device sends the token along */
@@ -2440,6 +2449,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/mqa') return doMqa(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/replaygain') return doReplayGain(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/sysinfo') return doSysinfo(url.parse(req.url, true).query, res);
+  if (req.method === 'GET' && route === '/warnings') return send(res, 200, sysWarn.list());
   if (req.method === 'GET' && route === '/services') return doServices(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/artistimage') return doArtistImage(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/lyricsoffset') return doOffsetGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
@@ -2461,7 +2471,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -2469,7 +2479,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });
@@ -2491,6 +2501,7 @@ if (require.main === module) {
   setTimeout(pruneLog, 30000);                            /* clean up old undo data */
   setTimeout(dupMigrate, 20000);                          /* duplicates folder of earlier versions: new name, .mpdignore */
   sysInfo.start();                                        /* measure CPU load ("System" page) */
+  if (process.env.SYSWARN !== '0') sysWarn.start();       /* drive, memory and space warnings */
   rgAuto.start();                                         /* follows the queue via MPD idle */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
   if (process.env.ARTISTNAMES !== '0' && appConfig().ARTISTNAMES !== false) artistNames.start();      /* library check: usual spelling */

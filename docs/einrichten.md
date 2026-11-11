@@ -392,6 +392,23 @@ jedes Laufwerks (interne Karte, USB und jede Verbindung unter `/mnt/NAS/` einzel
 `/proc`, `/sys` und `df`; er misst alle 10 Sekunden und nur bei offener Seite alle 2 Sekunden (eine kleine Datei, ohne spürbare Last) und sichert den Verlauf alle
 10 Minuten in `/data/xplorio/data/sysinfo.json`.
 
+#### Warnungen
+Ganz oben auf der Seite steht die Karte „Warnungen“, sobald es etwas zu melden gibt. Der Tag-Dienst prüft dafür jede Minute:
+- **Laufwerksfehler** aus dem Kernel-Protokoll (`dmesg`, sonst `journalctl -k`): Lese- und Schreibfehler, keine Antwort vom
+  Laufwerk (z. B. `uas_eh_abort_handler`, `Unit Not Ready`, `I/O error`), Fehler im Dateisystem, mehrfach neu aufgebaute
+  USB-Verbindungen (ab dem dritten Mal; einmal ist normal) und Unterspannung am Player. Zusammengefasst je Laufwerk, mit der
+  letzten Zeile aus dem Protokoll.
+- **Laufwerk weg:** Ein USB-Laufwerk, das eingehängt war, fehlt. Absichtlich abgezogen: „Gelesen“, dann ist es vergessen.
+- **Arbeitsspeicher** 5 Minuten lang über 80 % belegt (vorbei unter 75 %).
+- **Speicherplatz:** USB- und Netzwerk-Laufwerke ab 90 %, die interne Karte schon ab 80 % oder unter 500 MB frei (sie trägt
+  die MPD-Datenbank, die Einstellungen von Volumio, die Daten von Xplorio und „Interne Musik“); geprüft alle 10 Minuten.
+
+Neue Warnungen blendet die App einmal oben rot ein (ein Tipp öffnet „System“), und das Zahnrad bekommt einen roten Punkt,
+bis sie mit „Gelesen“ bzw. „Alle gelesen“ bestätigt sind. Vergangene Ereignisse bleiben 24 Stunden in der Liste, auch über
+einen Neustart des Players hinweg (`/data/xplorio/data/syswarn.json`; das Journal liegt auf Volumio im RAM). Kann der
+Dienst das Kernel-Protokoll nicht lesen, sagt die Karte das; Abhilfe wie bei den Protokollen (Gruppe `systemd-journal`,
+siehe unten). Mit `SYSWARN=0` in der Umgebung des Tag-Dienstes ist die Prüfung aus.
+
 #### Dienste
 Darunter die Karte „Dienste“: Volumio, MPD, Xplorio-Webserver, Tag-Dienst und Rotel-Steuerung mit Zustand (läuft seit …,
 gestoppt, Fehler) und einem Knopf „Neustart“. Vor einem Neustart fragt die Seite nach. Dienste, die auf dem Player nicht

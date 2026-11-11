@@ -15,7 +15,7 @@ rm -rf /tmp/xplorio
 D=${XPLORIO_DATA:-/data/xplorio}/data            # XPLORIO_DATA: tests only
 if [ -d "$D" ]; then
   rm -rf "$D/artists" "$D/radio-covers" "$D/stations"
-  rm -f "$D/albums.json" "$D/library-tracks.json" "$D/check.json" "$D/check-files.json" "$D/sysinfo.json" "$D/welcome.json" "$D/together.json"
+  rm -f "$D/albums.json" "$D/library-tracks.json" "$D/check.json" "$D/check-files.json" "$D/sysinfo.json" "$D/syswarn.json" "$D/welcome.json" "$D/together.json"
   find "$D" -maxdepth 2 \( -name '*.neu' -o -name '*.tmp' \) -type f -delete 2>/dev/null
 fi
 echo "Xplorio removed (caches deleted; your data in /data/xplorio kept)"
