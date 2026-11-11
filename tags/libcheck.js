@@ -388,34 +388,68 @@ function albumGroups(dirs, order) {
   order.forEach(function(d){
     var m = DISC_DIR_RE.exec(path.basename(d)), a = m ? path.dirname(d) : d;
     if (!albumsOf[a]) { albumsOf[a] = []; albumOrder.push(a); }
-    albumsOf[a] = albumsOf[a].concat(dirs[d]);
+    Array.prototype.push.apply(albumsOf[a], dirs[d]);
   });
   return {albumsOf: albumsOf, albumOrder: albumOrder};
 }
-/* all songs that are in a group of duplicate tracks (before analyze: the tag service then reads their size and m4a codec) */
-function dupTrackSongs(songs) {
-  var dirs = {}, order = [], out = [];
+/* songs by folder and by album (disc folders together), built once per check and shared by its steps */
+function grouping(songs) {
+  var dirs = {}, order = [];
   songs.forEach(function(s){ var d = path.dirname(s.file); if (!dirs[d]) { dirs[d] = []; order.push(d); } dirs[d].push(s); });
   var ag = albumGroups(dirs, order);
-  ag.albumOrder.forEach(function(a){ trackDups(ag.albumsOf[a]).forEach(function(g){ out = out.concat(g.files); }); });
+  return {songs: songs, dirs: dirs, order: order, albumsOf: ag.albumsOf, albumOrder: ag.albumOrder, dups: null};
+}
+/* all songs that are in a group of duplicate tracks (before analyze: the tag service then reads their size and m4a codec) */
+function dupTrackSongs(songs) {
+  var ctx = grouping(songs), out = [];
+  ctx.albumOrder.forEach(function(a){ trackDups(ctx.albumsOf[a]).forEach(function(g){ Array.prototype.push.apply(out, g.files); }); });
   return out;
+}
+/* the same in portions, so that the tag service keeps answering during a check (a CM3 needs seconds for this);
+   cb(songs, ctx): ctx carries the grouping and the duplicate groups per album on to analyze (extra.ctx) */
+var STEP_ALBUMS = 100;
+function dupTrackSongsAsync(songs, cb) {
+  var ctx = grouping(songs), out = [], i = 0;
+  ctx.dups = {};
+  (function step() {
+    var end = Math.min(ctx.albumOrder.length, i + STEP_ALBUMS);
+    for (; i < end; i++) {
+      var a = ctx.albumOrder[i], g = trackDups(ctx.albumsOf[a]);
+      if (g.length) ctx.dups[a] = g;
+      g.forEach(function(x){ Array.prototype.push.apply(out, x.files); });
+    }
+    if (i < ctx.albumOrder.length) return setImmediate(step);
+    cb(out, ctx);
+  })();
 }
 
 /* songs: as from mpdWalk; hasCover(dir) -> true/false; audioOf(song) -> audio analysis entry or null (optional).
    Result: lists per category */
-/* extra (optional): dsfTag(file) -> bytes of the ID3 block of a DSF file; cover(dir) -> {name, w, h, bytes} of its image */
-function analyze(songs, hasCover, audioOf, extra) {
+/* extra (optional): dsfTag(file) -> bytes of the ID3 block of a DSF file; cover(dir) -> {name, w, h, bytes} of its image;
+   ctx from dupTrackSongsAsync. done (optional): work in portions of SLICE_MS and call done(result) instead of returning it,
+   so that the tag service keeps answering meanwhile (on a CM3 the whole evaluation takes several seconds) */
+var SLICE_MS = 25;
+function eachIn(async, ms) {
+  return function(list, fn, next) {
+    if (!async) { list.forEach(fn); return next(); }
+    var i = 0;
+    (function run() {
+      var t = Date.now();
+      while (i < list.length) { fn(list[i], i); i++; if (Date.now() - t >= ms && i < list.length) return setImmediate(run); }
+      next();
+    })();
+  };
+}
+function analyze(songs, hasCover, audioOf, extra, done) {
   extra = extra || {};
-  var dirs = {}, order = [];
-  songs.forEach(function(s){
-    var d = path.dirname(s.file);
-    if (!dirs[d]) { dirs[d] = []; order.push(d); }
-    dirs[d].push(s);
-  });
+  var each = eachIn(typeof done === 'function', extra.sliceMs === undefined ? SLICE_MS : extra.sliceMs);   /* sliceMs: tests */
+  var ctx = extra.ctx && extra.ctx.songs === songs ? extra.ctx : grouping(songs);
+  var dirs = ctx.dirs, order = ctx.order.slice();
   var res = {songs: songs.length, albums: order.length, noCover: [], albumArtist: [], albumName: [], yearMixed: [], noTrack: [], noTags: [], gaps: [], dupTracks: [], spelling: [], mixedQuality: [],
              dsfTags: [], coverQuality: [], folderName: []};
-  var forGenres = [];
-  order.sort().forEach(function(d){
+  var forGenres = [], verOf = {};
+  var albumsOf = ctx.albumsOf, albumOrder = ctx.albumOrder;   /* duplicate tracks: per album, disc folders ("CD2") together with their album */
+  each(order.sort(), function(d){
     var list = dirs[d];
     var albums = uniq(list.map(function(s){ return s.album; }).filter(Boolean));
     var name = albums[0] || path.basename(d);
@@ -447,12 +481,11 @@ function analyze(songs, hasCover, audioOf, extra) {
     });
     forGenres.push({dir: d, name: name, artist: who, files: filesOf(list), songs: list,
                     audio: audioOf ? list.map(audioOf).filter(Boolean) : []});
-  });
-  /* duplicate tracks: per album, disc folders ("CD2") together with their album */
-  var ag = albumGroups(dirs, order), albumsOf = ag.albumsOf, albumOrder = ag.albumOrder;
+  }, perAlbum);
+  function perAlbum() {
   /* album name and year not the same in all tracks of an album (disc folders together): the suggestion is added by the
      tag service (MusicBrainz), here the most common value; album names without a disc addition ("Album (Disc 2)") */
-  albumOrder.slice().sort().forEach(function(a){
+  each(albumOrder.slice().sort(), function(a){
     var list = albumsOf[a], names = counted(list, function(s){ return s.album || ''; }), years = counted(list, function(s){ return year(s.date); });
     var base = {dir: a, name: names.filter(function(x){ return x.name; }).concat([{name: path.basename(a)}])[0].name, artist: whoOf(list), count: list.length};
     function files(extra) {
@@ -472,10 +505,11 @@ function analyze(songs, hasCover, audioOf, extra) {
     }
     var mq = mixedQuality(list);
     if (mq) res.mixedQuality.push(merge(base, merge(mq, {files: files()})));
-  });
+  }, versionsAndDups);
+  }
+  function versionsAndDups() {
   /* folders that the duplicate check counts as different versions of an album (e.g. an incomplete copy in the album
      folder next to CD1/CD2): the same track in two versions is listed there, not here */
-  var verOf = {};
   res.duplicates = duplicates.find(songs, artistKey);
   res.splitAlbums = [];                                  /* parts of one album in several folders: not copies */
   res.duplicates = res.duplicates.filter(function(g){
@@ -495,8 +529,9 @@ function analyze(songs, hasCover, audioOf, extra) {
     g.files.forEach(function(s){ var v = verOf[path.dirname(s.file)]; if (v) seen[v] = 1; });
     return Object.keys(seen).length < 2;
   }
-  albumOrder.sort().forEach(function(a){
-    var list = albumsOf[a], groups = trackDups(list).filter(oneVersion);
+  each(albumOrder.slice().sort(), function(a){
+    var list = albumsOf[a];
+    var groups = (ctx.dups ? (ctx.dups[a] || []).map(function(g){ return merge(g, {files: rank(g.files)}); }) : trackDups(list)).filter(oneVersion);   /* ranked again: sizes and m4a formats are known now */
     if (!groups.length) return;
     var albumNames = uniq(list.map(function(s){ return s.album; }).filter(Boolean));
     var aas = uniq(list.map(function(s){ return s.albumartist; }).filter(Boolean)), artists = uniq(list.map(function(s){ return s.artist; }).filter(Boolean));
@@ -507,20 +542,22 @@ function analyze(songs, hasCover, audioOf, extra) {
           return {uri: s.file, name: path.basename(s.file), format: q.format, seconds: Math.round(secs(s)), best: i === 0};
         })};
       })});
-  });
+  }, genresAndNames);
+  }
+  function genresAndNames() {
   var gc = genres.check(forGenres);
   res.genreMissing = gc.missing; res.genreMerge = gc.merge; res.genreConflict = gc.conflict; res.genreStyles = gc.styles;
 
   /* spellings: artist and album artist, grouped by artistKey */
   var groups = {};
-  songs.forEach(function(s){
+  each(songs, function(s){
     uniq([s.artist, s.albumartist].filter(Boolean)).forEach(function(n){
       var k = artistKey(n);
       if (!k) return;
       var g = groups[k] || (groups[k] = {});
       g[n] = (g[n] || 0) + 1;
     });
-  });
+  }, function(){
   Object.keys(groups).forEach(function(k){
     var names = Object.keys(groups[k]);
     if (names.length < 2) return;
@@ -531,8 +568,12 @@ function analyze(songs, hasCover, audioOf, extra) {
   res.spelling.sort(function(a, b){ return byName(a.variants[0], b.variants[0]); });
   /* names with their number of tracks (as artist or album artist), for the usual spelling (artistnames.js) */
   res.names = {};
-  songs.forEach(function(s){ uniq([s.artist, s.albumartist].filter(Boolean)).forEach(function(n){ res.names[n] = (res.names[n] || 0) + 1; }); });
-  return res;
+  each(songs, function(s){ uniq([s.artist, s.albumartist].filter(Boolean)).forEach(function(n){ res.names[n] = (res.names[n] || 0) + 1; }); }, function(){
+    if (done) done(res);
+  });
+  });
+  }
+  return done ? undefined : res;
 }
 
 /* tracks of one folder without title, artist or album tag (the player then shows the file name or nothing; such tracks
@@ -600,4 +641,4 @@ function dirsWithoutImage(songs, musicRoot, cb) {
   next();
 }
 
-module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, splitAlbum: splitAlbum, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};
+module.exports = {mpdWalk: mpdWalk, mpdCommand: mpdCommand, analyze: analyze, artistKey: artistKey, trackGaps: trackGaps, trackDups: trackDups, titleKey: titleKey, missingTracks: missingTracks, splitAlbum: splitAlbum, missingTags: missingTags, mixedQuality: mixedQuality, dupTrackSongs: dupTrackSongs, dupTrackSongsAsync: dupTrackSongsAsync, bareAlbum: bareAlbum, discOfName: discOfName, dirsWithoutImage: dirsWithoutImage};

@@ -15,6 +15,21 @@ var songs = [
   S('USB/D/Cafe/01.flac', {artist: 'Cafe Del Mar', album: 'C', track: '1'})
 ];
 var r = lc.analyze(songs, function(d){ return d !== 'USB/C/NDW'; });
+/* in portions: the same result as in one go, also with the grouping and duplicate groups from dupTrackSongsAsync */
+var pending = 0;
+function sameInPortions(list, hasCover, name) {
+  var whole = JSON.stringify(lc.analyze(list, hasCover));
+  pending++;
+  lc.dupTrackSongsAsync(list, function(dupSongs, ctx){
+    var sync = true;
+    lc.analyze(list, hasCover, null, {ctx: ctx, sliceMs: 0}, function(res){
+      t('in portions: ' + name, function(){ assert.ok(!sync); assert.strictEqual(JSON.stringify(res), whole); });
+      pending--;
+    });
+    sync = false;
+  });
+}
+sameInPortions(songs, function(d){ return d !== 'USB/C/NDW'; }, 'same result as in one go');
 t('counters', function(){ assert.strictEqual(r.songs, 8); assert.strictEqual(r.albums, 5); });
 t('no cover: only the folder without image', function(){
   assert.deepStrictEqual(r.noCover.map(function(x){ return x.dir; }), ['USB/C/NDW']);
@@ -172,6 +187,16 @@ t('duplicate albums: tracks the best version lacks, with the folder to copy them
                        V('USB/M/Hits/2-3.mp3', {title: 'Northern Skies (Remix)', track: '3', disc: '2'})], function(){ return true; });
   assert.deepStrictEqual(r5.duplicates[0].missing.map(function(m){ return m.title; }), ['Northern Skies (Remix)']);   /* addition: another track */
 });
+(function(){
+  function V(f, o) { o.album = 'Hits'; o.albumartist = 'Band'; return D(f, o); }
+  sameInPortions([V('USB/V/Hits/01.mp3', {title: 'Intro', track: '1', time: '60'}),
+                  V('USB/V/Hits/CD1/01.flac', {title: 'Intro', track: '1', disc: '1', time: '60'}),
+                  V('USB/V/Hits/CD2/01.flac', {title: 'Outro', track: '1', disc: '2', time: '90'}),
+                  V('USB/V/Hits/CD2/02.flac', {title: 'Outro', track: '2', disc: '2', time: '90'}),
+                  V('USB/W/Hits/01.flac', {title: 'Outro', track: '1', time: '90'}),
+                  V('USB/W/Hits/02.flac', {title: 'Outro', track: '2', time: '90.4'}),
+                  V('USB/W/Hits/03.mp3', {title: 'Outro', track: '3', time: '90'})], function(){ return true; }, 'duplicate tracks and versions');
+})();
 t('album split over folders: parts of one album, not copies', function(){
   function V(f, o) { o.album = 'Hits'; o.albumartist = 'Band'; o.format = '44100:16:2'; return D(f, o); }
   var r = lc.analyze([V('USB/S/Hits/01.flac', {title: 'One', track: '1'}), V('USB/S/Hits/02.flac', {title: 'Two', track: '2'}),
@@ -510,3 +535,4 @@ function service(mpdPort) {
     });
   });
 }
+process.on('exit', function(){ assert.strictEqual(pending, 0, 'analyze in portions did not finish'); });
