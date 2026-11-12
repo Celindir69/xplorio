@@ -604,6 +604,10 @@ journalctl -u xplorio-rotel -n 30 --no-pager
 
 Reload the interface once; the remote control icon appears at the top right of the player view.
 
+**Off on single devices:** `xplorio.html?rotel=false` switches the amplifier control off on this device only. Volume
+then goes to Volumio, and the on/off button and remote control are missing. The device remembers it; `?rotel=true`
+undoes it. The bridge itself keeps running.
+
 ### Remote control
 
 With `ROTEL: true`, a remote control icon appears at the top right of the player view. It opens the "Playback" page (gear menu) at the "Amplifier" card: power/standby, volume and mute, input, tone bypass, bass, treble, balance, and speakers A and B. The values come from the amplifier and also follow the physical remote.

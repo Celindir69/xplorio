@@ -825,6 +825,10 @@ journalctl -u xplorio-rotel -n 30 --no-pager
 ```
 Die Oberfläche einmal neu laden; das Fernbedienungs-Symbol erscheint oben rechts in der Player-Ansicht.
 
+**Auf einzelnen Geräten aus:** `xplorio.html?rotel=false` schaltet die Verstärker-Steuerung nur auf diesem Gerät ab.
+Die Lautstärke geht dann an Volumio, Ein/Aus und Fernbedienung fehlen. Das Gerät merkt sich das, `?rotel=true` hebt es
+wieder auf. Die Bridge selbst läuft weiter.
+
 ### Fernbedienung
 Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs-Symbol. Es öffnet die Seite
 „Wiedergabe“ (Zahnrad-Menü) an der Karte „Verstärker“: Ein/Standby, Lautstärke und Stumm, Eingang, Klang umgehen
