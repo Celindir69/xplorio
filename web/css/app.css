@@ -1477,13 +1477,14 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
   padding:1vh max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 0 clamp(20px, 2.6vw, 48px); }
 #vuStage .vuBox { width:100%; max-width:min(820px, calc((100vh - 64px) * .9)); margin:0 auto; }
 
-/* phone (portrait): side by side below a smaller cover, nearly the full width */
+/* phone (portrait): side by side below the cover; the cover takes the room that is left (whatever the controls need) */
 @media (orientation:portrait) {
-  html.vuOn:not(.stage) #vuPort { display:block; flex:0 0 auto; width:94vw; margin:0 0 2.2vh 0; }
+  html.vuOn:not(.stage) #vuPort { display:block; flex:0 0 auto; width:84vw; margin:0 0 2.2vh 0; }
   html.vuOn:not(.stage) #vuPort .vuBox { padding:2.2% 2.2%; gap:2.2%; }
-  html.vuOn:not(.stage) #coverWrap { margin-bottom:2vh;
-    width:min(52vw, max(24vw, calc(100vh - 470px - 32vw - var(--sat) - var(--sab)))); height:min(52vw, max(24vw, calc(100vh - 470px - 32vw - var(--sat) - var(--sab))));
-    width:min(52vw, max(24vw, calc(100dvh - 470px - 32vw - var(--sat) - var(--sab)))); height:min(52vw, max(24vw, calc(100dvh - 470px - 32vw - var(--sat) - var(--sab)))); }
+  html.vuOn:not(.stage) #topSpacer { display:none; }
+  html.vuOn:not(.stage) #coverWrap { flex:1 1 0; min-height:0; width:100%; height:auto; max-width:none; max-height:min(68vw, 360px);
+    margin:1vh 0 2vh 0; }
+  html.vuOn:not(.stage) #cover { width:auto; height:100%; max-width:100%; }
 }
 /* classic landscape: across the bottom, cover smaller, cover and controls move up */
 @media (orientation:landscape) {
