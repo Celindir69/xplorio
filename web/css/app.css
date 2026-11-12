@@ -1454,8 +1454,6 @@ html.rotelLock #vSlider { pointer-events:none; }
 .vuBox { display:flex; gap:3%; padding:3%; border-radius:12px; background:linear-gradient(#2e251c, #15100b);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.6); }
 .vuBox .vuFace { display:block; flex:1 1 0; min-width:0; width:100%; height:auto; }
-.vuBox.stacked { flex-direction:column; justify-content:center; }
-.vuBox.stacked .vuFace { min-height:0; height:100%; }
 .vuNum { font:600 9px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuSign { font:700 13px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuTitle { font:700 16px/1 Georgia, 'Times New Roman', serif; letter-spacing:1px; }
@@ -1465,24 +1463,36 @@ html.rotelLock #vSlider { pointer-events:none; }
 .vuLamp.on { fill:#ff3a1c; stroke:#ffb59e; }
 html.light .vuBox { box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.25); }
 
-/* stage view: Lyrics | Track list | VU at the bottom right; with VU the instruments in place of the lyrics */
-#stagePane, #vuStage { display:none; }
+/* stage view: Lyrics | Track list and VU on/off at the bottom right; with VU the instruments below the lyrics */
+#stagePane, .vuPlace { display:none; }
 html.stage #stagePane { display:flex; position:absolute; z-index:2; gap:8px;
   right:max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)); bottom:calc(var(--sab) + 16px); }
 #stagePane button { font:inherit; font-size:13px; color:var(--fg); background:rgba(var(--shade-rgb),.35); border:1px solid rgba(var(--fg-rgb),.25);
-  border-radius:999px; padding:6px 14px; cursor:pointer; opacity:.7; }
+  padding:6px 14px; cursor:pointer; opacity:.7; border-radius:0; }
+#stagePane button[data-pane="lyrics"] { border-radius:999px 0 0 999px; }
+#stagePane button[data-pane="tracks"] { border-radius:0 999px 999px 0; margin-left:-8px; border-left:none; }
+#stagePane button[data-pane="vu"] { border-radius:999px; margin-left:6px; }
 #stagePane button.on { background:var(--fg); color:var(--ink); border-color:var(--fg); opacity:1; }
-html.stage.vuAvail.vuPane #vuStage { display:flex; position:absolute; top:0; left:0; right:0; bottom:calc(var(--sab) + 64px); align-items:center; justify-content:center;
-  padding:0 max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 0 clamp(20px, 2.6vw, 48px); }
-#vuStage .vuBox { width:100%; max-width:900px; }
-html.stage.vuAvail.vuPane #overlayLyrics .overlayBody, html.stage.vuAvail.vuPane #lyrShiftBar { visibility:hidden; }
+html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--sab) + 64px) 0;
+  padding:1vh max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 0 clamp(20px, 2.6vw, 48px); }
+#vuStage .vuBox { width:100%; max-width:min(820px, calc((100vh - 64px) * .9)); margin:0 auto; }
 
-/* classic layout and phone: a tap on the cover turns it over, the instruments are on the back */
-#vuBack { display:none; }
-html.vuAvail:not(.stage) #coverWrap { position:relative; cursor:pointer; -webkit-transform-style:preserve-3d; transform-style:preserve-3d;
-  -webkit-transform:perspective(1400px) rotateY(0deg); transform:perspective(1400px) rotateY(0deg); transition:transform .6s ease; }
-html.vuAvail:not(.stage).vuFlip #coverWrap { -webkit-transform:perspective(1400px) rotateY(180deg); transform:perspective(1400px) rotateY(180deg); }
-html.vuAvail:not(.stage) #cover { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-html.vuAvail:not(.stage) #vuBack { display:flex; position:absolute; top:0; left:0; right:0; bottom:0;
-  -webkit-transform:rotateY(180deg); transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-#vuBack .vuBox { width:100%; height:100%; }
+/* phone (portrait): side by side below a smaller cover, nearly the full width */
+@media (orientation:portrait) {
+  html.vuOn:not(.stage) #vuPort { display:block; flex:0 0 auto; width:94vw; margin:0 0 2.2vh 0; }
+  html.vuOn:not(.stage) #vuPort .vuBox { padding:2.2% 2.2%; gap:2.2%; }
+  html.vuOn:not(.stage) #coverWrap { margin-bottom:2vh;
+    width:min(52vw, max(24vw, calc(100vh - 470px - 32vw - var(--sat) - var(--sab)))); height:min(52vw, max(24vw, calc(100vh - 470px - 32vw - var(--sat) - var(--sab))));
+    width:min(52vw, max(24vw, calc(100dvh - 470px - 32vw - var(--sat) - var(--sab)))); height:min(52vw, max(24vw, calc(100dvh - 470px - 32vw - var(--sat) - var(--sab)))); }
+}
+/* classic landscape: across the bottom, cover smaller, cover and controls move up */
+@media (orientation:landscape) {
+  html.vuOn:not(.stage) #app { bottom:var(--vuH); }
+  html.vuOn:not(.stage) { --vuH:min(32vh, 27vw); }
+  html.vuOn:not(.stage) #vuDock { display:flex; justify-content:center; position:fixed; z-index:2; left:0; right:0;
+    bottom:calc(var(--sab) + 1.5vh); height:calc(var(--vuH) - 3vh); }
+  html.vuOn:not(.stage) #vuDock .vuBox { height:100%; padding:1.2vh; gap:1.2vh; }
+  html.vuOn:not(.stage) #vuDock .vuFace { height:100%; width:auto; flex:0 0 auto; }
+  html.vuOn:not(.stage) #coverWrap { width:min(calc(100vh - var(--vuH) - 40px), 40vw); height:min(calc(100vh - var(--vuH) - 40px), 40vw);
+    width:min(calc(100dvh - var(--vuH) - 40px), 40vw); height:min(calc(100dvh - var(--vuH) - 40px), 40vw); }
+}

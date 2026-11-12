@@ -968,12 +968,13 @@ Gut zu wissen:
 ## VU-Meter
 Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
 
-- **Bühnenansicht:** Unten rechts gibt es die Knöpfe **Liedtext**, **Titelliste** und **VU**. Mit **Liedtext** bleibt
-  es wie bisher (Liedtext, bei einem anderen Verstärker-Eingang die Titelliste). **Titelliste** zeigt die Titel des
-  laufenden Albums aus der Warteschlange, der laufende ist hervorgehoben. **VU** zeigt die Instrumente. Jedes Gerät
-  merkt sich die Wahl.
-- **Klassische Ansicht und Handy:** Ein Tipp aufs Cover dreht es um, auf der Rückseite sind die Instrumente. Ein
-  zweiter Tipp dreht es zurück.
+- **Bühnenansicht:** Unten rechts wählt man **Liedtext** oder **Titelliste** und schaltet mit **VU** die Instrumente
+  ein und aus. Sie stehen dann unter dem Liedtext oder der Titelliste. Mit **Liedtext** bleibt es wie bisher (Liedtext,
+  bei einem anderen Verstärker-Eingang die Titelliste). **Titelliste** zeigt die Titel des laufenden Albums aus der
+  Warteschlange, der laufende ist fett.
+- **Klassische Ansicht und Handy:** Ein Tipp aufs Cover schaltet die Instrumente ein und aus. Im Querformat stehen sie
+  quer unten, Cover und Bedienung rücken nach oben. Auf dem Handy stehen sie nebeneinander unter einem kleineren Cover.
+- Jedes Gerät merkt sich, ob die Instrumente an sind.
 
 Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
 leuchtet über 0 VU und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
@@ -998,7 +999,7 @@ audio_output {
   Tag-Dienst nach spätestens einer Minute ab.
 - Ein Volumio-Update überschreibt die Vorlage. Dann den Block erneut eintragen.
 
-Ohne diesen Ausgang fehlen der Knopf „VU“ und das Umdrehen des Covers. Die Hauptausgabe zum DAC bleibt
+Ohne diesen Ausgang fehlen der Knopf „VU“ und das Einblenden per Tipp aufs Cover. Die Hauptausgabe zum DAC bleibt
 unverändert und bitgenau.
 
 **Aufruf-Option `vu=`** (wird je Gerät gemerkt, wie `layout=`):

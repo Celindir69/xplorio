@@ -703,12 +703,13 @@ Good to know:
 ## VU meter
 Two backlit needle meters show the level of the left and right channel.
 
-- **Stage view:** At the bottom right there are the buttons **Lyrics**, **Tracks** and **VU**. **Lyrics** behaves as
-  before (lyrics, or the track list when the amplifier is on another input). **Tracks** shows the tracks of the
-  playing album from the queue, with the current one highlighted. **VU** shows the meters. Each device remembers the
-  choice.
-- **Classic layout and phone:** A tap on the cover turns it over; the meters are on the back. Another tap turns it
-  back.
+- **Stage view:** At the bottom right you choose **Lyrics** or **Tracks**, and **VU** switches the meters on and off.
+  They then sit below the lyrics or track list. **Lyrics** behaves as before (lyrics, or the track list when the
+  amplifier is on another input). **Tracks** shows the tracks of the playing album from the queue, with the current
+  one in bold.
+- **Classic layout and phone:** A tap on the cover switches the meters on and off. In landscape they run across the
+  bottom and the cover and controls move up. On the phone they sit side by side below a smaller cover.
+- Each device remembers whether the meters are on.
 
 The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
 middle lights above 0 VU and stays on for a second. On pause the needles sink slowly.
@@ -733,7 +734,7 @@ audio_output {
   off within a minute.
 - A Volumio update overwrites the template; add the block again afterwards.
 
-Without this output the "VU" button and the cover flip are missing. The main output to the DAC stays unchanged and
+Without this output the "VU" button and the tap on the cover are missing. The main output to the DAC stays unchanged and
 bit-perfect.
 
 **URL option `vu=`** (remembered per device, like `layout=`):

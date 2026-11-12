@@ -1,13 +1,13 @@
 /* VU meter: two backlit needle instruments (left and right channel). Levels from the tag service (GET /vu, tags/vumeter.js),
-   which reads MPD's "VU" fifo output while someone watches. Where: in the stage view a third choice next to "Lyrics" and
-   "Track list" (buttons at the bottom right of the right half); in the classic layout and on the phone a tap on the cover
-   turns it over. ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
+   which reads MPD's "VU" fifo output while someone watches. Where: in the stage view below the lyrics or track list
+   ("VU" button at the bottom right, next to "Lyrics | Track list"); in the classic landscape layout across the bottom,
+   on the phone side by side below a smaller cover (a tap on the cover switches them on and off). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
    Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
    lights above 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
    APP_CONFIG.VU_DELAY_MS: MPD fills the fifo before the sound reaches the amplifier, the needle waits this long.
    Classic script, shared global scope; loaded after stage.js. */
-var VU_KEY = 'xplorioVu', VU_PANE_KEY = 'mxStagePane';
+var VU_KEY = 'xplorioVu', VU_PANE_KEY = 'mxStagePane', VU_ON_KEY = 'xplorioVuOn';
 var VU_REF = vuNum((window.APP_CONFIG || {}).VU_REF_DBFS, -14);
 var VU_DELAY = vuNum((window.APP_CONFIG || {}).VU_DELAY_MS, 400);
 var VU_SCALE = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3];
@@ -19,7 +19,8 @@ var VU_LAMP_MS = 1000, VU_SILENT_MS = 250;
 var vuOpt = vuOption(), vuAvail = vuOpt === 'demo', vuDsd = false, vuPlaying = false;
 var vuSrc = null, vuQueue = [], vuLastAt = 0, vuRaf = 0, vuT = 0;
 var vuMeters = [];                       /* {needle:[x, v, target, el], lamp:{el, until}} per instrument set */
-var vuPane = vuPaneStored();
+var vuPane = vuPaneStored() === 'tracks' ? 'tracks' : 'lyrics';
+var vuWanted = vuStored(VU_ON_KEY) === '1';         /* instruments shown (per device) */
 
 function vuNum(v, d) { return typeof v === 'number' && isFinite(v) ? v : d; }
 function vuOption() {
@@ -29,7 +30,8 @@ function vuOption() {
     return localStorage.getItem(VU_KEY) || 'true';
   } catch (e) { return 'true'; }
 }
-function vuPaneStored() { try { return localStorage.getItem(VU_PANE_KEY) || 'lyrics'; } catch (e) { return 'lyrics'; } }
+function vuStored(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function vuPaneStored() { return vuStored(VU_PANE_KEY) || 'lyrics'; }
 function vuOn() { return vuOpt !== 'false' && vuAvail; }
 
 /* VU value -> needle position 0 (-20) … 1 (+3) */
@@ -88,10 +90,10 @@ function vuFace(label) {
   vuEl('rect', {x: .5, y: .5, width: 199, height: 129, rx: 6, fill: 'none', stroke: 'rgba(0,0,0,.35)'}, svg);
   return {svg: svg, needle: needle, lamp: lamp, note: note, x: VU_REST, v: 0, target: VU_REST, until: 0};
 }
-/* frame with the two instruments; stacked: one above the other (back of the cover, square) */
-function vuBuild(stacked) {
+/* dark frame with the two instruments side by side */
+function vuBuild() {
   var box = document.createElement('div');
-  box.className = 'vuBox' + (stacked ? ' stacked' : '');
+  box.className = 'vuBox';
   var l = vuFace('L'), r = vuFace('R');
   box.appendChild(l.svg); box.appendChild(r.svg);
   vuMeters.push({box: box, faces: [l, r]});
@@ -155,12 +157,11 @@ function vuDemo(now) {
 }
 
 /* ---------- Data from the tag service ---------- */
-function vuShown() {
-  if (!vuOn() || document.hidden) return false;
-  return stageOn ? vuPane === 'vu' : document.documentElement.classList.contains('vuFlip');
-}
+function vuShown() { return vuOn() && vuWanted && !document.hidden; }
 function vuDsdOff() { return vuOpt === 'nodsd' && vuDsd; }
 function vuUpdate() {
+  document.documentElement.classList.toggle('vuAvail', vuOn());
+  document.documentElement.classList.toggle('vuOn', vuOn() && vuWanted);
   var shown = vuShown(), want = shown && vuOpt !== 'demo' && !vuDsdOff() && typeof TAGS !== 'undefined';
   if (want && !vuSrc) {
     vuSrc = new EventSource(TAGS + '/vu');
@@ -181,52 +182,60 @@ function vuSync(st) {
   if (dsd !== vuDsd) { vuDsd = dsd; vuUpdate(); }
 }
 
-/* ---------- Stage view: Lyrics | Track list | VU at the bottom right ---------- */
-var vuStage = document.createElement('div');
-vuStage.id = 'vuStage';
-vuStage.appendChild(vuBuild(false));
-overlayLyrics.appendChild(vuStage);
+/* ---------- Where the instruments are ----------
+   VU on or off (per device): in the stage view the "VU" button at the bottom right, below the lyrics or track list;
+   otherwise a tap on the cover. Classic landscape: across the bottom, cover and controls move up; phone: side by side
+   below a smaller cover. Each place has its own set, CSS shows the one that fits. */
+function vuPlace(id, parent, before) {
+  var d = document.createElement('div');
+  d.id = id; d.className = 'vuPlace';
+  d.appendChild(vuBuild());
+  parent.insertBefore(d, before || null);
+}
+vuPlace('vuStage', overlayLyrics);                                                     /* stage view: below the lyrics */
+vuPlace('vuPort', document.getElementById('app'), document.getElementById('rightPane'));   /* phone: below the cover */
+vuPlace('vuDock', document.body);                                                       /* classic landscape: at the bottom */
 
+function vuSetOn(on) {
+  vuWanted = on;
+  try { localStorage.setItem(VU_ON_KEY, on ? '1' : '0'); } catch (e) { /* private mode */ }
+  vuPaint(); vuUpdate();
+  lyrLastH = 0;                                            /* stage view: the lyrics area changed its height, re-center */
+  if (typeof stagePlainSetup === 'function') setTimeout(stagePlainSetup, 50);
+}
+
+/* stage view, bottom right: Lyrics | Track list, and VU on/off */
 var vuPaneBar = document.createElement('div');
 vuPaneBar.id = 'stagePane';
 ['lyrics', 'tracks', 'vu'].forEach(function(p){
   var b = document.createElement('button');
   b.type = 'button'; b.setAttribute('data-pane', p);
   b.textContent = T('vu.pane.' + p);
-  b.addEventListener('click', function(){ vuSetPane(p); });
+  b.addEventListener('click', function(){ if (p === 'vu') vuSetOn(!vuWanted); else vuSetPane(p); });
   vuPaneBar.appendChild(b);
 });
 overlayLyrics.appendChild(vuPaneBar);
 
-function vuPaneNow() { return vuPane === 'vu' && !vuOn() ? 'lyrics' : vuPane; }
 /* poll.js: show the album's track list in place of the lyrics */
-function stagePaneTracks() { return vuPaneNow() === 'tracks'; }
+function stagePaneTracks() { return vuPane === 'tracks'; }
 function vuPaint() {
-  var p = vuPaneNow();
-  document.documentElement.classList.toggle('vuPane', p === 'vu');   /* CSS: only in the stage view */
   [].forEach.call(vuPaneBar.children, function(b){
-    b.classList.toggle('on', b.getAttribute('data-pane') === p);
-    b.style.display = b.getAttribute('data-pane') === 'vu' && !vuOn() ? 'none' : '';
+    var p = b.getAttribute('data-pane');
+    b.classList.toggle('on', p === 'vu' ? vuWanted : p === vuPane);
+    if (p === 'vu') { b.style.display = vuOn() ? '' : 'none'; b.setAttribute('aria-pressed', vuWanted ? 'true' : 'false'); }
   });
 }
 function vuSetPane(p) {
-  var tracksBefore = stagePaneTracks();
+  if (p === vuPane) return;
   vuPane = p;
   try { localStorage.setItem(VU_PANE_KEY, p); } catch (e) { /* private mode */ }
   vuPaint();
-  if (stagePaneTracks() !== tracksBefore && typeof poll === 'function') { lastLyrKey = ''; poll(); }   /* lyrics <-> track list */
-  vuUpdate();
+  if (typeof poll === 'function') { lastLyrKey = ''; poll(); }   /* lyrics <-> track list */
 }
 
-/* ---------- Classic layout and phone: tap on the cover turns it over ---------- */
-var vuBack = document.createElement('div');
-vuBack.id = 'vuBack';
-vuBack.appendChild(vuBuild(true));
-document.getElementById('coverWrap').appendChild(vuBack);
 document.getElementById('coverWrap').addEventListener('click', function(){
   if (stageOn || !vuOn() || document.querySelector('.overlay.on')) return;   /* an open panel: the tap only closes it (ui.js) */
-  document.documentElement.classList.toggle('vuFlip');
-  vuUpdate();
+  vuSetOn(!vuWanted);
 });
 
 var vuStageApply = stageApply;
@@ -234,8 +243,6 @@ stageApply = function(){
   vuStageApply();
   vuUpdate();
 };
-if (STAGE_MQ.addEventListener) STAGE_MQ.addEventListener('change', vuUpdate);   /* stage.js reacts to it as well */
-else if (STAGE_MQ.addListener) STAGE_MQ.addListener(vuUpdate);
 document.addEventListener('visibilitychange', vuUpdate);
 
 /* is a VU output there? (once at the start; the meter appears only then) */
@@ -243,10 +250,8 @@ function vuCheck() {
   if (vuOpt === 'false' || vuOpt === 'demo' || typeof TAGS === 'undefined') return;
   fetch(TAGS + '/vustatus').then(function(r){ return r.json(); }).then(function(r){
     vuAvail = !!(r && r.ok && r.available);
-    document.documentElement.classList.toggle('vuAvail', vuOn());
     vuPaint(); vuUpdate();
   }).catch(function(){});
 }
-document.documentElement.classList.toggle('vuAvail', vuOn());
-vuPaint();
+vuPaint(); vuUpdate();
 vuCheck();
