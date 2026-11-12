@@ -1486,13 +1486,8 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
     margin:1vh 0 2vh 0; }
   html.vuOn:not(.stage) #cover { width:auto; height:100%; max-width:100%; }
 }
-/* classic landscape: in the right column below the controls; the cover stays large, the column a little narrower */
+/* classic landscape: in the right column below the controls; same split as without the meters, the controls move up */
 @media (orientation:landscape) {
   html.vuOn:not(.stage) #vuSide { display:block; flex:0 0 auto; width:min(100%, 80vh); margin-top:1vh; }
   html.vuOn:not(.stage) #vuSide .vuBox { padding:2%; gap:2%; }
-}
-@media (orientation:landscape) and (min-width:700px) {
-  html.vuOn:not(.stage) #coverWrap { width:min(88vh, 54vw, calc(100vh - 48px)); height:min(88vh, 54vw, calc(100vh - 48px));
-    width:min(88dvh, 54vw, calc(100dvh - 48px)); height:min(88dvh, 54vw, calc(100dvh - 48px)); }
-  html.vuOn:not(.stage) #rightPane { max-width:600px; }
 }
