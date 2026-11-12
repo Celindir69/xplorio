@@ -2,7 +2,7 @@
    which reads MPD's "VU" fifo output while someone watches. Where: in the stage view below the lyrics or track list
    ("VU" button at the bottom right, next to "Lyrics | Track list"); in the classic landscape layout below the controls,
    on the phone side by side below a smaller cover (a tap on the cover switches them on and off, a tap on the meters
-   switches their color). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
+   switches their color, the last one is a digital LED bar meter). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
    Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
    lights while the needle is past 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
@@ -19,7 +19,7 @@ var VU_POS0 = vuPos(0);
 var VU_LAMP_MS = 1000, VU_SILENT_MS = 250;
 
 /* face colors, a tap on the meters switches to the next one (per device); ?vustyle=… sets it */
-var VU_STYLES = ['accent', 'amberAccent', 'amber', 'white', 'blue'], VU_STYLE_KEY = 'xplorioVuStyle';
+var VU_STYLES = ['accent', 'amberAccent', 'amber', 'white', 'blue', 'digital'], VU_STYLE_KEY = 'xplorioVuStyle';
 var vuStyle = vuStyleStored();
 function vuStyleStored() {
   try {
@@ -104,26 +104,70 @@ function vuFace(label) {
   vuEl('text', {x: mn[0], y: mn[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: ink}, svg).textContent = '−';
   vuEl('text', {x: pl[0], y: pl[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: red}, svg).textContent = '+';
   var lamp = vuEl('circle', {cx: VU_CX, cy: 80, r: 4.2, 'class': 'vuLamp'}, svg);   /* lamp in the middle below the scale */
-  vuEl('text', {x: VU_CX, y: 103, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = 'VU';
+  vuEl('text', {x: VU_CX, y: 101, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
   var note = vuEl('text', {x: VU_CX, y: 68, 'text-anchor': 'middle', 'class': 'vuNote', fill: ink}, svg);
-  vuEl('text', {x: 12, y: 112, 'class': 'vuSide', fill: ink}, svg).textContent = label;
   var needle = vuEl('g', {}, svg);
   vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: 'var(--vu-needle)', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
   vuEl('rect', {x: 0, y: 116, width: 200, height: 14, fill: '#1b130c'}, svg);         /* cover over the needle's pivot */
   vuEl('rect', {x: .5, y: .5, width: 199, height: 129, rx: 6, fill: 'none', stroke: 'rgba(0,0,0,.35)'}, svg);
   return {svg: svg, needle: needle, lamp: lamp, note: note, x: VU_REST, v: 0, target: VU_REST, until: 0};
 }
-/* dark frame with the two instruments side by side */
+/* ---------- Digital: one LED bar per channel, the same box size as the two needle instruments ---------- */
+var VU_SEGS = [-20, -17.5, -15, -12.5, -10, -8, -6, -3, 0, 1, 2, 3, 4];   /* lights at this VU; from 0 on red */
+var VU_SEG_LABELS = {0: '-20', 2: '-15', 4: '-10', 6: '-6', 7: '-3', 10: '+2', 12: '+4'};
+var VU_DX0 = 52, VU_DX1 = 408, VU_DGAP = 5, VU_DW = (VU_DX1 - VU_DX0 - VU_DGAP * (VU_SEGS.length - 1)) / VU_SEGS.length;
+function vuSegX(i) { return VU_DX0 + i * (VU_DW + VU_DGAP); }
+function vuDigital() {
+  var svg = vuEl('svg', {viewBox: '0 0 420 130', 'class': 'vuDigi', 'aria-hidden': 'true'});
+  vuEl('rect', {x: 0, y: 0, width: 420, height: 130, rx: 6, fill: '#05060a'}, svg);
+  var red0 = vuSegX(VU_SEGS.indexOf(1)) - VU_DGAP / 2;
+  [[19, 29], [100, 110]].forEach(function(y){                     /* fine tick strips above and below */
+    for (var x = VU_DX0; x <= VU_DX1; x += 3.4)
+      vuEl('line', {x1: x, y1: y[0], x2: x, y2: y[1], 'class': x < red0 ? 'vuDgG' : 'vuDgR', 'stroke-width': 1.1}, svg);
+  });
+  var rows = [[37, 'L'], [77, 'R']].map(function(r){
+    vuEl('text', {x: 30, y: r[0] + 11.5, 'text-anchor': 'middle', 'class': 'vuDgTxt vuDgGt'}, svg).textContent = r[1];
+    return VU_SEGS.map(function(v, i){
+      return vuEl('rect', {x: vuSegX(i), y: r[0], width: VU_DW, height: 15, rx: 1.5, 'class': v > 0 ? 'vuDgSeg red' : 'vuDgSeg'}, svg);
+    });
+  });
+  vuEl('text', {x: 30, y: 68, 'text-anchor': 'middle', 'class': 'vuDgTxt vuDgGt'}, svg).textContent = 'dB';
+  Object.keys(VU_SEG_LABELS).forEach(function(i){
+    var t = vuEl('text', {x: vuSegX(+i) + VU_DW / 2, y: 68, 'text-anchor': 'middle', 'class': 'vuDgTxt ' + (VU_SEGS[i] > 0 ? 'vuDgRt' : 'vuDgGt')}, svg);
+    t.textContent = VU_SEG_LABELS[i];
+  });
+  vuEl('text', {x: red0, y: 68, 'text-anchor': 'middle', 'class': 'vuDgTxt vuDgGt'}, svg).textContent = '0';
+  var note = vuEl('text', {x: VU_DX1, y: 10, 'text-anchor': 'end', 'class': 'vuNote vuDgGt'}, svg);
+  return {svg: svg, rows: rows, note: note, lv: [-99, -99], hold: [-99, -99], holdAt: [0, 0], lit: [-1, -1], hl: [-1, -1]};
+}
+/* needle position back to VU */
+function vuFromPos(p) { return p <= 0 ? -99 : 20 * Math.log(p * (1 - VU_P0) + VU_P0) / Math.LN10 + 3; }
+/* LED bars: up at once, down 26 dB/s; the highest segment of the last second stays lit (peak hold) */
+function vuDigiStep(d, faces, dt, now) {
+  faces.forEach(function(f, ch){
+    var t = vuFromPos(f.target);
+    d.lv[ch] = t >= d.lv[ch] ? t : Math.max(t, d.lv[ch] - 26 * dt);
+    if (d.lv[ch] >= d.hold[ch] || now - d.holdAt[ch] > 1000) { d.hold[ch] = d.lv[ch]; d.holdAt[ch] = now; }
+    var lit = -1, hl = -1;
+    VU_SEGS.forEach(function(v, i){ if (d.lv[ch] >= v) lit = i; if (d.hold[ch] >= v) hl = i; });
+    if (lit === d.lit[ch] && hl === d.hl[ch]) return;
+    d.lit[ch] = lit; d.hl[ch] = hl;
+    d.rows[ch].forEach(function(r, i){ r.classList.toggle('on', i <= lit || i === hl); });
+  });
+}
+
+/* dark frame with the two instruments side by side (or the digital bars) */
 function vuBuild() {
   var box = document.createElement('div');
   box.className = 'vuBox';
-  var l = vuFace('L'), r = vuFace('R');
-  box.appendChild(l.svg); box.appendChild(r.svg);
+  var l = vuFace('Left'), r = vuFace('Right');
+  var dg = vuDigital();
+  box.appendChild(l.svg); box.appendChild(r.svg); box.appendChild(dg.svg);
   box.addEventListener('click', function(e){
     e.stopPropagation();
     vuSetStyle(VU_STYLES[(VU_STYLES.indexOf(vuStyle) + 1) % VU_STYLES.length]);
   });
-  vuMeters.push({box: box, faces: [l, r]});
+  vuMeters.push({box: box, faces: [l, r], digi: dg});
   return box;
 }
 
@@ -167,6 +211,7 @@ function vuFrame() {
       f.needle.setAttribute('transform', 'rotate(' + vuDeg(f.x).toFixed(2) + ' ' + VU_CX + ' ' + VU_CY + ')');
       f.lamp.setAttribute('class', 'vuLamp' + (f.until > now ? ' on' : ''));
     });
+    if (vuStyle === 'digital') vuDigiStep(m.digi, m.faces, dt, now);
   });
   vuRaf = requestAnimationFrame(vuFrame);
 }
@@ -198,7 +243,7 @@ function vuUpdate() {
       if (vuQueue.length > 200) vuQueue.splice(0, vuQueue.length - 200);
     };
   } else if (!want && vuSrc) { vuSrc.close(); vuSrc = null; vuQueue = []; }
-  vuMeters.forEach(function(m){ m.faces.forEach(function(f){ f.note.textContent = vuDsdOff() ? T('vu.dsdOff') : ''; }); });
+  vuMeters.forEach(function(m){ m.faces.concat([m.digi]).forEach(function(f){ f.note.textContent = vuDsdOff() ? T('vu.dsdOff') : ''; }); });
   if (shown && !vuRaf) { vuT = 0; vuRaf = requestAnimationFrame(vuFrame); }
 }
 
