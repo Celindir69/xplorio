@@ -19,10 +19,11 @@ window.APP_CONFIG = {
   ROTEL_HOST: '',     /* network address of the amplifier (read only by rotel-bridge.js), e.g. '192.168.1.50' */
   ROTEL_INPUTS: {},   /* change name and icon of individual inputs (read by rotel-bridge.js), e.g. {aux: {name: 'Turntable', icon: 'phono'}};
                          icons: phono, cd, tuner, bluetooth, usb, digital, aux, pc, tv */
-  ROTEL_AMP_PORT: 9590, /* amplifier port (ASCII protocol) */
+  ROTEL_MODEL: 'RA-1572', /* amplifier model (read by rotel-bridge.js): 'RA-1572' (also MKII), 'RA-1592', 'RC-1592', 'RSP-1582' */
+  ROTEL_AMP_PORT: null, /* amplifier port (ASCII protocol); null = the model's (9590, RSP-1582: 9596) */
   ROTEL_PORT: 8765,   /* port of the Rotel service on the player */
-  ROTEL_PROFILE: null, /* remote control (playback page): commands and inputs of the amplifier. null = Rotel RA-1572 /
-                         RA-1572MKII; override individual parts, false hides an element (docs/einrichten.md) */
+  ROTEL_PROFILE: null, /* remote control (playback page): commands and inputs of the amplifier. null = those of
+                         ROTEL_MODEL; override individual parts, false hides an element (docs/einrichten.md) */
   TIDAL: 'auto',      /* TIDAL parts (Local/TIDAL choice in the search, similar artists on TIDAL):
                          'auto' = only if the TIDAL plugin is active in Volumio; true = always; false = never */
   QOBUZ: 'auto',      /* Qobuz same as TIDAL (choice in the search, similar artists on Qobuz):

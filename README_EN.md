@@ -124,7 +124,7 @@ progress of the mood tags.
 - Light and dark, following the device setting or set explicitly.
 - German, English, French, Spanish and Italian, following the Volumio language setting or set explicitly; further languages as a file in `web/lang/`
   (see [Setup](docs/setup.md#language)).
-- Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js`; an input other than the player is shown with an icon in the player view.
+- Optional: control a network-connected Rotel amplifier (power, volume, input, tone, balance, speakers A/B as a remote control) via `rotel/rotel-bridge.js` (RA-1572, RA-1592, RC-1592, RSP-1582); other amplifiers via the Volumio plugin SerialAmpControl, Xplorio then controls volume and power through it; an input other than the player is shown with an icon in the player view.
 - TIDAL Watchdog: reconnects TIDAL or restarts Volumio if the TIDAL plugin becomes unresponsive.
   (On my MX-Stream this happens due to a session timeout after about 4 hours without TIDAL use.)
 - All settings on the plugin's settings page in Volumio, no ssh needed.

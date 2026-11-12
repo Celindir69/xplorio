@@ -260,6 +260,8 @@ langRegister('fr', 'Français', {
 
   'controls.rotel.notLinked': 'Rotel non connecté – allume-le sur l\'appareil',
   'controls.rotel.off': 'Éteindre le Rotel',
+  'controls.amp.sent': 'Envoyé à l’amplificateur',
+  'controls.amp.toggle': 'Amplificateur marche/arrêt (via SerialAmpControl)',
   'controls.rotel.on': 'Allumer le Rotel',
   'controls.rotel.unreachable': 'Service Rotel injoignable',
   'controls.rotel.locked': 'Le Rotel joue {input} – volume et marche/arrêt sont verrouillés tant que le flux est actif',

@@ -42,7 +42,7 @@ braucht es dafür nicht:
 - **Grundeinstellungen:** Port, Tag-Dienst ein/aus, Sprache, hell/dunkel; dazu ein Knopf, der Xplorio öffnet.
 - **Funktionen:** Verlauf, Erscheinungstage, Stimmungs-Tags, Farbstimmung, m4a-Codec und m4a als verlustfrei, TIDAL, Qobuz,
   HIGHRESAUDIO und Spotify (automatisch, immer oder nie) und weitere Namen des Players (`ALLOWED_HOSTS`).
-- **Rotel-Verstärker:** Rotel-Bridge ein/aus, Adresse des Verstärkers und auf Wunsch eigene Namen der Eingänge, z. B.
+- **Rotel-Verstärker:** Rotel-Bridge ein/aus, Modell, Adresse des Verstärkers und auf Wunsch eigene Namen der Eingänge, z. B.
   `aux=Plattenspieler/phono, opt1=TV` (Symbol hinter dem Schrägstrich, optional).
 - **Last.fm:** [Last.fm-Zugang](#lastfm-zugang) (API-Key und Shared Secret). Das Plugin schreibt beides nach
   `/data/xplorio/data/keys.json`; die Seite zeigt danach nur „Gespeichert“, ein leeres Feld behält den gespeicherten Wert,
@@ -803,6 +803,17 @@ im Router fest vergeben) und den Power Mode auf „Quick“ stellen, damit er si
 Adresse des Verstärkers eintragen, z. B. `192.168.1.50`. Das Plugin startet die Bridge beim Speichern neu. Ohne
 Rotel-Bridge regelt die Oberfläche die Lautstärke von Volumio (falls dort eingeschaltet).
 
+**Modelle:** RA-1572 / RA-1572MKII (Standard), RA-1592 (ab Software 1.52), RC-1592 (ab 1.53) und RSP-1582 (Software 5,
+Port 9596). Auswahl unter „Modell“. Die Befehle der drei neueren Einträge stammen aus der Befehlsliste des Plugins
+SerialAmpControl und sind in Xplorio nur gegen einen simulierten Verstärker getestet. RC-1592 und RSP-1582 bieten
+Ein/Aus, Lautstärke, Stumm und Eingang, aber keine Klang-, Balance- oder Lautsprecherregler.
+
+**Andere Verstärker (SerialAmpControl):** Für Verstärker mit RS232-Anschluss (Rotel A11/A12/A14, Anthem, Meridian,
+Cambridge CXA61 u. a.) gibt es das Volumio-Plugin SerialAmpControl (ab Volumio 3). Ist es eingeschaltet, übernimmt es
+Volumios Lautstärke. Xplorio regelt dann über Volumio und zeigt oben links einen Ein/Aus-Knopf, der über das Plugin
+schaltet (ohne Anzeige, ob der Verstärker an ist, weil das Plugin das nicht meldet). Die Rotel-Bridge startet in dieser
+Zeit nicht, damit nicht beide gleichzeitig mit dem Verstärker sprechen.
+
 **Prüfen** (per ssh):
 ```bash
 curl -s localhost:8765/state
@@ -820,7 +831,7 @@ Mit `ROTEL: true` erscheint in der Player-Ansicht oben rechts ein Fernbedienungs
 (Bypass), Bass, Höhen, Balance sowie Lautsprecher A und B. Die Werte kommen vom Verstärker und folgen auch der echten
 Fernbedienung.
 
-Die Befehle sind für den Rotel RA-1572 / RA-1572MKII voreingestellt (ASCII-Protokoll V2, Port 9590). Andere Modelle
+Die Befehle kommen vom gewählten Modell (Standard: RA-1572 / RA-1572MKII, ASCII-Protokoll V2, Port 9590). Andere Modelle
 in `/data/xplorio/config.local.js` (siehe [Einstellungen](#einstellungen)); was fehlt, bleibt beim Standard:
 ```js
 window.APP_CONFIG.ROTEL_PROFILE = {

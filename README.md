@@ -118,7 +118,7 @@ Fortschritt der Stimmungs-Tags.
 - Hell und dunkel, nach der Einstellung des Geräts oder fest eingestellt.
 - Deutsch, Englisch, Französisch, Spanisch und Italienisch, wie in Volumio eingestellt oder fest eingestellt; weitere Sprachen als Datei in `web/lang/`
   (siehe [Einrichten](docs/einrichten.md#sprache)).
-- Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js`; ein anderer Eingang als der Player steht mit Icon in der Player-Ansicht.
+- Optional: Rotel-Verstärker im Netz (Ein/Aus, Lautstärke, Eingang, Klang, Balance, Lautsprecher A/B als Fernbedienung) über `rotel/rotel-bridge.js` (RA-1572, RA-1592, RC-1592, RSP-1582); andere Verstärker über das Volumio-Plugin SerialAmpControl, Xplorio regelt dann Lautstärke und Ein/Aus darüber; ein anderer Eingang als der Player steht mit Icon in der Player-Ansicht.
 - TIDAL-Wächter: verbindet TIDAL neu bzw. startet Volumio neu, wenn das TIDAL-Plugin hängt. 
   (Was auf meinem MX-Stream, aufgrund eines Session-Timeouts, etwa nach 4 Stunden ohne Tidal-Nutzung auftritt.)
 - Alle Einstellungen auf der Einstellungsseite des Plugins in Volumio, ohne ssh.

@@ -259,6 +259,8 @@ langRegister('es', 'Español', {
 
   'controls.rotel.notLinked': 'Rotel no conectado: enciéndelo en el propio aparato',
   'controls.rotel.off': 'Apagar Rotel',
+  'controls.amp.sent': 'Enviado al amplificador',
+  'controls.amp.toggle': 'Amplificador encendido/apagado (con SerialAmpControl)',
   'controls.rotel.on': 'Encender Rotel',
   'controls.rotel.unreachable': 'Servicio Rotel no disponible',
   'controls.rotel.locked': 'El Rotel está reproduciendo {input}: volumen y encendido bloqueados mientras suena el stream',

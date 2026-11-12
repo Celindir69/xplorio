@@ -39,6 +39,24 @@ t('icons by command; ROTEL_INPUTS changes only the name and icon of individual i
   assert.deepStrictEqual(r.sources, [{cmd: 'aux', name: 'Record', icon: 'phono'}]);
 });
 
+t('models: RA-1592, RC-1592, RSP-1582 (port, queries, volume commands, reply end)', function(){
+  var a = rb.makeProfile(null, null, 'RA-1592');
+  assert.strictEqual(a.sources.length, 14); assert.ok(a.bass && a.speakerB);
+  assert.strictEqual(a.port, 9590); assert.strictEqual(rb.volSetCmd(a, 5), 'vol_5');
+  var c = rb.makeProfile(null, null, 'RC-1592');
+  assert.deepStrictEqual(rb.queries(c), ['get_current_power', 'get_volume', 'get_mute_status', 'get_current_source']);
+  assert.strictEqual(c.bass, false); assert.strictEqual(c.speakerA, false);
+  assert.strictEqual(rb.volSetCmd(c, 5), 'vol_05'); assert.strictEqual(rb.queryFor(c, 'opt3'), 'get_current_source');
+  var r = rb.makeProfile({sources: [{cmd: 'video1', name: 'TV'}, 'pc_usb']}, null, 'RSP-1582');
+  assert.strictEqual(r.port, 9596); assert.strictEqual(r.delimiter, '!'); assert.strictEqual(r.powerOnSource, 'pc_usb');
+  assert.strictEqual(rb.volCmd(r, 'vol_up'), 'volume_up'); assert.strictEqual(rb.volCmd(r, 'vol_dwn'), 'volume_down');
+  assert.strictEqual(rb.volSetCmd(r, 42), 'volume_42'); assert.strictEqual(r.sources[0].name, 'TV');
+  var d = rb.makeProfile(null, null, 'nonsense');                       /* unknown model: RA-1572 */
+  assert.strictEqual(d.sources.length, 12); assert.strictEqual(rb.volSetCmd(d, 5), 'vol_05'); assert.strictEqual(rb.volCmd(d, 'vol_up'), 'vol_up');
+  var x = rb.makeProfile({volSet: 'vol_##;reboot', queries: ['power?', 'rm -rf'], delimiter: ';'});
+  assert.strictEqual(x.volSet, 'vol_##'); assert.deepStrictEqual(x.queries, ['power?']); assert.strictEqual(x.delimiter, '$');
+});
+
 t('amplifier replies', function(){
   ['bass=-04', 'treble=000', 'balance=R03', 'bypass=on', 'speaker=b'].forEach(rb.parseMsg);
   assert.strictEqual(rb.state.bass, -4); assert.strictEqual(rb.state.treble, 0); assert.strictEqual(rb.state.balance, 3);
