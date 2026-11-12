@@ -105,6 +105,31 @@ else {
     run({op: 'write', path: dsf, tags: {compilation: ''}});
     assert.strictEqual(run({op: 'read', path: dsf}).tags.compilation, '');
   });
+  t('tags.py: album artist and date under a name MPD does not read (hidden)', function(){
+    var mk2 = 'import sys\nsys.path.insert(0,%v)\nfrom mutagen.dsf import DSF\nfrom mutagen.id3 import TXXX,TDOR,TPE2\n' +
+      'a=DSF(%f)\na.tags.add(TXXX(encoding=3,desc="ALBUM ARTIST",text=["Velvet Static"]))\na.tags.add(TDOR(encoding=3,text=["1999"]))\na.save()\n';
+    cp.spawnSync(py, ['-c', mk2.replace('%v', JSON.stringify(path.join(__dirname, '..', 'tags', 'vendor'))).replace('%f', JSON.stringify(dsf))]);
+    assert.deepStrictEqual(run({op: 'hidden', path: dsf}).found, {albumartist: ['TXXX:ALBUM ARTIST', 'Velvet Static'], date: ['TDOR', '1999']});
+    run({op: 'write', path: dsf, tags: {albumartist: 'Velvet Static'}});                       /* usual field set: not hidden any more */
+    assert.deepStrictEqual(run({op: 'hidden', path: dsf}).found, {date: ['TDOR', '1999']});
+    /* FLAC: STREAMINFO only, then Vorbis comments "ALBUM ARTIST" and YEAR */
+    var fl = path.join(root, 'USB', 'h.flac');
+    var mk3 = 'import struct\nsi=struct.pack(">H H",4096,4096)+b"\\0"*6+bytes([0x0a,0xc4,0x42,0xf0,0,0,0,0])+b"\\0"*16\n' +
+      'open(%f,"wb").write(b"fLaC"+bytes([0x80,0,0,34])+si)\nimport sys\nsys.path.insert(0,%v)\nfrom mutagen.flac import FLAC\n' +
+      'a=FLAC(%f)\na.add_tags()\na.tags["ALBUM ARTIST"]="Aurora Kite"\na.tags["YEAR"]="2004"\na.tags["ORIGINALDATE"]="1977"\na.save()\n';
+    cp.spawnSync(py, ['-c', mk3.replace(/%f/g, JSON.stringify(fl)).replace('%v', JSON.stringify(path.join(__dirname, '..', 'tags', 'vendor')))]);
+    assert.deepStrictEqual(run({op: 'hidden', path: fl}).found, {albumartist: ['ALBUM ARTIST', 'Aurora Kite'], date: ['YEAR', '2004']});
+  });
+  var hk = {albumArtist: [{dir: 'USB', missing: true, files: [{uri: 'USB/t.dsf'}]}]}, puts = [];
+  svc.hiddenKeys([{file: 'USB/t.dsf', album: 'Glass Hours', artist: 'Lumen Drift', albumartist: '', date: '', title: 'One', 'last-modified': 'x'},
+                  {file: 'USB/h.flac', album: 'Paper Skies', artist: 'Aurora Kite', albumartist: '', date: '2004', title: 'Two', 'last-modified': 'y'}],
+    hk, {get: function(){ return null; }, put: function(a, f, lm, k, v){ puts.push([f, k]); }}, function(){
+      t('check: values under another name, per folder, only where MPD has none (date of h.flac is known, its album artist not asked)', function(){
+        assert.deepStrictEqual(hk.hiddenKeys.map(function(a){ return [a.dir, a.count, a.found, a.fixes]; }), [['USB', 1,
+          [{field: 'date', key: 'TDOR', value: '1999', n: 1}], [{uri: 'USB/t.dsf', tags: {date: '1999'}}]]]);
+        assert.deepStrictEqual(puts, [['USB/t.dsf', 'hidden']]);       /* album artist was set above: only the date is left */
+      });
+    });
   t('tags.py: unsupported extension and missing file', function(){
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'notes.txt')}).ok, false);
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'nix.flac')}).ok, false);
