@@ -712,6 +712,9 @@ Two backlit needle meters show the level of the left and right channel.
   right below the controls, and the layout stays as without
   them. On the phone they sit side by side below a smaller cover.
 - Each device remembers whether the meters are on.
+- **Color:** A tap on the meters switches to the next color: accent (the cover's color), amber with accent, amber,
+  white and blue. Each device remembers the color; `?vustyle=accent`, `amberAccent`, `amber`, `white` or `blue` sets it.
+  Amber is the default.
 
 The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
 middle lights once the needle is past 0 VU and stays on for a second. On pause the needles sink slowly.
@@ -745,6 +748,7 @@ bit-perfect.
 - `xplorio.html?vu=nodsd`: off while a DSD file plays. Otherwise MPD has to convert DSD to PCM for the fifo, which can
   push a weak player (MX-Stream) to its limit. The meters then read "off for DSD".
 - `xplorio.html?vu=demo`: needles driven by a simulated signal, without a fifo, for a look
+- `xplorio.html?vustyle=blue`: color of the meters (`accent`, `amberAccent`, `amber`, `white`, `blue`), also remembered per device
 
 **Fine-tuning** in `web/config.local.js`:
 - `VU_REF_DBFS` (default `-8`): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
