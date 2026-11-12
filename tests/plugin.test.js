@@ -327,14 +327,16 @@ plug.onStart().then(function(){
     assert.strictEqual(el(ui3, 'vuOutput').value, true);
     assert.deepStrictEqual(el(ui3, 'vuRef').value, {value: '-8', label: '-8 dBFS (Standard)'});
     assert.strictEqual(evalConfig().VU_REF_DBFS, -8);
+    assert.deepStrictEqual(el(ui3, 'vuDelay').value, {value: '400', label: '400 ms (Standard)'});
+    assert.strictEqual(evalConfig().VU_DELAY_MS, 400);
     assert.ok(!/Vorlage|Schnittstelle nicht/.test(el(ui3, 'vuOutput').doc));
   });
   var r0 = mpdRestarts;
   return plug.saveSettings({vuRef: {value: '-99'}}).then(function(){
     t('VU reference: only values from the list', function(){ assert.strictEqual(plug.config.get('vuRef'), '-8'); });
-    return plug.saveSettings({vuRef: {value: '-12', label: '-12 dBFS'}});
+    return plug.saveSettings({vuRef: {value: '-12', label: '-12 dBFS'}, vuDelay: {value: '800'}});
   }).then(function(){
-    t('VU reference from the page into config.local.js as a number', function(){ assert.strictEqual(evalConfig().VU_REF_DBFS, -12); });
+    t('VU reference from the page into config.local.js as a number', function(){ assert.strictEqual(evalConfig().VU_REF_DBFS, -12); assert.strictEqual(evalConfig().VU_DELAY_MS, 800); });
     return plug.saveSettings({vuOutput: false});
   }).then(function(){
     t('VU switch off: Volumio rebuilds mpd.conf without the output, MPD restarts, hook stays registered once', function(){

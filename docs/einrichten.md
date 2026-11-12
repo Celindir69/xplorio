@@ -1030,7 +1030,7 @@ unverändert und bitgenau.
 - `VU_REF_DBFS` (Standard `-8`, mit dem Plugin unter **VU-Meter: 0 VU entspricht** in den Einstellungen): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
   -12 dBFS, dann pendelt die Nadel um -3 bis 0. Stehen die Nadeln oft am Anschlag, Wert erhöhen, etwa auf `-6`. Bewegen
   sich leise Aufnahmen (Klassik, ältere CDs) kaum, Wert senken, etwa auf `-12`.
-- `VU_DELAY_MS` (Standard `400`): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
+- `VU_DELAY_MS` (Standard `400`, mit dem Plugin unter **VU-Meter: Verzögerung**): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
   warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken.
 
 Gut zu wissen: Die Pegel kommen als Server-Sent Events (`GET /vu`) vom Tag-Dienst, 40 Werte pro Sekunde, nur solange
