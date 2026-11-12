@@ -752,6 +752,8 @@ html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; fon
 .lyrTrkN { flex:0 0 2.2em; text-align:right; opacity:.5; font-variant-numeric:tabular-nums; }
 .lyrTrkT { flex:1 1 auto; min-width:0; }
 .lyrTrkD { flex:0 0 auto; opacity:.55; font-variant-numeric:tabular-nums; }
+html:not(.otherInput) .lyrTrk { cursor:pointer; }   /* a tap plays the track (not while the amplifier is on another input) */
+html:not(.otherInput) .lyrTrk:hover .lyrTrkT { text-decoration:underline; text-underline-offset:.15em; }
 .lyrTrk.cur .lyrTrkT { font-weight:700; text-shadow:var(--glow); }   /* the track playing ("Track list" chosen) */
 
 /* queue, playlists, search … at the top right as round buttons */
@@ -1486,14 +1488,8 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
     margin:1vh 0 2vh 0; }
   html.vuOn:not(.stage) #cover { width:auto; height:100%; max-width:100%; }
 }
-/* classic landscape: across the bottom, cover smaller, cover and controls move up */
+/* classic landscape: in the right column below the controls; same split as without the meters, the controls move up */
 @media (orientation:landscape) {
-  html.vuOn:not(.stage) #app { bottom:var(--vuH); }
-  html.vuOn:not(.stage) { --vuH:min(32vh, 27vw); }
-  html.vuOn:not(.stage) #vuDock { display:flex; justify-content:center; position:fixed; z-index:2; left:0; right:0;
-    bottom:calc(var(--sab) + 1.5vh); height:calc(var(--vuH) - 3vh); }
-  html.vuOn:not(.stage) #vuDock .vuBox { height:100%; padding:1.2vh; gap:1.2vh; }
-  html.vuOn:not(.stage) #vuDock .vuFace { height:100%; width:auto; flex:0 0 auto; }
-  html.vuOn:not(.stage) #coverWrap { width:min(calc(100vh - var(--vuH) - 40px), 40vw); height:min(calc(100vh - var(--vuH) - 40px), 40vw);
-    width:min(calc(100dvh - var(--vuH) - 40px), 40vw); height:min(calc(100dvh - var(--vuH) - 40px), 40vw); }
+  html.vuOn:not(.stage) #vuSide { display:block; flex:0 0 auto; width:min(100%, 80vh); margin-top:1vh; }
+  html.vuOn:not(.stage) #vuSide .vuBox { padding:2%; gap:2%; }
 }

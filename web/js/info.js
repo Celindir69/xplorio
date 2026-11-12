@@ -37,13 +37,20 @@ function renderTrackList(tracks) {
     ti.textContent = t.title || t.name || '';
     d.textContent = fmtTrackDur(t.duration);
     row.appendChild(n); row.appendChild(ti); row.appendChild(d);
+    if (t.queueIndex >= 0) row.addEventListener('click', function(){ queuePlayAt(t.queueIndex); });   /* play it (other input: only a hint, queue.js) */
     lyricsText.appendChild(row);
   });
 }
 /* the queued tracks of this album (all of the queue if none match, e.g. a playlist) */
 function albumTracks(queue, album, artist) {
-  var same = (queue || []).filter(function(t){ return album && t.album === album && (!artist || !t.artist || t.artist === artist || t.albumartist === artist); });
-  return same.length ? same : (queue || []);
+  var all = (queue || []).map(function(t, i){
+    var c = {};
+    for (var k in t) if (t.hasOwnProperty(k)) c[k] = t[k];
+    c.queueIndex = i;                                   /* position in the queue: a tap plays it */
+    return c;
+  });
+  var same = all.filter(function(t){ return album && t.album === album && (!artist || !t.artist || t.artist === artist || t.albumartist === artist); });
+  return same.length ? same : all;
 }
 
 /* ---------- Info ---------- */
