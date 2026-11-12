@@ -413,7 +413,7 @@ Ganz oben auf der Seite steht die Karte „Warnungen“, sobald es etwas zu meld
   die MPD-Datenbank, die Einstellungen von Volumio, die Daten von Xplorio und „Interne Musik“); geprüft alle 10 Minuten.
 
 Neue Warnungen blendet die App einmal oben rot ein (ein Tipp öffnet „System“), und das Zahnrad bekommt einen roten Punkt,
-bis sie mit „Gelesen“ bzw. „Alle gelesen“ bestätigt sind. Vergangene Ereignisse bleiben 24 Stunden in der Liste, auch über
+bis sie mit „Gelesen“ bzw. „Alle gelesen“ bestätigt sind. Gelesene Warnungen stehen darunter unter „Gelesen“, klein und grau, ohne Hinweistext. Vergangene Ereignisse bleiben 24 Stunden in der Liste, auch über
 einen Neustart des Players hinweg (`/data/xplorio/data/syswarn.json`; das Journal liegt auf Volumio im RAM). Kann der
 Dienst das Kernel-Protokoll nicht lesen, sagt die Karte das; Abhilfe wie bei den Protokollen (Gruppe `systemd-journal`,
 siehe unten). Mit `SYSWARN=0` in der Umgebung des Tag-Dienstes ist die Prüfung aus.
