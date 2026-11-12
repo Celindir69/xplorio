@@ -86,6 +86,11 @@ function stopPlaybackThen(done) {
 }
 
 btnRotelPower.addEventListener('click', function(){
+  if (AMP_PLUGIN) {
+    socket.emit('callMethod', {endpoint: 'system_hardware/serialampcontroller', method: 'sendCommand', data: 'powerToggle'});
+    showToast(T('controls.amp.sent'));
+    return;
+  }
   if (rotelBusy) return;
   var want = !rotelOn;
   if (want && !rotelLinked) {
@@ -220,9 +225,16 @@ function volumioVol(v) {
   socket.emit('volume', v);
 }
 
+/* SerialAmpControl plugin on (APP_CONFIG.AMP_PLUGIN, written by the Xplorio plugin): it has Volumio's volume, so the
+   slider works as without Rotel; the on/off button switches through it. It does not report the state: no "on" shown */
+var AMP_PLUGIN = !ROTEL_ON && !!(window.APP_CONFIG && window.APP_CONFIG.AMP_PLUGIN);
 if (!ROTEL_ON) {
-  btnRotelPower.style.display = 'none';
+  btnRotelPower.style.display = AMP_PLUGIN ? '' : 'none';
   vSlider.max = 100;
+}
+if (AMP_PLUGIN) {
+  btnRotelPower.className = 'topBtn';
+  btnRotelPower.title = T('controls.amp.toggle');
 }
 
 function rotel(path) {

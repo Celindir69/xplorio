@@ -42,7 +42,7 @@ Everything needed is on the plugin's settings page (Plugins > Installed plugins 
 - **Basics:** port, Tag Service on/off, language, light/dark; plus a button that opens Xplorio.
 - **Features:** history, release days, mood tags, color mood, m4a codec and m4a as lossless, TIDAL, Qobuz, HIGHRESAUDIO and
   Spotify (automatic, always or never) and further names of the player (`ALLOWED_HOSTS`).
-- **Rotel amplifier:** Rotel bridge on/off, the amplifier's address and, if you like, your own names for the inputs, e.g.
+- **Rotel amplifier:** Rotel bridge on/off, model, the amplifier's address and, if you like, your own names for the inputs, e.g.
   `aux=Turntable/phono, opt1=TV` (icon after the slash, optional).
 - **Last.fm:** [Last.fm credentials](#lastfm-credentials) (API key and shared secret). The plugin writes both to
   `/data/xplorio/data/keys.json`; afterwards the page only shows "Saved", an empty field keeps the stored value, and
@@ -578,6 +578,17 @@ in the router) and set the power mode to "Quick" so it can be switched on from s
 amplifier's address, e.g. `192.168.1.50`. The plugin restarts the bridge when you save. Without the Rotel bridge, the
 interface controls Volumio's volume (if enabled there).
 
+**Models:** RA-1572 / RA-1572MKII (default), RA-1592 (software 1.52 or later), RC-1592 (1.53 or later) and RSP-1582
+(software 5, port 9596), chosen under "Model". The commands of the three newer entries come from the command list of the
+SerialAmpControl plugin and are tested in Xplorio only against a simulated amplifier. RC-1592 and RSP-1582 offer power,
+volume, mute and input, but no tone, balance or speaker controls.
+
+**Other amplifiers (SerialAmpControl):** for amplifiers with an RS232 port (Rotel A11/A12/A14, Anthem, Meridian,
+Cambridge CXA61 and others) there is the Volumio plugin SerialAmpControl (Volumio 3 or later). When it is switched on, it
+takes over Volumio's volume. Xplorio then controls the volume through Volumio and shows an on/off button at the top left
+that switches through the plugin (without showing whether the amplifier is on, since the plugin does not report it). The
+Rotel bridge does not start meanwhile, so the two never talk to the amplifier at the same time.
+
 **Checking** (over ssh):
 
 ```bash
@@ -597,7 +608,7 @@ Reload the interface once; the remote control icon appears at the top right of t
 
 With `ROTEL: true`, a remote control icon appears at the top right of the player view. It opens the "Playback" page (gear menu) at the "Amplifier" card: power/standby, volume and mute, input, tone bypass, bass, treble, balance, and speakers A and B. The values come from the amplifier and also follow the physical remote.
 
-The commands are preset for the Rotel RA-1572 / RA-1572MKII (ASCII protocol V2, port 9590). For other models, use `/data/xplorio/config.local.js` (see [Settings](#settings)); anything left out keeps the default:
+The commands come from the chosen model (default: RA-1572 / RA-1572MKII, ASCII protocol V2, port 9590). For other models, use `/data/xplorio/config.local.js` (see [Settings](#settings)); anything left out keeps the default:
 
 ```js
 window.APP_CONFIG.ROTEL_PROFILE = {

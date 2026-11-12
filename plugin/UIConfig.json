@@ -229,6 +229,7 @@
 				"label": "TRANSLATE.XPLORIO.SAVE",
 				"data": [
 					"rotelBridge",
+					"rotelModel",
 					"rotelHost",
 					"rotelInputs"
 				]
@@ -240,6 +241,14 @@
 					"label": "TRANSLATE.XPLORIO.ROTEL_BRIDGE",
 					"doc": "TRANSLATE.XPLORIO.ROTEL_BRIDGE_DOC",
 					"value": false
+				},
+				{
+					"id": "rotelModel",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.ROTEL_MODEL",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_MODEL_DOC",
+					"value": {"value": "RA-1572", "label": "RA-1572 / RA-1572MKII"},
+					"options": []
 				},
 				{
 					"id": "rotelHost",

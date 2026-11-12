@@ -259,6 +259,8 @@ langRegister('de', 'Deutsch', {
 
   'controls.rotel.notLinked': 'Rotel nicht verbunden – bitte am Gerät einschalten',
   'controls.rotel.off': 'Rotel ausschalten',
+  'controls.amp.sent': 'An den Verstärker gesendet',
+  'controls.amp.toggle': 'Verstärker ein/aus (über SerialAmpControl)',
   'controls.rotel.on': 'Rotel einschalten',
   'controls.rotel.unreachable': 'Rotel-Dienst nicht erreichbar',
   'controls.rotel.locked': 'Rotel spielt gerade {input} – Lautstärke und Ein/Aus sind gesperrt, solange der Stream läuft',

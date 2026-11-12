@@ -21,6 +21,14 @@ var DATA   = process.env.XPLORIO_DATA || '/data/xplorio';
 var RUN  = process.env.XPLORIO_RUN || '/tmp/xplorio';             /* settings of the services (EnvironmentFile) */
 var MUSIC = process.env.XPLORIO_MUSIC || '/mnt';
 /* the separate AutoDJ plugin (Celindir69/autodj-plugin): Xplorio only points to it on the settings page */
+/* the SerialAmpControl plugin (amplifiers by RS232 or network): if it is on, it has Volumio's volume and the amplifier's
+   port; Xplorio then takes the volume from Volumio, offers on/off through it and leaves the Rotel bridge off */
+ControllerXplorio.prototype.ampPlugin = function() {
+  try {
+    var pm = this.commandRouter.pluginManager;
+    return !!(pm && typeof pm.isEnabled === 'function' && pm.isEnabled('system_hardware', 'serialampcontroller'));
+  } catch (e) { return false; }
+};
 function autodjInstalled() { return fs.existsSync(process.env.XPLORIO_AUTODJ_DIR || '/data/plugins/miscellanea/volumio_autodj'); }
 /* the services: systemd unit, switch on the page (the web server always runs) */
 var SERVICES = [
@@ -43,6 +51,7 @@ var FIELDS = [
   {id: 'hra',          key: 'HRA',           kind: 'tri'},
   {id: 'spotify',      key: 'SPOTIFY',       kind: 'tri'},
   {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts'},
+  {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host'},
   {id: 'rotelInputs',  key: 'ROTEL_INPUTS',  kind: 'inputs'}
 ];
@@ -80,7 +89,9 @@ ControllerXplorio.prototype.onStart = function() {
   var self = this, defer = libQ.defer(), port = self.port();
   self.writeConfig();
   self.writeEnv();
-  var todo = SERVICES.filter(function(s){ return !s.id || self.config.get(s.id); }), failed = null;
+  var amp = self.ampPlugin(), failed = null;
+  var todo = SERVICES.filter(function(s){ return !s.id || (self.config.get(s.id) && !(amp && s.id === 'rotelBridge')); });   /* not both on the amplifier */
+  if (amp && self.config.get('rotelBridge')) self.logger.info('Xplorio: SerialAmpControl is on, Rotel bridge not started');
   (function next() {
     var s = todo.shift();
     if (!s) return failed ? defer.reject(new Error(failed)) : defer.resolve();
@@ -152,7 +163,9 @@ ControllerXplorio.prototype.writeConfig = function() {
     catch (e) { self.ownBroken = true; self.logger.error('Xplorio: /data/xplorio/config.local.js left out: ' + e.message); }
   }
   FIELDS.forEach(function(f){ lines.push('window.APP_CONFIG.' + f.key + ' = ' + JSON.stringify(toApp(f, self.config.get(f.id))) + ';'); });
-  lines.push('window.APP_CONFIG.ROTEL = ' + !!self.config.get('rotelBridge') + ';');
+  var amp = self.ampPlugin();
+  lines.push('window.APP_CONFIG.ROTEL = ' + (!!self.config.get('rotelBridge') && !amp) + ';');
+  lines.push('window.APP_CONFIG.AMP_PLUGIN = ' + amp + ';');
   var file = path.join(APP, 'web', 'config.local.js'), text = lines.join('\n') + '\n';
   if (read(file) === text) return;
   try {
@@ -191,12 +204,17 @@ ControllerXplorio.prototype.getUIConfig = function() {
       if (feat) feat.description = [feat.description, self.str('AUTODJ_HINT')].filter(Boolean).join(' ');
     }
     el('port').value = self.port();
+    if (self.ampPlugin()) {                                         /* SerialAmpControl has the amplifier */
+      var rs = ui.sections.filter(function(sec){ return sec.id === 'section_rotel'; })[0];
+      if (rs) rs.description = [rs.description, self.str('AMP_PLUGIN_ON')].filter(Boolean).join(' ');
+    }
     ['tagService', 'rotelBridge'].forEach(function(id){ el(id).value = !!self.config.get(id); });
     FIELDS.forEach(function(f){
       var e = el(f.id), v = self.config.get(f.id);
       if (f.kind === 'bool') { e.value = !!v; return; }
       if (f.kind === 'select' || f.kind === 'tri') {
         e.options = (f.options || ['auto', 'on', 'off']).map(function(o){
+          if (f.id === 'rotelModel') return {value: o, label: o === 'RA-1572' ? 'RA-1572 / RA-1572MKII' : o};
           return {value: o, label: f.id === 'language' && o ? LANG_NAMES[o] : self.str((f.id === 'theme' ? 'THEME_' : f.id === 'language' ? 'LANG_' : 'TRI_') + (o || 'auto').toUpperCase())};
         });
         e.value = e.options.filter(function(o){ return o.value === v; })[0] || e.options[0];

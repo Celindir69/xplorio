@@ -259,6 +259,8 @@ langRegister('it', 'Italiano', {
 
   'controls.rotel.notLinked': 'Rotel non connesso – accendilo dall\'apparecchio',
   'controls.rotel.off': 'Spegni Rotel',
+  'controls.amp.sent': 'Inviato all’amplificatore',
+  'controls.amp.toggle': 'Amplificatore acceso/spento (tramite SerialAmpControl)',
   'controls.rotel.on': 'Accendi Rotel',
   'controls.rotel.unreachable': 'Servizio Rotel non raggiungibile',
   'controls.rotel.locked': 'Il Rotel sta riproducendo {input}: volume e accensione bloccati finché lo stream è attivo',

@@ -261,6 +261,8 @@ langRegister('en', 'English', {
 
   'controls.rotel.notLinked': 'Rotel not connected – please switch it on at the unit',
   'controls.rotel.off': 'Turn Rotel off',
+  'controls.amp.sent': 'Sent to the amplifier',
+  'controls.amp.toggle': 'Amplifier on/off (via SerialAmpControl)',
   'controls.rotel.on': 'Turn Rotel on',
   'controls.rotel.unreachable': 'Rotel service unreachable',
   'controls.rotel.locked': 'The Rotel is playing {input} – volume and power are locked while the stream is on',

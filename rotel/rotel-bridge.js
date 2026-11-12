@@ -7,7 +7,7 @@ var vm   = require('vm');
 var path = require('path');
 
 /* Amplifier address from the interface configuration (web/config.js, then web/config.local.js):
-   ROTEL_HOST, ROTEL_AMP_PORT (amplifier, 9590) and ROTEL_PORT (this service, 8765).
+   ROTEL_HOST, ROTEL_MODEL, ROTEL_AMP_PORT (amplifier; not set: the model's port, 9590 or 9596) and ROTEL_PORT (this service, 8765).
    The environment variables ROTEL_HOST, ROTEL_PORT (amplifier) and HTTP_PORT take precedence. */
 var CONFIG_DIR = process.env.APP_CONFIG_DIR || path.join(__dirname, '..', 'web');   /* app/web in the plugin */
 function loadAppConfig() {
@@ -21,7 +21,6 @@ function loadAppConfig() {
 var CFG = loadAppConfig();
 
 var ROTEL_HOST = process.env.ROTEL_HOST || CFG.ROTEL_HOST || '';
-var ROTEL_PORT = parseInt(process.env.ROTEL_PORT || CFG.ROTEL_AMP_PORT || '9590', 10);
 var HTTP_PORT  = parseInt(process.env.HTTP_PORT  || CFG.ROTEL_PORT || '8765', 10);
 var MAX_VOL    = 70;   /* safety limit (Rotel: 0-96) */
 
@@ -32,6 +31,10 @@ var MAX_VOL    = 70;   /* safety limit (Rotel: 0-96) */
    bass/treble: [up, down, center]; balance: [right, left, center] (one step each, or to 0) */
 var DEFAULT_PROFILE = {
   model: 'RA-1572 / RA-1572MKII',
+  port: 9590,
+  volUp: 'vol_up', volDown: 'vol_dwn', volSet: 'vol_##',   /* ## = two digits, # = as many as needed */
+  queries: ['power?', 'volume?', 'mute?', 'source?'],    /* bypass?, bass? … follow from the profile */
+  delimiter: '$',                                        /* end of each reply */
   sources: [
     {cmd: 'cd', name: 'CD'}, {cmd: 'coax1', name: 'Coax 1'}, {cmd: 'coax2', name: 'Coax 2'}, {cmd: 'opt1', name: 'Opt 1'},
     {cmd: 'opt2', name: 'Opt 2'}, {cmd: 'aux', name: 'Aux'}, {cmd: 'tuner', name: 'Tuner'}, {cmd: 'phono', name: 'Phono'},
@@ -43,6 +46,32 @@ var DEFAULT_PROFILE = {
   speakerA: ['speaker_a_on', 'speaker_a_off'], speakerB: ['speaker_b_on', 'speaker_b_off'],
   powerOnSource: 'pcusb'                          /* select this input after power-on ('' = don't switch) */
 };
+/* further models (ROTEL_MODEL): what differs from the RA-1572. Commands from the command lists of the SerialAmpControl
+   plugin (ampCommands.json); tone, balance and speakers only where the device has them in the RA-1572's form */
+var MODELS = {
+  'RA-1572': {},
+  'RA-1592': {model: 'RA-1592 (SW 1.52+)', volSet: 'vol_#', sources: [
+    {cmd: 'cd', name: 'CD'}, {cmd: 'coax1', name: 'Coax 1'}, {cmd: 'coax2', name: 'Coax 2'}, {cmd: 'coax3', name: 'Coax 3'},
+    {cmd: 'opt1', name: 'Opt 1'}, {cmd: 'opt2', name: 'Opt 2'}, {cmd: 'opt3', name: 'Opt 3'}, {cmd: 'aux', name: 'Aux'},
+    {cmd: 'tuner', name: 'Tuner'}, {cmd: 'phono', name: 'Phono'}, {cmd: 'usb', name: 'USB'}, {cmd: 'bluetooth', name: 'Bluetooth'},
+    {cmd: 'bal_xlr', name: 'XLR'}, {cmd: 'pcusb', name: 'PC-USB'}]},
+  'RC-1592': {model: 'RC-1592 (SW 1.53+)', volSet: 'vol_##', queries: ['get_current_power', 'get_volume', 'get_mute_status', 'get_current_source'],
+    sources: 'RA-1592', bypass: false, bass: false, treble: false, balance: false, speakerA: false, speakerB: false},
+  'RSP-1582': {model: 'RSP-1582 (SW 5)', port: 9596, volUp: 'volume_up', volDown: 'volume_down', volSet: 'volume_#', delimiter: '!',
+    queries: ['get_current_power', 'get_volume', 'get_mute_status', 'get_current_source'], powerOnSource: 'pc_usb', sources: [
+    {cmd: 'cd', name: 'CD'}, {cmd: 'video1', name: 'Video 1'}, {cmd: 'video2', name: 'Video 2'}, {cmd: 'video3', name: 'Video 3'},
+    {cmd: 'video4', name: 'Video 4'}, {cmd: 'video5', name: 'Video 5'}, {cmd: 'video6', name: 'Video 6'}, {cmd: 'video7', name: 'Video 7'},
+    {cmd: 'video8', name: 'Video 8'}, {cmd: 'tuner', name: 'Tuner'}, {cmd: 'phono', name: 'Phono'}, {cmd: 'usb', name: 'USB'},
+    {cmd: 'pc_usb', name: 'PC-USB'}, {cmd: 'bal_xlr', name: 'XLR'}],
+    bypass: false, bass: false, treble: false, balance: false, speakerA: false, speakerB: false}
+};
+MODELS['RC-1592'].sources = MODELS['RA-1592'].sources;
+/* model (ROTEL_MODEL, default RA-1572) -> its profile before ROTEL_PROFILE */
+function modelBase(name) {
+  var m = Object.prototype.hasOwnProperty.call(MODELS, name) ? MODELS[name] : {}, b = {};
+  Object.keys(DEFAULT_PROFILE).forEach(function(k){ b[k] = Object.prototype.hasOwnProperty.call(m, k) ? m[k] : DEFAULT_PROFILE[k]; });
+  return b;
+}
 var CMD_RE = /^[a-z0-9_+\-]{1,24}$/;
 /* input icons in the interface (web/js/controls.js); if not given, derived from the command */
 var ICONS = ['phono', 'cd', 'tuner', 'bluetooth', 'usb', 'tv', 'digital', 'aux', 'pc'];
@@ -60,9 +89,9 @@ function iconFor(cmd) {
 
 /* Override the default with ROTEL_PROFILE; invalid commands are dropped.
    inputs (ROTEL_INPUTS): change only the name and icon of individual inputs, e.g. {aux: {name: 'Turntable', icon: 'phono'}} */
-function makeProfile(over, inputs) {
-  var p = {}, o = over && typeof over === 'object' ? over : {};
-  Object.keys(DEFAULT_PROFILE).forEach(function(k){ p[k] = Object.prototype.hasOwnProperty.call(o, k) ? o[k] : DEFAULT_PROFILE[k]; });
+function makeProfile(over, inputs, model) {
+  var p = {}, o = over && typeof over === 'object' ? over : {}, base = modelBase(model);
+  Object.keys(base).forEach(function(k){ p[k] = Object.prototype.hasOwnProperty.call(o, k) ? o[k] : base[k]; });
   p.sources = (Array.isArray(p.sources) ? p.sources : []).map(function(x){
     return typeof x === 'string' ? {cmd: x, name: x} : {cmd: String(x && x.cmd || ''), name: String(x && (x.name || x.cmd) || '')};
   }).filter(function(x){ return CMD_RE.test(x.cmd); });
@@ -80,6 +109,11 @@ function makeProfile(over, inputs) {
   p.toneMax = Math.max(1, Math.min(20, parseInt(p.toneMax, 10) || 10));
   p.balanceMax = Math.max(1, Math.min(30, parseInt(p.balanceMax, 10) || 15));
   p.powerOnSource = CMD_RE.test(String(p.powerOnSource || '')) ? p.powerOnSource : '';
+  ['volUp', 'volDown'].forEach(function(k){ if (!CMD_RE.test(String(p[k] || ''))) p[k] = base[k]; });
+  if (!/^[a-z_]{1,20}#{1,3}$/.test(String(p.volSet || ''))) p.volSet = base.volSet;
+  p.queries = (Array.isArray(p.queries) ? p.queries : base.queries).map(String).filter(function(q){ return /^[a-z0-9_]{1,30}\??$/.test(q); });
+  p.delimiter = p.delimiter === '!' ? '!' : '$';
+  p.port = parseInt(p.port, 10) > 0 ? parseInt(p.port, 10) : base.port;
   return p;
 }
 /* replies: tone +03 / -03 / 000, balance L05 / R05 / 000 (left is negative) */
@@ -91,7 +125,7 @@ function parseBalance(v) {
 }
 /* allowed commands for /cmd */
 function allowedCmds(p) {
-  var a = ['vol_up', 'vol_dwn', 'mute_on', 'mute_off', 'power_on', 'power_off'];
+  var a = ['vol_up', 'vol_dwn', 'mute_on', 'mute_off', 'power_on', 'power_off'];   /* vol_up/vol_dwn: the model's own (volCmd) */
   p.sources.forEach(function(x){ a.push(x.cmd); });
   ['bypass', 'speakerA', 'speakerB', 'bass', 'treble', 'balance'].forEach(function(k){ if (p[k]) a = a.concat(p[k]); });
   var cfgCmds = [CFG.ROTEL_CMD_POWER_ON, CFG.ROTEL_CMD_POWER_OFF].filter(function(c){ return CMD_RE.test(String(c || '')); });
@@ -99,7 +133,7 @@ function allowedCmds(p) {
 }
 /* queries after connecting */
 function queries(p) {
-  var q = ['power?', 'volume?', 'mute?', 'source?'];
+  var q = p.queries.slice();
   if (p.bypass) q.push('bypass?');
   if (p.bass) q.push('bass?');
   if (p.treble) q.push('treble?');
@@ -114,11 +148,25 @@ function queryFor(p, c) {
   ['bypass', 'bass', 'treble', 'balance', 'speakerA', 'speakerB'].forEach(function(k){
     if (p[k] && p[k].indexOf(c) >= 0) q = /^speaker/.test(k) ? 'speaker?' : k + '?';
   });
-  if (!q && p.sources.some(function(x){ return x.cmd === c; })) q = 'source?';
+  if (!q && p.sources.some(function(x){ return x.cmd === c; })) q = sourceQuery(p);
   return q;
 }
+/* the model's source query ("source?" or "get_current_source") */
+function sourceQuery(p) { return p.queries.filter(function(q){ return /source/.test(q); })[0] || 'source?'; }
+/* a query as it goes to the amplifier: "power?" as it is, "get_volume" with "!" */
+function wire(q) { return /\?$/.test(q) ? q : q + '!'; }
 
-var PROFILE = makeProfile(CFG.ROTEL_PROFILE, CFG.ROTEL_INPUTS);
+/* the interface always sends vol_up / vol_dwn; the model may call them differently */
+function volCmd(p, c) { return c === 'vol_up' ? p.volUp : c === 'vol_dwn' ? p.volDown : c; }
+/* volume value -> command: "vol_##" two digits (vol_05), "vol_#" as it is (vol_5) */
+function volSetCmd(p, v) {
+  var n = (p.volSet.match(/#+$/) || ['#'])[0].length, s = String(v);
+  while (s.length < n) s = '0' + s;
+  return p.volSet.replace(/#+$/, s);
+}
+var ROTEL_MODEL = String(process.env.ROTEL_MODEL || CFG.ROTEL_MODEL || 'RA-1572');
+var PROFILE = makeProfile(CFG.ROTEL_PROFILE, CFG.ROTEL_INPUTS, ROTEL_MODEL);
+var ROTEL_PORT = parseInt(process.env.ROTEL_PORT || CFG.ROTEL_AMP_PORT || PROFILE.port, 10);
 var POWER_ON_SOURCE = PROFILE.powerOnSource;
 
 var state = {connected:false, power:null, volume:null, mute:null, source:null,
@@ -143,7 +191,7 @@ function ensureSource(tries) {
   if (tries <= 0) return;
   send(POWER_ON_SOURCE);
   sourceTimer = setTimeout(function(){
-    if (sock && state.connected) sock.write('source?');
+    if (sock && state.connected) sock.write(wire(sourceQuery(PROFILE)));
     sourceTimer = setTimeout(function(){ ensureSource(tries - 1); }, 1000);
   }, 1500);
 }
@@ -191,13 +239,13 @@ function connect() {
     clearTimeout(connectTimer);
     state.connected = true;
     send('rs232_update_on');          /* Rotel reports changes by itself */
-    queries(PROFILE).forEach(function(q){ sock.write(q); });
+    queries(PROFILE).forEach(function(q){ sock.write(wire(q)); });
   });
   sock.on('data', function(d){
     buf += d;
-    var parts = buf.split('$');
+    var parts = buf.split(PROFILE.delimiter);
     buf = parts.pop();
-    if (buf.length > 4096) buf = '';                    /* no "$" for that long: not a Rotel reply, start over */
+    if (buf.length > 4096) buf = '';                    /* no "$" (or "!") for that long: not a Rotel reply, start over */
     parts.forEach(parseMsg);
   });
   sock.on('error', function(){});
@@ -290,16 +338,16 @@ var server = http.createServer(function(req, res){
   head['Cache-Control'] = 'no-store';
   if (req.method === 'OPTIONS') { res.writeHead(204, head); return res.end(); }
   if (u.pathname === '/cmd' && ALLOWED.indexOf(u.query.c) > -1) {
-    if (!send(u.query.c)) { ok = false; error = 'not connected'; }
+    if (!send(volCmd(PROFILE, u.query.c))) { ok = false; error = 'not connected'; }
     else {
       var q = queryFor(PROFILE, u.query.c);
-      if (q) setTimeout(function(){ if (sock && state.connected) sock.write(q); }, 300);
+      if (q) setTimeout(function(){ if (sock && state.connected) sock.write(wire(q)); }, 300);
     }
   } else if (u.pathname === '/vol') {
     var v = parseInt(u.query.v, 10);
     if (!isNaN(v)) {
       v = Math.max(0, Math.min(MAX_VOL, v));
-      if (send('vol_' + (v < 10 ? '0' : '') + v)) state.volume = v;
+      if (send(volSetCmd(PROFILE, v))) state.volume = v;
       else { ok = false; error = 'not connected'; }
     }
   } else if (u.pathname === '/profile') {
@@ -319,5 +367,5 @@ var server = http.createServer(function(req, res){
 });
 
 if (require.main === module) { server.listen(HTTP_PORT); connect(); }
-module.exports = {queryFor: queryFor, server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
+module.exports = {MODELS: MODELS, volCmd: volCmd, volSetCmd: volSetCmd, queryFor: queryFor, server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
   parseMsg: parseMsg, state: state};

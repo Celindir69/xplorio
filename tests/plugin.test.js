@@ -284,6 +284,22 @@ plug.onStart().then(function(){
     assert.ok(/Passwort ist gesetzt/.test(el(ui2, 'password').doc));
     plug.saveSettings({lastfmKey: '', lastfmSecret: '', lastfmClear: true});
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
+    assert.deepStrictEqual(el(ui2, 'rotelModel').options.map(function(o){ return o.value; }), ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']);
+    assert.strictEqual(evalConfig().ROTEL_MODEL, 'RA-1572');
   });
+  /* SerialAmpControl on: it has the amplifier; Rotel bridge not started, volume from Volumio, on/off through it */
+  plug.commandRouter.pluginManager.isEnabled = function(cat, name){ return cat === 'system_hardware' && name === 'serialampcontroller'; };
+  calls.length = 0;
+  return plug.saveSettings({rotelModel: 'RSP-1582'});
+}).then(function(){
+  t('SerialAmpControl on: Rotel bridge stays off, AMP_PLUGIN for the interface, hint on the settings page', function(){
+    var c = evalConfig();
+    assert.deepStrictEqual([c.ROTEL, c.AMP_PLUGIN, c.ROTEL_MODEL], [false, true, 'RSP-1582']);
+    assert.ok(plug.config.get('rotelBridge'));                     /* the switch stays as it was */
+    assert.ok(sudo().indexOf('restart xplorio-rotel.service') < 0 && sudo().indexOf('restart xplorio-web.service') >= 0);
+  });
+  return plug.getUIConfig();
+}).then(function(ui3){
+  t('SerialAmpControl on: hint in the Rotel section', function(){ assert.ok(/SerialAmpControl/.test(sec(ui3, 'section_rotel').description)); });
   console.log(n + ' checks passed'); process.exit(0);
 }).fail(function(e){ console.error(e); process.exit(1); });
