@@ -325,10 +325,18 @@ plug.onStart().then(function(){
   t('SerialAmpControl on: hint in the Rotel section', function(){ assert.ok(/SerialAmpControl/.test(sec(ui3, 'section_rotel').description)); });
   t('settings page: switch "VU meter" on, no note while the hook is there', function(){
     assert.strictEqual(el(ui3, 'vuOutput').value, true);
+    assert.deepStrictEqual(el(ui3, 'vuRef').value, {value: '-8', label: '-8 dBFS (Standard)'});
+    assert.strictEqual(evalConfig().VU_REF_DBFS, -8);
     assert.ok(!/Vorlage|Schnittstelle nicht/.test(el(ui3, 'vuOutput').doc));
   });
   var r0 = mpdRestarts;
-  return plug.saveSettings({vuOutput: false}).then(function(){
+  return plug.saveSettings({vuRef: {value: '-99'}}).then(function(){
+    t('VU reference: only values from the list', function(){ assert.strictEqual(plug.config.get('vuRef'), '-8'); });
+    return plug.saveSettings({vuRef: {value: '-12', label: '-12 dBFS'}});
+  }).then(function(){
+    t('VU reference from the page into config.local.js as a number', function(){ assert.strictEqual(evalConfig().VU_REF_DBFS, -12); });
+    return plug.saveSettings({vuOutput: false});
+  }).then(function(){
     t('VU switch off: Volumio rebuilds mpd.conf without the output, MPD restarts, hook stays registered once', function(){
       assert.strictEqual(plug.getMpdConfig(), '');
       assert.ok(!/fifo/.test(fs.readFileSync(MPDC, 'utf8')));

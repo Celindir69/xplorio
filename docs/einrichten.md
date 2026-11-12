@@ -1023,7 +1023,7 @@ unverändert und bitgenau.
 - `xplorio.html?vustyle=blue`: Farbe der Instrumente (`accent`, `amberAccent`, `amber`, `white`, `blue`, `digital`), ebenfalls je Gerät gemerkt
 
 **Feineinstellung** in `web/config.local.js`:
-- `VU_REF_DBFS` (Standard `-8`): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
+- `VU_REF_DBFS` (Standard `-8`, mit dem Plugin unter **VU-Meter: 0 VU entspricht** in den Einstellungen): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
   -12 dBFS, dann pendelt die Nadel um -3 bis 0. Stehen die Nadeln oft am Anschlag, Wert erhöhen, etwa auf `-6`. Bewegen
   sich leise Aufnahmen (Klassik, ältere CDs) kaum, Wert senken, etwa auf `-12`.
 - `VU_DELAY_MS` (Standard `400`): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln

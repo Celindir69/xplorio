@@ -51,6 +51,7 @@ var FIELDS = [
   {id: 'hra',          key: 'HRA',           kind: 'tri'},
   {id: 'spotify',      key: 'SPOTIFY',       kind: 'tri'},
   {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts'},
+  {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'db', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host'},
   {id: 'rotelInputs',  key: 'ROTEL_INPUTS',  kind: 'inputs'}
@@ -219,8 +220,9 @@ ControllerXplorio.prototype.getUIConfig = function() {
     FIELDS.forEach(function(f){
       var e = el(f.id), v = self.config.get(f.id);
       if (f.kind === 'bool') { e.value = !!v; return; }
-      if (f.kind === 'select' || f.kind === 'tri') {
+      if (f.kind === 'select' || f.kind === 'tri' || f.kind === 'db') {
         e.options = (f.options || ['auto', 'on', 'off']).map(function(o){
+          if (f.kind === 'db') return {value: o, label: o + ' dBFS' + (o === f.def ? ' (' + self.str('VU_REF_STD') + ')' : '')};
           if (f.id === 'rotelModel') return {value: o, label: o === 'RA-1572' ? 'RA-1572 / RA-1572MKII' : o};
           return {value: o, label: f.id === 'language' && o ? LANG_NAMES[o] : self.str((f.id === 'theme' ? 'THEME_' : f.id === 'language' ? 'LANG_' : 'TRI_') + (o || 'auto').toUpperCase())};
         });
@@ -388,6 +390,7 @@ function appConfig(files) {
 function fromApp(f, v) {
   if (f.kind === 'bool') return v !== false;
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : f.options[0];
+  if (f.kind === 'db') return f.options.indexOf(String(v)) >= 0 ? String(v) : f.def;
   if (f.kind === 'tri') return v === true ? 'on' : v === false ? 'off' : 'auto';
   if (f.kind === 'hosts') return Array.isArray(v) ? v.filter(function(h){ return typeof h === 'string'; }).join(', ') : '';
   if (f.kind === 'inputs') {
@@ -401,6 +404,7 @@ function fromApp(f, v) {
 function toApp(f, v) {
   if (f.kind === 'bool') return v !== false;
   if (f.kind === 'tri') return v === 'on' ? true : v === 'off' ? false : 'auto';
+  if (f.kind === 'db') return Number(v);
   if (f.kind === 'hosts') return splitList(v);
   if (f.kind === 'inputs') {
     var o = {};
@@ -416,7 +420,7 @@ function toApp(f, v) {
 /* input from the page -> stored value, undefined = not valid */
 function check(f, v) {
   if (f.kind === 'bool') return !!v;
-  if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : undefined;
+  if (f.kind === 'select' || f.kind === 'db') return f.options.indexOf(String(v)) >= 0 ? String(v) : undefined;
   if (f.kind === 'tri') return ['auto', 'on', 'off'].indexOf(v) >= 0 ? v : undefined;
   v = String(v === undefined || v === null ? '' : v).trim();
   if (v.length > 500) return undefined;

@@ -758,7 +758,7 @@ bit-perfect.
 - `xplorio.html?vustyle=blue`: color of the meters (`accent`, `amberAccent`, `amber`, `white`, `blue`, `digital`), also remembered per device
 
 **Fine-tuning** in `web/config.local.js`:
-- `VU_REF_DBFS` (default `-8`): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
+- `VU_REF_DBFS` (default `-8`; with the plugin, **VU meter: 0 VU equals** on its settings page): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
   so the needle swings around -3 to 0. If the needles often hit the stop, raise it, for example to `-6`. If quiet
   recordings (classical, older CDs) barely move it, lower it, for example to `-12`.
 - `VU_DELAY_MS` (default `400`): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles

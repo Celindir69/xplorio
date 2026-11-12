@@ -39,6 +39,7 @@
 					"port",
 					"tagService",
 					"vuOutput",
+					"vuRef",
 					"language",
 					"theme"
 				]
@@ -73,6 +74,17 @@
 					"label": "TRANSLATE.XPLORIO.VU_OUTPUT",
 					"doc": "TRANSLATE.XPLORIO.VU_OUTPUT_DOC",
 					"value": true
+				},
+				{
+					"id": "vuRef",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.VU_REF",
+					"doc": "TRANSLATE.XPLORIO.VU_REF_DOC",
+					"value": {
+						"value": "-8",
+						"label": ""
+					},
+					"options": []
 				},
 				{
 					"id": "language",
