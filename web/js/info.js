@@ -32,7 +32,7 @@ function renderTrackList(tracks) {
   lyricsText.appendChild(head);
   tracks.forEach(function(t, i){
     var row = document.createElement('div'), n = document.createElement('span'), ti = document.createElement('span'), d = document.createElement('span');
-    row.className = 'lyrTrk'; n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
+    row.className = 'lyrTrk' + (typeof curTitle !== 'undefined' && curTitle && (t.title || t.name) === curTitle ? ' cur' : ''); n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
     n.textContent = (i + 1) + '.';
     ti.textContent = t.title || t.name || '';
     d.textContent = fmtTrackDur(t.duration);

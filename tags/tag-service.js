@@ -2556,6 +2556,101 @@ setInterval(function(){                                  /* safety: nobody liste
   });
 }, 15000).unref();
 
+/* ---------- VU meter (web/js/vumeter.js, tags/vumeter.js) ---------- */
+/* GET /vustatus -> {ok, available, reason}; GET /vu: Server-Sent Events, one line "rmsL,peakL,rmsR,peakR" (dBFS) per 25 ms.
+   The fifo output (name with "VU", fixed format) is switched on in MPD only while someone watches and off again
+   VU_GRACE_MS after the last one left, so MPD does not convert for it otherwise (e.g. DSD to PCM). Paused or stopped:
+   MPD writes nothing, nothing is sent, the needles sink. */
+var vumeter = require('./vumeter.js');
+var VU_GRACE_MS = 5000, VU_QUEUE = 12;
+var vuClients = [], vuReader = null, vuOffTimer = null, vuLastClient = 0;
+function vuConf() {
+  try { return remote.confOutputs(fs.readFileSync(MPD_CONF, 'utf8')); } catch (e) { return []; }
+}
+function vuState(cb) {
+  var conf = vuConf();
+  remote.mpd(MPD_HOST, MPD_PORT, ['outputs'], function(err, lines){
+    if (err) return cb(err);
+    var f = vumeter.find(remote.parseOutputs(lines), conf);
+    cb(null, f, f ? vumeter.parseFormat(f.format) : null);
+  });
+}
+function doVuStatus(cb) {
+  vuState(function(err, f, fmt){
+    if (err) return cb(200, {ok: false, error: err.message});
+    cb(200, {ok: true, available: !!(f && fmt && f.path), reason: !f ? 'none' : !fmt ? 'format' : !f.path ? 'path' : '', format: f ? f.format : ''});
+  });
+}
+function vuSwitch(f, on) {
+  if (f && f.enabled !== on) remote.mpd(MPD_HOST, MPD_PORT, [(on ? 'enableoutput ' : 'disableoutput ') + f.id], function(e){
+    if (e) console.log('vu meter: ' + (on ? 'enable' : 'disable') + ' output failed: ' + e.message);
+  });
+}
+function vuSend(text) {
+  vuClients.forEach(function(r){ try { r.write(text); } catch (e) { /* gone, removed on close */ } });
+}
+function vuStart(f, fmt) {
+  if (vuReader) return;
+  var net = require('net');
+  var rd = vuReader = {an: vumeter.analyzer(fmt), q: vumeter.pacer(VU_QUEUE), sock: null, retry: null, beat: 0};
+  function open() {
+    rd.retry = null;
+    if (vuReader !== rd) return;
+    var fd;
+    try {
+      if (!fs.statSync(f.path).isFIFO()) throw new Error('not a fifo');
+      fd = fs.openSync(f.path, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);   /* never blocks, even without a writer */
+    } catch (e) { rd.retry = setTimeout(open, 1000); return; }                         /* MPD creates it when playback starts */
+    var sock = rd.sock = new net.Socket({fd: fd, readable: true, writable: false});
+    sock.on('data', function(d){ rd.q.add(rd.an.push(d)); });
+    function again() {                                  /* MPD closed its end (stop): open again and wait for the next track */
+      if (rd.sock !== sock) return;
+      rd.sock = null; sock.destroy();
+      if (vuReader === rd) rd.retry = setTimeout(open, 500);
+    }
+    sock.on('end', again);
+    sock.on('error', again);
+  }
+  rd.tick = setInterval(function(){
+    var w = rd.q.next();
+    if (w) { vuSend('data: ' + w.join(',') + '\n\n'); rd.beat = 0; }
+    else if (++rd.beat >= 600) { vuSend(': \n\n'); rd.beat = 0; }   /* every 15 s, so proxies and browsers keep the line */
+  }, vumeter.WINDOW_MS);
+  open();
+}
+function vuStop() {
+  if (vuClients.length || !vuReader) return;
+  var rd = vuReader; vuReader = null;
+  clearInterval(rd.tick); clearTimeout(rd.retry);
+  if (rd.sock) rd.sock.destroy();
+  vuState(function(err, f){ if (!err) vuSwitch(f, false); });
+}
+function doVu(req, res) {
+  vuState(function(err, f, fmt){
+    if (err || !f || !fmt || !f.path) return send(res, 404, {ok: false, error: err ? err.message : 'no VU output in MPD'});
+    var h = guard.corsHeaders(res.xplorioOrigin);
+    h['Content-Type'] = 'text/event-stream'; h['Cache-Control'] = 'no-cache, no-store'; h['X-Accel-Buffering'] = 'no';
+    res.writeHead(200, h);
+    res.write('retry: 3000\n\n');
+    if (req.socket && req.socket.setNoDelay) req.socket.setNoDelay(true);
+    vuClients.push(res); vuLastClient = Date.now();
+    clearTimeout(vuOffTimer);
+    vuSwitch(f, true);
+    vuStart(f, fmt);
+    req.on('close', function(){
+      var i = vuClients.indexOf(res);
+      if (i >= 0) vuClients.splice(i, 1);
+      vuLastClient = Date.now();
+      if (!vuClients.length) { clearTimeout(vuOffTimer); vuOffTimer = setTimeout(vuStop, VU_GRACE_MS); }
+    });
+  });
+}
+setInterval(function(){                                  /* nobody watching, but the output is on (mpd.conf, MPD restarted): off */
+  if (vuClients.length || Date.now() - vuLastClient < VU_GRACE_MS * 2) return;
+  if (!vuConf().some(function(c){ return c.type === 'fifo' && /vu/i.test(c.name); })) return;   /* no MPD connection otherwise */
+  vuState(function(err, f){ if (!err && f && f.enabled) vuSwitch(f, false); });
+}, 60000).unref();
+
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -2588,6 +2683,8 @@ function handle(req, res) {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.method === 'GET' && route === '/stream')  return doStream(req, res);
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
+  if (req.method === 'GET' && route === '/vustatus') return doVuStatus(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!keys.lastfm().key});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });

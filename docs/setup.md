@@ -700,6 +700,59 @@ Good to know:
 - The stream carries everything MPD plays: library, web radio, Qobuz and TIDAL through Volumio. Spotify Connect, AirPlay and Bluetooth bypass MPD and are missing.
 - The button switches MPD's outputs, not the plugin; its settings stay as they are.
 
+## VU meter
+Two backlit needle meters show the level of the left and right channel.
+
+- **Stage view:** At the bottom right you choose **Lyrics** or **Tracks**, and **VU** switches the meters on and off.
+  They then sit below the lyrics or track list. **Lyrics** behaves as before (lyrics, or the track list when the
+  amplifier is on another input). **Tracks** shows the tracks of the playing album from the queue, with the current
+  one in bold.
+- **Classic layout and phone:** A tap on the cover switches the meters on and off. In landscape they run across the
+  bottom and the cover and controls move up. On the phone they sit side by side below a smaller cover.
+- Each device remembers whether the meters are on.
+
+The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
+middle lights above 0 VU and stays on for a second. On pause the needles sink slowly.
+
+**Setup:** The VU meter needs an extra MPD output of type `fifo`. Xplorio does not change `mpd.conf`; add the block by
+hand, as for the stream output. On Volumio 2 it goes into Volumio's template
+`/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (not `/etc/mpd.conf`, which Volumio rewrites); then restart
+Volumio:
+```
+audio_output {
+  type    "fifo"
+  name    "VU"
+  path    "/tmp/mpd-vu.fifo"
+  format  "44100:16:2"
+  enabled "no"
+}
+```
+- **`name`** must contain "VU". Xplorio never reads other fifo outputs, such as Snapcast's.
+- **`format`** must be fixed: 16, 24 or 32 bit, 1 or 2 channels. 44.1 kHz/16 bit is plenty for the meter.
+- **`enabled "no"`:** The tag service switches the output on only while someone is looking at the meters, and off
+  again 5 seconds later. If it is on with nobody watching (for example after MPD restarts), the tag service switches it
+  off within a minute.
+- A Volumio update overwrites the template; add the block again afterwards.
+
+Without this output the "VU" button and the tap on the cover are missing. The main output to the DAC stays unchanged and
+bit-perfect.
+
+**URL option `vu=`** (remembered per device, like `layout=`):
+- `xplorio.html?vu=true`: VU meter on (default once the output exists)
+- `xplorio.html?vu=false`: VU meter off
+- `xplorio.html?vu=nodsd`: off while a DSD file plays. Otherwise MPD has to convert DSD to PCM for the fifo, which can
+  push a weak player (MX-Stream) to its limit. The meters then read "off for DSD".
+- `xplorio.html?vu=demo`: needles driven by a simulated signal, without a fifo, for a look
+
+**Fine-tuning** in `web/config.local.js`:
+- `VU_REF_DBFS` (default `-14`): the level (dBFS RMS) shown as 0 VU. If loud recordings sit in the red all the time,
+  raise it, for example to `-10`. If quiet recordings barely move the needle, lower it, for example to `-18`.
+- `VU_DELAY_MS` (default `400`): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles
+  wait this long so they match the sound. If they run ahead of the sound, raise it; if they lag, lower it.
+
+Good to know: The levels come from the tag service as Server-Sent Events (`GET /vu`), 40 values per second, only
+while the meters are visible. Spotify Connect, AirPlay and Bluetooth bypass MPD; the needles stay down then.
+
 ## Volumio 2
 
 The plugin store for Volumio 4 only takes plugins for Debian bookworm. The plugin also runs on Volumio 2 (e.g. MX-Stream);

@@ -11,6 +11,8 @@ window.APP_CONFIG = {
   COLOR_MOOD: true,   /* color mood from the cover (only covers from the player itself); false = off */
   M4A_PROBE: true,    /* m4a: read the codec (ALAC/AAC) from the file; false = only M4A_LOSSLESS */
   M4A_LOSSLESS: true, /* classify m4a as lossless (ALAC); false = no badge for m4a (AAC would otherwise be misclassified) */
+  VU_REF_DBFS: -14,   /* VU meter: level (dBFS RMS) the needle shows as 0 VU; lower = needles further right (docs/einrichten.md) */
+  VU_DELAY_MS: 400,   /* VU meter: the needles wait this long, MPD fills the fifo ahead of the amplifier's sound */
   TAGS_PORT: 8766,    /* port of the tag service (tag editor) on the player */
   ALLOWED_HOSTS: [],  /* tag service and Rotel bridge only answer on IP, names without a dot and .local/.lan/.home/.internal/
                          .home.arpa/.fritz.box. Add further names of the player here, e.g. ['player.example.net'] */
