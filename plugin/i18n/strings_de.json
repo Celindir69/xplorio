@@ -16,6 +16,8 @@
 		"VU_REF": "VU-Meter: 0 VU entspricht",
 		"VU_REF_DOC": "Welcher Pegel als 0 VU gilt. Stehen die Nadeln oft am Anschlag, einen höheren Wert wählen (etwa -6), bewegen sich leise Aufnahmen kaum, einen niedrigeren (etwa -12).",
 		"VU_REF_STD": "Standard",
+		"VU_DELAY": "VU-Meter: Verzögerung",
+		"VU_DELAY_DOC": "MPD liefert den Ton an die Anzeige, bevor er durch den Puffer zum DAC läuft; so lange warten die Nadeln. Kommen die Ausschläge zu früh, Wert erhöhen, kommen sie zu spät, senken.",
 		"LANGUAGE": "Sprache",
 		"LANGUAGE_DOC": "Sprache der Oberfläche. Automatisch = wie in Volumio eingestellt.",
 		"LANG_AUTO": "Automatisch",

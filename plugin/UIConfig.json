@@ -40,6 +40,7 @@
 					"tagService",
 					"vuOutput",
 					"vuRef",
+					"vuDelay",
 					"language",
 					"theme"
 				]
@@ -82,6 +83,17 @@
 					"doc": "TRANSLATE.XPLORIO.VU_REF_DOC",
 					"value": {
 						"value": "-8",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "vuDelay",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.VU_DELAY",
+					"doc": "TRANSLATE.XPLORIO.VU_DELAY_DOC",
+					"value": {
+						"value": "400",
 						"label": ""
 					},
 					"options": []

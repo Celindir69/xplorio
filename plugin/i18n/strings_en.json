@@ -16,6 +16,8 @@
 		"VU_REF": "VU meter: 0 VU equals",
 		"VU_REF_DOC": "The level shown as 0 VU. If the needles often hit the stop, pick a higher value (e.g. -6); if quiet recordings barely move them, a lower one (e.g. -12).",
 		"VU_REF_STD": "default",
+		"VU_DELAY": "VU meter: delay",
+		"VU_DELAY_DOC": "MPD hands the sound to the meter before it runs through the buffer to the DAC; the needles wait this long. If they move too early, raise it; too late, lower it.",
 		"LANGUAGE": "Language",
 		"LANGUAGE_DOC": "Language of the interface. Automatic = as set in Volumio.",
 		"LANG_AUTO": "Automatic",
