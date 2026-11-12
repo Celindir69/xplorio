@@ -745,8 +745,9 @@ bit-perfect.
 - `xplorio.html?vu=demo`: needles driven by a simulated signal, without a fifo, for a look
 
 **Fine-tuning** in `web/config.local.js`:
-- `VU_REF_DBFS` (default `-14`): the level (dBFS RMS) shown as 0 VU. If loud recordings sit in the red all the time,
-  raise it, for example to `-10`. If quiet recordings barely move the needle, lower it, for example to `-18`.
+- `VU_REF_DBFS` (default `-8`): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
+  so the needle swings around -3 to 0. If the needles often hit the stop, raise it, for example to `-6`. If quiet
+  recordings (classical, older CDs) barely move it, lower it, for example to `-12`.
 - `VU_DELAY_MS` (default `400`): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles
   wait this long so they match the sound. If they run ahead of the sound, raise it; if they lag, lower it.
 
