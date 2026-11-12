@@ -739,18 +739,26 @@ function sysPaintWarn() {
     head.appendChild(all);
   }
   box.appendChild(head);
-  items.forEach(function(it){
-    var row = histEl('div', 'syWarnRow' + (it.read ? ' read' : '') + (it.active ? ' active' : ''));
+  /* current (unread): red with "Read" and the hint; read ones below, small and grey, until they leave after 24 h */
+  var unread = items.filter(function(it){ return !it.read; }), read = items.filter(function(it){ return it.read; });
+  if (unread.length && read.length) box.appendChild(histEl('div', 'syWarnSec', T('warn.current')));
+  unread.forEach(function(it){
+    var row = histEl('div', 'syWarnRow' + (it.active ? ' active' : ''));
     var top = histEl('div', 'syWarnTop');
     top.appendChild(histEl('span', 'syWarnTitle', sysWarnTitle(it)));
-    if (!it.read) {
-      var b = histEl('div', 'mxChip mxSmall', T('warn.read'));
-      b.addEventListener('click', function(){ sysWarnRead([it.id]); });
-      top.appendChild(b);
-    }
+    var b = histEl('div', 'mxChip mxSmall', T('warn.read'));
+    b.addEventListener('click', function(){ sysWarnRead([it.id]); });
+    top.appendChild(b);
     row.appendChild(top);
     row.appendChild(histEl('div', 'syNote', sysWarnWhen(it) + ' · ' + sysWarnHint(it)));
     if (it.p && it.p.line) row.appendChild(histEl('div', 'syWarnLine', it.p.line));
+    box.appendChild(row);
+  });
+  if (read.length) box.appendChild(histEl('div', 'syWarnSec', T('warn.readHead')));
+  read.forEach(function(it){
+    var row = histEl('div', 'syWarnRow read');
+    row.appendChild(histEl('div', 'syWarnTitle', sysWarnTitle(it)));
+    row.appendChild(histEl('div', 'syNote', sysWarnWhen(it)));
     box.appendChild(row);
   });
   if (sysWarnList && sysWarnList.source === 'none') box.appendChild(histEl('div', 'syNote', T('warn.noKernel')));

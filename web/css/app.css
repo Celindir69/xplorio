@@ -1315,7 +1315,7 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 button.sySvcBtn { font-family:inherit; color:var(--fg); }
 .syPath { font-size:calc(3 * var(--vw)); overflow-wrap:anywhere; margin-top:calc(1 * var(--vw)); color:rgba(var(--fg-rgb),.8); -webkit-user-select:text; user-select:text; }
 @media (min-width:700px) {
-  .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath, .sySvcState { font-size:13px; } .syBig { font-size:30px; } .syDiskHead, .sySvcName { font-size:15px; }
+  .syTitle, .syK, .syKv, .sySub, .syNote, .syCore, .syPath, .sySvcState { font-size:13px; } .syBig { font-size:30px; } .syDiskHead, .sySvcName { font-size:15px; } .syWarnSec { font-size:11px; }
 }
 
 /* Tappable rows look the same in all lists: highlighted on mouse hover, briefly highlighted on tap
@@ -1429,8 +1429,12 @@ html.rotelLock #vSlider { pointer-events:none; }
 .syWarnHead + .syWarnRow { margin-top:calc(2 * var(--vw)); }
 .syWarnTop { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .syWarnTitle { font-weight:600; color:var(--err); }
-.syWarnRow.read .syWarnTitle { color:var(--fg); font-weight:500; }
-.syWarnRow.read { opacity:.75; }
+.syWarnSec { margin-top:calc(3 * var(--vw)); font-size:calc(2.6 * var(--vw)); letter-spacing:.06em; color:rgba(var(--fg-rgb),.5); }
+.syWarnHead + .syWarnSec { margin-top:calc(2 * var(--vw)); }
+.syWarnSec + .syWarnRow { margin-top:calc(1 * var(--vw)); }
+.syWarnRow.read { padding:calc(1.5 * var(--vw)) 0; }
+.syWarnRow.read .syWarnTitle { color:rgba(var(--fg-rgb),.6); font-weight:500; font-size:.85em; }
+.syWarnRow.read .syNote { margin-top:2px; font-size:.85em; color:rgba(var(--fg-rgb),.45); }
 .syWarnLine { margin-top:4px; font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(var(--fg-rgb),.5); overflow-wrap:anywhere; }
 #btnMenu.warn { opacity:1; }
 #btnMenu.warn::after { content:''; position:absolute; top:18%; right:18%; width:9px; height:9px; border-radius:50%;

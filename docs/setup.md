@@ -319,7 +319,7 @@ At the very top of the page is the "Warnings" card, as soon as there is somethin
   MPD database, Volumio's settings, Xplorio's data and "Internal music"); checked every 10 minutes.
 
 The app shows new warnings once as a red notice at the top (a tap opens "System"), and the gear gets a red dot until they
-are confirmed with "Read" or "All read". Past events stay in the list for 24 hours, also across a restart of the player
+are confirmed with "Read" or "All read". Read warnings move below under "Read", small and grey, without the hint text. Past events stay in the list for 24 hours, also across a restart of the player
 (`/data/xplorio/data/syswarn.json`; on Volumio the journal lives in RAM). If the service cannot read the kernel log, the card
 says so; the fix is the same as for the logs (group `systemd-journal`, see below). With `SYSWARN=0` in the Tag Service's
 environment the check is off.
