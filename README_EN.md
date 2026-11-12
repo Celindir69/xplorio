@@ -42,6 +42,8 @@ singles), an extra "Track" tab appears.
 
 On large screens, cover art, information, and controls are displayed on the left, with lyrics on the right; the information
 automatically cycles through the available pages. Switch using the control at the top right or with `?layout=stage`.
+At the bottom right you choose between lyrics, track list and VU meter (two backlit needle meters; needs a fifo output
+in MPD, see [VU meter](docs/setup.md#vu-meter)). In the classic layout and on the phone, a tap on the cover turns it over.
 
 <p>
   <img src="docs/bilder/en/display-desktop.jpg" width="49%" alt="Display-Layout on Desktop">

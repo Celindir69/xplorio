@@ -42,7 +42,9 @@ ein Reiter „Titel“.
 
 ### Display-Layout für iPad, Desktop und Fernseher
 Auf großen Bildschirmen stehen Cover, Infos und Steuerung links und die Lyrics rechts; die Infos blättern von selbst
-weiter. Umschalten oben rechts oder mit `?layout=stage`.
+weiter. Umschalten oben rechts oder mit `?layout=stage`. Unten rechts wählt man zwischen Liedtext, Titelliste und
+VU-Meter (zwei hinterleuchtete Zeigerinstrumente; braucht einen FIFO-Ausgang in MPD, siehe
+[VU-Meter](docs/einrichten.md#vu-meter)). In der klassischen Ansicht und auf dem Handy dreht ein Tipp aufs Cover es um.
 
 <p>
   <img src="docs/bilder/display-desktop.jpg" width="49%" alt="Display-Layout am Desktop">

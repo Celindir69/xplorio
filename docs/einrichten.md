@@ -965,6 +965,59 @@ Gut zu wissen:
   AirPlay und Bluetooth laufen an MPD vorbei und fehlen.
 - Der Knopf schaltet MPDs Ausgänge, nicht das Plugin; dessen Einstellungen bleiben unverändert.
 
+## VU-Meter
+Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
+
+- **Bühnenansicht:** Unten rechts gibt es die Knöpfe **Liedtext**, **Titelliste** und **VU**. Mit **Liedtext** bleibt
+  es wie bisher (Liedtext, bei einem anderen Verstärker-Eingang die Titelliste). **Titelliste** zeigt die Titel des
+  laufenden Albums aus der Warteschlange, der laufende ist hervorgehoben. **VU** zeigt die Instrumente. Jedes Gerät
+  merkt sich die Wahl.
+- **Klassische Ansicht und Handy:** Ein Tipp aufs Cover dreht es um, auf der Rückseite sind die Instrumente. Ein
+  zweiter Tipp dreht es zurück.
+
+Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
+leuchtet über 0 VU und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
+
+**Einrichten:** Das VU-Meter braucht in MPD einen zusätzlichen Ausgang vom Typ `fifo`. Xplorio ändert `mpd.conf` nicht,
+der Block wird von Hand eingetragen, wie beim Stream-Ausgang. Unter Volumio 2 gehört er in Volumios Vorlage
+`/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (nicht in `/etc/mpd.conf`, die Volumio neu schreibt), danach
+Volumio neu starten:
+```
+audio_output {
+  type    "fifo"
+  name    "VU"
+  path    "/tmp/mpd-vu.fifo"
+  format  "44100:16:2"
+  enabled "no"
+}
+```
+- **`name`** muss „VU“ enthalten. Andere FIFO-Ausgänge, etwa der von Snapcast, liest Xplorio nie.
+- **`format`** muss fest sein: 16, 24 oder 32 bit, 1 oder 2 Kanäle. 44,1 kHz/16 bit reicht für die Anzeige völlig.
+- **`enabled "no"`:** Der Tag-Dienst schaltet den Ausgang nur ein, solange jemand die Instrumente ansieht, und
+  5 Sekunden danach wieder aus. Ist er an, ohne dass jemand zusieht (etwa nach einem Neustart von MPD), schaltet ihn der
+  Tag-Dienst nach spätestens einer Minute ab.
+- Ein Volumio-Update überschreibt die Vorlage. Dann den Block erneut eintragen.
+
+Ohne diesen Ausgang fehlen der Knopf „VU“ und das Umdrehen des Covers. Die Hauptausgabe zum DAC bleibt
+unverändert und bitgenau.
+
+**Aufruf-Option `vu=`** (wird je Gerät gemerkt, wie `layout=`):
+- `xplorio.html?vu=true`: VU-Meter an (Standard, sobald der Ausgang da ist)
+- `xplorio.html?vu=false`: VU-Meter aus
+- `xplorio.html?vu=nodsd`: aus, solange eine DSD-Datei läuft. MPD müsste für den FIFO sonst DSD in PCM umrechnen,
+  was einen schwachen Player (MX-Stream) an die Grenze bringen kann. Auf den Instrumenten steht dann „bei DSD aus“.
+- `xplorio.html?vu=demo`: Nadeln mit einem simulierten Signal, ohne FIFO, zum Ansehen
+
+**Feineinstellung** in `web/config.local.js`:
+- `VU_REF_DBFS` (Standard `-14`): welcher Pegel (dBFS RMS) als 0 VU gilt. Laute Aufnahmen schlagen dauernd in den
+  roten Bereich: Wert erhöhen, etwa auf `-10`. Leise Aufnahmen bewegen die Nadel kaum: Wert senken, etwa auf `-18`.
+- `VU_DELAY_MS` (Standard `400`): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
+  warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken.
+
+Gut zu wissen: Die Pegel kommen als Server-Sent Events (`GET /vu`) vom Tag-Dienst, 40 Werte pro Sekunde, nur solange
+die Instrumente sichtbar sind. Spotify Connect, AirPlay und Bluetooth laufen an MPD vorbei, dabei bleiben die
+Nadeln unten.
+
 ## Volumio 2
 Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf Volumio 2 (z. B. MX-Stream) läuft das Plugin
 ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#installieren). Unterschiede:

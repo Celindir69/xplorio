@@ -260,6 +260,7 @@ function stateIn(st) {
 function stateApply(st) {
 st = inputApply(st);
 if (typeof remoteSync === 'function') remoteSync(st);         /* playback on this device (remote.js) */
+if (typeof vuSync === 'function') vuSync(st);                 /* VU meter: playing, DSD (vumeter.js) */
 if (st.status === 'play' && typeof queuedForInput !== 'undefined') queuedForInput = false;   /* already playing: play back to normal */
 
 curDur = Number(st.duration) || 0;
@@ -329,7 +330,7 @@ updateSyncedLyrics();
     mTitle.classList.toggle('link', !!radioArtist || similarOk());   /* click opens their albums or similar tracks (browse.js) */
 
     var key    = artist + '|' + album + '|' + (radio ? title : '');
-    var tracks = preview && stageOn && !!album;           /* stage view, album only queued (other input): its track list */
+    var tracks = (preview || (typeof stagePaneTracks === 'function' && stagePaneTracks())) && stageOn && !!album;   /* stage view, album only queued (other input) or "Track list" chosen: its track list */
     var lyrKey = tracks ? 'tracks|' + artist + '|' + album : artist + '|' + title;
 
     if (lyrKey !== lastLyrKey) {

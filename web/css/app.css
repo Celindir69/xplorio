@@ -752,6 +752,7 @@ html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; fon
 .lyrTrkN { flex:0 0 2.2em; text-align:right; opacity:.5; font-variant-numeric:tabular-nums; }
 .lyrTrkT { flex:1 1 auto; min-width:0; }
 .lyrTrkD { flex:0 0 auto; opacity:.55; font-variant-numeric:tabular-nums; }
+.lyrTrk.cur .lyrTrkT { font-weight:700; text-shadow:var(--glow); }   /* the track playing ("Track list" chosen) */
 
 /* queue, playlists, search … at the top right as round buttons */
 html.stage #topRight .actBtn { padding:0; opacity:.55; }
@@ -1448,3 +1449,40 @@ html.rotelLock #vSlider { pointer-events:none; }
 #warnNote.on { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
 .warnNoteX { flex:0 0 auto; font-size:22px; line-height:1; opacity:.8; padding:0 4px; }
 @media (prefers-reduced-motion:reduce) { #warnNote { transition:none; } }
+
+/* ===== VU meter (vumeter.js): two backlit instruments in a dark frame, always opaque (also in the light design) ===== */
+.vuBox { display:flex; gap:3%; padding:3%; border-radius:12px; background:linear-gradient(#2e251c, #15100b);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.6); }
+.vuBox .vuFace { display:block; flex:1 1 0; min-width:0; width:100%; height:auto; }
+.vuBox.stacked { flex-direction:column; justify-content:center; }
+.vuBox.stacked .vuFace { min-height:0; height:100%; }
+.vuNum { font:600 9px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+.vuSign { font:700 13px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+.vuTitle { font:700 16px/1 Georgia, 'Times New Roman', serif; letter-spacing:1px; }
+.vuSide { font:600 8px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; opacity:.7; }
+.vuNote { font:600 8px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; opacity:.75; }
+.vuLamp { fill:#6b2414; stroke:rgba(0,0,0,.45); stroke-width:.8; }
+.vuLamp.on { fill:#ff3a1c; stroke:#ffb59e; }
+html.light .vuBox { box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.25); }
+
+/* stage view: Lyrics | Track list | VU at the bottom right; with VU the instruments in place of the lyrics */
+#stagePane, #vuStage { display:none; }
+html.stage #stagePane { display:flex; position:absolute; z-index:2; gap:8px;
+  right:max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)); bottom:calc(var(--sab) + 16px); }
+#stagePane button { font:inherit; font-size:13px; color:var(--fg); background:rgba(var(--shade-rgb),.35); border:1px solid rgba(var(--fg-rgb),.25);
+  border-radius:999px; padding:6px 14px; cursor:pointer; opacity:.7; }
+#stagePane button.on { background:var(--fg); color:var(--ink); border-color:var(--fg); opacity:1; }
+html.stage.vuAvail.vuPane #vuStage { display:flex; position:absolute; top:0; left:0; right:0; bottom:calc(var(--sab) + 64px); align-items:center; justify-content:center;
+  padding:0 max(env(safe-area-inset-right,0px), clamp(20px, 3vw, 56px)) 0 clamp(20px, 2.6vw, 48px); }
+#vuStage .vuBox { width:100%; max-width:900px; }
+html.stage.vuAvail.vuPane #overlayLyrics .overlayBody, html.stage.vuAvail.vuPane #lyrShiftBar { visibility:hidden; }
+
+/* classic layout and phone: a tap on the cover turns it over, the instruments are on the back */
+#vuBack { display:none; }
+html.vuAvail:not(.stage) #coverWrap { position:relative; cursor:pointer; -webkit-transform-style:preserve-3d; transform-style:preserve-3d;
+  -webkit-transform:perspective(1400px) rotateY(0deg); transform:perspective(1400px) rotateY(0deg); transition:transform .6s ease; }
+html.vuAvail:not(.stage).vuFlip #coverWrap { -webkit-transform:perspective(1400px) rotateY(180deg); transform:perspective(1400px) rotateY(180deg); }
+html.vuAvail:not(.stage) #cover { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+html.vuAvail:not(.stage) #vuBack { display:flex; position:absolute; top:0; left:0; right:0; bottom:0;
+  -webkit-transform:rotateY(180deg); transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+#vuBack .vuBox { width:100%; height:100%; }

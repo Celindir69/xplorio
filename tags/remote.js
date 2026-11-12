@@ -3,7 +3,7 @@
    browser through the tag service; the ALSA output (amplifier) is switched off for "remote". Pure helpers here, the service is in tag-service.js. Node 8, ES5 only. */
 var net = require('net');
 
-/* audio_output blocks of mpd.conf -> [{type, name, port, enabled}] */
+/* audio_output blocks of mpd.conf -> [{type, name, port, enabled, encoder, bitrate, path, format}] */
 function confOutputs(text) {
   var out = [], re = /audio_output\s*\{([^}]*)\}/g, m;
   text = String(text || '').split(/\r?\n/).map(function(l){                 /* comments out, "#" inside quotes stays */
@@ -16,7 +16,7 @@ function confOutputs(text) {
       if (k) o[k[1].toLowerCase()] = k[2];
     });
     out.push({type: o.type || '', name: o.name || '', port: parseInt(o.port, 10) || 8000, enabled: o.enabled !== 'no', encoder: o.encoder || 'lame',
-              bitrate: parseInt(o.bitrate, 10) || 0});
+              bitrate: parseInt(o.bitrate, 10) || 0, path: o.path || '', format: o.format || ''});   /* path, format: fifo output (vumeter.js) */
   }
   return out;
 }
