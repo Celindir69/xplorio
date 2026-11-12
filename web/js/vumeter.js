@@ -104,9 +104,8 @@ function vuFace(label) {
   vuEl('text', {x: mn[0], y: mn[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: ink}, svg).textContent = '−';
   vuEl('text', {x: pl[0], y: pl[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: red}, svg).textContent = '+';
   var lamp = vuEl('circle', {cx: VU_CX, cy: 80, r: 4.2, 'class': 'vuLamp'}, svg);   /* lamp in the middle below the scale */
-  vuEl('text', {x: VU_CX, y: 103, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = 'VU';
+  vuEl('text', {x: VU_CX, y: 101, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
   var note = vuEl('text', {x: VU_CX, y: 68, 'text-anchor': 'middle', 'class': 'vuNote', fill: ink}, svg);
-  vuEl('text', {x: 12, y: 112, 'class': 'vuSide', fill: ink}, svg).textContent = label;
   var needle = vuEl('g', {}, svg);
   vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: 'var(--vu-needle)', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
   vuEl('rect', {x: 0, y: 116, width: 200, height: 14, fill: '#1b130c'}, svg);         /* cover over the needle's pivot */
@@ -117,7 +116,7 @@ function vuFace(label) {
 function vuBuild() {
   var box = document.createElement('div');
   box.className = 'vuBox';
-  var l = vuFace('L'), r = vuFace('R');
+  var l = vuFace('Left'), r = vuFace('Right');
   box.appendChild(l.svg); box.appendChild(r.svg);
   box.addEventListener('click', function(e){
     e.stopPropagation();

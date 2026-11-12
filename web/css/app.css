@@ -1470,8 +1470,7 @@ html[data-vu="blue"] { --vu-g0:#5aa4e6; --vu-g1:#2367b4; --vu-g2:#0b2a57; --vu-i
 .vuFace stop { transition:stop-color .8s; }
 .vuNum { font:600 9px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuSign { font:700 13px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
-.vuTitle { font:700 16px/1 Georgia, 'Times New Roman', serif; letter-spacing:1px; }
-.vuSide { font:600 8px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; opacity:.7; }
+.vuTitle { font:400 10.5px/1 Georgia, 'Times New Roman', serif; letter-spacing:.8px; opacity:.85; }
 .vuNote { font:600 8px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; opacity:.75; }
 .vuLamp { fill:#6b2414; stroke:rgba(0,0,0,.45); stroke-width:.8; }
 .vuLamp.on { fill:#ff3a1c; stroke:#ffb59e; }
