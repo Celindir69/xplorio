@@ -1467,6 +1467,19 @@ html[data-vu="blue"] { --vu-g0:#5aa4e6; --vu-g1:#2367b4; --vu-g2:#0b2a57; --vu-i
     --vu-g1:color-mix(in oklab, #f7b54a 65%, var(--accent-d, #f7b54a)); --vu-g2:color-mix(in oklab, #c9741c 65%, var(--accent-d, #c9741c)); }
 }
 .vuBox .vuFace { cursor:pointer; }
+/* digital: LED bars instead of the two needle instruments, same size */
+.vuBox .vuDigi { display:none; flex:1 1 0; min-width:0; width:100%; height:auto; cursor:pointer; }
+html[data-vu="digital"] .vuBox .vuFace { display:none; }
+html[data-vu="digital"] .vuBox .vuDigi { display:block; }
+.vuDgSeg { fill:#1d2a0c; }
+.vuDgSeg.on { fill:#9be22d; }
+.vuDgSeg.red { fill:#3a1212; }
+.vuDgSeg.red.on { fill:#ff2a1a; }
+.vuDgG { stroke:#8fd12a; }
+.vuDgR { stroke:#e8281a; }
+.vuDgTxt { font:500 12px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+.vuDgGt { fill:#9be22d; }
+.vuDgRt { fill:#ff2a1a; }
 .vuFace stop { transition:stop-color .8s; }
 .vuNum { font:600 9px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuSign { font:700 13px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }

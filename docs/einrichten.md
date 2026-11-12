@@ -978,8 +978,9 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
   Instrumente. Auf dem Handy stehen sie nebeneinander unter einem kleineren Cover.
 - Jedes Gerät merkt sich, ob die Instrumente an sind.
 - **Farbe:** Ein Tipp auf die Instrumente schaltet die Farbe weiter: Akzent (die Farbe des Covers), Bernstein mit
-  Akzent, Bernstein, Weiß und Blau. Jedes Gerät merkt sich die Farbe, `?vustyle=accent`, `amberAccent`, `amber`, `white`
-  oder `blue` stellt sie fest ein. Standard ist Bernstein.
+  Akzent, Bernstein, Weiß, Blau und zuletzt **Digital**: LED-Balken für links und rechts wie an einem Studiogerät, mit
+  Spitzenwert-Halten für eine Sekunde. Jedes Gerät merkt sich die Variante, `?vustyle=accent`, `amberAccent`, `amber`,
+  `white`, `blue` oder `digital` stellt sie fest ein. Standard ist Bernstein.
 
 Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
 leuchtet, sobald die Nadel über 0 VU steht, und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
@@ -1019,7 +1020,7 @@ unverändert und bitgenau.
 - `xplorio.html?vu=nodsd`: aus, solange eine DSD-Datei läuft. MPD müsste für den FIFO sonst DSD in PCM umrechnen,
   was einen schwachen Player (MX-Stream) an die Grenze bringen kann. Auf den Instrumenten steht dann „bei DSD aus“.
 - `xplorio.html?vu=demo`: Nadeln mit einem simulierten Signal, ohne FIFO, zum Ansehen
-- `xplorio.html?vustyle=blue`: Farbe der Instrumente (`accent`, `amberAccent`, `amber`, `white`, `blue`), ebenfalls je Gerät gemerkt
+- `xplorio.html?vustyle=blue`: Farbe der Instrumente (`accent`, `amberAccent`, `amber`, `white`, `blue`, `digital`), ebenfalls je Gerät gemerkt
 
 **Feineinstellung** in `web/config.local.js`:
 - `VU_REF_DBFS` (Standard `-8`): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
