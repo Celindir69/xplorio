@@ -973,7 +973,7 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
   bei einem anderen Verstärker-Eingang die Titelliste). **Titelliste** zeigt die Titel des laufenden Albums aus der
   Warteschlange, der laufende ist fett.
 - **Klassische Ansicht und Handy:** Ein Tipp aufs Cover schaltet die Instrumente ein und aus. Im Querformat stehen sie
-  quer unten, Cover und Bedienung rücken nach oben. Auf dem Handy stehen sie nebeneinander unter einem kleineren Cover.
+  rechts unter der Bedienung, das Cover bleibt groß. Auf dem Handy stehen sie nebeneinander unter einem kleineren Cover.
 - Jedes Gerät merkt sich, ob die Instrumente an sind.
 
 Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte

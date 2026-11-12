@@ -1486,14 +1486,13 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
     margin:1vh 0 2vh 0; }
   html.vuOn:not(.stage) #cover { width:auto; height:100%; max-width:100%; }
 }
-/* classic landscape: across the bottom, cover smaller, cover and controls move up */
+/* classic landscape: in the right column below the controls; the cover stays large, the column a little narrower */
 @media (orientation:landscape) {
-  html.vuOn:not(.stage) #app { bottom:var(--vuH); }
-  html.vuOn:not(.stage) { --vuH:min(32vh, 27vw); }
-  html.vuOn:not(.stage) #vuDock { display:flex; justify-content:center; position:fixed; z-index:2; left:0; right:0;
-    bottom:calc(var(--sab) + 1.5vh); height:calc(var(--vuH) - 3vh); }
-  html.vuOn:not(.stage) #vuDock .vuBox { height:100%; padding:1.2vh; gap:1.2vh; }
-  html.vuOn:not(.stage) #vuDock .vuFace { height:100%; width:auto; flex:0 0 auto; }
-  html.vuOn:not(.stage) #coverWrap { width:min(calc(100vh - var(--vuH) - 40px), 40vw); height:min(calc(100vh - var(--vuH) - 40px), 40vw);
-    width:min(calc(100dvh - var(--vuH) - 40px), 40vw); height:min(calc(100dvh - var(--vuH) - 40px), 40vw); }
+  html.vuOn:not(.stage) #vuSide { display:block; flex:0 0 auto; width:min(100%, 80vh); margin-top:1vh; }
+  html.vuOn:not(.stage) #vuSide .vuBox { padding:2%; gap:2%; }
+}
+@media (orientation:landscape) and (min-width:700px) {
+  html.vuOn:not(.stage) #coverWrap { width:min(88vh, 54vw, calc(100vh - 48px)); height:min(88vh, 54vw, calc(100vh - 48px));
+    width:min(88dvh, 54vw, calc(100dvh - 48px)); height:min(88dvh, 54vw, calc(100dvh - 48px)); }
+  html.vuOn:not(.stage) #rightPane { max-width:600px; }
 }

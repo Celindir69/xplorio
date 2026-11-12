@@ -1,6 +1,6 @@
 /* VU meter: two backlit needle instruments (left and right channel). Levels from the tag service (GET /vu, tags/vumeter.js),
    which reads MPD's "VU" fifo output while someone watches. Where: in the stage view below the lyrics or track list
-   ("VU" button at the bottom right, next to "Lyrics | Track list"); in the classic landscape layout across the bottom,
+   ("VU" button at the bottom right, next to "Lyrics | Track list"); in the classic landscape layout below the controls,
    on the phone side by side below a smaller cover (a tap on the cover switches them on and off). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
    Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
@@ -185,7 +185,7 @@ function vuSync(st) {
 
 /* ---------- Where the instruments are ----------
    VU on or off (per device): in the stage view the "VU" button at the bottom right, below the lyrics or track list;
-   otherwise a tap on the cover. Classic landscape: across the bottom, cover and controls move up; phone: side by side
+   otherwise a tap on the cover. Classic landscape: in the right column below the controls; phone: side by side
    below a smaller cover. Each place has its own set, CSS shows the one that fits. */
 function vuPlace(id, parent, before) {
   var d = document.createElement('div');
@@ -195,7 +195,7 @@ function vuPlace(id, parent, before) {
 }
 vuPlace('vuStage', overlayLyrics);                                                     /* stage view: below the lyrics */
 vuPlace('vuPort', document.getElementById('app'), document.getElementById('rightPane'));   /* phone: below the cover */
-vuPlace('vuDock', document.body);                                                       /* classic landscape: at the bottom */
+vuPlace('vuSide', document.getElementById('rightPane'));                               /* classic landscape: below the controls */
 
 function vuSetOn(on) {
   vuWanted = on;

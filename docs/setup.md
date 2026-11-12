@@ -707,8 +707,8 @@ Two backlit needle meters show the level of the left and right channel.
   They then sit below the lyrics or track list. **Lyrics** behaves as before (lyrics, or the track list when the
   amplifier is on another input). **Tracks** shows the tracks of the playing album from the queue, with the current
   one in bold.
-- **Classic layout and phone:** A tap on the cover switches the meters on and off. In landscape they run across the
-  bottom and the cover and controls move up. On the phone they sit side by side below a smaller cover.
+- **Classic layout and phone:** A tap on the cover switches the meters on and off. In landscape they sit on the
+  right below the controls, and the cover stays large. On the phone they sit side by side below a smaller cover.
 - Each device remembers whether the meters are on.
 
 The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
