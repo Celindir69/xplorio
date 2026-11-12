@@ -984,10 +984,16 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
 Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
 leuchtet, sobald die Nadel über 0 VU steht, und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
 
-**Einrichten:** Das VU-Meter braucht in MPD einen zusätzlichen Ausgang vom Typ `fifo`. Xplorio ändert `mpd.conf` nicht,
-der Block wird von Hand eingetragen, wie beim Stream-Ausgang. Unter Volumio 2 gehört er in Volumios Vorlage
-`/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (nicht in `/etc/mpd.conf`, die Volumio neu schreibt), danach
-Volumio neu starten:
+**Einrichten:** Das VU-Meter braucht in MPD einen zusätzlichen Ausgang vom Typ `fifo`. Mit dem Plugin genügt der Schalter
+**VU-Meter** in den Plugin-Einstellungen (Standard: an). Xplorio schreibt `mpd.conf` dabei nicht selbst. Es meldet den
+Ausgang über Volumios Schnittstelle für Plugins (`registerConfigCallback`), und Volumio hängt ihn bei jedem Neuschreiben
+von `mpd.conf` an. So übersteht er das Speichern der Wiedergabe-Einstellungen und Volumio-Updates. Beim Ein- oder
+Ausschalten startet MPD einmal neu. Wird das Plugin entfernt, verschwindet der Ausgang beim nächsten Neuschreiben.
+
+**Von Hand** (ohne Plugin, oder wenn die Plugin-Seite meldet, dass Volumio die Schnittstelle nicht bietet): Der Block
+gehört in Volumios Vorlage `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (nicht in `/etc/mpd.conf`, die
+Volumio neu schreibt), danach in Volumio unter Wiedergabe-Optionen speichern. Steht ein VU-Ausgang schon in der
+Vorlage, fügt das Plugin keinen zweiten hinzu.
 ```
 audio_output {
   type    "fifo"
@@ -1002,7 +1008,7 @@ audio_output {
 - **`enabled "no"`:** Der Tag-Dienst schaltet den Ausgang nur ein, solange jemand die Instrumente ansieht, und
   5 Sekunden danach wieder aus. Ist er an, ohne dass jemand zusieht (etwa nach einem Neustart von MPD), schaltet ihn der
   Tag-Dienst nach spätestens einer Minute ab.
-- Ein Volumio-Update überschreibt die Vorlage. Dann den Block erneut eintragen.
+- Von Hand: Ein Volumio-Update überschreibt die Vorlage. Dann den Block erneut eintragen oder den Schalter im Plugin nutzen.
 
 Ohne diesen Ausgang fehlen der Knopf „VU“ und das Einblenden per Tipp aufs Cover. Die Hauptausgabe zum DAC bleibt
 unverändert und bitgenau.

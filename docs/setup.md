@@ -719,10 +719,16 @@ Two backlit needle meters show the level of the left and right channel.
 The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
 middle lights once the needle is past 0 VU and stays on for a second. On pause the needles sink slowly.
 
-**Setup:** The VU meter needs an extra MPD output of type `fifo`. Xplorio does not change `mpd.conf`; add the block by
-hand, as for the stream output. On Volumio 2 it goes into Volumio's template
-`/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (not `/etc/mpd.conf`, which Volumio rewrites); then restart
-Volumio:
+**Setup:** The VU meter needs an extra MPD output of type `fifo`. With the plugin, the **VU meter** switch on the plugin's
+settings page is all it takes (default: on). Xplorio does not write `mpd.conf` itself. It hands the output to Volumio
+through its interface for plugins (`registerConfigCallback`), and Volumio appends it every time it rewrites `mpd.conf`,
+so it survives saving the playback settings and Volumio updates. Switching it on or off restarts MPD once. When the
+plugin is removed, the output goes with the next rewrite.
+
+**By hand** (without the plugin, or when the plugin page says Volumio lacks that interface): the block goes into
+Volumio's template `/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl` (not `/etc/mpd.conf`, which Volumio
+rewrites); then save the playback options in Volumio. If a VU output is already in the template, the plugin adds no
+second one.
 ```
 audio_output {
   type    "fifo"
@@ -737,7 +743,7 @@ audio_output {
 - **`enabled "no"`:** The tag service switches the output on only while someone is looking at the meters, and off
   again 5 seconds later. If it is on with nobody watching (for example after MPD restarts), the tag service switches it
   off within a minute.
-- A Volumio update overwrites the template; add the block again afterwards.
+- By hand: a Volumio update overwrites the template; add the block again afterwards, or use the plugin's switch.
 
 Without this output the "VU" button and the tap on the cover are missing. The main output to the DAC stays unchanged and
 bit-perfect.

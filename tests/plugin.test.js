@@ -28,6 +28,9 @@ fs.mkdirSync(path.join(T, 'music/USB/Stick'), {recursive: true});
 process.env.XPLORIO_DATA = DATA;
 process.env.XPLORIO_MUSIC = path.join(T, 'music');
 var RUN = path.join(T, 'run'); process.env.XPLORIO_RUN = RUN;
+var MPDT = path.join(T, 'mpd.conf.tmpl'), MPDC = path.join(T, 'mpd.conf');
+fs.writeFileSync(MPDT, 'audio_output {\n  type "alsa"\n  name "alsa"\n}\n');
+process.env.XPLORIO_MPD_TMPL = MPDT; process.env.XPLORIO_MPD_CONF = MPDC;
 process.env.HTTP_PORT = '1234';                                     /* from Volumio's environment: must not reach the children */
 function evalConfig() {
   var ctx = {window: {}};
@@ -88,10 +91,20 @@ t('uninstall.sh: caches and runtime files go, the user\'s data stays', function(
 });
 
 var Plugin = require(path.join(P, 'index.js'));
+/* Volumio's MPD plugin as far as the VU output needs it: builds mpd.conf from the template plus what the callbacks return */
+var mpdRestarts = 0, fakeMpd = {registeredCallbacks: [],
+  registerConfigCallback: function(c){ this.registeredCallbacks.push(c); },
+  createMPDFile: function(cb){
+    var conf = fs.readFileSync(MPDT, 'utf8');
+    this.registeredCallbacks.forEach(function(c){ conf += plug.commandRouter.pluginManager.getPlugin(c.type, c.plugin)[c.data](); });
+    fs.writeFileSync(MPDC, conf); setImmediate(cb);
+  },
+  restartMpd: function(cb){ mpdRestarts++; setImmediate(cb); }};
 var toasts = [], calls = [], failing = {}, active = {};
 function makePlugin() {
   var p = new Plugin({coreCommand: {
-      pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); }},
+      pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); },
+                      getPlugin: function(c, n){ return c === 'music_service' && n === 'mpd' ? fakeMpd : (c === 'user_interface' && n === 'xplorio' ? plug : undefined); }},
       pushToastMessage: function(k, ti, tx){ toasts.push([k, tx]); },
       sharedVars: {get: function(){ return 'de'; }},
       i18nJson: function(a, b, ui){ return kew.resolve(JSON.parse(fs.readFileSync(ui, 'utf8'))); }},
@@ -131,6 +144,15 @@ plug.config.set('port', PORT);
 plug.onStart().then(function(){
   t('start: the services switched on via systemctl (sudo)', function(){
     assert.deepStrictEqual(sudo(), ['restart xplorio-web.service', 'restart xplorio-tags.service', 'restart xplorio-rotel.service']);
+  });
+  t('VU output: hook registered once, mpd.conf rebuilt by Volumio with the fifo output, MPD restarted once', function(){
+    assert.strictEqual(fakeMpd.registeredCallbacks.length, 1);
+    assert.deepStrictEqual(fakeMpd.registeredCallbacks[0], {type: 'user_interface', plugin: 'xplorio', data: 'getMpdConfig'});
+    var outs = require(path.join(repo, 'tags/remote.js')).confOutputs(fs.readFileSync(MPDC, 'utf8'));
+    assert.deepStrictEqual(outs.map(function(o){ return [o.type, o.name, o.path, o.format, o.enabled]; }),
+                           [['alsa', 'alsa', '', '', true], ['fifo', 'VU', '/tmp/mpd-vu.fifo', '44100:16:2', false]]);
+    assert.strictEqual(mpdRestarts, 1);
+    plug.vuSync(); assert.strictEqual(mpdRestarts, 1);              /* as it should be: nothing to do */
   });
   t('start: settings of the services in /tmp/xplorio/<service>.env', function(){
     assert.strictEqual(env('xplorio-web'), 'HTTP_PORT=' + PORT + '\nXPLORIO_WWW=' + path.join(P, 'app') + '\n');
@@ -301,5 +323,34 @@ plug.onStart().then(function(){
   return plug.getUIConfig();
 }).then(function(ui3){
   t('SerialAmpControl on: hint in the Rotel section', function(){ assert.ok(/SerialAmpControl/.test(sec(ui3, 'section_rotel').description)); });
+  t('settings page: switch "VU meter" on, no note while the hook is there', function(){
+    assert.strictEqual(el(ui3, 'vuOutput').value, true);
+    assert.ok(!/Vorlage|Schnittstelle nicht/.test(el(ui3, 'vuOutput').doc));
+  });
+  var r0 = mpdRestarts;
+  return plug.saveSettings({vuOutput: false}).then(function(){
+    t('VU switch off: Volumio rebuilds mpd.conf without the output, MPD restarts, hook stays registered once', function(){
+      assert.strictEqual(plug.getMpdConfig(), '');
+      assert.ok(!/fifo/.test(fs.readFileSync(MPDC, 'utf8')));
+      assert.strictEqual(mpdRestarts, r0 + 1);
+      assert.strictEqual(fakeMpd.registeredCallbacks.length, 1);
+    });
+    fs.appendFileSync(MPDT, 'audio_output {\n  type "fifo"\n  name "VU-Meter"\n  path "/tmp/x"\n  format "44100:16:2"\n}\n');
+    return plug.saveSettings({vuOutput: true});
+  }).then(function(){
+    t('VU output already in the template by hand: nothing added, note on the settings page', function(){
+      assert.strictEqual(plug.getMpdConfig(), '');
+      return true;
+    });
+    return plug.getUIConfig();
+  }).then(function(ui4){
+    t('settings page: note that the output is there by hand', function(){ assert.ok(/von Hand/.test(el(ui4, 'vuOutput').doc)); });
+    return plug.onStop();
+  }).then(function(){
+    t('stopped or removed: out of the MPD plugin\'s list, so no "undefined" in a later mpd.conf', function(){
+      assert.strictEqual(fakeMpd.registeredCallbacks.length, 0);
+    });
+  });
+}).then(function(){
   console.log(n + ' checks passed'); process.exit(0);
 }).fail(function(e){ console.error(e); process.exit(1); });
