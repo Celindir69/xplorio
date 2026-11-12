@@ -1493,3 +1493,14 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
   html.vuOn:not(.stage) #vuSide { display:block; flex:0 0 auto; width:min(100%, 80vh); margin-top:1vh; }
   html.vuOn:not(.stage) #vuSide .vuBox { padding:2%; gap:2%; }
 }
+
+/* ===== Large monitors (classic layout): width and scale follow the window height instead of fixed pixels,
+   so the right column grows with the cover and the sides are used; iPad and laptop never reach these limits ===== */
+@media (orientation:landscape) and (min-width:1600px) and (min-height:860px) {
+  html:not(.stage) { --vw:max(7px, min(1vw, .78vh)); }
+  html:not(.stage) #app { padding-left:max(env(safe-area-inset-left,0px), calc((100vw - max(1500px, 172vh)) / 2), 28px);
+    padding-right:max(env(safe-area-inset-right,0px), calc((100vw - max(1500px, 172vh)) / 2), 28px); }
+  html:not(.stage) #rightPane { max-width:max(700px, 74vh); }
+  html:not(.stage) #app .ctrlBtn svg, html:not(.stage) #cRepeat svg, html:not(.stage) #cRandom svg,
+  html:not(.stage) #actions .actBtn svg { max-width:none; max-height:none; }   /* the caps are for phone and laptop */
+}
