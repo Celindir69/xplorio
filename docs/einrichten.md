@@ -971,7 +971,8 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
 - **Bühnenansicht:** Unten rechts wählt man **Liedtext** oder **Titelliste** und schaltet mit **VU** die Instrumente
   ein und aus. Sie stehen dann unter dem Liedtext oder der Titelliste. Mit **Liedtext** bleibt es wie bisher (Liedtext,
   bei einem anderen Verstärker-Eingang die Titelliste). **Titelliste** zeigt die Titel des laufenden Albums aus der
-  Warteschlange, der laufende ist fett.
+  Warteschlange, der laufende ist fett. Ein Tipp auf einen Titel spielt ihn, außer der Verstärker steht auf einem
+  anderen Eingang (dann kommt nur ein Hinweis, wie in der Warteschlange).
 - **Klassische Ansicht und Handy:** Ein Tipp aufs Cover schaltet die Instrumente ein und aus. Im Querformat stehen sie
   rechts unter der Bedienung, die Aufteilung bleibt wie ohne
   Instrumente. Auf dem Handy stehen sie nebeneinander unter einem kleineren Cover.

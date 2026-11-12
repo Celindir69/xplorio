@@ -752,6 +752,8 @@ html.stage #lyricsText:empty:before { content:attr(data-empty); opacity:.35; fon
 .lyrTrkN { flex:0 0 2.2em; text-align:right; opacity:.5; font-variant-numeric:tabular-nums; }
 .lyrTrkT { flex:1 1 auto; min-width:0; }
 .lyrTrkD { flex:0 0 auto; opacity:.55; font-variant-numeric:tabular-nums; }
+html:not(.otherInput) .lyrTrk { cursor:pointer; }   /* a tap plays the track (not while the amplifier is on another input) */
+html:not(.otherInput) .lyrTrk:hover .lyrTrkT { text-decoration:underline; text-underline-offset:.15em; }
 .lyrTrk.cur .lyrTrkT { font-weight:700; text-shadow:var(--glow); }   /* the track playing ("Track list" chosen) */
 
 /* queue, playlists, search … at the top right as round buttons */

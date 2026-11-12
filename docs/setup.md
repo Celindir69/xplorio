@@ -706,7 +706,8 @@ Two backlit needle meters show the level of the left and right channel.
 - **Stage view:** At the bottom right you choose **Lyrics** or **Tracks**, and **VU** switches the meters on and off.
   They then sit below the lyrics or track list. **Lyrics** behaves as before (lyrics, or the track list when the
   amplifier is on another input). **Tracks** shows the tracks of the playing album from the queue, with the current
-  one in bold.
+  one in bold. A tap on a track plays it, unless the amplifier is on another input (then only a hint
+  appears, as in the queue).
 - **Classic layout and phone:** A tap on the cover switches the meters on and off. In landscape they sit on the
   right below the controls, and the layout stays as without
   them. On the phone they sit side by side below a smaller cover.
