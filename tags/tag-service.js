@@ -485,6 +485,65 @@ function checkFiles(songs, images, cache, cb) {
     });
   })();
 }
+/* Album artist or date under a name MPD does not read ("ALBUM ARTIST", TXXX, YEAR, ORIGINALDATE; idea from MPDantic):
+   only files where MPD has none, and for the album artist only albums the check already reports (album artist missing).
+   Read by tags.py (op hidden), cached per file state like the covers. -> res.hiddenKeys: per folder
+   {dir, name, artist, count, found: [{field, key, value, n}], fixes: [{uri, tags}], files} */
+var HIDDEN_MAX = 5000;                                   /* files per check; the cache makes the next check fast */
+function hiddenKeys(songs, res, cache, done) {
+  var want = {}, list = [];
+  (res.albumArtist || []).forEach(function(it){ if (it.missing) (it.files || []).forEach(function(f){ want[f.uri] = 1; }); });
+  songs.forEach(function(s){
+    if (list.length < HIDDEN_MAX && ((want[s.file] && !s.albumartist) || !String(s.date || '').trim())) list.push(s);
+  });
+  res.hiddenKeys = [];
+  var found = [], ask = [];
+  list.forEach(function(s, k){
+    var hit = cache.get('f', s.file, s['last-modified'], 'hidden');
+    if (hit) found[k] = hit.v; else ask.push(k);
+  });
+  var run = checkRun || {};                              /* progress (none in the tests) */
+  run.phase = 'hidden'; run.done = 0; run.total = ask.length;
+  var i = 0;
+  (function step() {
+    if (i >= ask.length) return group();
+    var part = ask.slice(i, i + PY_BATCH);
+    i += part.length;
+    runPyMany(part.map(function(k){ return {op: 'hidden', path: path.join(MUSIC_ROOT, list[k].file)}; }), function(r){
+      part.forEach(function(k, n){
+        if (!r[n] || !r[n].ok) return;
+        found[k] = r[n].found || {};
+        cache.put('f', list[k].file, list[k]['last-modified'], 'hidden', found[k]);
+      });
+      run.done = i; step();
+    });
+  })();
+  function group() {
+    var by = {}, order = [];
+    list.forEach(function(s, k){
+      var f = found[k] || {}, tags = {};
+      if (f.albumartist && want[s.file] && !s.albumartist) tags.albumartist = f.albumartist;
+      if (f.date && !String(s.date || '').trim()) tags.date = f.date;
+      if (!Object.keys(tags).length) return;
+      var d = path.dirname(s.file);
+      if (!by[d]) { by[d] = {dir: d, name: s.album || path.basename(d), artist: s.albumartist || s.artist || '', count: 0, found: {}, fixes: [], files: []}; order.push(d); }
+      var a = by[d], out = {};
+      a.count++;
+      a.files.push({uri: s.file, title: s.title || path.basename(s.file)});
+      Object.keys(tags).forEach(function(field){
+        var key = field + '\0' + tags[field][0] + '\0' + tags[field][1];
+        if (!a.found[key]) a.found[key] = {field: field, key: tags[field][0], value: tags[field][1], n: 0};
+        a.found[key].n++;
+        out[field] = tags[field][1];
+      });
+      a.fixes.push({uri: s.file, tags: out});
+    });
+    res.hiddenKeys = order.sort().map(function(d){
+      var a = by[d]; a.found = Object.keys(a.found).map(function(k){ return a.found[k]; }); return a;
+    });
+    done();
+  }
+}
 /* lossy files of duplicate albums: their size (s.size) for the data rate (duplicates.quality), one stat after another */
 function fileSizes(list, cb) {
   var i = 0;
@@ -543,7 +602,8 @@ function checkCovers(songs, cand, cache, extra) {
     libcheck.analyze(songs, function(d){ return !noCover[d]; },
       function(s){ return audioStore.get(s.artist, s.title, s.album); }, extra, saved);
   }
-  function saved(res) {
+  function saved(res) { hiddenKeys(songs, res, cache, function(){ stored(res); }); }
+  function stored(res) {
     res.reread = cache.misses; res.cached = cache.hits;  /* how much the cache saved */
     try { cache.save(writeAtomic); } catch (e) { console.error('check-files.json: ' + e.message); }
     res.releaseDate = releasedates.diffs(albums.fromSongs(songs), songs,
@@ -2611,4 +2671,4 @@ if (require.main === module) {
     setInterval(function(){ albumsEnsure(); }, 3600000);  /* keep the track list current (rereads only when MPD has changed) */
   }
 }
-module.exports = {pruneLog: pruneLog, resolveUri: resolveUri, scanDirs: scanDirs, server: server, tracker: tracker, playStore: playStore, lastfm: lfm, moodtags: moodCollector};
+module.exports = {pruneLog: pruneLog, resolveUri: resolveUri, scanDirs: scanDirs, server: server, tracker: tracker, playStore: playStore, lastfm: lfm, moodtags: moodCollector, hiddenKeys: hiddenKeys};

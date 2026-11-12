@@ -27,6 +27,10 @@ ReplayGain values (for the player view, read only):
   {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null, "mqa":{"orig":192000|null}|null}
                                        (gain in dB; mqa: MQA file per its tags, orig = original sample rate)
 
+Values under a name MPD does not read (album artist as "ALBUM ARTIST" or TXXX, date as YEAR or ORIGINALDATE), only
+where the usual field is empty:
+  {"op":"hidden", "path":"..."}  -> {"ok":true, "found":{"albumartist":["ALBUM ARTIST","Velvet Static"], "date":["YEAR","1999"]}}
+
 Several jobs in one call (saves the Python startup per file, important with many files):
   {"op":"batch", "jobs":[{...}, {...}]}  -> {"ok":true, "results":[{...}, {...}]}  (one response per job as above)
 """
@@ -158,6 +162,55 @@ def read_tags(audio, kind):
         if com:
             out['comment'] = join(com[0].text)
     out['compilation'] = flag(out['compilation'])
+    return out
+
+
+# other names for the album artist and the date (compared without case, spaces, "_" and "-"), in order of preference
+HIDDEN = {'albumartist': ['albumartist', 'band'], 'date': ['year', 'originaldate', 'originalyear', 'releasedate']}
+
+
+def hidden_key(k):
+    return txt(k).lower().replace(u' ', u'').replace(u'_', u'').replace(u'-', u'')
+
+
+def read_hidden(audio, kind, std):
+    """{field: [name in the file, value]} for albumartist and date where std (read_tags) has none"""
+    tags = audio.tags
+    if tags is None:
+        return {}
+    cand = []                                  # (name as in the file, value)
+    if kind == 'flac':
+        usual = {'albumartist': 'albumartist', 'date': 'date'}
+        for k, v in tags.items():
+            if txt(k).lower() not in usual.values() and v:
+                cand.append((txt(k).upper(), v[0] if isinstance(v, list) else v))   # Vorbis names: shown in capitals
+    elif kind == 'm4a':
+        for k, v in tags.items():
+            if k.startswith('----:') and v:
+                val = v[0] if isinstance(v, list) else v
+                cand.append((txt(k.split(':')[-1]), val.decode('utf-8', 'replace') if isinstance(val, bytes) else val))
+    else:
+        for fr in tags.getall('TXXX'):
+            if fr.text:
+                cand.append((u'TXXX:' + txt(fr.desc), fr.text[0]))
+        for fid in ('TDOR', 'TORY'):
+            fr = tags.get(fid)
+            if fr is not None and fr.text:
+                cand.append((txt(fid), fr.text[0]))
+    out = {}
+    for field, names in HIDDEN.items():
+        if std.get(field):
+            continue
+        best = None
+        for name, val in cand:
+            key = hidden_key(name.split(u':', 1)[1] if name.startswith(u'TXXX:') else name)
+            if name in ('TDOR', 'TORY'):
+                key = 'originaldate'
+            val = txt(val).strip()
+            if key in names and val and (best is None or names.index(key) < best[0]):
+                best = (names.index(key), name, val)
+        if best:
+            out[field] = [best[1], best[2]]
     return out
 
 
@@ -470,7 +523,7 @@ def run_job(job):
     path = job.get('path')
     op = job.get('op')
     if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set', 'replaygain',
-                              'images_strip', 'images_restore'):
+                              'images_strip', 'images_restore', 'hidden'):
         fail('invalid job')
     if PY2 and isinstance(path, text_type):
         path = path.encode('utf-8')
@@ -490,6 +543,8 @@ def run_job(job):
         if op == 'replaygain':
             return dict(read_replaygain(audio, kind), ok=True)
         before = read_tags(audio, kind)
+        if op == 'hidden':
+            return {'ok': True, 'found': read_hidden(audio, kind, before)}
         if op == 'read':
             return {'ok': True, 'format': kind, 'tags': before}
         new = dict((f, v) for f, v in (job.get('tags') or {}).items() if f in FIELDS and plain(v))

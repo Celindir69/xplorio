@@ -21,6 +21,7 @@ var CHECK_CATS = [
   {key: 'year', name: T('check.cat.year'), hint: T('check.cat.yearHint')},
   {key: 'noTrack', name: T('check.cat.noTrack'), hint: T('check.cat.noTrackHint')},
   {key: 'noTags', name: T('check.cat.noTags'), hint: T('check.cat.noTagsHint')},
+  {key: 'hiddenKeys', name: T('check.cat.hiddenKeys'), hint: T('check.cat.hiddenKeysHint')},
   {key: 'tagText', name: T('check.cat.tagText'), hint: T('check.cat.tagTextHint')},
   {key: 'dsfTags', name: T('check.cat.dsfTags'), hint: T('check.cat.dsfTagsHint')},
   {key: 'coverQuality', name: T('check.cat.coverQuality'), hint: T('check.cat.coverQualityHint')},
@@ -31,7 +32,7 @@ var CHECK_CATS = [
   {key: 'genreConflict', name: T('check.cat.genreConflict'), hint: T('check.cat.genreConflictHint')}
 ];
 var CHECK_KEEPABLE = {genreConflict: 1, genreMerge: 1, genreMissing: 1, duplicates: 1, splitAlbums: 1, year: 1, albumName: 1, spelling: 1, mixedQuality: 1,
-                      coverQuality: 1, folderName: 1, tagText: 1};   /* categories with "Keep" */
+                      coverQuality: 1, folderName: 1, tagText: 1, hiddenKeys: 1};   /* categories with "Keep" */
 var checkGenreOk = {};                                   /* genre suggestions marked "keep" (tag service genre-ok.json), see checkKeepOf */
 var CHECK_CHEVRON = '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
@@ -102,6 +103,7 @@ function checkRunText(run) {
   return run.phase === 'mpd'
     ? (run.total ? T('check.runFolders', {done: checkNum(run.done), total: checkNum(run.total)}) : T('check.runFoldersNoTotal', {done: checkNum(run.done)}))
     : run.phase === 'files' ? T('check.runFiles', {done: checkNum(run.done), total: checkNum(run.total)})
+    : run.phase === 'hidden' ? T('check.runHidden', {done: checkNum(run.done), total: checkNum(run.total)})
     : T('check.runCovers', {done: checkNum(run.done), total: checkNum(run.total)});
 }
 function checkRender(res) {
@@ -305,6 +307,7 @@ function checkFill(box, cat, list) {
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
       else if (cat.key === 'year' || cat.key === 'albumName') box.insertBefore(checkFixRow(cat.key, list[shown], false), moreRow);
       else if (cat.key === 'tagText') box.insertBefore(checkTagTextRow(list[shown], false), moreRow);
+      else if (cat.key === 'hiddenKeys') box.insertBefore(checkHiddenRow(list[shown], false), moreRow);
       else if (cat.key === 'artistFix') box.insertBefore(checkArtistFixRow(list[shown]), moreRow);
       else if (cat.key === 'spelling') box.insertBefore(checkSpellingRow(list[shown], false), moreRow);
       else if (cat.key === 'mixedQuality') checkQualityRows(list[shown], false).forEach(function(el){ box.insertBefore(el, moreRow); });
@@ -340,6 +343,7 @@ function checkKeepOf(cat, it) {
   if (cat === 'coverQuality') return {k: 'cover|' + it.dir, v: it.image + ':' + it.why};   /* until the image changes */
   if (cat === 'folderName') return {k: 'folder|' + it.dir, v: it.folder};
   if (cat === 'tagText') return {k: 'tagtext|' + it.dir, v: checkTagTextKey(it)};   /* as long as these values stay */
+  if (cat === 'hiddenKeys') return {k: 'hidden|' + it.dir, v: checkHiddenKey(it)};
   if (cat === 'spelling') return {k: 'spell|' + (it.key || checkValuesKey(it.variants)), v: checkValuesKey(it.variants)};   /* as long as these spellings stay */
   return {k: it.dir, v: it.tag};
 }
@@ -381,7 +385,7 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
   }
   if (kept) btn(T('check.conflict.undoKeep'), T('check.conflict.undoKeepHint'), function(b){ keep(false, b); });
   else {
-    var fix = cat === 'year' || cat === 'albumName' || cat === 'spelling' || cat === 'tagText';
+    var fix = cat === 'year' || cat === 'albumName' || cat === 'spelling' || cat === 'tagText' || cat === 'hiddenKeys';
     var run = function(b, to){                               /* write the suggestion (or the chosen spelling) -> batch */
       if (cat === 'spelling') return checkApplyArtist({variants: it.variants, to: to}, b);
       return fix ? checkApplyItems(checkFixItems(cat, it), b) : checkApplyGenre(files, it.genre, b);
@@ -400,7 +404,8 @@ function checkGenreButtons(row, cat, doneKey, it, files, kept) {
         });
       }).catch(function(){ b.disabled = false; b.textContent = label; });
     }); };
-    if (cat === 'tagText') { if (it.fixes.length) apply(T('check.conflict.apply'), T('check.tagText.applyHint', {n: checkNum(it.fixes.length)})); }
+    if (cat === 'hiddenKeys') apply(T('check.conflict.apply'), T('check.hidden.applyHint', {n: checkNum(it.fixes.length)}));
+    else if (cat === 'tagText') { if (it.fixes.length) apply(T('check.conflict.apply'), T('check.tagText.applyHint', {n: checkNum(it.fixes.length)})); }
     else if (fix ? it.suggest : it.genre) apply(T('check.conflict.apply'), fix ? T('check.fix.applyHint', {value: it.suggest}) : T('check.conflict.applyHint', {genre: it.genre}), it.suggest);
     if (cat === 'spelling') checkSpellingOthers(it).forEach(function(to){       /* another spelling instead of the suggestion */
       apply(T('check.spelling.use', {name: to}), T('check.fix.applyHint', {value: to}), to);
@@ -462,6 +467,7 @@ function checkKeptSection(box, cat) {
     if (cat === 'year' || cat === 'albumName') return list.appendChild(checkFixRow(cat, it, true));
     if (cat === 'spelling') return list.appendChild(checkSpellingRow(it, true));
     if (cat === 'tagText') return list.appendChild(checkTagTextRow(it, true));
+    if (cat === 'hiddenKeys') return list.appendChild(checkHiddenRow(it, true));
     if (cat === 'mixedQuality') return checkQualityRows(it, true).forEach(function(el){ list.appendChild(el); });
     if (CHECK_SIMPLE[cat]) return list.appendChild(checkSimpleRow(cat, it, true));
     list.appendChild(cat === 'genreMerge' ? checkGenreGroupRow(cat, it, true) : cat === 'genreMissing' ? checkGenreAlbumRow(cat, it, true) : checkConflictRow(it, true));
@@ -674,6 +680,25 @@ function checkTagTextRow(it, kept) {
   return row;
 }
 
+/* ---------- Album artist or date under a name MPD does not read (tag service hiddenKeys) ---------- */
+/* "ALBUM ARTIST „Velvet Static“ → Album-Künstler (12×) · YEAR „1999“ → Datum"; Apply copies them to the usual name */
+function checkHiddenKey(it) {
+  return it.found.map(function(f){ return f.field + ':' + f.key + ':' + f.value; }).sort().join('|').slice(0, 300);   /* /genreok: at most 300 characters */
+}
+function checkHiddenRow(it, kept) {
+  var key = 'hiddenKeys|' + it.dir;
+  var parts = it.found.slice(0, 3).map(function(f){
+    var s = T('check.hidden.' + f.field, {key: f.key, value: f.value});
+    return f.n > 1 ? T('check.tagText.times', {text: s, n: checkNum(f.n)}) : s;
+  });
+  if (it.found.length > 3) parts.push(T('check.tagText.more', {n: checkNum(it.found.length - 3)}));
+  var row = checkRow(key, it.name + (it.artist ? ' · ' + it.artist : ''), parts.join(' · ') + ' · /mnt/' + it.dir, function(){
+    openTagEditor(it.files, it.name, {move: true});
+  });
+  checkGenreButtons(row, 'hiddenKeys', key, it, it.files, kept);
+  return row;
+}
+
 /* ---------- Lossless and lossy tracks in one album: the worse ones with ▶ and "Move", "Keep" if it is intended ---------- */
 /* head "Album · Artist", "FLAC 16/44.1 (10), MP3 (2)" and Keep; below it one row per worse track (as for duplicate tracks) */
 function checkQualityRows(it, kept) {
@@ -709,7 +734,7 @@ function checkFixRow(cat, it, kept) {
 }
 /* what "Apply" writes: the date into all files; the album name, and the disc number from "(Disc 2)" where the disc tag is empty */
 function checkFixItems(cat, it) {
-  if (cat === 'tagText') return it.fixes;                  /* repaired umlauts and dates, per track */
+  if (cat === 'tagText' || cat === 'hiddenKeys') return it.fixes;   /* repaired umlauts and dates / the value under the usual name, per track */
   return it.files.map(function(f){
     var tags = cat === 'year' ? {date: it.suggest} : {album: it.suggest};
     if (cat === 'albumName' && f.disc) tags.disc = f.disc;
