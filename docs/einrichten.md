@@ -981,7 +981,7 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
 - Jedes Gerät merkt sich, ob die Instrumente an sind.
 
 Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
-leuchtet über 0 VU und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
+leuchtet, sobald die Nadel über 0 VU steht, und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
 
 **Einrichten:** Das VU-Meter braucht in MPD einen zusätzlichen Ausgang vom Typ `fifo`. Xplorio ändert `mpd.conf` nicht,
 der Block wird von Hand eingetragen, wie beim Stream-Ausgang. Unter Volumio 2 gehört er in Volumios Vorlage

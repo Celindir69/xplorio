@@ -716,7 +716,7 @@ Two backlit needle meters show the level of the left and right channel.
 - Each device remembers whether the meters are on.
 
 The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
-middle lights above 0 VU and stays on for a second. On pause the needles sink slowly.
+middle lights once the needle is past 0 VU and stays on for a second. On pause the needles sink slowly.
 
 **Setup:** The VU meter needs an extra MPD output of type `fifo`. Xplorio does not change `mpd.conf`; add the block by
 hand, as for the stream output. On Volumio 2 it goes into Volumio's template

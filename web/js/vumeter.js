@@ -4,7 +4,7 @@
    on the phone side by side below a smaller cover (a tap on the cover switches them on and off). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
    Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
-   lights above 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
+   lights while the needle is past 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
    APP_CONFIG.VU_DELAY_MS: MPD fills the fifo before the sound reaches the amplifier, the needle waits this long.
    Classic script, shared global scope; loaded after stage.js. */
 var VU_KEY = 'xplorioVu', VU_PANE_KEY = 'mxStagePane', VU_ON_KEY = 'xplorioVuOn';
@@ -14,6 +14,7 @@ var VU_SCALE = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3];
 var VU_ANGLE = 45;                       /* degrees left and right of the middle */
 var VU_P0 = Math.pow(10, -23 / 20);      /* deflection at -20 VU (deflection is proportional to the voltage, +3 VU = full) */
 var VU_REST = -0.045;                    /* needle at the stop, left of -20 */
+var VU_POS0 = vuPos(0);
 var VU_LAMP_MS = 1000, VU_SILENT_MS = 250;
 
 var vuOpt = vuOption(), vuAvail = vuOpt === 'demo', vuDsd = false, vuPlaying = false;
@@ -120,7 +121,6 @@ function vuApply(w, now) {
     m.faces.forEach(function(f, i){
       var vu = w[i * 2] - VU_REF;
       f.target = Math.max(VU_REST, Math.min(1.06, vuPos(vu)));
-      if (vu > 0) f.until = now + VU_LAMP_MS;
     });
   });
 }
@@ -137,6 +137,7 @@ function vuFrame() {
     m.faces.forEach(function(f){
       if (silent) f.target = VU_REST;                           /* pause, stop: the needles sink slowly */
       vuStep(f, dt);
+      if (f.x > VU_POS0) f.until = now + VU_LAMP_MS;           /* lamp: when the needle itself is past 0 VU */
       f.needle.setAttribute('transform', 'rotate(' + vuDeg(f.x).toFixed(2) + ' ' + VU_CX + ' ' + VU_CY + ')');
       f.lamp.setAttribute('class', 'vuLamp' + (f.until > now ? ' on' : ''));
     });
