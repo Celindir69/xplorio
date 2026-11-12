@@ -1,7 +1,8 @@
 /* VU meter: two backlit needle instruments (left and right channel). Levels from the tag service (GET /vu, tags/vumeter.js),
    which reads MPD's "VU" fifo output while someone watches. Where: in the stage view below the lyrics or track list
    ("VU" button at the bottom right, next to "Lyrics | Track list"); in the classic landscape layout below the controls,
-   on the phone side by side below a smaller cover (a tap on the cover switches them on and off). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
+   on the phone side by side below a smaller cover (a tap on the cover switches them on and off, a tap on the meters
+   switches their color). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
    Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
    lights while the needle is past 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
@@ -16,6 +17,24 @@ var VU_P0 = Math.pow(10, -23 / 20);      /* deflection at -20 VU (deflection is 
 var VU_REST = -0.045;                    /* needle at the stop, left of -20 */
 var VU_POS0 = vuPos(0);
 var VU_LAMP_MS = 1000, VU_SILENT_MS = 250;
+
+/* face colors, a tap on the meters switches to the next one (per device); ?vustyle=… sets it */
+var VU_STYLES = ['accent', 'amberAccent', 'amber', 'white', 'blue'], VU_STYLE_KEY = 'xplorioVuStyle';
+var vuStyle = vuStyleStored();
+function vuStyleStored() {
+  try {
+    var m = /[?&]vustyle=(\w+)/.exec(location.search);
+    if (m && VU_STYLES.indexOf(m[1]) >= 0) localStorage.setItem(VU_STYLE_KEY, m[1]);
+    var s = localStorage.getItem(VU_STYLE_KEY);
+    return VU_STYLES.indexOf(s) >= 0 ? s : 'amber';
+  } catch (e) { return 'amber'; }
+}
+function vuSetStyle(s) {
+  vuStyle = s;
+  document.documentElement.setAttribute('data-vu', s);
+  try { localStorage.setItem(VU_STYLE_KEY, s); } catch (e) { /* private mode */ }
+}
+document.documentElement.setAttribute('data-vu', vuStyle);
 
 var vuOpt = vuOption(), vuAvail = vuOpt === 'demo', vuDsd = false, vuPlaying = false;
 var vuSrc = null, vuQueue = [], vuLastAt = 0, vuRaf = 0, vuT = 0;
@@ -44,7 +63,10 @@ var VU_NS = 'http://www.w3.org/2000/svg', VU_CX = 100, VU_CY = 150, VU_R = 98;
 var vuGradN = 0;
 function vuEl(name, attrs, parent) {
   var e = document.createElementNS(VU_NS, name);
-  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  for (var k in attrs) {
+    if (/^var\(/.test(attrs[k])) e.style.setProperty(k, attrs[k]);   /* CSS variable: as a style, not every browser reads it in an attribute */
+    else e.setAttribute(k, attrs[k]);
+  }
   if (parent) parent.appendChild(e);
   return e;
 }
@@ -61,11 +83,11 @@ function vuFace(label) {
   var svg = vuEl('svg', {viewBox: '0 0 200 130', 'class': 'vuFace', 'aria-hidden': 'true'});
   var defs = vuEl('defs', {}, svg);
   var g = vuEl('radialGradient', {id: id, cx: '50%', cy: '62%', r: '75%'}, defs);
-  vuEl('stop', {offset: '0', 'stop-color': '#ffdc8a'}, g);
-  vuEl('stop', {offset: '.55', 'stop-color': '#f7b54a'}, g);
-  vuEl('stop', {offset: '1', 'stop-color': '#c9741c'}, g);
+  vuEl('stop', {offset: '0', 'stop-color': 'var(--vu-g0)'}, g);       /* colors from the style (CSS, html[data-vu]) */
+  vuEl('stop', {offset: '.55', 'stop-color': 'var(--vu-g1)'}, g);
+  vuEl('stop', {offset: '1', 'stop-color': 'var(--vu-g2)'}, g);
   vuEl('rect', {x: 0, y: 0, width: 200, height: 130, rx: 6, fill: 'url(#' + id + ')'}, svg);
-  var ink = '#2a1a0c', red = '#b3200f';
+  var ink = 'var(--vu-ink)', red = 'var(--vu-red)';
   vuEl('path', {d: vuArc(vuDeg(0), vuDeg(vuPos(0)), VU_R), fill: 'none', stroke: ink, 'stroke-width': 1.4}, svg);
   vuEl('path', {d: vuArc(vuDeg(vuPos(0)), vuDeg(1), VU_R + 2.5), fill: 'none', stroke: red, 'stroke-width': 6}, svg);
   VU_SCALE.forEach(function(v){
@@ -86,7 +108,7 @@ function vuFace(label) {
   var note = vuEl('text', {x: VU_CX, y: 68, 'text-anchor': 'middle', 'class': 'vuNote', fill: ink}, svg);
   vuEl('text', {x: 12, y: 112, 'class': 'vuSide', fill: ink}, svg).textContent = label;
   var needle = vuEl('g', {}, svg);
-  vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: '#1a0f06', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
+  vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: 'var(--vu-needle)', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
   vuEl('rect', {x: 0, y: 116, width: 200, height: 14, fill: '#1b130c'}, svg);         /* cover over the needle's pivot */
   vuEl('rect', {x: .5, y: .5, width: 199, height: 129, rx: 6, fill: 'none', stroke: 'rgba(0,0,0,.35)'}, svg);
   return {svg: svg, needle: needle, lamp: lamp, note: note, x: VU_REST, v: 0, target: VU_REST, until: 0};
@@ -97,6 +119,10 @@ function vuBuild() {
   box.className = 'vuBox';
   var l = vuFace('L'), r = vuFace('R');
   box.appendChild(l.svg); box.appendChild(r.svg);
+  box.addEventListener('click', function(e){
+    e.stopPropagation();
+    vuSetStyle(VU_STYLES[(VU_STYLES.indexOf(vuStyle) + 1) % VU_STYLES.length]);
+  });
   vuMeters.push({box: box, faces: [l, r]});
   return box;
 }

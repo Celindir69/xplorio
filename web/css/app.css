@@ -1456,6 +1456,18 @@ html.rotelLock #vSlider { pointer-events:none; }
 .vuBox { display:flex; gap:3%; padding:3%; border-radius:12px; background:linear-gradient(#2e251c, #15100b);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 10px 30px rgba(0,0,0,.6); }
 .vuBox .vuFace { display:block; flex:1 1 0; min-width:0; width:100%; height:auto; }
+/* face colors per style (tap on the meters: vumeter.js VU_STYLES); amber is the classic one and the fallback */
+html { --vu-g0:#ffdc8a; --vu-g1:#f7b54a; --vu-g2:#c9741c; --vu-ink:#2a1a0c; --vu-red:#b3200f; --vu-needle:#1a0f06; }
+html[data-vu="white"] { --vu-g0:#fdfcf7; --vu-g1:#efede4; --vu-g2:#c6c2b3; --vu-ink:#1d1d1d; --vu-red:#c0261a; --vu-needle:#111; }
+html[data-vu="blue"] { --vu-g0:#5aa4e6; --vu-g1:#2367b4; --vu-g2:#0b2a57; --vu-ink:#eef6ff; --vu-red:#ff6b57; --vu-needle:#f4f8ff; }
+@supports (color: color-mix(in oklab, red, blue)) {   /* older browsers: amber */
+  html[data-vu="accent"] { --vu-g0:color-mix(in oklab, var(--accent-d, #ffdc8a) 45%, white); --vu-g1:var(--accent-d, #f7b54a);
+    --vu-g2:color-mix(in oklab, var(--accent-d, #c9741c) 60%, black); --vu-red:#8e1206; }
+  html[data-vu="amberAccent"] { --vu-g0:color-mix(in oklab, #ffdc8a 72%, var(--accent-d, #ffdc8a));
+    --vu-g1:color-mix(in oklab, #f7b54a 65%, var(--accent-d, #f7b54a)); --vu-g2:color-mix(in oklab, #c9741c 65%, var(--accent-d, #c9741c)); }
+}
+.vuBox .vuFace { cursor:pointer; }
+.vuFace stop { transition:stop-color .8s; }
 .vuNum { font:600 9px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuSign { font:700 13px/1 -apple-system, 'Helvetica Neue', Arial, sans-serif; }
 .vuTitle { font:700 16px/1 Georgia, 'Times New Roman', serif; letter-spacing:1px; }
