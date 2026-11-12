@@ -27,7 +27,16 @@ cRandom.addEventListener('click', function(){
 
 
 /* ---------- Rotel volume ---------- */
-var ROTEL_ON = !!(window.APP_CONFIG && window.APP_CONFIG.ROTEL);
+var ROTEL_ON = rotelHere(!!(window.APP_CONFIG && window.APP_CONFIG.ROTEL));
+/* ?rotel=false: no amplifier control on this device (volume through Volumio, no on/off, no remote control);
+   ?rotel=true: back to the setting (APP_CONFIG.ROTEL). Remembered per device */
+function rotelHere(cfg) {
+  try {
+    var m = /[?&]rotel=(true|false|1|0|on|off)\b/.exec(location.search);
+    if (m) { if (/^(false|0|off)$/.test(m[1])) localStorage.setItem('xplorioRotel', 'off'); else localStorage.removeItem('xplorioRotel'); }
+    return cfg && localStorage.getItem('xplorioRotel') !== 'off';
+  } catch (e) { return cfg; }
+}
 var ROTEL    = 'http://' + location.hostname + ':' + ((window.APP_CONFIG && window.APP_CONFIG.ROTEL_PORT) || 8765);
 var volWrap  = document.getElementById('volWrap');
 var vSlider  = document.getElementById('vSlider');
