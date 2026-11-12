@@ -8,7 +8,7 @@
    APP_CONFIG.VU_DELAY_MS: MPD fills the fifo before the sound reaches the amplifier, the needle waits this long.
    Classic script, shared global scope; loaded after stage.js. */
 var VU_KEY = 'xplorioVu', VU_PANE_KEY = 'mxStagePane', VU_ON_KEY = 'xplorioVuOn';
-var VU_REF = vuNum((window.APP_CONFIG || {}).VU_REF_DBFS, -14);
+var VU_REF = vuNum((window.APP_CONFIG || {}).VU_REF_DBFS, -8);
 var VU_DELAY = vuNum((window.APP_CONFIG || {}).VU_DELAY_MS, 400);
 var VU_SCALE = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3];
 var VU_ANGLE = 45;                       /* degrees left and right of the middle */

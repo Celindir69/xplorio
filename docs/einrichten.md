@@ -1014,8 +1014,9 @@ unverändert und bitgenau.
 - `xplorio.html?vu=demo`: Nadeln mit einem simulierten Signal, ohne FIFO, zum Ansehen
 
 **Feineinstellung** in `web/config.local.js`:
-- `VU_REF_DBFS` (Standard `-14`): welcher Pegel (dBFS RMS) als 0 VU gilt. Laute Aufnahmen schlagen dauernd in den
-  roten Bereich: Wert erhöhen, etwa auf `-10`. Leise Aufnahmen bewegen die Nadel kaum: Wert senken, etwa auf `-18`.
+- `VU_REF_DBFS` (Standard `-8`): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
+  -12 dBFS, dann pendelt die Nadel um -3 bis 0. Stehen die Nadeln oft am Anschlag, Wert erhöhen, etwa auf `-6`. Bewegen
+  sich leise Aufnahmen (Klassik, ältere CDs) kaum, Wert senken, etwa auf `-12`.
 - `VU_DELAY_MS` (Standard `400`): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
   warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken.
 
