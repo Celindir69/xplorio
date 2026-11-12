@@ -43,7 +43,7 @@ ein Reiter „Titel“.
 ### Display-Layout für iPad, Desktop und Fernseher
 Auf großen Bildschirmen stehen Cover, Infos und Steuerung links und die Lyrics rechts; die Infos blättern von selbst
 weiter. Umschalten oben rechts oder mit `?layout=stage`. Unten rechts wählt man Liedtext oder Titelliste und schaltet
-das VU-Meter dazu (zwei hinterleuchtete Zeigerinstrumente; braucht einen FIFO-Ausgang in MPD, siehe
+das VU-Meter dazu (zwei hinterleuchtete Zeigerinstrumente; den nötigen FIFO-Ausgang in MPD legt das Plugin an, siehe
 [VU-Meter](docs/einrichten.md#vu-meter)). In der klassischen Ansicht und auf dem Handy blendet ein Tipp aufs Cover die
 Instrumente ein.
 

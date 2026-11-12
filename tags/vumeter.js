@@ -1,4 +1,4 @@
-/* VU meter (web/js/vumeter.js): MPD's "fifo" output (added to mpd.conf by hand, Xplorio never changes the file) carries the
+/* VU meter (web/js/vumeter.js): MPD's "fifo" output (the plugin hands it to Volumio, which adds it to mpd.conf, or added by hand) carries the
    same music as the amplifier output as raw PCM. The tag service reads it while someone looks at the meters and sends
    level and peak per channel 40 times a second (GET /vu, Server-Sent Events). Pure helpers here, the service is in
    tag-service.js. Node 8, ES5 only. */

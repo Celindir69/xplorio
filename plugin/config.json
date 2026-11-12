@@ -1,5 +1,6 @@
 {
 	"port": {"type": "number", "value": 4040},
 	"tagService": {"type": "boolean", "value": true},
-	"rotelBridge": {"type": "boolean", "value": false}
+	"rotelBridge": {"type": "boolean", "value": false},
+	"vuOutput": {"type": "boolean", "value": true}
 }

@@ -38,6 +38,7 @@
 				"data": [
 					"port",
 					"tagService",
+					"vuOutput",
 					"language",
 					"theme"
 				]
@@ -65,6 +66,13 @@
 					"label": "TRANSLATE.XPLORIO.TAG_SERVICE",
 					"doc": "TRANSLATE.XPLORIO.TAG_SERVICE_DOC",
 					"value": false
+				},
+				{
+					"id": "vuOutput",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.VU_OUTPUT",
+					"doc": "TRANSLATE.XPLORIO.VU_OUTPUT_DOC",
+					"value": true
 				},
 				{
 					"id": "language",

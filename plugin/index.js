@@ -72,7 +72,9 @@ ControllerXplorio.prototype.onVolumioStart = function() {
   this.config.loadFile(file);
   if (this.config.get('port') === undefined) this.config.set('port', 4040);
   if (this.config.get('tagService') === undefined) this.config.set('tagService', true);
+  if (this.config.get('vuOutput') === undefined) this.config.set('vuOutput', true);
   this.defaults();
+  this.vuHook(true);                                  /* early, so the MPD plugin has it when it writes mpd.conf at boot */
   return libQ.resolve();
 };
 
@@ -89,6 +91,8 @@ ControllerXplorio.prototype.onStart = function() {
   var self = this, defer = libQ.defer(), port = self.port();
   self.writeConfig();
   self.writeEnv();
+  self.vuHook(true);
+  self.vuSync();
   var amp = self.ampPlugin(), failed = null;
   var todo = SERVICES.filter(function(s){ return !s.id || (self.config.get(s.id) && !(amp && s.id === 'rotelBridge')); });   /* not both on the amplifier */
   if (amp && self.config.get('rotelBridge')) self.logger.info('Xplorio: SerialAmpControl is on, Rotel bridge not started');
@@ -121,6 +125,7 @@ ControllerXplorio.prototype.onStart = function() {
 /* all services of the plugin off (also those switched off on the page) */
 ControllerXplorio.prototype.onStop = function() {
   var self = this, defer = libQ.defer(), left = SERVICES.length;
+  self.vuHook(false);                                 /* removed or switched off: Volumio must not call into it any more */
   SERVICES.forEach(function(s){ self.systemctl('stop', s.unit, function(){ if (--left === 0) defer.resolve(); }); });
   return defer.promise;
 };
@@ -208,7 +213,9 @@ ControllerXplorio.prototype.getUIConfig = function() {
       var rs = ui.sections.filter(function(sec){ return sec.id === 'section_rotel'; })[0];
       if (rs) rs.description = [rs.description, self.str('AMP_PLUGIN_ON')].filter(Boolean).join(' ');
     }
-    ['tagService', 'rotelBridge'].forEach(function(id){ el(id).value = !!self.config.get(id); });
+    ['tagService', 'rotelBridge', 'vuOutput'].forEach(function(id){ el(id).value = !!self.config.get(id); });
+    var vuNote = !self.mpd() ? 'VU_NO_HOOK' : vuInTemplate() ? 'VU_BY_HAND' : '';
+    if (vuNote) el('vuOutput').doc = self.str('VU_OUTPUT_DOC') + ' ' + self.str(vuNote);
     FIELDS.forEach(function(f){
       var e = el(f.id), v = self.config.get(f.id);
       if (f.kind === 'bool') { e.value = !!v; return; }
@@ -253,7 +260,7 @@ ControllerXplorio.prototype.saveSettings = function(data) {
     var p = parseInt(data.port, 10);
     if (!(p >= 1024 && p <= 65535) || p === 3000) err = 'BAD_PORT'; else set.port = p;
   }
-  ['tagService', 'rotelBridge'].forEach(function(id){ if (has(id)) set[id] = !!data[id]; });
+  ['tagService', 'rotelBridge', 'vuOutput'].forEach(function(id){ if (has(id)) set[id] = !!data[id]; });
   FIELDS.forEach(function(f){
     if (!has(f.id) || err) return;
     var v = check(f, val(f.id));
@@ -313,6 +320,53 @@ ControllerXplorio.prototype.saveKeys = function(vals) {
   else Object.keys(vals).forEach(function(n){ if (vals[n]) k[n] = vals[n]; });
   keys.write(k);
   this.logger.info('Xplorio: Last.fm access ' + (vals ? 'saved' : 'deleted'));
+};
+
+/* ---------- VU meter: MPD's fifo output, added to Volumio's own mpd.conf ----------
+   Xplorio never writes mpd.conf itself. Volumio's MPD plugin builds it from its template and appends what plugins return
+   through registerConfigCallback, on every rebuild (boot, playback settings). With "VU meter" on, Xplorio returns the fifo
+   output (switched off; the tag service switches it on only while someone looks at the meters, tags/vumeter.js). Is a VU
+   output already in the template (added by hand), nothing is added. */
+var VU_BLOCK = 'audio_output {\n    type            "fifo"\n    name            "VU"\n    path            "/tmp/mpd-vu.fifo"\n' +
+               '    format          "44100:16:2"\n    enabled         "no"\n}\n';
+var MPD_TMPL = process.env.XPLORIO_MPD_TMPL || '/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl';
+var MPD_CONF = process.env.XPLORIO_MPD_CONF || '/etc/mpd.conf';
+var VU_HOOK = {type: 'user_interface', plugin: 'xplorio', data: 'getMpdConfig'};
+function vuOutputIn(text) {
+  return require(path.join(APP, 'tags', 'remote.js')).confOutputs(text).some(function(o){ return o.type === 'fifo' && /vu/i.test(o.name); });
+}
+function vuInTemplate() { return vuOutputIn(read(MPD_TMPL)); }
+
+ControllerXplorio.prototype.mpd = function() {
+  var pm = this.commandRouter.pluginManager, m = null;
+  try { m = pm && typeof pm.getPlugin === 'function' ? pm.getPlugin('music_service', 'mpd') : null; } catch (e) { /* not there */ }
+  return m && typeof m.registerConfigCallback === 'function' && Array.isArray(m.registeredCallbacks) ? m : null;
+};
+/* on: in the MPD plugin's list once (it has no removal and keeps the list until Volumio restarts); off: out of the list
+   again, else an uninstalled Xplorio would leave "undefined" in the next mpd.conf */
+ControllerXplorio.prototype.vuHook = function(on) {
+  var m = this.mpd();
+  if (!m) return;
+  var list = m.registeredCallbacks;
+  for (var i = list.length - 1; i >= 0; i--) if (list[i] && list[i].plugin === VU_HOOK.plugin && list[i].data === VU_HOOK.data) list.splice(i, 1);
+  if (on) m.registerConfigCallback({type: VU_HOOK.type, plugin: VU_HOOK.plugin, data: VU_HOOK.data});
+};
+/* called by the MPD plugin while it builds mpd.conf; the text is appended as it is (always a string) */
+ControllerXplorio.prototype.getMpdConfig = function() {
+  return this.config && this.config.get('vuOutput') && !vuInTemplate() ? VU_BLOCK : '';
+};
+/* mpd.conf as it should be with the switch? Otherwise let the MPD plugin rebuild it and restart MPD (only then:
+   switched on or off, or the first start after installing) */
+ControllerXplorio.prototype.vuSync = function() {
+  var self = this, m = self.mpd();
+  if (!m || typeof m.createMPDFile !== 'function') return;
+  var conf = read(MPD_CONF), want = !!self.getMpdConfig(), has = vuOutputIn(conf);
+  if (want ? has : conf.indexOf(VU_BLOCK) < 0) return;              /* off: only our own block goes, one added by hand stays */
+  self.logger.info('Xplorio: VU output ' + (want ? 'added to' : 'removed from') + ' mpd.conf, MPD restarts');
+  m.createMPDFile(function(err){
+    if (err) return self.logger.error('Xplorio: mpd.conf not rebuilt: ' + err);
+    if (typeof m.restartMpd === 'function') m.restartMpd(function(){});
+  });
 };
 
 /* ---------- helpers ---------- */
