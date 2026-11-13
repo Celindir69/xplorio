@@ -40,6 +40,7 @@
 					"tagService",
 					"vuOutput",
 					"vuRef",
+					"vuNeedle",
 					"vuDelay",
 					"language",
 					"theme"
@@ -83,6 +84,17 @@
 					"doc": "TRANSLATE.XPLORIO.VU_REF_DOC",
 					"value": {
 						"value": "-8",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "vuNeedle",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.VU_NEEDLE",
+					"doc": "TRANSLATE.XPLORIO.VU_NEEDLE_DOC",
+					"value": {
+						"value": "fast",
 						"label": ""
 					},
 					"options": []

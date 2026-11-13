@@ -4,13 +4,14 @@
    on the phone side by side below a smaller cover (a tap on the cover switches them on and off, a tap on the meters
    switches their color, the last one is a digital LED bar meter). ?vu=true (default) | false (off) | nodsd (off while DSD plays, saves the player converting it) |
    demo (simulated signal, without fifo); remembered per device.
-   Needle like a real VU meter: about 300 ms to the value with a slight overshoot, slower back; the lamp in the middle
+   Needle fast by default; APP_CONFIG.VU_NEEDLE = 'classic': like a real VU meter, about 300 ms with a slight overshoot; the lamp in the middle
    lights while the needle is past 0 VU and stays on for a second. APP_CONFIG.VU_REF_DBFS: level (dBFS RMS) shown as 0 VU;
    APP_CONFIG.VU_DELAY_MS: MPD fills the fifo before the sound reaches the amplifier, the needle waits this long.
    Classic script, shared global scope; loaded after stage.js. */
 var VU_KEY = 'xplorioVu', VU_PANE_KEY = 'mxStagePane', VU_ON_KEY = 'xplorioVuOn';
 var VU_REF = vuNum((window.APP_CONFIG || {}).VU_REF_DBFS, -8);
 var VU_DELAY = vuNum((window.APP_CONFIG || {}).VU_DELAY_MS, 400);
+var VU_CLASSIC = (window.APP_CONFIG || {}).VU_NEEDLE === 'classic';   /* needle: 'fast' (default) or 'classic' (VU standard, ~300 ms) */
 var VU_SCALE = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3];
 var VU_ANGLE = 45;                       /* degrees left and right of the middle */
 var VU_P0 = Math.pow(10, -23 / 20);      /* deflection at -20 VU (deflection is proportional to the voltage, +3 VU = full) */
@@ -173,7 +174,10 @@ function vuBuild() {
 
 /* ---------- Ballistics ---------- */
 function vuStep(f, dt) {
-  var up = f.target > f.x, w = up ? 13.5 : (vuSilent() ? 4 : 8), z = up ? 0.8 : 1;   /* up ≈ 300 ms, 1–2 % overshoot */
+  var up = f.target > f.x, z = up && VU_CLASSIC ? 0.8 : 1, w;
+  if (vuSilent()) w = 4;                                     /* pause, stop: the needles sink slowly */
+  else if (VU_CLASSIC) w = up ? 13.5 : 8;                    /* VU standard: up ≈ 300 ms, 1–2 % overshoot, slower back */
+  else w = up ? 60 : 22;                                     /* fast: up ≈ 60 ms, back ≈ 200 ms, no overshoot */
   for (var t = 0; t < dt; t += 0.004) {
     var h = Math.min(0.004, dt - t);
     f.v += (w * w * (f.target - f.x) - 2 * z * w * f.v) * h;
