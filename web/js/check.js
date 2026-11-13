@@ -4,6 +4,7 @@ var overlayCheck = document.getElementById('overlayCheck');
 var checkBody    = document.getElementById('checkBody');
 var checkTimer   = null;
 var checkOpen    = {};          /* expanded categories stay open on redraw */
+var checkUpTo    = {};          /* entries shown per category after "show more": a redraw (e.g. after Keep) shows as many again */
 var CHECK_PAGE   = 100;         /* this many entries per category, then "show more" */
 var checkDone    = {};          /* edited entries (tag service remembers them until the next check) */
 var checkDoneAt  = 0;           /* which check run checkDone belongs to */
@@ -106,8 +107,31 @@ function checkRunText(run) {
     : run.phase === 'hidden' ? T('check.runHidden', {done: checkNum(run.done), total: checkNum(run.total)})
     : T('check.runCovers', {done: checkNum(run.done), total: checkNum(run.total)});
 }
+/* the first row on screen (category, its text, distance from the top): after a redraw the list is scrolled so that
+   this row stands where it stood, even if rows above it are gone (Keep, Apply) or have another height */
+function checkAnchor() {
+  var top = checkBody.getBoundingClientRect().top, boxes = checkBody.querySelectorAll('.ckList');
+  for (var i = 0; i < boxes.length; i++) {
+    if (!boxes[i].firstChild || boxes[i].getBoundingClientRect().bottom <= top) continue;
+    for (var c = boxes[i].firstElementChild; c; c = c.nextElementSibling) {
+      var r = c.getBoundingClientRect();
+      if (r.bottom > top && r.height) return {box: i, text: checkRowText(c), off: r.top - top};
+    }
+  }
+  return null;
+}
+function checkRowText(el) { var t = el.querySelector('.sTitle'); return (t || el).textContent.slice(0, 300); }
+function checkToAnchor(a) {
+  var box = a && checkBody.querySelectorAll('.ckList')[a.box];
+  for (var c = box && box.firstElementChild; c; c = c.nextElementSibling) {
+    if (checkRowText(c) !== a.text) continue;
+    checkBody.scrollTop += c.getBoundingClientRect().top - checkBody.getBoundingClientRect().top - a.off;
+    return true;
+  }
+  return false;
+}
 function checkRender(res) {
-  var keepScroll = checkBody.scrollTop;
+  var keepScroll = checkBody.scrollTop, anchor = checkAnchor();
   while (checkBody.firstChild) checkBody.removeChild(checkBody.firstChild);
   var r = res.result, run = res.running;
 
@@ -131,7 +155,7 @@ function checkRender(res) {
   checkBody.appendChild(checkDbRow());
   if (!r) { checkMoodSection(); checkBody.scrollTop = keepScroll; return; }
   if (res.genreOk) checkGenreOk = res.genreOk;
-  if (checkDoneAt !== r.at) { checkDone = {}; checkDoneAt = r.at; }
+  if (checkDoneAt !== r.at) { checkDone = {}; checkUpTo = {}; cbKnown = {}; checkDoneAt = r.at; }
   Object.keys(r.done || {}).forEach(function(k){ checkDone[k] = 1; });
   r.artistFix = res.artistFix || [];
   r.year = res.yearFix || [];                            /* with the MusicBrainz suggestion of the moment (tag service) */
@@ -153,6 +177,7 @@ function checkRender(res) {
     var box = document.createElement('div'); box.className = 'ckList';
     row.addEventListener('click', function(){
       checkOpen[cat.key] = !checkOpen[cat.key];
+      if (!checkOpen[cat.key]) delete checkUpTo[cat.key];  /* closed by hand: next time from the first page again */
       row.classList.toggle('open', checkOpen[cat.key]);
       if (checkOpen[cat.key] && !box.firstChild) checkFill(box, cat, list);
     });
@@ -161,6 +186,7 @@ function checkRender(res) {
   });
   checkMoodSection();
   checkBody.scrollTop = keepScroll;
+  checkToAnchor(anchor);
 }
 
 /* Update the library (whole MPD database); changes already collected are included.
@@ -300,8 +326,8 @@ function checkFill(box, cat, list) {
   var hint = document.createElement('div'); hint.className = 'ckCatHint'; hint.textContent = list.length ? cat.hint : T('check.nothingFound');
   box.appendChild(hint);
   var shown = 0;
-  function more() {
-    var end = Math.min(list.length, shown + CHECK_PAGE);
+  function more(upTo) {
+    var end = Math.min(list.length, typeof upTo === 'number' ? Math.max(upTo, CHECK_PAGE) : shown + CHECK_PAGE);
     for (; shown < end; shown++) {
       if (cat.key === 'genreMerge') box.insertBefore(checkGenreGroupRow(cat.key, list[shown]), moreRow);
       else if (cat.key === 'genreConflict') box.insertBefore(checkConflictRow(list[shown], false), moreRow);
@@ -317,15 +343,16 @@ function checkFill(box, cat, list) {
       else if (CHECK_SIMPLE[cat.key]) box.insertBefore(checkSimpleRow(cat.key, list[shown], false), moreRow);
       else box.insertBefore(checkAlbumRow(cat.key, list[shown]), moreRow);
     }
+    if (shown > CHECK_PAGE) checkUpTo[cat.key] = shown;
     moreRow.style.display = shown < list.length ? '' : 'none';
     moreRow.textContent = T('check.more', {k: checkNum(Math.min(CHECK_PAGE, list.length - shown)), left: checkNum(list.length - shown)});
   }
   if (cat.key === 'duplicates' && list.length) checkDupTrash(box);
   if (cat.key === 'artistFix') checkArtistStatus(box);
   var moreRow = document.createElement('div'); moreRow.className = 'ckMore';
-  moreRow.addEventListener('click', more);
+  moreRow.addEventListener('click', function(){ more(); });
   box.appendChild(moreRow);
-  more();
+  more(checkUpTo[cat.key] || CHECK_PAGE);
   if (CHECK_KEEPABLE[cat.key]) checkKeptSection(box, cat.key);
 }
 
@@ -540,8 +567,8 @@ function checkSimpleRow(cat, it, kept) {
     });
     row.insertBefore(fm, row.lastChild);
   }
-  if (cat === 'coverQuality' && it.why === 'small' && !kept) checkCoverBest(row, it, key);
   if (CHECK_KEEPABLE[cat]) checkGenreButtons(row, cat, key, it, it.files, kept);
+  if (cat === 'coverQuality' && it.why === 'small' && !kept) checkCoverBest(row, it, key);   /* "Apply" goes in front of "Keep" */
   var bx = row.querySelector('.ckGenreBtns');
   if (fm && bx) bx.insertBefore(fm, bx.firstChild);       /* file manager with the other buttons */
   return row;
@@ -552,6 +579,7 @@ function checkSimpleRow(cat, it, kept) {
    seconds while any visible row still waits. Apply: into all files of the folder and as folder.jpg (replaced), with Undo */
 var CB_ASK_MS = 4000;
 var cbRows = [], cbTimer = null, cbObs = null;
+var cbKnown = {};               /* dir -> answer already shown (found / none): a redrawn row shows it at once, without asking again */
 function checkCoverBest(row, it, key) {
   var box = document.createElement('div'); box.className = 'ckCb';
   var cur = document.createElement('img'); cur.className = 'ckCbImg'; cur.alt = '';
@@ -564,6 +592,7 @@ function checkCoverBest(row, it, key) {
   arrow.style.display = neu.style.display = 'none';
   row.querySelector('.sMeta').appendChild(box);
   var e = {row: row, it: it, key: key, seen: !window.IntersectionObserver, done: false, show: show};
+  if (cbKnown[it.dir]) { show(cbKnown[it.dir]); return; }
   cbRows.push(e);
   if (window.IntersectionObserver) {
     if (!cbObs) cbObs = new IntersectionObserver(function(list){
@@ -585,8 +614,8 @@ function checkCoverBest(row, it, key) {
     return b;
   }
   function show(st) {
-    if (st.state === 'wait') return;
-    e.done = true;
+    if (st.state === 'wait' || e.done) return;            /* two answers overlapping: only the first one adds "Apply" */
+    e.done = true; cbKnown[it.dir] = st;
     if (st.state !== 'found') { txt.textContent = T('check.coverq.none'); return; }
     var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
     neu.src = src; neu.style.display = ''; if (cur.style.display !== 'none') arrow.style.display = '';
@@ -622,6 +651,7 @@ function checkCoverBestAsk() {
     var waiting = false;
     ask.forEach(function(r){
       var st = res.covers[r.it.dir];
+      if (r.done) return;
       if (!st) { r.done = true; return; }
       if (st.state === 'wait') waiting = true; else r.show(st);
     });
