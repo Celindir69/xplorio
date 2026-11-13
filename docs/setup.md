@@ -764,7 +764,9 @@ bit-perfect.
 - `VU_NEEDLE` (default `'fast'`; with the plugin, **VU meter: needle**): `'fast'` follows the level almost at once,
   `'classic'` is slow like a real VU meter (about 300 ms to the value, slight overshoot).
 - `VU_DELAY_MS` (default `400`; with the plugin, **VU meter: delay**): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles
-  wait this long so they match the sound. If they run ahead of the sound, raise it; if they lag, lower it.
+  wait this long so they match the sound. If they run ahead of the sound, raise it; if they lag, lower it. When the
+  device plays the stream itself (playback on the phone, `player=remote`), Xplorio measures that stream's lag and waits
+  as long, as for synced lyrics; the value does not apply then.
 
 Good to know: The levels come from the tag service as Server-Sent Events (`GET /vu`), 40 values per second, only
 while the meters are visible. Spotify Connect, AirPlay and Bluetooth bypass MPD; the needles stay down then.
