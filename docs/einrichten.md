@@ -1033,4 +1033,9 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
 - **Python:** Volumio 2 hat Python 2.7, Volumio 4 Python 3; `tags.py` läuft mit beiden, mutagen bringt der Tag-Dienst mit.
 - **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Last.fm und Wikipedia
   (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit Last.fm-Key gibt es auch Albumtexte.
+- **ReplayGain bei m4a (ALAC, AAC):** libav 11 von Volumio 2 liest ReplayGain in m4a nur unter der Kennung
+  `org.hydrogenaudio.replaygain`, nicht unter der üblichen `com.apple.iTunes`. MPD spielt solche Dateien dann ohne
+  ReplayGain. `python tools/m4a-replaygain.py <Ordner>` zeigt, welche Dateien betroffen sind; mit `--write` kopiert es die
+  vier Werte zusätzlich unter die andere Kennung (Tonspur und Änderungszeit bleiben, `--remove --write` nimmt es zurück).
+  Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
