@@ -769,6 +769,7 @@ there it is installed and updated with [`xplorio-deploy`](#installing). Differen
 - **Information texts:** Volumio 4 only provides artist and album information with a subscription; the app therefore retrieves it from Last.fm and Wikipedia (see [Artist and Album Information](#artist-and-album-information)). With a Last.fm key, album information is also available.
 - **ReplayGain in m4a (ALAC, AAC):** Volumio 2's libav 11 only reads ReplayGain in m4a under the domain
   `org.hydrogenaudio.replaygain`, not under the usual `com.apple.iTunes`, so MPD plays such files without ReplayGain.
-  `python tools/m4a-replaygain.py <folder>` lists the affected files; with `--write` it copies the four values under the
-  other domain as well (audio and modification time stay; `--remove --write` undoes it). Volumio 4 reads both.
+  `sudo bash tools/libav-m4a-replaygain.sh apply` changes that one domain in the library to `com.apple.iTunes` (backup
+  in `/data/xplorio/libav-backup`, then MPD restarts). Without an argument the script only shows the state; `rollback`
+  brings the original back. A package update of libav would overwrite the patch. Volumio 4 reads both domains.
 - **Not tested under Volumio 4:** Rotel Bridge and TIDAL Watchdog.

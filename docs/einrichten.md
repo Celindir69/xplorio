@@ -1035,7 +1035,8 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
   (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit Last.fm-Key gibt es auch Albumtexte.
 - **ReplayGain bei m4a (ALAC, AAC):** libav 11 von Volumio 2 liest ReplayGain in m4a nur unter der Kennung
   `org.hydrogenaudio.replaygain`, nicht unter der üblichen `com.apple.iTunes`. MPD spielt solche Dateien dann ohne
-  ReplayGain. `python tools/m4a-replaygain.py <Ordner>` zeigt, welche Dateien betroffen sind; mit `--write` kopiert es die
-  vier Werte zusätzlich unter die andere Kennung (Tonspur und Änderungszeit bleiben, `--remove --write` nimmt es zurück).
+  ReplayGain. `sudo bash tools/libav-m4a-replaygain.sh apply` ändert in der Bibliothek diese eine Kennung auf
+  `com.apple.iTunes` (Sicherung in `/data/xplorio/libav-backup`, danach Neustart von MPD). Ohne Argument zeigt das Skript
+  nur den Zustand, `rollback` holt das Original zurück. Ein Paket-Update von libav würde den Patch überschreiben.
   Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
