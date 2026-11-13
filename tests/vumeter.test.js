@@ -60,6 +60,20 @@ t('pacing: one window per tick, a long queue is shortened from the front', funct
   assert.deepStrictEqual([p.next(), p.next(), p.next(), p.next()], [[3], [4], [5], null]);
 });
 
+t('pacing: a backlog drains at double speed, peaks kept; ticks a little slow do not build up a lag', function(){
+  var p = vu.pacer(12, 2);
+  p.add([[-20, -3], [-10, -9], [-30, -1], [-25, -5], [-15, -8]]);
+  assert.deepStrictEqual(p.next(), [-10, -3]);          /* 5 waiting: two as one, the louder of each */
+  assert.deepStrictEqual([p.next(), p.next(), p.next(), p.next()], [[-30, -1], [-25, -5], [-15, -8], null]);
+  /* MPD delivers 40 windows per second, the timer ticks only 37 times: the queue stays short */
+  var q = vu.pacer(12, 2), arrived = 0, most = 0;
+  for (var ms = 0; ms < 60000; ms++) {
+    if (ms % 25 === 0) { q.add([[arrived++]]); }
+    if (ms % 27 === 0) { q.next(); most = Math.max(most, q.size()); }
+  }
+  assert.ok(most <= 3, 'queue grew to ' + most);
+});
+
 /* end to end: fake MPD, mpd.conf with a VU output on a real fifo */
 var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vu-')), fifo = path.join(dir, 'vu.fifo');
 cp.execFileSync('mkfifo', [fifo]);
@@ -101,9 +115,9 @@ mpd.listen(0, function(){
             catch (e) { if (tries < 100) return setTimeout(function(){ write(tries + 1); }, 20); throw e; }
             fs.writeSync(wfd, pcm);
             setTimeout(function(){
-              t('/vu: output switched on, levels arrive evenly, one line per 25 ms window', function(){
+              t('/vu: output switched on, levels arrive evenly, a block of 4 windows as 3 lines (catching up)', function(){
                 assert.deepStrictEqual(cmds, ['enableoutput 2']);
-                assert.strictEqual(got.length, 4);
+                assert.strictEqual(got.length, 3);
                 assert.ok(Math.abs(got[1][0] + 9) < 0.2 && Math.abs(got[1][2] + 15) < 0.2, JSON.stringify(got[1]));
               });
               fs.closeSync(wfd);

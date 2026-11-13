@@ -58,13 +58,22 @@ function analyzer(fmt) {
   }};
 }
 
-/* MPD writes in chunks ahead of time; the windows go out one per tick, evenly. A queue that grows too long (the browser
-   was busy, MPD sent a large block) is shortened from the front so the meter does not fall behind */
-function pacer(max) {
+/* MPD writes in chunks ahead of time; the windows go out one per tick, evenly. The tick is never exactly 25 ms and MPD
+   sends a little in bursts, so without care the queue would fill up and the meter would lag behind for good (up to
+   max windows). So while more than keep windows wait, two go out as one (the louder of each value): the queue drains
+   at double speed and no peak is lost. A queue that grows too long anyway (the browser was busy, MPD sent a large
+   block) is shortened from the front */
+function pacer(max, keep) {
   var q = [];
+  if (keep == null) keep = 2;
   return {
     add: function(list){ for (var i = 0; i < list.length; i++) q.push(list[i]); if (q.length > max) q.splice(0, q.length - max); },
-    next: function(){ return q.length ? q.shift() : null; },
+    next: function(){
+      if (!q.length) return null;
+      var w = q.shift();
+      if (q.length > keep) { var x = q.shift(); w = w.map(function(v, i){ return Math.max(v, x[i]); }); }
+      return w;
+    },
     size: function(){ return q.length; },
     clear: function(){ q = []; }
   };
