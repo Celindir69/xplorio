@@ -105,7 +105,7 @@ function vuFace(label) {
   vuEl('text', {x: mn[0], y: mn[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: ink}, svg).textContent = '−';
   vuEl('text', {x: pl[0], y: pl[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: red}, svg).textContent = '+';
   var lamp = vuEl('circle', {cx: VU_CX, cy: 80, r: 4.2, 'class': 'vuLamp'}, svg);   /* lamp in the middle below the scale */
-  vuEl('text', {x: VU_CX, y: 101, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
+  vuEl('text', {x: VU_CX, y: 97, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
   var note = vuEl('text', {x: VU_CX, y: 68, 'text-anchor': 'middle', 'class': 'vuNote', fill: ink}, svg);
   var needle = vuEl('g', {}, svg);
   vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: 'var(--vu-needle)', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
@@ -205,7 +205,8 @@ function vuFrame() {
   var now = Date.now(), dt = Math.min(0.1, (now - (vuT || now)) / 1000);
   vuT = now;
   if (vuOpt === 'demo') vuDemo(now);
-  while (vuQueue.length && vuQueue[0].at <= now) vuApply(vuQueue.shift().w, now);
+  var lag = vuLag();
+  while (vuQueue.length && vuQueue[0].at + lag <= now) vuApply(vuQueue.shift().w, now);
   var silent = vuSilent();
   vuMeters.forEach(function(m){
     m.faces.forEach(function(f){
@@ -233,6 +234,12 @@ function vuDemo(now) {
 }
 
 /* ---------- Data from the tag service ---------- */
+/* how long a level waits before the needle shows it: the amplifier's buffer (VU_DELAY), or, while this device plays
+   the stream itself (player=remote), the stream's lag as the browser measures it (remote.js, as for synced lyrics) */
+function vuLag() {
+  var r = typeof remoteDelayMs === 'function' ? remoteDelayMs() : 0;
+  return r > 0 ? r : VU_DELAY;
+}
 function vuShown() { return vuOn() && vuWanted && !document.hidden; }
 function vuDsdOff() { return vuOpt === 'nodsd' && vuDsd; }
 function vuUpdate() {
@@ -243,8 +250,8 @@ function vuUpdate() {
     vuSrc = new EventSource(TAGS + '/vu');
     vuSrc.onmessage = function(e){
       var w = String(e.data).split(',').map(Number);
-      if (w.length === 4) vuQueue.push({at: Date.now() + VU_DELAY, w: w});
-      if (vuQueue.length > 200) vuQueue.splice(0, vuQueue.length - 200);
+      if (w.length === 4) vuQueue.push({at: Date.now(), w: w});
+      if (vuQueue.length > 1200) vuQueue.splice(0, vuQueue.length - 1200);   /* 30 s, enough for a long stream buffer */
     };
   } else if (!want && vuSrc) { vuSrc.close(); vuSrc = null; vuQueue = []; }
   vuMeters.forEach(function(m){ m.faces.concat([m.digi]).forEach(function(f){ f.note.textContent = vuDsdOff() ? T('vu.dsdOff') : ''; }); });

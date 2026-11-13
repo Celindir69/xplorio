@@ -1033,7 +1033,9 @@ unverändert und bitgenau.
 - `VU_NEEDLE` (Standard `'fast'`, mit dem Plugin unter **VU-Meter: Nadel**): `'fast'` folgt dem Pegel fast sofort,
   `'classic'` ist träge wie ein echtes VU-Meter (etwa 300 ms bis zum Wert, leichtes Überschwingen).
 - `VU_DELAY_MS` (Standard `400`, mit dem Plugin unter **VU-Meter: Verzögerung**): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
-  warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken.
+  warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken. Spielt das
+  Gerät selbst den Stream (Wiedergabe auf dem Handy, `player=remote`), misst Xplorio dessen Verzögerung und wartet so
+  lange wie beim synchronen Liedtext; der Wert gilt dann nicht.
 
 Gut zu wissen: Die Pegel kommen als Server-Sent Events (`GET /vu`) vom Tag-Dienst, 40 Werte pro Sekunde, nur solange
 die Instrumente sichtbar sind. Spotify Connect, AirPlay und Bluetooth laufen an MPD vorbei, dabei bleiben die
