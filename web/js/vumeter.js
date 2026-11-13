@@ -105,7 +105,7 @@ function vuFace(label) {
   vuEl('text', {x: mn[0], y: mn[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: ink}, svg).textContent = '−';
   vuEl('text', {x: pl[0], y: pl[1] + 4, 'text-anchor': 'middle', 'class': 'vuSign', fill: red}, svg).textContent = '+';
   var lamp = vuEl('circle', {cx: VU_CX, cy: 80, r: 4.2, 'class': 'vuLamp'}, svg);   /* lamp in the middle below the scale */
-  vuEl('text', {x: VU_CX, y: 101, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
+  vuEl('text', {x: VU_CX, y: 97, 'text-anchor': 'middle', 'class': 'vuTitle', fill: ink}, svg).textContent = label;   /* Left / Right */
   var note = vuEl('text', {x: VU_CX, y: 68, 'text-anchor': 'middle', 'class': 'vuNote', fill: ink}, svg);
   var needle = vuEl('g', {}, svg);
   vuEl('line', {x1: VU_CX, y1: VU_CY, x2: VU_CX, y2: VU_CY - VU_R - 8, stroke: 'var(--vu-needle)', 'stroke-width': 1.6, 'stroke-linecap': 'round'}, needle);
