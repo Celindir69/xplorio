@@ -52,6 +52,7 @@ var FIELDS = [
   {id: 'spotify',      key: 'SPOTIFY',       kind: 'tri'},
   {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts'},
   {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'db', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
+  {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic']},
   {id: 'vuDelay',      key: 'VU_DELAY_MS',   kind: 'db', options: ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'], def: '400', unit: 'ms'},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host'},
@@ -225,7 +226,7 @@ ControllerXplorio.prototype.getUIConfig = function() {
         e.options = (f.options || ['auto', 'on', 'off']).map(function(o){
           if (f.kind === 'db') return {value: o, label: o + ' ' + (f.unit || 'dBFS') + (o === f.def ? ' (' + self.str('VU_REF_STD') + ')' : '')};
           if (f.id === 'rotelModel') return {value: o, label: o === 'RA-1572' ? 'RA-1572 / RA-1572MKII' : o};
-          return {value: o, label: f.id === 'language' && o ? LANG_NAMES[o] : self.str((f.id === 'theme' ? 'THEME_' : f.id === 'language' ? 'LANG_' : 'TRI_') + (o || 'auto').toUpperCase())};
+          return {value: o, label: f.id === 'language' && o ? LANG_NAMES[o] : self.str((f.id === 'theme' ? 'THEME_' : f.id === 'language' ? 'LANG_' : f.id === 'vuNeedle' ? 'VU_NEEDLE_' : 'TRI_') + (o || 'auto').toUpperCase())};
         });
         e.value = e.options.filter(function(o){ return o.value === v; })[0] || e.options[0];
         return;

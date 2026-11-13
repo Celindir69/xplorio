@@ -717,7 +717,7 @@ Two backlit needle meters show the level of the left and right channel.
   device remembers the choice; `?vustyle=accent`, `amberAccent`, `amber`, `white`, `blue` or `digital` sets it. Amber is
   the default.
 
-The needle takes about 300 ms to reach the value, overshoots slightly and falls back more slowly. The lamp in the
+The needle follows the level quickly (adjustable: classic and slow, about 300 ms to the value with slight overshoot). The lamp in the
 middle lights once the needle is past 0 VU and stays on for a second. On pause the needles sink slowly.
 
 **Setup:** The VU meter needs an extra MPD output of type `fifo`. With the plugin, the **VU meter** switch on the plugin's
@@ -761,6 +761,8 @@ bit-perfect.
 - `VU_REF_DBFS` (default `-8`; with the plugin, **VU meter: 0 VU equals** on its settings page): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
   so the needle swings around -3 to 0. If the needles often hit the stop, raise it, for example to `-6`. If quiet
   recordings (classical, older CDs) barely move it, lower it, for example to `-12`.
+- `VU_NEEDLE` (default `'fast'`; with the plugin, **VU meter: needle**): `'fast'` follows the level almost at once,
+  `'classic'` is slow like a real VU meter (about 300 ms to the value, slight overshoot).
 - `VU_DELAY_MS` (default `400`; with the plugin, **VU meter: delay**): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles
   wait this long so they match the sound. If they run ahead of the sound, raise it; if they lag, lower it.
 

@@ -982,7 +982,7 @@ Zwei hinterleuchtete Zeigerinstrumente zeigen den Pegel links und rechts an.
   Spitzenwert-Halten für eine Sekunde. Jedes Gerät merkt sich die Variante, `?vustyle=accent`, `amberAccent`, `amber`,
   `white`, `blue` oder `digital` stellt sie fest ein. Standard ist Bernstein.
 
-Die Nadel braucht etwa 300 ms bis zum Wert, schwingt leicht über und fällt langsamer zurück. Die Lampe in der Mitte
+Die Nadel folgt dem Pegel flink (einstellbar: klassisch träge mit etwa 300 ms bis zum Wert und leichtem Überschwingen). Die Lampe in der Mitte
 leuchtet, sobald die Nadel über 0 VU steht, und bleibt eine Sekunde an. Bei Pause sinken die Nadeln langsam ab.
 
 **Einrichten:** Das VU-Meter braucht in MPD einen zusätzlichen Ausgang vom Typ `fifo`. Mit dem Plugin genügt der Schalter
@@ -1026,6 +1026,8 @@ unverändert und bitgenau.
 - `VU_REF_DBFS` (Standard `-8`, mit dem Plugin unter **VU-Meter: 0 VU entspricht** in den Einstellungen): welcher Pegel (dBFS RMS) als 0 VU gilt. Heutige Aufnahmen liegen meist bei -8 bis
   -12 dBFS, dann pendelt die Nadel um -3 bis 0. Stehen die Nadeln oft am Anschlag, Wert erhöhen, etwa auf `-6`. Bewegen
   sich leise Aufnahmen (Klassik, ältere CDs) kaum, Wert senken, etwa auf `-12`.
+- `VU_NEEDLE` (Standard `'fast'`, mit dem Plugin unter **VU-Meter: Nadel**): `'fast'` folgt dem Pegel fast sofort,
+  `'classic'` ist träge wie ein echtes VU-Meter (etwa 300 ms bis zum Wert, leichtes Überschwingen).
 - `VU_DELAY_MS` (Standard `400`, mit dem Plugin unter **VU-Meter: Verzögerung**): MPD füllt den FIFO, bevor der Ton durch den Puffer zum DAC läuft. Die Nadeln
   warten so lange, damit sie zum Ton passen. Laufen sie dem Ton voraus, Wert erhöhen, hinken sie hinterher, senken.
 
