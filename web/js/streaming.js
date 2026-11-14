@@ -75,7 +75,7 @@ function streamSplitSearch(lists, query) {
       });
       return;
     }
-    if (cat === 'songs') {                                  /* local tracks: only real hits in title or artist */
+    if (cat === 'songs' && q !== '*') {                     /* local tracks: only real hits in title or artist ("*": all) */
       items = items.filter(function(it){
         return (it.title || it.name || '').toLowerCase().indexOf(q) > -1 || (it.artist || '').toLowerCase().indexOf(q) > -1;
       });

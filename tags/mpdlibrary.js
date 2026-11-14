@@ -173,9 +173,38 @@ function browse(mpd, uri, cb) {
   cb(null, nav([], null, ''));
 }
 
-/* search term -> cb(err, answer like Volumio's search): lists "Artists", "Albums", "Tracks" */
+/* search term -> cb(err, answer like Volumio's search): lists "Artists", "Albums", "Tracks". "*": everything
+   (all artists and albums, the first ALL_TRACKS tracks) */
+var ALL_TRACKS = 2000;
+function searchAll(mpd, cb) {
+  mpd(['list albumartist', 'list album group albumartist', 'search title "" window 0:' + ALL_TRACKS], function(err, lists){
+    if (err) return cb(err);
+    var artists = values(lists[0]).sort(cmp).map(function(a){
+      return {service: 'mpd', type: 'folder', title: a, uri: 'artists://' + enc(a), albumart: '/albumart?web=' + enc(a) + '/large&icon=users'};
+    });
+    var albums = [], who = '';
+    (lists[1] || []).forEach(function(l){
+      var i = l.indexOf(': ');
+      if (i <= 0) return;
+      var k = l.slice(0, i).toLowerCase(), v = l.slice(i + 2);
+      if (k === 'albumartist') who = v;
+      else if (k === 'album' && v) albums.push({service: 'mpd', type: 'folder', title: v, artist: who, uri: 'albums://' + enc(who) + '/' + enc(v),
+                                                albumart: '/albumart?web=' + enc(who) + '/' + enc(v) + '/extralarge'});
+    });
+    albums.sort(function(a, b){ return cmp(a.title, b.title); });
+    var tracks = entries(lists[2]).filter(function(e){ return e.file; }).sort(function(a, b){ return cmp(a.title, b.title); }).map(songItem);
+    var out = [];
+    if (artists.length) out.push(list('Artists', artists));
+    if (albums.length) out.push(list('Albums', albums));
+    if (tracks.length) out.push(list('Tracks', tracks, ['list']));
+    var r = nav(out, null, '');
+    r.navigation.isSearchResult = true;
+    cb(null, r);
+  });
+}
 function search(mpd, q, cb) {
   q = String(q || '').trim();
+  if (q === '*') return searchAll(mpd, cb);
   if (q.length < 2) return cb(null, nav([], null, ''));
   var w = ' window 0:' + SEARCH_MAX;
   mpd(['search artist ' + quote(q) + w, 'search albumartist ' + quote(q) + w, 'search album ' + quote(q) + w, 'search title ' + quote(q) + w], function(err, lists){

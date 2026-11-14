@@ -231,7 +231,7 @@ document.getElementById('searchTabBar').querySelectorAll('.qTab').forEach(functi
 
 function triggerSearch() {
   var q = searchInput.value.trim();
-  if (q.length < 2) {
+  if (q.length < 2 && q !== '*') {                 /* "*": everything (MPD alone: mpdlibrary.js) */
     searchData = streamEmptySearch();
     searchSuggest = null;
     searchSeq++;

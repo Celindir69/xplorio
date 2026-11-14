@@ -138,3 +138,23 @@ ta('cover address -> file: folder (first song, also one level down), file, artis
     });
   });
 });
+
+ta('search "*": all artists and albums, tracks', function(done){
+  lib.search(function(cmds, cb){
+    var res = cmds.map(function(c){
+      if (c === 'list albumartist') return ['AlbumArtist: Nena', 'AlbumArtist: Depeche Mode'];
+      if (c === 'list album group albumartist') return ['AlbumArtist: Depeche Mode', 'Album: Violator', 'AlbumArtist: Nena', 'Album: 99 Luftballons'];
+      if (/^search title "" window/.test(c)) return ['file: a.flac', 'Title: Zeit', 'file: b.flac', 'Title: Alles'];
+      return [];
+    });
+    setImmediate(function(){ cb(null, res); });
+  }, '*', function(err, r){
+    assert.ifError(err);
+    var l = r.navigation.lists;
+    assert.deepStrictEqual(l.map(function(x){ return x.title; }), ['Artists', 'Albums', 'Tracks']);
+    assert.deepStrictEqual(l[0].items.map(function(x){ return x.title; }), ['Depeche Mode', 'Nena']);
+    assert.deepStrictEqual(l[1].items.map(function(x){ return x.uri; }), ['albums://Nena/99%20Luftballons', 'albums://Depeche%20Mode/Violator']);
+    assert.deepStrictEqual(l[2].items.map(function(x){ return x.title; }), ['Alles', 'Zeit']);
+    done();
+  });
+});
