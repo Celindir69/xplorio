@@ -788,3 +788,13 @@ there it is installed and updated with [`xplorio-deploy`](#installing). Differen
   in `/data/xplorio/libav-backup`, then MPD restarts). Without an argument the script only shows the state; `rollback`
   brings the original back. A package update of libav would overwrite the patch. Volumio 4 reads both domains.
 - **Not tested under Volumio 4:** Rotel Bridge and TIDAL Watchdog.
+
+## Without Volumio: MPD only (preview)
+Xplorio can drive MPD on its own instead of Volumio, e.g. on a Mac (`brew install mpd`). Set `PLAYER: 'mpd'` in
+`web/config.local.js` (or start the tag service with `XPLORIO_PLAYER=mpd`; `MPD_HOST` and `MPD_PORT` as usual). Playback,
+queue, volume, shuffle and repeat then go through the tag service (`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, live changes
+via `/mpd/events`), covers come from MPD itself (image in the folder or in the file), and the history keeps counting.
+
+Not there yet: streaming services, Volumio's favourites, web radio list and playlists, AutoDJ, the library views that go
+through Volumio, and starting without Volumio's web server. These follow step by step; until then they stay empty with
+MPD. With Volumio (the default) nothing changes.

@@ -130,10 +130,10 @@ document.addEventListener('touchend', function(e){
 }, {passive:true});
 
 /* ---------- Playback ---------- */
-function cmd(c) { fetch('/api/v1/commands/?cmd=' + c).catch(function(){}); }
+function cmd(c) { player.cmd(c); }
 document.getElementById('cPrev').addEventListener('click', function(){ cmd('prev'); });
 document.getElementById('cPlay').addEventListener('click', function(){
-  if (queuedForInput) { queuedForInput = false; socket.emit('play', {value: 0}); return; }   /* chosen while on another input (core.js) */
+  if (queuedForInput) { queuedForInput = false; player.playAt(0); return; }   /* chosen while on another input (core.js) */
   cmd('toggle');
 });
 document.getElementById('cNext').addEventListener('click', function(){ cmd('next'); });
@@ -144,8 +144,7 @@ document.getElementById('seekBar').addEventListener('click', function(e){
   var pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
   seekBase = pct * curDur * 1000; seekStamp = Date.now();
   paintTime();
-  fetch('/api/v1/commands/?cmd=seek&position=' + Math.floor(pct * curDur))
-    .catch(function(){});
+  player.seek(Math.floor(pct * curDur));
 });
 
 document.addEventListener('visibilitychange', function(){

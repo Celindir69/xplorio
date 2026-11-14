@@ -189,7 +189,7 @@ function queueAddButton(items, n) {
     var list = typeof items === 'function' ? items() : items;
     if (!list || !list.length) return;
     if (typeof amPlayItems === 'function' && amPlayItems(list, true)) return;   /* "Apple Music" mode: append there */
-    socket.emit('addToQueue', list);
+    player.add(list);
     showToast(n ? T('mix.added', {n: n}) : T('queue.added'));
   });
   return b;
@@ -696,7 +696,7 @@ function playlistPlay(e, tracks, from) {
   if (queueForInput(tracks.slice(from || 0).map(function(t){   /* from the selected track */
     return {uri: t.uri, service: t.service || e.service || 'mpd', type: 'song', title: t.title || t.name || '', artist: t.artist || '', album: t.album || ''};
   }))) { browseOrigin = null; return; }                       /* something else started meanwhile: do not jump anymore */
-  socket.emit('replaceAndPlay', {uri:e.uri, title:e.name, albumart:null, service:e.service || 'mpd', type:e.type || undefined});
+  player.replaceAndPlay({uri:e.uri, title:e.name, albumart:null, service:e.service || 'mpd', type:e.type || undefined}, true);
   closeAllOverlays();
   browseOrigin = null;
   if (!from) return;
@@ -704,13 +704,13 @@ function playlistPlay(e, tracks, from) {
   (function waitForQueue() {                       /* wait until the queue is complete, then jump */
     setTimeout(function(){
       if (jump !== playlistJump || lastPlayedPlaylist !== e.uri) return;
-      fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(j){
+      player.queue().then(function(j){
         if (jump !== playlistJump) return;
         var q = (j && j.queue) || [], n = q.length;
         function tail(u) { return String(u || '').split('/').pop(); }   /* prefixes (music-library/, mnt/) differ */
         var t0 = tracks[0] && tail(tracks[0].uri), q0 = q[0] && tail(q[0].uri);
         if (t0 && q0 && t0 !== q0) return;            /* queue does not belong to this playlist (anymore) */
-        if (n >= tracks.length) socket.emit('play', {value:from});
+        if (n >= tracks.length) player.playAt(from);
         else if (++tries < 16) waitForQueue();
       }).catch(function(){ if (++tries < 16) waitForQueue(); });
     }, 500);

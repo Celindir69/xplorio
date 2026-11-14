@@ -174,7 +174,7 @@ function stateFill(st) {
   if (!empty && !check) return st;
   var c = stateFillCache, p = st.position;
   var got = (c.pos === p && Date.now() - c.at < 3000) ? Promise.resolve(c.item)
-    : withTimeout(fetch('/api/v1/getQueue'), 4000).then(function(r){ return r.json(); }).then(function(j){
+    : withTimeout(player.queue(), 4000).then(function(j){
         var q = (j && j.queue) || [];
         stateFillCache = {pos: p, at: Date.now(), item: q[p] || null};
         return q[p] || null;
@@ -195,7 +195,7 @@ function stateFill(st) {
     if (!r.status) { r.status = 'stop'; r.seek = 0; r.noStatus = true; }   /* not playing: time at the start */
     if (stateFillWatch && (r.noStatus || check) && stateFillStopped !== r.uri) {
       stateFillStopped = r.uri;
-      fetch('/api/v1/commands/?cmd=stop').catch(function(){});
+      player.cmd('stop');
     }
     return r;
   }, function(){ return st; });
@@ -212,7 +212,7 @@ function inputApply(st) {
   if (!inp) { inputSession = ''; return st; }
   if (inputSession !== inp.name) {                                     /* what was loaded when switching */
     inputSession = inp.name; inputBaseUri = st.uri || '';
-    if (inp.off && st.status === 'play') { fetch('/api/v1/commands/?cmd=stop').catch(function(){}); st.status = 'stop'; }   /* switched off while playing: stop once, so Volumio does not run on into nothing */
+    if (inp.off && st.status === 'play') { player.cmd('stop'); st.status = 'stop'; }   /* switched off while playing: stop once, so Volumio does not run on into nothing */
   }
   if (st.status === 'play' || (st.uri || '') !== inputBaseUri) {
     var a = {};
@@ -238,10 +238,10 @@ var pollBusy = false, pollAt = 0;                       /* never several getStat
 var POLL_MS = 10000, POLL_QUIET_MS = 30000;
 function poll(tick) {                                   /* tick: from the interval, otherwise at once */
   if (document.hidden || pollBusy) return;
-  if (tick === 'tick' && socket.connected && Date.now() - Math.max(pushSeen, pollAt) < POLL_QUIET_MS) return;
+  if (tick === 'tick' && player.connected() && Date.now() - Math.max(pushSeen, pollAt) < POLL_QUIET_MS) return;
   pollAt = Date.now();
   pollBusy = true;
-  withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).then(stateIn)
+  withTimeout(player.state(), 8000).then(stateIn)
     .catch(function(){ playing = false; })            /* Volumio unreachable: stop the time from running */
     .then(function(){ pollBusy = false; });
 }
@@ -338,7 +338,7 @@ updateSyncedLyrics();
       setTrackInfo(lyrKey, title, null, radio);                   /* remove the previous track's tab */
       if (tracks) {
         (function(k, al, ar){
-          fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(q){
+          player.queue().then(function(q){
             if (k === lastLyrKey) showLyrics({kind: 'tracks', value: albumTracks(q && q.queue, al, ar)});
           }).catch(function(){ if (k === lastLyrKey) showLyrics(null); });
         })(lyrKey, album, artist);
@@ -403,6 +403,6 @@ setInterval(function(){
 setInterval(function(){ updateSyncedLyrics(); }, 200);
 setInterval(function(){ poll('tick'); }, POLL_MS);      /* fallback; changes come by pushState */
 setInterval(function(){ if (!document.hidden && !volDrag && ROTEL_ON) rotel('/state'); }, 2000);   /* amplifier: the bridge answers from memory */
-socket.on('connect', function(){ poll(); });           /* also after a reconnect: whatever changed meanwhile */
+player.on('connect', function(){ poll(); });           /* also after a reconnect: whatever changed meanwhile */
 poll();
 

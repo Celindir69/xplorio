@@ -1055,3 +1055,14 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
   nur den Zustand, `rollback` holt das Original zurück. Ein Paket-Update von libav würde den Patch überschreiben.
   Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
+
+## Ohne Volumio: nur MPD (Vorschau)
+Xplorio kann statt Volumio auch MPD allein steuern, z. B. auf einem Mac (`brew install mpd`). Dafür in
+`web/config.local.js` `PLAYER: 'mpd'` setzen (oder den Tag-Dienst mit `XPLORIO_PLAYER=mpd` starten; `MPD_HOST` und
+`MPD_PORT` wie gewohnt). Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst
+(`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im
+Ordner oder in der Datei), der Verlauf zählt ebenfalls mit.
+
+Noch nicht dabei: Streamingdienste, Volumios Favoriten, Webradio-Liste und Playlisten, AutoDJ, die Bibliotheks-Ansichten,
+die über Volumio laufen, sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
+sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.

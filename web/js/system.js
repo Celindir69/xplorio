@@ -26,7 +26,7 @@ function sysOpen() { return overlaySystem.classList.contains('on') && !document.
 function sysFull() {
   var seq = sysSeq;
   clearTimeout(sysFullTimer);
-  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).catch(function(){ return null; }),
+  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(player.state(), 8000).catch(function(){ return null; }),
                tagGetJson('/services').catch(function(){ return null; })])
     .then(function(res){
       if (seq !== sysSeq) return;

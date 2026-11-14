@@ -178,12 +178,12 @@ function loadMyRadio() {
       lists.forEach(function(l){ items = items.concat(l.items || []); });
       renderPlList(items, radioPanel, function(it){
         if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
-        socket.emit('replaceAndPlay', {
+        player.replaceAndPlay({
           uri:      it.uri,
           title:    it.title || it.name || '',
           albumart: it.albumart || null,
           service:  it.service || 'webradio'
-        });
+        }, true);
         closeAllOverlays();
       }, false, T('radio.manageHint'));
       radioLogos(items, radioPanel);

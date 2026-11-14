@@ -29,7 +29,7 @@ if (window.MutationObserver) new MutationObserver(function(muts){
 var body = document.getElementById('lyricsText');
 var area = document.getElementById('overlayLyrics').querySelector('.overlayBody');
 
-var socket = io();
+/* socket: Volumio's socket.io (player.js; with MPD a silent stand-in) */
 socket.on('connect', function(){ socket.emit('getUiSettings'); });
 /* Language of the Volumio UI: the app adopts it (i18n.js) unless ?lang= or LANGUAGE say otherwise.
    Volumio delivers info texts only in this language; if LANG differs, ask() fetches the texts itself first (infotext.js). */
@@ -51,8 +51,8 @@ function queueForInput(items) {
   if (!inp) { queuedForInput = false; return false; }
   if (!items || !items.length) return true;
   queuedForInput = true;
-  socket.emit('clearQueue');
-  setTimeout(function(){ socket.emit('addToQueue', items); }, 300);
+  player.clear();
+  setTimeout(function(){ player.add(items); }, 300);
   showToast(T('play.queuedInput', {name: inp.name}));
   if (typeof closeAllOverlays === 'function') closeAllOverlays();
   return true;
@@ -63,11 +63,8 @@ function playItems(items, stay) {   /* stay: leave the open overlay (search, che
   if (!items || !items.length) return;
   if (!stay && typeof browseOrigin !== 'undefined') browseOrigin = null;   /* playing ends the way back (browse.js) */
   if (queueForInput(items)) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({item: items[0]})
-  }).then(function(){
-    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
+  player.replaceAndPlay(items[0]).then(function(){
+    if (items.length > 1) setTimeout(function(){ player.add(items.slice(1)); }, 300);
   }).catch(function(){});
   if (!stay && typeof closeAllOverlays === 'function') closeAllOverlays();
 }
@@ -114,7 +111,7 @@ socket.on('closeAllModals', function(){
   if (audioGone) { audioGone = false; audioToast('audio.connected'); }
 });
 var pushSeen = 0;                                       /* last pushState: while the socket speaks, poll.js asks less */
-socket.on('pushState', function(st){
+player.on('state', function(st){
   pushSeen = Date.now();
   if (typeof stateIn === 'function' && !document.hidden) return stateIn(st);   /* the whole display (poll.js) */
   if (typeof showVolumio === 'function') showVolumio(st);
@@ -281,7 +278,7 @@ function seekToMs(ms) {
   var sec = Math.max(0, Math.min(curDur, Math.ceil(ms / 1000)));
   seekBase = sec * 1000; seekStamp = Date.now();
   paintTime();
-  fetch('/api/v1/commands/?cmd=seek&position=' + sec).catch(function(){});
+  player.seek(sec);
 }
 
 

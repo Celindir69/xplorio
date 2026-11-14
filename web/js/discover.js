@@ -353,13 +353,13 @@ function tracksAfterCurrent(list) {
   var items = tracksItems(list);
   if (typeof amPlayItems === 'function' && amPlayItems(items, true)) return;   /* "Apple Music" mode: append there */
   Promise.all([
-    fetch('/api/v1/getState').then(function(r){ return r.json(); }),
-    fetch('/api/v1/getQueue').then(function(r){ return r.json(); })
+    player.state(),
+    player.queue()
   ]).then(function(res){
     var st = res[0] || {}, q = (res[1] && res[1].queue) || [], pos = typeof st.position === 'number' ? st.position : -1;
     if (st.status !== 'play' || pos < 0 || pos >= q.length) return tracksPlay(list);
-    for (var i = q.length - 1; i > pos; i--) socket.emit('removeFromQueue', {value: i});   /* from the end: indices stay valid */
-    socket.emit('addToQueue', items);
+    for (var i = q.length - 1; i > pos; i--) player.remove(i);   /* from the end: indices stay valid */
+    player.add(items);
     closeAllOverlays();
   }).catch(function(){ tracksPlay(list); });
 }

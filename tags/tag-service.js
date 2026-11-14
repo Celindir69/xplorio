@@ -1273,7 +1273,18 @@ var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, functio
 var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); }, function(e){ lfm.nowPlaying(e); });
 var recording = false;
 
-function playerState(cb) { volumioGet('/api/v1/getState', 1024 * 1024, cb); }
+/* who plays: Volumio (default) or MPD alone (APP_CONFIG.PLAYER = 'mpd' or XPLORIO_PLAYER=mpd, e.g. on a Mac; mpdplayer.js) */
+var mpdplayer = require('./mpdplayer.js');
+var mpdPlayer = new mpdplayer.Player({host: MPD_HOST, port: MPD_PORT});
+function playerIsMpd() { return String(process.env.XPLORIO_PLAYER || appConfig().PLAYER || 'volumio').toLowerCase() === 'mpd'; }
+function playerState(cb) {
+  if (playerIsMpd()) return mpdPlayer.state(cb);
+  volumioGet('/api/v1/getState', 1024 * 1024, cb);
+}
+function playerQueue(cb) {
+  if (playerIsMpd()) return mpdPlayer.queue(cb);
+  volumioGet('/api/v1/getQueue', 16 * 1024 * 1024, cb);
+}
 function volumioGet(route, max, cb) {
   var done = false;
   function finish(e, st) { if (!done) { done = true; cb(e, st); } }
@@ -2109,7 +2120,7 @@ var rgauto = require('./rgauto.js');                    /* ReplayGain "Automatic
 function volumioQueue(cb) {
   playerState(function(e, st){
     if (e || !st || typeof st.position !== 'number') return cb(e || new Error('no position'));
-    volumioGet('/api/v1/getQueue', 16 * 1024 * 1024, function(e2, q){
+    playerQueue(function(e2, q){
       if (e2 || !q || !Array.isArray(q.queue)) return cb(e2 || new Error('no queue'));
       cb(null, {pos: st.position, random: !!st.random, items: q.queue});
     });
@@ -2651,6 +2662,45 @@ setInterval(function(){                                  /* nobody watching, but
   vuState(function(err, f){ if (!err && f && f.enabled) vuSwitch(f, false); });
 }, 60000).unref();
 
+/* ---------- MPD as the player (only with PLAYER 'mpd'; mpdplayer.js) ----------
+   GET /mpd/state, /mpd/queue (like Volumio's getState, getQueue), /mpd/events (server-sent events "state", "queue"),
+   /mpd/art?file=… (cover), POST /mpd/cmd {action, …} */
+function doMpd(req, res, route) {
+  if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
+  function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
+  if (req.method === 'GET' && route === '/mpd/state') return mpdPlayer.state(reply);
+  if (req.method === 'GET' && route === '/mpd/queue') return mpdPlayer.queue(reply);
+  if (req.method === 'GET' && route === '/mpd/art') {
+    return mpdPlayer.art(String(url.parse(req.url, true).query.file || ''), function(e, img){
+      if (e) { res.writeHead(404, {'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=60'}); return res.end(); }
+      res.writeHead(200, {'Content-Type': img.mime, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=600'});
+      res.end(img.body);
+    });
+  }
+  if (req.method === 'GET' && route === '/mpd/events') {
+    var h = guard.corsHeaders(res.xplorioOrigin);
+    h['Content-Type'] = 'text/event-stream'; h['Cache-Control'] = 'no-cache, no-store'; h['X-Accel-Buffering'] = 'no';
+    res.writeHead(200, h);
+    res.write('retry: 3000\n\n');
+    var stop = mpdPlayer.listen(res);
+    var beat = setInterval(function(){ try { res.write(': \n\n'); } catch (e) { /* gone */ } }, 15000);
+    req.on('close', function(){ clearInterval(beat); stop(); });
+    return;
+  }
+  if (req.method === 'POST' && route === '/mpd/cmd') {
+    var data = '';
+    req.setEncoding('utf8');
+    req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+    req.on('end', function(){
+      var body;
+      try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      mpdPlayer.command(body || {}, function(c, o){ send(res, c, o); });
+    });
+    return;
+  }
+  send(res, 404, {ok: false, error: 'unknown path'});
+}
+
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -2681,6 +2731,7 @@ function handle(req, res) {
   res.xplorioOrigin = g.origin;
   var route = req.url.split('?')[0];
   if (req.method === 'OPTIONS') return send(res, 204, {});
+  if (route.indexOf('/mpd/') === 0) return doMpd(req, res, route);
   if (req.method === 'GET' && route === '/stream')  return doStream(req, res);
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
