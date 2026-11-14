@@ -7,7 +7,7 @@
 # Settings in ../xplorio.conf next to the app files (written by make-app.sh). Logs: ~/Library/Logs/Xplorio.
 # bash 3.2 (macOS); besides macOS itself only node and mpd (Homebrew).
 
-export PATH="/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:$PATH"   # Homebrew (Apple silicon, Intel), MacPorts
+export PATH="/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:$PATH"   # Homebrew (Apple silicon), MacPorts (old Macs), Homebrew (Intel)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"                          # the Xplorio files (xplorio.html, web, server, tags)
 . "${XPLORIO_CONF:-$APP/../xplorio.conf}"               # SUPPORT, MPD_CONF, MPD_PORT, MUSIC_ROOT, TAGS_DATA
