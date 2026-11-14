@@ -101,7 +101,7 @@ if [ -f "$MC" ] && ! awk '{l=tolower($0)} l~/audio_output/{b=1;f=0;v=0} b&&l~/ty
   CONF_CHANGED=1
 fi
 # mpd.conf changed while MPD runs: stop it, Xplorio starts it again with the new settings
-[ -n "$CONF_CHANGED" ] && command -v mpd >/dev/null && mpd --kill "$MC" >/dev/null 2>&1 || true
+[ -n "$CONF_CHANGED" ] && command -v mpd >/dev/null && mpd "$MC" --kill >/dev/null 2>&1 || true
 # own settings of the interface; MPD as the player
 CL="$SUPPORT/config.local.js"
 [ -f "$CL" ] || echo "/* own settings (see web/config.js); kept when the program is rebuilt */" >"$CL"

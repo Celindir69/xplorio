@@ -34,7 +34,14 @@ stopAll() {
     fi
   done
   pkill -f "$APP/rotel/rotel-bridge.js" 2>/dev/null   # run by the tag service (Rotel amplifier)
-  mpd --kill "$MPD_CONF" >/dev/null 2>&1
+  # the file before the option (MacPorts' MPD 0.24 takes no file after an option); the PID from the start as a fallback
+  mpd "$MPD_CONF" --kill >/dev/null 2>&1
+  if [ -f "$RUN/mpd.pid" ]; then
+    p=$(cat "$RUN/mpd.pid")
+    sleep 1
+    case "$(ps -p "$p" -o comm= 2>/dev/null)" in *mpd) kill "$p" 2>/dev/null ;; esac   # only if it is still MPD
+    rm -f "$RUN/mpd.pid"
+  fi
   return 0
 }
 
@@ -59,6 +66,7 @@ if ! up "$MPD_PORT"; then
   # in the foreground, sent to the background here: MPD's own way (fork) dies silently on older macOS (MacPorts' MPD 0.24).
   # The file before the options: that MPD takes no file after --no-daemon ("too many arguments")
   nohup "$MPD" "$MPD_CONF" --no-daemon >>"$LOG/mpd.log" 2>&1 </dev/null &
+  echo $! >"$RUN/mpd.pid"
   if ! waitUp "$MPD_PORT" 20; then
     echo "MPD startet nicht. Den Grund zeigt die Datei $LOG/mpd.log"
     exit 1

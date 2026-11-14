@@ -2827,7 +2827,7 @@ var macAudio = new macaudio.MacAudio({
   },
   restart: function(cb){
     var bin = process.env.MPD_BIN || 'mpd';
-    cp.execFile(bin, ['--kill', MAC_MPD_CONF], {timeout: 15000}, function(){
+    cp.execFile(bin, [MAC_MPD_CONF, '--kill'], {timeout: 15000}, function(){
       setTimeout(function(){
         try {                                            /* as xplorio-services.sh: in the foreground, detached (MPD's own fork dies on older macOS) */
           cp.spawn(bin, [MAC_MPD_CONF, '--no-daemon'], {detached: true, stdio: 'ignore'}).on('error', function(e){ console.error('MPD restart failed: ' + e.message); }).unref();
