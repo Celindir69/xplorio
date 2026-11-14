@@ -22,6 +22,9 @@ var FIELDS = [
   {id: 'm4aProbe',     key: 'M4A_PROBE',     kind: 'bool', def: true},
   {id: 'm4aLossless',  key: 'M4A_LOSSLESS',  kind: 'bool', def: true},
   {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts', def: []},
+  {id: 'rotel',        key: 'ROTEL',         kind: 'bool', def: false},
+  {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host', def: ''},
+  {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582'], def: 'RA-1572'},
   {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'num', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
   {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic'], def: 'fast'},
   {id: 'vuDelay',      key: 'VU_DELAY_MS',   kind: 'num', options: ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'], def: '400'}
@@ -134,12 +137,14 @@ function valueOf(f, cfg) {
   if (f.kind === 'bool') return v === undefined ? f.def : v !== false;
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : f.def;
   if (f.kind === 'hosts') return Array.isArray(v) ? v.filter(function(h){ return typeof h === 'string'; }).join(', ') : '';
+  if (f.kind === 'host') return typeof v === 'string' ? v : f.def;
   if (f.kind === 'num') return v !== undefined && f.options.indexOf(String(v)) >= 0 ? String(v) : f.def;
   return v;
 }
 function check(f, v) {
   if (f.kind === 'bool') return typeof v === 'boolean' ? v : undefined;
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : undefined;
+  if (f.kind === 'host') { var h = String(v == null ? '' : v).trim(); return /^[A-Za-z0-9.\-:]{0,253}$/.test(h) ? h : undefined; }
   if (f.kind === 'num') return v !== undefined && v !== null && f.options.indexOf(String(v)) >= 0 ? String(v) : undefined;   /* written as a number */
   if (f.kind === 'hosts') {
     var list = String(v || '').split(/[\s,;]+/).filter(Boolean);

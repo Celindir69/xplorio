@@ -90,6 +90,10 @@ t('interface settings: written through the link, own lines stay, values the page
   c = cfgOf(file);
   assert.strictEqual(c.VU_REF_DBFS, -12); assert.strictEqual(c.VU_DELAY_MS, 600); assert.strictEqual(c.VU_NEEDLE, 'classic');   /* numbers, as the meter reads them */
   assert.strictEqual(s.settings(c).vuRef, '-12');
+  assert.strictEqual(s.saveSettings({rotelHost: 'amp; rm -rf'}, c).error, 'value');                /* Rotel: only an address */
+  s.saveSettings({rotel: true, rotelHost: ' 192.168.1.50 ', rotelModel: 'RA-1592'}, c);
+  c = cfgOf(file);
+  assert.deepStrictEqual([c.ROTEL, c.ROTEL_HOST, c.ROTEL_MODEL], [true, '192.168.1.50', 'RA-1592']);
 });
 
 ta('commands: Last.fm, folders with a rescan, unknown', function(done){

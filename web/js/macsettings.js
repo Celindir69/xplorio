@@ -145,6 +145,7 @@ function msRender() {
   grid.appendChild(msEssentiaCard(d));
   grid.appendChild(msLastfmCard(d));
   grid.appendChild(msAdjCard());
+  grid.appendChild(msRotelCard(d));
   grid.appendChild(msUiCard(d));
 }
 
@@ -284,6 +285,33 @@ function msAdjCard() {
     c.appendChild(row);
   } else if (!msAdjMsg) c.appendChild(browseNote(T('hist.loading')));
   if (msAdjMsg) c.appendChild(histEl('div', 'syNote' + (msAdjBad ? ' syWarn' : ''), msAdjMsg));
+  return c;
+}
+
+/* ---------- Rotel amplifier (config.local.js: ROTEL, ROTEL_HOST, ROTEL_MODEL; the tag service runs the Rotel bridge) ---------- */
+function msRotelCard(d) {
+  var c = sysCard(T('mac.rotel'), 'syWide'), s = d.settings, ch = msEdit.rotel || (msEdit.rotel = {});
+  function cur(id) { return Object.prototype.hasOwnProperty.call(ch, id) ? ch[id] : s[id]; }
+  function line(label, ctl) {
+    var r = histEl('div', 'msSetRow');
+    r.appendChild(histEl('div', 'msSetLabel', label));
+    r.appendChild(ctl);
+    c.appendChild(r);
+  }
+  c.appendChild(histEl('div', 'syNote', T('mac.rotelNote')));
+  line(T('mac.rotel'), pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!cur('rotel'), function(v){ ch.rotel = v; msRender(); }));
+  var host = msInput(cur('rotelHost'), '192.168.1.50');
+  host.addEventListener('input', function(){ ch.rotelHost = host.value.trim(); });
+  line(T('mac.rotelHost'), host);
+  line(T('mac.rotelModel'), pbChips([['RA-1572', 'RA-1572 / MKII'], ['RA-1592', 'RA-1592'], ['RC-1592', 'RC-1592'], ['RSP-1582', 'RSP-1582']],
+    cur('rotelModel'), function(v){ ch.rotelModel = v; msRender(); }));
+  var row = histEl('div', 'pbRow msAddRow');
+  row.appendChild(msButton(T('mac.saveReload'), function(){
+    if (!Object.keys(ch).length) return;
+    if (cur('rotel') && !cur('rotelHost')) { msMsg = T('mac.rotelNoHost'); msMsgBad = true; return msRender(); }
+    msSend({action: 'settings', settings: ch}, T('mac.saved'), function(){ setTimeout(function(){ location.reload(); }, 1500); });
+  }, 'on'));
+  c.appendChild(row);
   return c;
 }
 

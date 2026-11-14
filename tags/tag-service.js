@@ -2859,11 +2859,46 @@ function doMac(req, res, route) {
     if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
     macSettings.command(body, appConfig(), function(c, o){
       if (o && o.ok && o.done === 'essentiaLink') audioStore.reload(true);
-      if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; }
+      if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; rotelSync(); }
       send(res, c, o);
     });
   });
 }
+
+/* ---------- Rotel bridge on the Mac (XPLORIO_ROTEL=manage, set by tools/mac/xplorio-services.sh) ----------
+   On Volumio the plugin runs rotel/rotel-bridge.js as a service. On the Mac the tag service runs it as a child while
+   APP_CONFIG.ROTEL is on and ROTEL_HOST is set, and starts it again when its settings change (it reads them at the start).
+   xplorio-services.sh stop ends it together with the tag service. */
+var ROTEL_SCRIPT = path.join(__dirname, '..', 'rotel', 'rotel-bridge.js');
+var rotelChild = null, rotelKey = '', rotelTimer = null;
+function rotelSync() {
+  if (process.env.XPLORIO_ROTEL !== 'manage') return;
+  var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
+  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
+  if (key === rotelKey && (!want || rotelChild)) return;
+  rotelKey = key;
+  clearTimeout(rotelTimer);
+  var old = rotelChild;
+  rotelChild = null;
+  if (old) { try { old.kill('SIGTERM'); } catch (e) { /* gone */ } }
+  if (!want) return;
+  rotelTimer = setTimeout(function(){                      /* the old one frees the port first */
+    var env = {};
+    Object.keys(process.env).forEach(function(k){ env[k] = process.env[k]; });
+    env.APP_CONFIG_DIR = APP_CONFIG_DIR; env.HTTP_PORT = String(c.ROTEL_PORT || 8765);
+    delete env.ROTEL_HOST; delete env.ROTEL_PORT; delete env.ROTEL_MODEL;
+    var ch = rotelChild = cp.spawn(process.execPath, [ROTEL_SCRIPT], {env: env, stdio: ['ignore', 'inherit', 'inherit']});
+    console.error('Rotel bridge started (' + c.ROTEL_HOST + ')');
+    ch.on('exit', function(code){
+      if (rotelChild !== ch) return;                       /* stopped here */
+      rotelChild = null; rotelKey = '';
+      console.error('Rotel bridge ended (' + code + '), starting again in 10 s');
+      rotelTimer = setTimeout(rotelSync, 10000);
+    });
+  }, old ? 800 : 0);
+}
+process.on('exit', function(){ if (rotelChild) { try { rotelChild.kill('SIGTERM'); } catch (e) { /* gone */ } } });
+if (process.env.XPLORIO_ROTEL === 'manage') { setTimeout(rotelSync, 1000); setInterval(rotelSync, 30000).unref(); }
 
 /* ---------- HTTP ---------- */
 

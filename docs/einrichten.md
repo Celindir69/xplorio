@@ -1085,6 +1085,9 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
 - **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
   dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
   Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
+- **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der
+  Tag-Dienst startet dann die Rotel-Bridge (`rotel/rotel-bridge.js`, Port 8765) selbst und nach jeder Änderung neu;
+  Eingangsnamen (`ROTEL_INPUTS`) und eigene Profile wie unter Volumio als eigene Zeilen in `config.local.js`.
 - **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
   weitere Adressen, VU-Meter (0 VU entspricht, Nadel, Verzögerung). Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.
 
