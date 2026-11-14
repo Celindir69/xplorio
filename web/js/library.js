@@ -93,7 +93,7 @@ function plTileNext() {
   if (plTileBusy || !plTileQueue.length) return;
   var job = plTileQueue.shift();
   plTileBusy = true;
-  fetch('/api/v1/browse?uri=' + volumioArg(job.uri)).then(function(r){ return r.json(); }).then(function(j){
+  player.browse(job.uri).then(function(j){
     var tracks = browseItems(j).filter(function(it){ return it.uri && !/^folder/.test(it.type || ''); });
     var artists = plTileArtists(tracks);
     plTileCache(job.uri, artists);
@@ -124,8 +124,7 @@ function loadPlaylists() {
   hint.className = 'plHint'; hint.textContent = T('pl.loading');
   playlistResults.appendChild(hint);
 
-  fetch('/api/v1/browse?uri=playlists')
-    .then(function(r){ return r.json(); })
+  player.browse('playlists')
     .then(function(j){
       var items = (j && j.navigation && j.navigation.lists && j.navigation.lists[0])
                   ? j.navigation.lists[0].items : [];
@@ -170,8 +169,7 @@ function loadMyRadio() {
   hint.className = 'plHint'; hint.textContent = T('pl.loading');
   radioPanel.appendChild(hint);
 
-  fetch('/api/v1/browse?uri=' + volumioArg('radio/favourites'))
-    .then(function(r){ return r.json(); })
+  player.browse('radio/favourites')
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
       var items = [];
@@ -358,7 +356,7 @@ function doSearch(q) {
   searchMessage(T('search.searching'));
   superSearchStart(q, seq);
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
-  withTimeout(fetch('/api/v1/search?query=' + volumioArg(q)).then(function(r){ return r.json(); }), SEARCH_TIMEOUT_MS)
+  withTimeout(player.search(q), SEARCH_TIMEOUT_MS)
     .then(function(j){
       clearTimeout(slow);
       if (seq !== searchSeq) return;

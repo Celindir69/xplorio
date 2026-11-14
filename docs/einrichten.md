@@ -1061,8 +1061,8 @@ Xplorio kann statt Volumio auch MPD allein steuern, z. B. auf einem Mac (`brew i
 `web/config.local.js` `PLAYER: 'mpd'` setzen (oder den Tag-Dienst mit `XPLORIO_PLAYER=mpd` starten; `MPD_HOST` und
 `MPD_PORT` wie gewohnt). Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst
 (`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im
-Ordner oder in der Datei), der Verlauf zählt ebenfalls mit.
+Ordner oder in der Datei), der Verlauf zählt ebenfalls mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie
+MPD-Playlisten liefert der Tag-Dienst ebenfalls aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten).
 
-Noch nicht dabei: Streamingdienste, Volumios Favoriten, Webradio-Liste und Playlisten, AutoDJ, die Bibliotheks-Ansichten,
-die über Volumio laufen, sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
+Noch nicht dabei: Streamingdienste, Volumios Favoriten und Webradio-Liste, AutoDJ sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
 sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.

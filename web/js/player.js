@@ -5,6 +5,7 @@
      player.add(items), player.clear(), player.replaceAndPlay(item[, viaSocket]) -> Promise
      player.remove(i), player.move(from, to), player.random(on), player.repeat({value, repeatSingle})
      player.volume(v), player.mute(on), player.connected(), player.on('state'|'connect', fn)
+     player.browse(uri), player.search(q)  -> Promise of Volumio's browse / search answer ({navigation: {lists, info}})
    Volumio: exactly the REST and socket calls the app always made. MPD: through the tag service (tags/mpdplayer.js),
    live changes as server-sent events (/mpd/events).
    `socket` is Volumio's socket; with MPD a silent stand-in, so the Volumio-only parts (favourites, Infinity Playback,
@@ -41,7 +42,9 @@ var playerVolumio = {
   volume: function(v){ socket.emit('volume', v); },
   mute: function(on){ socket.emit(on ? 'mute' : 'unmute'); },
   connected: function(){ return socket.connected; },
-  on: function(ev, fn){ socket.on(ev === 'state' ? 'pushState' : ev, fn); }
+  on: function(ev, fn){ socket.on(ev === 'state' ? 'pushState' : ev, fn); },
+  browse: function(uri){ return fetch('/api/v1/browse?uri=' + volumioArg(uri)).then(volumioJson); },
+  search: function(q){ return fetch('/api/v1/search?query=' + volumioArg(q)).then(volumioJson); }
 };
 
 /* MPD through the tag service (its address as in tagedit.js) */
@@ -96,7 +99,11 @@ function playerMpdMake() {
     volume: function(v){ quiet({action: 'volume', value: Math.round(Math.max(0, Math.min(100, v)))}); },
     mute: function(on){ quiet({action: on ? 'mute' : 'unmute'}); },
     connected: function(){ return open; },
-    on: function(ev, fn){ if (handlers[ev]) handlers[ev].push(fn); listen(); }
+    on: function(ev, fn){ if (handlers[ev]) handlers[ev].push(fn); listen(); },
+    browse: function(uri){ return get('/mpd/browse?uri=' + encodeURIComponent(uri)); },
+    search: function(q){ return get('/mpd/search?query=' + encodeURIComponent(q)); },
+    /* Volumio's cover addresses (/albumart?…) and the tag service's own (/mpd/…) -> address at the tag service */
+    art: function(a){ return a.indexOf('/albumart') === 0 ? base + '/mpd' + a : a.indexOf('/mpd/') === 0 ? base + a : a; }
   };
 }
 

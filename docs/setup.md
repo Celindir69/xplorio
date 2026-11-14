@@ -794,7 +794,9 @@ Xplorio can drive MPD on its own instead of Volumio, e.g. on a Mac (`brew instal
 `web/config.local.js` (or start the tag service with `XPLORIO_PLAYER=mpd`; `MPD_HOST` and `MPD_PORT` as usual). Playback,
 queue, volume, shuffle and repeat then go through the tag service (`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, live changes
 via `/mpd/events`), covers come from MPD itself (image in the folder or in the file), and the history keeps counting.
+Search, artist, album, genre and folder views and MPD playlists also come from MPD through the tag service
+(`/mpd/browse`, `/mpd/search`, shaped like Volumio's answers).
 
-Not there yet: streaming services, Volumio's favourites, web radio list and playlists, AutoDJ, the library views that go
-through Volumio, and starting without Volumio's web server. These follow step by step; until then they stay empty with
+Not there yet: streaming services, Volumio's favourites and web radio list, AutoDJ, and starting without Volumio's web
+server. These follow step by step; until then they stay empty with
 MPD. With Volumio (the default) nothing changes.

@@ -302,6 +302,7 @@ var DICE_SVG = '<svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0
 
 function artUrl(a) {
   if (!a) return '';
+  if (player.art) a = player.art(a);                        /* MPD alone: covers from the tag service (player.js) */
   return (a.indexOf('http') === 0 || a.indexOf('data:') === 0) ? a : (location.origin + a);   /* data: large input icon (poll.js) */
 }
 
@@ -357,8 +358,7 @@ function ask(payload) {
 }
 
 function askDiscography(artist) {
-  var url = '/api/v1/browse?uri=' + volumioArg(artistUri(artist));
-  return fetch(url).then(function(r){ return r.json(); }).then(function(j){
+  return player.browse(artistUri(artist)).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var out = [];
     lists.forEach(function(l){
@@ -386,8 +386,7 @@ function loadSimilarArtists(artist) {
       similarAllCache[artist] = names;
       if (!names.length) { similarCache[artist] = []; return []; }
       var checks = names.map(function(name){
-        return fetch('/api/v1/browse?uri=' + volumioArg(artistUri(name)))
-          .then(function(r){ return r.json(); })
+        return player.browse(artistUri(name))
           .then(function(j){
             var lists = (j && j.navigation && j.navigation.lists) || [];
             var hasAlbums = lists.some(function(l){ return (l.items||[]).length > 0; });
@@ -403,14 +402,13 @@ function loadSimilarArtists(artist) {
 }
 
 function playArtistByName(name) {
-  fetch('/api/v1/search?query=' + volumioArg(name))
-    .then(function(r){ return r.json(); })
+  player.search(name)
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
       var artistItem = null;
       lists.forEach(function(l){
         var t = (l.title || '').toLowerCase();
-        if (t.indexOf('interpret') > -1) {
+        if (/interpret|artist/.test(t)) {                  /* Volumio in German: "Interpreten"; MPD alone (mpdlibrary.js): "Artists" */
           (l.items || []).forEach(function(it){
             if (!artistItem && (it.title||it.name||'').toLowerCase() === name.toLowerCase())
               artistItem = it;

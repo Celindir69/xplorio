@@ -164,6 +164,8 @@ function toItem(s) {
 function itemTarget(it) {
   var uri = String((it && it.uri) || '');
   if (/^https?:\/\//i.test(uri)) return {add: uri};
+  var pl = /^playlists\/(.+)$/.exec(uri);
+  if (pl && (!it.service || it.service === 'mpd')) return {load: pl[1]};
   var cmd = applemusic.itemCommand(it);
   if (!cmd) return null;
   if (/^listallinfo /.test(cmd)) {
@@ -186,6 +188,7 @@ function addCommands(mpd, items, cb) {
     var t = itemTarget(list[i++]);
     if (!t) { skipped++; return next(); }
     if (t.add) { out.push('add ' + quote(t.add)); return next(); }
+    if (t.load) { out.push('load ' + quote(t.load)); return next(); }
     mpd([t.find], function(err, lists){
       var found = err ? [] : songs(lists[0]);
       if (!found.length && /^find albumartist /.test(t.find)) {

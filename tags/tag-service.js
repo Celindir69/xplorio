@@ -1276,6 +1276,7 @@ var recording = false;
 /* who plays: Volumio (default) or MPD alone (APP_CONFIG.PLAYER = 'mpd' or XPLORIO_PLAYER=mpd, e.g. on a Mac; mpdplayer.js) */
 var mpdplayer = require('./mpdplayer.js');
 var mpdPlayer = new mpdplayer.Player({host: MPD_HOST, port: MPD_PORT});
+var mpdlibrary = require('./mpdlibrary.js');
 function playerIsMpd() { return String(process.env.XPLORIO_PLAYER || appConfig().PLAYER || 'volumio').toLowerCase() === 'mpd'; }
 function playerState(cb) {
   if (playerIsMpd()) return mpdPlayer.state(cb);
@@ -1520,7 +1521,7 @@ function doGenreLib(route, query, cb) {
     try { q = JSON.parse(String(query.q || '[]')); } catch (e) { return cb(400, {ok: false, error: 'invalid q'}); }
     if (!Array.isArray(q) || q.length > 500) return cb(400, {ok: false, error: 'invalid q'});
     var fn = albumGenreFn();
-    if (!albumYear || albumYear.list !== list) {
+    if (!albumYear || albumYear.list !== list || !albumYear.dir) {   /* /decadeprofile builds it without dir */
       var byDir = {};
       list.forEach(function(a){ byDir[a.dir] = a; });
       albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list), byDir: byDir};
@@ -2664,18 +2665,23 @@ setInterval(function(){                                  /* nobody watching, but
 
 /* ---------- MPD as the player (only with PLAYER 'mpd'; mpdplayer.js) ----------
    GET /mpd/state, /mpd/queue (like Volumio's getState, getQueue), /mpd/events (server-sent events "state", "queue"),
-   /mpd/art?file=… (cover), POST /mpd/cmd {action, …} */
+   /mpd/art?file=… (cover), /mpd/albumart?path=…&web=… (cover for Volumio's /albumart addresses), /mpd/browse?uri=…,
+   /mpd/search?query=… (like Volumio's browse and search; mpdlibrary.js), POST /mpd/cmd {action, …} */
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
   if (req.method === 'GET' && route === '/mpd/state') return mpdPlayer.state(reply);
   if (req.method === 'GET' && route === '/mpd/queue') return mpdPlayer.queue(reply);
-  if (req.method === 'GET' && route === '/mpd/art') {
-    return mpdPlayer.art(String(url.parse(req.url, true).query.file || ''), function(e, img){
+  var query = url.parse(req.url, true).query;
+  if (req.method === 'GET' && route === '/mpd/browse') return mpdlibrary.browse(mpdPlayer.mpd, String(query.uri || ''), reply);
+  if (req.method === 'GET' && route === '/mpd/search') return mpdlibrary.search(mpdPlayer.mpd, String(query.query || ''), reply);
+  if (req.method === 'GET' && (route === '/mpd/art' || route === '/mpd/albumart')) {
+    var which = route === '/mpd/art' ? function(cb){ cb(null, String(query.file || '')); } : function(cb){ mpdlibrary.artFile(mpdPlayer.mpd, query, cb); };
+    return which(function(e0, file){ if (e0) file = ''; mpdPlayer.art(file, function(e, img){
       if (e) { res.writeHead(404, {'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=60'}); return res.end(); }
       res.writeHead(200, {'Content-Type': img.mime, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=600'});
       res.end(img.body);
-    });
+    }); });
   }
   if (req.method === 'GET' && route === '/mpd/events') {
     var h = guard.corsHeaders(res.xplorioOrigin);

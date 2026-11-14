@@ -19,7 +19,7 @@ function browseItems(j) {
 var STREAM_TIMEOUT_MS = 12000;    /* TIDAL/Qobuz sometimes stop answering (session timeout in Volumio) */
 
 function browseGet(uri) {
-  var p = fetch('/api/v1/browse?uri=' + volumioArg(uri)).then(function(r){ return r.json(); });
+  var p = player.browse(uri);
   var svc = streamOf(uri);
   if (!svc) return p;
   return withTimeout(p, STREAM_TIMEOUT_MS).catch(function(err){
@@ -48,7 +48,7 @@ function streamArtistItems(svc, j) {
 /* search for an artist at a service; only a hit with exactly the same name counts */
 function streamFindArtist(svc, name) {
   if (!svc.on || Date.now() < svc.downUntil) return Promise.resolve(null);
-  return withTimeout(fetch('/api/v1/search?query=' + volumioArg(name)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
+  return withTimeout(player.search(name), STREAM_TIMEOUT_MS).then(function(j){
     var hit = null;
     streamArtistItems(svc, j).forEach(function(it){
       if (!hit && (it.title || '').toLowerCase() === name.toLowerCase()) hit = it;
@@ -147,7 +147,7 @@ function localExtraTitles(artist, albumTitles) {
 }
 
 function localSearchTitles(artist, have, me) {
-  return fetch('/api/v1/search?query=' + volumioArg(artist)).then(function(r){ return r.json(); }).then(function(j){
+  return player.search(artist).then(function(j){
     var seen = {};
     return browseItems(j).filter(function(it){
       if (it.type !== 'song' || it.service !== 'mpd' || !it.uri || seen[it.uri]) return false;
@@ -397,7 +397,7 @@ function streamFindAlbum(svc, artist, album, whole) {   /* whole: the entry {uri
   if (!svc || !svc.on) return Promise.resolve(null);
   function bare(s) { return String(s || '').toLowerCase().replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').trim(); }
   var want = bare(album), who = bare(artist);
-  return withTimeout(fetch('/api/v1/search?query=' + volumioArg(album)).then(function(r){ return r.json(); }), STREAM_TIMEOUT_MS).then(function(j){
+  return withTimeout(player.search(album), STREAM_TIMEOUT_MS).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var found = streamSplitSearch(lists, album).stream[svc.id].albums.filter(function(it){ return bare(it.title || it.name) === want; });
     var exact = String(album || '').toLowerCase().trim();       /* "Album" before "Album (Deluxe)" */

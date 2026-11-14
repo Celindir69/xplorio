@@ -28,7 +28,7 @@ var favMap = {}, favAt = 0, favLoading = null;
 function favRefresh(force) {
   if (!force && Date.now() - favAt < 5000) return Promise.resolve(favMap);
   if (favLoading) return favLoading;
-  favLoading = fetch('/api/v1/browse?uri=favourites').then(function(r){ return r.json(); }).then(function(j){
+  favLoading = player.browse('favourites').then(function(j){
     var m = {};
     browseItems(j).forEach(function(it){ if (it.uri) m[rateFileKey(it.uri)] = it; });
     favMap = m; favAt = Date.now(); favLoading = null;
