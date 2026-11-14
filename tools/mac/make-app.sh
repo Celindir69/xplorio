@@ -9,6 +9,9 @@
 # For tests: XPLORIO_SUPPORT, XPLORIO_APPS (target folder), XPLORIO_MUSIC (no folder dialog), XPLORIO_NO_SWIFT=1.
 set -e
 export PATH="/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:$PATH"   # Homebrew (Apple silicon), MacPorts (old Macs), Homebrew (Intel)
+# MPD forks to run in the background; macOS stops a forked program that had started Objective-C classes (MacPorts' MPD:
+# "+[NSNumber initialize] may have been in progress ... when fork() was called"). This switches that check off for MPD.
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 SRC=$(cd "$(dirname "$0")/../.." && pwd -P)
 SUPPORT="${XPLORIO_SUPPORT:-$HOME/Library/Application Support/Xplorio}"
 [ -f "$SRC/xplorio.html" ] && [ -d "$SRC/tags" ] || { echo "make-app: $SRC is not the Xplorio folder" >&2; exit 1; }

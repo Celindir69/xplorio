@@ -8,6 +8,9 @@
 # bash 3.2 (macOS); besides macOS itself only node and mpd (Homebrew).
 
 export PATH="/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:$PATH"   # Homebrew (Apple silicon), MacPorts (old Macs), Homebrew (Intel)
+# MPD forks to run in the background; macOS stops a forked program that had started Objective-C classes (MacPorts' MPD:
+# "+[NSNumber initialize] may have been in progress ... when fork() was called"). This switches that check off for MPD.
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"                          # the Xplorio files (xplorio.html, web, server, tags)
 . "${XPLORIO_CONF:-$APP/../xplorio.conf}"               # SUPPORT, MPD_CONF, MPD_PORT, MUSIC_ROOT, TAGS_DATA
