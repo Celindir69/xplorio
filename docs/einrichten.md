@@ -1068,7 +1068,7 @@ Noch nicht dabei: Streamingdienste, Volumios Favoriten und Webradio-Liste, AutoD
 sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.
 
 ### Als Mac-Programm
-`bash tools/mac/make-app.sh` (im heruntergeladenen Xplorio-Ordner, nach `brew install mpd mpc node`) baut
+`bash tools/mac/make-app.sh` (im heruntergeladenen Xplorio-Ordner, nach `brew install mpd mpc node`; auf Macs, die Homebrew nicht mehr unterstützt, mit MacPorts: `sudo port install mpd mpc nodejs18`) baut
 **Xplorio.app** in Programme: ein eigenes Fenster mit Xplorio und eigenem Symbol. Öffnen startet MPD, Tag-Dienst und
 Webserver, Schließen des Fensters (oder ⌘ Q) beendet alle drei. Beim ersten Mal fragt das Skript nach dem Musikordner;
 eine Test-Einrichtung in `~/xplorio-mpd` wird samt Bibliothek und Verlauf übernommen. Einstellungen liegen in

@@ -802,7 +802,7 @@ server. These follow step by step; until then they stay empty with
 MPD. With Volumio (the default) nothing changes.
 
 ### As a Mac program
-`bash tools/mac/make-app.sh` (in the downloaded Xplorio folder, after `brew install mpd mpc node`) builds **Xplorio.app**
+`bash tools/mac/make-app.sh` (in the downloaded Xplorio folder, after `brew install mpd mpc node`; on Macs Homebrew no longer supports, with MacPorts: `sudo port install mpd mpc nodejs18`) builds **Xplorio.app**
 in Applications: its own window with Xplorio and its own icon. Opening it starts MPD, the tag service and the web
 server; closing the window (or ⌘ Q) stops all three. The first time the script asks for the music folder; a test setup
 in `~/xplorio-mpd` is taken over with its library and history. Settings live in `~/Library/Application Support/Xplorio`
