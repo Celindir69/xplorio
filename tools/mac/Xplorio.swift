@@ -116,6 +116,45 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         return nil
     }
 
+    // alert, confirm and prompt of the page (e.g. "Update library?"): without these WebKit answers "no" on its own
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let a = NSAlert()
+        a.messageText = message
+        a.addButton(withTitle: "OK")
+        a.runModal()
+        completionHandler()
+    }
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let a = NSAlert()
+        a.messageText = message
+        a.addButton(withTitle: "OK")
+        a.addButton(withTitle: "Abbrechen")
+        completionHandler(a.runModal() == .alertFirstButtonReturn)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        let a = NSAlert()
+        a.messageText = prompt
+        a.addButton(withTitle: "OK")
+        a.addButton(withTitle: "Abbrechen")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        field.stringValue = defaultText ?? ""
+        a.accessoryView = field
+        a.window.initialFirstResponder = field
+        completionHandler(a.runModal() == .alertFirstButtonReturn ? field.stringValue : nil)
+    }
+    // choosing files (e.g. a cover image in the tag editor)
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+        panel.canChooseDirectories = parameters.allowsDirectories
+        panel.canChooseFiles = true
+        completionHandler(panel.runModal() == .OK ? panel.urls : nil)
+    }
+
     // closing the window ends the program, and with it MPD, tag service and web server
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { return true }
     func applicationWillTerminate(_ notification: Notification) {
