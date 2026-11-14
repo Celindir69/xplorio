@@ -302,7 +302,7 @@ Smart.prototype.run = function(cb) {
   }
   this.loadTracks(function(err, tracks, stamp){
     if (err) return finish(err);
-    self.lastStamp = stamp;
+    self.lastStamp = stamp; self.ranRules = self.rulesStamp();
     var lines = self.rules().filter(isRuleLine).map(trim), names = [], now = Date.now() / 1000, i = 0;
     (function next(){
       if (i >= lines.length) return cleanup();
@@ -323,6 +323,10 @@ Smart.prototype.run = function(cb) {
   });
 };
 
+/* rules file changed outside (copied over from Volumio): a run at the next check */
+Smart.prototype.rulesStamp = function() {
+  try { var st = fs.statSync(this.file('smart_playlists.txt')); return st.mtime.getTime() + ':' + st.size; } catch (e) { return ''; }
+};
 Smart.prototype.status = function() { return {ok: true, api: API, running: this.running, lastRun: this.lastRun}; };
 
 /* data {action, …} -> cb(answer); the answers of the plugin's REST endpoint */
@@ -405,7 +409,7 @@ Smart.prototype.tick = function() {
     if (err) return;
     var stamp = ((lists[0] || []).filter(function(l){ return l.indexOf('db_update: ') === 0; })[0] || '').slice(11);
     var old = !self.lastRun || Date.now() - self.lastRun.at > 24 * 3600 * 1000;
-    if (old || stamp !== self.lastStamp) self.run();
+    if (old || stamp !== self.lastStamp || self.rulesStamp() !== self.ranRules) self.run();
   });
 };
 

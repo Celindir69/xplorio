@@ -2690,7 +2690,7 @@ var mpdLists = new mpdlists.Lists({mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, 
 var smartlists = require('./smartlists.js');            /* smart playlists without Volumio: rules of the plugin, MPD playlists */
 var smartLists = new smartlists.Smart({mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, dir: path.join(DATA_DIR, 'smart-playlists'),
                                        log: function(t){ console.error(t); }});
-setInterval(function(){ if (playerIsMpd()) smartLists.tick(); }, 10 * 60 * 1000).unref();
+setInterval(function(){ if (playerIsMpd()) smartLists.tick(); }, 2 * 60 * 1000).unref();   /* cheap: one stats, one stat */
 setTimeout(function(){ if (playerIsMpd()) smartLists.tick(); }, 60 * 1000).unref();
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
