@@ -99,3 +99,31 @@ ta('switch: one sound output plays, the VU fifo stays; scan keeps the choice acr
     });
   });
 });
+
+ta('Bluetooth (with uid): no MPD output of its own, choosing it switches the Mac output and plays on the system output', function(done){
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplorio-audio-')), conf = path.join(dir, 'mpd.conf');
+  var BTU = {devices: [{name: 'B&W Headphones', transport: 'bluetooth', outputs: 2, uid: 'bt-1', 'default': false},
+                       {name: 'RME', transport: 'usb', outputs: 2, uid: 'usb-1', 'default': true}]};
+  fs.writeFileSync(conf, CONF);
+  var mpd = fakeMpd(conf), set = [];
+  var a = new ma.MacAudio({mpd: mpd, confFile: conf, devices: function(cb){ cb(null, JSON.stringify(BTU)); },
+                           listDevices: function(cb){ cb(null, JSON.stringify(BTU)); },
+                           setDefault: function(uid, cb){ set.push(uid); BTU.devices.forEach(function(d){ d['default'] = d.uid === uid; }); cb(); },
+                           restart: function(cb){ mpd.sync(); cb(); }});
+  a.scan(true, function(e){
+    assert.ifError(e);
+    assert.deepStrictEqual(ma.blocks(fs.readFileSync(conf, 'utf8')).map(function(b){ return b.name; }), ['vu', ma.SYSTEM, 'RME']);
+    a.status(function(e2, st){
+      var bt = st.outputs.filter(function(o){ return o.via; })[0];
+      assert.deepStrictEqual([bt.id, bt.name, bt.enabled], ['via:bt-1', 'B&W Headphones', false]);
+      a.select('via:bt-1', function(e3){
+        assert.ifError(e3);
+        assert.deepStrictEqual(set, ['bt-1']);
+        a.status(function(e4, st4){
+          assert.deepStrictEqual(st4.outputs.filter(function(o){ return o.enabled; }).map(function(o){ return o.name; }), [ma.SYSTEM, 'B&W Headphones']);
+          done();
+        });
+      });
+    });
+  });
+});

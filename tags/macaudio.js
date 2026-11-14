@@ -6,13 +6,17 @@
    "Exclusive" (hog_device): no other program plays on the device at the same time, the sample rate follows the music.
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
-         restart(cb) (MPD stops and starts again) */
+         restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, cb(err)) (audiodevices only:
+         the Mac's sound output for devices played through "Systemausgabe") */
 var fs = require('fs');
 
 var BEGIN = '# ---- Xplorio: audio outputs (settings page; replaced on every device scan) ----';
 var END = '# ---- Xplorio: end of audio outputs ----';
 var SYSTEM = 'Systemausgabe';
 var NO_HOG = /^(airplay|bluetooth)$/;          /* exclusive (hog_device) keeps these silent: macOS does not hand them over */
+/* MPD cannot open Bluetooth devices itself (OSStatus -10851): they play through "Systemausgabe", choosing one makes it the
+   Mac's sound output (audiodevices set <uid>). Only with the helper's uid; without it they get an output like the others */
+function viaSystem(d) { return d.kind === 'bluetooth' && !!d.uid; }
 
 /* devices that can play -> [{name, kind}]: from audiodevices (tools/mac/audiodevices.swift), else from system_profiler */
 function parseDevices(json) {
@@ -21,7 +25,10 @@ function parseDevices(json) {
   if (data && Array.isArray(data.devices)) {               /* audiodevices (Core Audio names, exactly as MPD looks for them) */
     data.devices.forEach(function(d){
       if (!d || typeof d.name !== 'string' || !d.name || !(d.outputs > 0)) return;
-      if (!out.some(function(o){ return o.name === d.name; })) out.push({name: d.name, kind: /^(usb|builtin|airplay|bluetooth|hdmi|virtual)$/.test(d.transport) ? d.transport : 'other'});
+      if (out.some(function(o){ return o.name === d.name; })) return;
+      var o = {name: d.name, kind: /^(usb|builtin|airplay|bluetooth|hdmi|virtual)$/.test(d.transport) ? d.transport : 'other'};
+      if (typeof d.uid === 'string' && d.uid) { o.uid = d.uid; o.def = d['default'] === true; }
+      out.push(o);
     });
     return out;
   }
@@ -63,6 +70,7 @@ function writeConf(text, devices, exclusive) {
   var names = [SYSTEM], lines = [BEGIN];
   lines.push('audio_output {', '  type       "osx"', '  name       ' + q(SYSTEM), '  mixer_type "software"', '}');
   (devices || []).forEach(function(d){
+    if (viaSystem(d)) return;
     var name = d.name;
     while (names.indexOf(name) >= 0) name += ' ';
     names.push(name);
@@ -104,7 +112,15 @@ MacAudio.prototype.status = function(cb) {
       return {id: o.id, name: o.name.trim(), enabled: o.enabled, system: !b.device, hog: !!b.hog};
     });
     var managed = self.conf().indexOf(BEGIN) >= 0;
-    cb(null, {outputs: outs, exclusive: outs.some(function(o){ return o.hog; }), managed: managed, busy: self.busy});
+    function done(list) { cb(null, {outputs: list, exclusive: list.some(function(o){ return o.hog; }), managed: managed, busy: self.busy}); }
+    var sys = outs.filter(function(o){ return o.system; })[0];
+    if (!sys || !self.o.listDevices) return done(outs);
+    self.o.listDevices(function(e, json){                 /* Bluetooth: through the system output */
+      var via = e ? [] : parseDevices(json).filter(viaSystem);
+      done(outs.concat(via.map(function(d){
+        return {id: 'via:' + d.uid, name: d.name.trim(), enabled: sys.enabled && d.def, system: false, hog: false, via: true};
+      })));
+    });
   });
 };
 
@@ -113,9 +129,17 @@ MacAudio.prototype.select = function(id, cb) {
   var self = this;
   this.status(function(err, st){
     if (err) return cb(err);
-    if (!st.outputs.some(function(o){ return o.id === id; })) return cb(new Error('output'));
+    var o = st.outputs.filter(function(x){ return x.id === id; })[0];
+    if (!o) return cb(new Error('output'));
+    if (o.via) {                                         /* make it the Mac's output, then play on the system output */
+      var sys = st.outputs.filter(function(x){ return x.system; })[0];
+      return self.o.setDefault(String(id).slice(4), function(e){
+        if (e) return cb(new Error('output'));
+        self.select(sys.id, cb);
+      });
+    }
     var cmds = ['enableoutput ' + id];
-    st.outputs.forEach(function(o){ if (o.id !== id && o.enabled) cmds.push('disableoutput ' + o.id); });
+    st.outputs.forEach(function(x){ if (x.id !== id && x.enabled && !x.via) cmds.push('disableoutput ' + x.id); });
     self.o.mpd(cmds, function(e){ cb(e); });
   });
 };
@@ -152,4 +176,4 @@ MacAudio.prototype.scan = function(exclusive, cb) {
   });
 };
 
-module.exports = {MacAudio: MacAudio, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};
+module.exports = {MacAudio: MacAudio, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};

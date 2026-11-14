@@ -523,6 +523,7 @@ langRegister('fr', 'Français', {
   'mac.audioSystem': 'Sortie système',
   'mac.audioSystemSub': 'comme choisi dans la barre des menus sous Son, AirPlay aussi',
   'mac.audioExclusiveOn': 'exclusif',
+  'mac.audioVia': 'Bluetooth : via la sortie système (devient la sortie audio du Mac)',
   'mac.audioActive': 'Active',
   'mac.audioUse': 'Utiliser',
   'mac.audioNone': 'Aucune sortie trouvée. Lance « Chercher les appareils ».',

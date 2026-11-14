@@ -2814,6 +2814,17 @@ var macAudio = new macaudio.MacAudio({
     if (fs.existsSync(helper)) return cp.execFile(helper, [], {timeout: 15000}, function(e, out){ cb(e, out); });
     cp.execFile('system_profiler', ['SPAudioDataType', '-json'], {timeout: 30000, maxBuffer: 4 * 1024 * 1024}, function(e, out){ cb(e, out); });
   },
+  listDevices: function(cb){                              /* only the Core Audio helper: quick, knows uid and the Mac's output */
+    var helper = path.join(__dirname, '..', 'mac', 'audiodevices');
+    if (process.env.XPLORIO_AUDIO_DEVICES) return fs.readFile(process.env.XPLORIO_AUDIO_DEVICES, 'utf8', cb);   /* tests */
+    if (!fs.existsSync(helper)) return cb(new Error('nodevices'));
+    cp.execFile(helper, [], {timeout: 10000}, function(e, out){ cb(e, out); });
+  },
+  setDefault: function(uid, cb){
+    var helper = path.join(__dirname, '..', 'mac', 'audiodevices');
+    if (process.env.XPLORIO_AUDIO_SET) return fs.appendFile(process.env.XPLORIO_AUDIO_SET, uid + '\n', cb);       /* tests */
+    cp.execFile(helper, ['set', uid], {timeout: 10000}, function(e){ cb(e); });
+  },
   restart: function(cb){
     var bin = process.env.MPD_BIN || 'mpd';
     cp.execFile(bin, ['--kill', MAC_MPD_CONF], {timeout: 15000}, function(){
@@ -2835,7 +2846,7 @@ function doMacAudio(body, cb) {
       cb(200, st);
     });
   }
-  if (body.action === 'audioSelect') return macAudio.select(+body.id, answer);
+  if (body.action === 'audioSelect') return macAudio.select(/^via:/.test(String(body.id)) ? String(body.id) : +body.id, answer);
   if (body.action === 'audioScan') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.scan(!!body.exclusive, answer);
