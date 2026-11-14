@@ -1055,3 +1055,35 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
   nur den Zustand, `rollback` holt das Original zurück. Ein Paket-Update von libav würde den Patch überschreiben.
   Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
+
+## Ohne Volumio: nur MPD (Vorschau)
+Xplorio kann statt Volumio auch MPD allein steuern, z. B. auf einem Mac (`brew install mpd`). Dafür in
+`web/config.local.js` `PLAYER: 'mpd'` setzen (oder den Tag-Dienst mit `XPLORIO_PLAYER=mpd` starten; `MPD_HOST` und
+`MPD_PORT` wie gewohnt). Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst
+(`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im
+Ordner oder in der Datei), der Verlauf zählt ebenfalls mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie
+MPD-Playlisten liefert der Tag-Dienst ebenfalls aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten).
+
+Noch nicht dabei: Streamingdienste, Volumios Favoriten und Webradio-Liste, AutoDJ sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
+sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.
+
+### Als Mac-Programm
+`bash tools/mac/make-app.sh` (im heruntergeladenen Xplorio-Ordner, nach `brew install mpd mpc node`) baut
+**Xplorio.app** in Programme: ein eigenes Fenster mit Xplorio und eigenem Symbol. Öffnen startet MPD, Tag-Dienst und
+Webserver, Schließen des Fensters (oder ⌘ Q) beendet alle drei. Beim ersten Mal fragt das Skript nach dem Musikordner;
+eine Test-Einrichtung in `~/xplorio-mpd` wird samt Bibliothek und Verlauf übernommen. Einstellungen liegen in
+`~/Library/Application Support/Xplorio` (`xplorio.conf`, `config.local.js`, `mpd/`), Protokolle in
+`~/Library/Logs/Xplorio`. Für eine neuere Version das Skript aus dem neuen Ordner noch einmal ausführen; die
+Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc aus Apples Befehlszeilenwerkzeugen).
+
+**Einstellungen** (Zahnrad → Einstellungen, nur ohne Volumio) ersetzen die Einstellungsseite des Plugins:
+- **Musikordner:** Ordner als Verknüpfung unter INTERNAL, USB oder NAS eintragen oder entfernen (entfernt wird nur die
+  Verknüpfung, nie Musik). Danach liest MPD die Bibliothek neu ein.
+- **Audioanalyse:** `essentia.jsonl` verknüpfen (am besten die Datei, die `analyse.py` schreibt: jede neue Analyse zählt
+  dann sofort) oder als Kopie hochladen. Eine vorhandene Kopie bleibt als `essentia.jsonl.bak`.
+- **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
+- **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
+  dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
+  Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
+- **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
+  weitere Adressen. Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.

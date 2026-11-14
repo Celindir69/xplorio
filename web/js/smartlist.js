@@ -355,7 +355,7 @@ function smartSearch() {
   if (q.length < 2) return smartHitsPaint();
   while (ed.hits.firstChild) ed.hits.removeChild(ed.hits.firstChild);
   ed.hits.appendChild(smartEl('div', 'tagHint', T('search.searching')));
-  withTimeout(fetch('/api/v1/search?query=' + volumioArg(q)).then(function(r){ return r.json(); }), 15000).then(function(j){
+  withTimeout(player.search(q), 15000).then(function(j){
     if (seq !== ed.seq || smartEd !== ed) return;
     var seen = {};
     ((j && j.navigation && j.navigation.lists) || []).forEach(function(l){

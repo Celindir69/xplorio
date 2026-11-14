@@ -29,7 +29,7 @@ if (window.MutationObserver) new MutationObserver(function(muts){
 var body = document.getElementById('lyricsText');
 var area = document.getElementById('overlayLyrics').querySelector('.overlayBody');
 
-var socket = io();
+/* socket: Volumio's socket.io (player.js; with MPD a silent stand-in) */
 socket.on('connect', function(){ socket.emit('getUiSettings'); });
 /* Language of the Volumio UI: the app adopts it (i18n.js) unless ?lang= or LANGUAGE say otherwise.
    Volumio delivers info texts only in this language; if LANG differs, ask() fetches the texts itself first (infotext.js). */
@@ -51,8 +51,8 @@ function queueForInput(items) {
   if (!inp) { queuedForInput = false; return false; }
   if (!items || !items.length) return true;
   queuedForInput = true;
-  socket.emit('clearQueue');
-  setTimeout(function(){ socket.emit('addToQueue', items); }, 300);
+  player.clear();
+  setTimeout(function(){ player.add(items); }, 300);
   showToast(T('play.queuedInput', {name: inp.name}));
   if (typeof closeAllOverlays === 'function') closeAllOverlays();
   return true;
@@ -63,11 +63,8 @@ function playItems(items, stay) {   /* stay: leave the open overlay (search, che
   if (!items || !items.length) return;
   if (!stay && typeof browseOrigin !== 'undefined') browseOrigin = null;   /* playing ends the way back (browse.js) */
   if (queueForInput(items)) return;
-  fetch('/api/v1/replaceAndPlay', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({item: items[0]})
-  }).then(function(){
-    if (items.length > 1) setTimeout(function(){ socket.emit('addToQueue', items.slice(1)); }, 300);
+  player.replaceAndPlay(items[0]).then(function(){
+    if (items.length > 1) setTimeout(function(){ player.add(items.slice(1)); }, 300);
   }).catch(function(){});
   if (!stay && typeof closeAllOverlays === 'function') closeAllOverlays();
 }
@@ -114,7 +111,7 @@ socket.on('closeAllModals', function(){
   if (audioGone) { audioGone = false; audioToast('audio.connected'); }
 });
 var pushSeen = 0;                                       /* last pushState: while the socket speaks, poll.js asks less */
-socket.on('pushState', function(st){
+player.on('state', function(st){
   pushSeen = Date.now();
   if (typeof stateIn === 'function' && !document.hidden) return stateIn(st);   /* the whole display (poll.js) */
   if (typeof showVolumio === 'function') showVolumio(st);
@@ -281,7 +278,7 @@ function seekToMs(ms) {
   var sec = Math.max(0, Math.min(curDur, Math.ceil(ms / 1000)));
   seekBase = sec * 1000; seekStamp = Date.now();
   paintTime();
-  fetch('/api/v1/commands/?cmd=seek&position=' + sec).catch(function(){});
+  player.seek(sec);
 }
 
 
@@ -305,6 +302,7 @@ var DICE_SVG = '<svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0
 
 function artUrl(a) {
   if (!a) return '';
+  if (player.art) a = player.art(a);                        /* MPD alone: covers from the tag service (player.js) */
   return (a.indexOf('http') === 0 || a.indexOf('data:') === 0) ? a : (location.origin + a);   /* data: large input icon (poll.js) */
 }
 
@@ -360,8 +358,7 @@ function ask(payload) {
 }
 
 function askDiscography(artist) {
-  var url = '/api/v1/browse?uri=' + volumioArg(artistUri(artist));
-  return fetch(url).then(function(r){ return r.json(); }).then(function(j){
+  return player.browse(artistUri(artist)).then(function(j){
     var lists = (j && j.navigation && j.navigation.lists) || [];
     var out = [];
     lists.forEach(function(l){
@@ -389,8 +386,7 @@ function loadSimilarArtists(artist) {
       similarAllCache[artist] = names;
       if (!names.length) { similarCache[artist] = []; return []; }
       var checks = names.map(function(name){
-        return fetch('/api/v1/browse?uri=' + volumioArg(artistUri(name)))
-          .then(function(r){ return r.json(); })
+        return player.browse(artistUri(name))
           .then(function(j){
             var lists = (j && j.navigation && j.navigation.lists) || [];
             var hasAlbums = lists.some(function(l){ return (l.items||[]).length > 0; });
@@ -406,14 +402,13 @@ function loadSimilarArtists(artist) {
 }
 
 function playArtistByName(name) {
-  fetch('/api/v1/search?query=' + volumioArg(name))
-    .then(function(r){ return r.json(); })
+  player.search(name)
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
       var artistItem = null;
       lists.forEach(function(l){
         var t = (l.title || '').toLowerCase();
-        if (t.indexOf('interpret') > -1) {
+        if (/interpret|artist/.test(t)) {                  /* Volumio in German: "Interpreten"; MPD alone (mpdlibrary.js): "Artists" */
           (l.items || []).forEach(function(it){
             if (!artistItem && (it.title||it.name||'').toLowerCase() === name.toLowerCase())
               artistItem = it;

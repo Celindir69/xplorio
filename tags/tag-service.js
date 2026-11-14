@@ -751,7 +751,7 @@ var trash = require('./trash.js');
 /* journal of what went into "Xplorio Trash" (trash.js): from where, when, why; for the Papierkorb view */
 var TRASH_FILE = path.join(DATA_DIR, 'trash.json');
 function trashJournal() { try { var j = JSON.parse(fs.readFileSync(TRASH_FILE, 'utf8')); return Array.isArray(j) ? j : []; } catch (e) { return []; } }
-function trashJournalSave(j) { try { mkdirs(DATA_DIR); writeAtomic(TRASH_FILE, JSON.stringify(j)); } catch (e) { console.error('cannot write ' + TRASH_FILE + ': ' + e.message); } }
+function trashJournalSave(j) { trashLast = null; try { mkdirs(DATA_DIR); writeAtomic(TRASH_FILE, JSON.stringify(j)); } catch (e) { console.error('cannot write ' + TRASH_FILE + ': ' + e.message); } }
 function trashNote(moved, reasonOf) {
   var at = Date.now();
   trashJournalSave(trash.journalAdd(trashJournal(), moved.map(function(m){ return {to: m.to, from: m.from, at: at, reason: reasonOf(m.from)}; }), MUSIC_ROOT));
@@ -884,9 +884,27 @@ function doFileMove(body, cb) {
 
 /* ---------- Papierkorb: what is in "Xplorio Trash" on the drives (trash.js) ---------- */
 /* GET /trash -> {ok, drives: [{drive, bytes, entries: [{path, kind, from, at, reason, bytes, files}]}], bytes, count} */
+/* in its own process (trash-worker.js): measuring large trash folders on slow drives held up every other request.
+   Requests at the same time share one run; a result counts for a few seconds */
+var trashRun = null, trashLast = null, TRASH_FRESH_MS = 5000;
 function doTrashGet(cb) {
-  try { var l = trash.list(MUSIC_ROOT, trashJournal()); l.ok = true; cb(200, l); }
-  catch (e) { cb(200, {ok: false, error: e.message}); }
+  if (trashLast && Date.now() - trashLast.at < TRASH_FRESH_MS) return cb(200, trashLast.r);
+  if (trashRun) return trashRun.push(cb);
+  trashRun = [cb];
+  var done = false, child;
+  function finish(r) {
+    if (done) return; done = true;
+    var waiting = trashRun; trashRun = null;
+    if (r.ok) trashLast = {at: Date.now(), r: r};
+    waiting.forEach(function(f){ f(200, r); });
+  }
+  try { child = cp.fork(path.join(__dirname, 'trash-worker.js'), [], {silent: true}); }
+  catch (e) { return finish({ok: false, error: e.message}); }
+  var timer = setTimeout(function(){ try { child.kill(); } catch (e) { /* gone */ } finish({ok: false, error: 'timeout'}); }, 120000);
+  child.on('message', function(r){ clearTimeout(timer); finish(r || {ok: false, error: 'empty'}); });
+  child.on('error', function(e){ clearTimeout(timer); finish({ok: false, error: e.message}); });
+  child.on('exit', function(){ clearTimeout(timer); finish({ok: false, error: 'worker ended'}); });
+  child.send({root: MUSIC_ROOT, journal: trashJournal()});
 }
 /* GET /trashfiles?p=<entry>: the files of a folder entry, to put back or delete one by one */
 function doTrashFiles(query, cb) {
@@ -1273,7 +1291,19 @@ var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, functio
 var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); }, function(e){ lfm.nowPlaying(e); });
 var recording = false;
 
-function playerState(cb) { volumioGet('/api/v1/getState', 1024 * 1024, cb); }
+/* who plays: Volumio (default) or MPD alone (APP_CONFIG.PLAYER = 'mpd' or XPLORIO_PLAYER=mpd, e.g. on a Mac; mpdplayer.js) */
+var mpdplayer = require('./mpdplayer.js');
+var mpdPlayer = new mpdplayer.Player({host: MPD_HOST, port: MPD_PORT});
+var mpdlibrary = require('./mpdlibrary.js');
+function playerIsMpd() { return String(process.env.XPLORIO_PLAYER || appConfig().PLAYER || 'volumio').toLowerCase() === 'mpd'; }
+function playerState(cb) {
+  if (playerIsMpd()) return mpdPlayer.state(cb);
+  volumioGet('/api/v1/getState', 1024 * 1024, cb);
+}
+function playerQueue(cb) {
+  if (playerIsMpd()) return mpdPlayer.queue(cb);
+  volumioGet('/api/v1/getQueue', 16 * 1024 * 1024, cb);
+}
 function volumioGet(route, max, cb) {
   var done = false;
   function finish(e, st) { if (!done) { done = true; cb(e, st); } }
@@ -1509,7 +1539,7 @@ function doGenreLib(route, query, cb) {
     try { q = JSON.parse(String(query.q || '[]')); } catch (e) { return cb(400, {ok: false, error: 'invalid q'}); }
     if (!Array.isArray(q) || q.length > 500) return cb(400, {ok: false, error: 'invalid q'});
     var fn = albumGenreFn();
-    if (!albumYear || albumYear.list !== list) {
+    if (!albumYear || albumYear.list !== list || !albumYear.dir) {   /* /decadeprofile builds it without dir */
       var byDir = {};
       list.forEach(function(a){ byDir[a.dir] = a; });
       albumYear = {list: list, fn: albums.yearIndex(list), dir: albums.dirIndex(list), byDir: byDir};
@@ -2109,7 +2139,7 @@ var rgauto = require('./rgauto.js');                    /* ReplayGain "Automatic
 function volumioQueue(cb) {
   playerState(function(e, st){
     if (e || !st || typeof st.position !== 'number') return cb(e || new Error('no position'));
-    volumioGet('/api/v1/getQueue', 16 * 1024 * 1024, function(e2, q){
+    playerQueue(function(e2, q){
       if (e2 || !q || !Array.isArray(q.queue)) return cb(e2 || new Error('no queue'));
       cb(null, {pos: st.position, random: !!st.random, items: q.queue});
     });
@@ -2651,6 +2681,129 @@ setInterval(function(){                                  /* nobody watching, but
   vuState(function(err, f){ if (!err && f && f.enabled) vuSwitch(f, false); });
 }, 60000).unref();
 
+/* ---------- MPD as the player (only with PLAYER 'mpd'; mpdplayer.js) ----------
+   GET /mpd/state, /mpd/queue (like Volumio's getState, getQueue), /mpd/events (server-sent events "state", "queue"),
+   /mpd/art?file=… (cover), /mpd/albumart?path=…&web=… (cover for Volumio's /albumart addresses), /mpd/browse?uri=…,
+   /mpd/search?query=… (like Volumio's browse and search; mpdlibrary.js), POST /mpd/cmd {action, …} */
+function doMpd(req, res, route) {
+  if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
+  function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
+  if (req.method === 'GET' && route === '/mpd/state') return mpdPlayer.state(reply);
+  if (req.method === 'GET' && route === '/mpd/queue') return mpdPlayer.queue(reply);
+  var query = url.parse(req.url, true).query;
+  if (req.method === 'GET' && route === '/mpd/browse') return mpdlibrary.browse(mpdPlayer.mpd, String(query.uri || ''), reply);
+  if (req.method === 'GET' && route === '/mpd/search') return mpdlibrary.search(mpdPlayer.mpd, String(query.query || ''), reply);
+  if (req.method === 'GET' && (route === '/mpd/art' || route === '/mpd/albumart')) {
+    var which = route === '/mpd/art' ? function(cb){ cb(null, String(query.file || '')); } : function(cb){ mpdlibrary.artFile(mpdPlayer.mpd, query, cb); };
+    return which(function(e0, file){ if (e0) file = ''; mpdPlayer.art(file, function(e, img){
+      if (e) { res.writeHead(404, {'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=60'}); return res.end(); }
+      res.writeHead(200, {'Content-Type': img.mime, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=600'});
+      res.end(img.body);
+    }); });
+  }
+  if (req.method === 'GET' && route === '/mpd/events') {
+    var h = guard.corsHeaders(res.xplorioOrigin);
+    h['Content-Type'] = 'text/event-stream'; h['Cache-Control'] = 'no-cache, no-store'; h['X-Accel-Buffering'] = 'no';
+    res.writeHead(200, h);
+    res.write('retry: 3000\n\n');
+    var stop = mpdPlayer.listen(res);
+    var beat = setInterval(function(){ try { res.write(': \n\n'); } catch (e) { /* gone */ } }, 15000);
+    req.on('close', function(){ clearInterval(beat); stop(); });
+    return;
+  }
+  if (req.method === 'POST' && route === '/mpd/cmd') {
+    var data = '';
+    req.setEncoding('utf8');
+    req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+    req.on('end', function(){
+      var body;
+      try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      mpdPlayer.command(body || {}, function(c, o){ send(res, c, o); });
+    });
+    return;
+  }
+  send(res, 404, {ok: false, error: 'unknown path'});
+}
+
+/* ---------- settings page on the Mac (only with PLAYER 'mpd'; macsettings.js, web/js/macsettings.js) ----------
+   GET /mac/settings -> music folders, audio analysis, Last.fm (set or not), interface settings;
+   POST /mac/settings {action: musicAdd|musicRemove|essentiaLink|settings|lastfm|choose, …} */
+var macsettings = require('./macsettings.js');
+var macSettings = new macsettings.MacSettings({
+  musicRoot: MUSIC_ROOT, configFile: path.join(APP_CONFIG_DIR, 'config.local.js'), keys: keys, essentiaFile: ESSENTIA_FILE,
+  scan: function(cb){ mpdPlayer.mpd(['update'], function(e){ cb(e); }); },
+  choose: function(kind, cb){
+    var what = kind === 'file' ? 'choose file with prompt "essentia.jsonl"' : 'choose folder with prompt "Musikordner"';
+    cp.execFile('osascript', ['-e', 'POSIX path of (' + what + ')'], {timeout: 300000}, function(e, out){
+      cb(e, e ? '' : String(out).trim().replace(/\/$/, '') || '');
+    });
+  },
+  essentiaStatus: function(){ return audioStore.status(); }
+});
+/* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MPD_CONF from xplorio-services.sh */
+var macaudio = require('./macaudio.js');
+var MPD_CONF = process.env.MPD_CONF || '';
+function mpdPing(tries, cb) {
+  mpdPlayer.mpd(['ping'], function(e){ if (!e || tries <= 0) return cb(e); setTimeout(function(){ mpdPing(tries - 1, cb); }, 500); });
+}
+var macAudio = new macaudio.MacAudio({
+  mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, confFile: MPD_CONF,
+  devices: function(cb){
+    if (process.env.XPLORIO_AUDIO_DEVICES) return fs.readFile(process.env.XPLORIO_AUDIO_DEVICES, 'utf8', cb);   /* tests */
+    if (process.platform !== 'darwin') return cb(new Error('nodevices'));
+    cp.execFile('system_profiler', ['SPAudioDataType', '-json'], {timeout: 30000, maxBuffer: 4 * 1024 * 1024}, function(e, out){ cb(e, out); });
+  },
+  restart: function(cb){
+    var bin = process.env.MPD_BIN || 'mpd';
+    cp.execFile(bin, ['--kill', MPD_CONF], {timeout: 15000}, function(){
+      setTimeout(function(){
+        cp.execFile(bin, [MPD_CONF], {timeout: 30000}, function(e){
+          if (e) console.error('MPD restart failed: ' + e.message);
+          mpdPing(40, cb);
+        });
+      }, 1000);
+    });
+  }
+});
+function doMacAudio(body, cb) {
+  function answer(e, extra) {
+    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
+    macAudio.status(function(e2, st){
+      if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
+      st.ok = true; st.done = body.action; st.canScan = !!MPD_CONF; if (extra) st.devices = extra.devices;
+      cb(200, st);
+    });
+  }
+  if (body.action === 'audioSelect') return macAudio.select(+body.id, answer);
+  if (body.action === 'audioScan') {
+    if (!MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
+    return macAudio.scan(!!body.exclusive, answer);
+  }
+  answer(null);
+}
+
+function doMac(req, res, route) {
+  if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
+  if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
+  if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method === 'GET') return send(res, 200, macSettings.read(appConfig()));
+  if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
+    macSettings.command(body, appConfig(), function(c, o){
+      if (o && o.ok && o.done === 'essentiaLink') audioStore.reload(true);
+      if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; }
+      send(res, c, o);
+    });
+  });
+}
+
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -2681,6 +2834,8 @@ function handle(req, res) {
   res.xplorioOrigin = g.origin;
   var route = req.url.split('?')[0];
   if (req.method === 'OPTIONS') return send(res, 204, {});
+  if (route.indexOf('/mpd/') === 0) return doMpd(req, res, route);
+  if (route.indexOf('/mac/') === 0) return doMac(req, res, route);
   if (req.method === 'GET' && route === '/stream')  return doStream(req, res);
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
