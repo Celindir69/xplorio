@@ -826,4 +826,10 @@ Without Volumio Xplorio also takes over:
 - **Favourites** (thumbs up): as the MPD playlist “Xplorio Favoriten” (hidden in the playlist list).
 - **Smart playlists:** the same rules and editor as with the plugin; the tag service evaluates them and writes MPD
   playlists (after saving, when the library changes, and once a day). Rules in `smart-playlists/smart_playlists.txt`
-  in the data folder. MPD needs `playlist_directory` for this (added by `make-app.sh`).
+  in the data folder (a copied file is picked up after about 2 minutes). MPD needs `playlist_directory` for this (added by `make-app.sh`).
+- **Endless playback (AutoDJ):** ∞ on the repeat button or the card on the settings page. When 3 or fewer tracks are left
+  after the one playing, the tag service adds a track by a similar artist (Last.fm, needs the API key) from your own
+  library. As in the plugin: recent artists and tracks are not repeated right away, exclude keywords (title or album)
+  and a maximum length. It pauses while repeat is on.
+- **VU meter:** `make-app.sh` adds the fifo output “VU” (`44100:16:2`, off) to `mpd.conf`; the tag service switches it on
+  only while someone looks at the needles. MPD restarts once after that.

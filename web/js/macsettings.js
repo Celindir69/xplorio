@@ -1,12 +1,13 @@
 /* "Settings" page on the Mac (gear menu, only with PLAYER 'mpd'): what the Volumio plugin's settings page does on the player.
-   Music folders (links in the music folder), the audio analysis file (essentia.jsonl: link or upload), Last.fm access and the
-   interface settings (written to config.local.js, the page loads again after saving).
+   Music folders (links in the music folder), audio output, the audio analysis file (essentia.jsonl: link or upload), Last.fm
+   access, endless playback (AutoDJ, POST /mpd/autodj, tags/autodj.js) and the interface settings (written to config.local.js, the page loads again after saving).
    Tag service: GET/POST /mac/settings (tags/macsettings.js), POST /essentia (upload). The folder and file dialog comes from the
    Mac program (message handler "xplorioChoose", tools/mac/Xplorio.swift), otherwise from the tag service (osascript).
    Classic script, shared global scope; see xplorio.html for load order. */
 var overlayMacSettings = document.getElementById('overlayMacSettings');
 var msBody = document.getElementById('msBody');
 var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
+var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
@@ -22,6 +23,8 @@ function openMacSettings() {
   msBody.appendChild(browseNote(T('hist.loading')));
   var seq = msSeq;
   msAudioLoad();
+  msAdj = null; msAdjMsg = ''; msAdjBad = false;
+  msAdjSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -141,6 +144,7 @@ function msRender() {
   grid.appendChild(msAudioCard());
   grid.appendChild(msEssentiaCard(d));
   grid.appendChild(msLastfmCard(d));
+  grid.appendChild(msAdjCard());
   grid.appendChild(msUiCard(d));
 }
 
@@ -243,6 +247,43 @@ function msLastfmCard(d) {
   var link = histEl('a', 'sHint listLink pbLink', T('mac.lfGet'));
   link.href = 'https://www.last.fm/api/account/create'; link.target = '_blank'; link.rel = 'noopener';
   c.appendChild(link);
+  return c;
+}
+
+/* ---------- endless playback (AutoDJ): {} = state, {enabled}, {excludes, maxMinutes} ---------- */
+function msAdjSend(body, okText) {
+  var seq = msSeq;
+  tagPostJson('/mpd/autodj', body).then(function(r){
+    if (seq !== msSeq) return;
+    msAdjBad = !(r && r.ok);
+    if (r && r.ok) {
+      msAdj = r; msAdjMsg = okText ? T(okText) : '';
+      if (typeof autodjState === 'function' && body.enabled !== undefined) { autodj = autodjState(r); if (typeof updateCtrlUI === 'function') updateCtrlUI(); }
+    } else msAdjMsg = T('mac.err.value');
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msAdjBad = true; msAdjMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msAdjCard() {
+  var c = sysCard(T('mac.adj'), 'syWide'), a = msAdj;
+  c.appendChild(histEl('div', 'syNote', T('mac.adjNote')));
+  if (a) {
+    var on = histEl('div', 'msSetRow');
+    on.appendChild(histEl('div', 'msSetLabel', T('mac.adj')));
+    on.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.enabled, function(v){ msAdjSend({enabled: v}); }));
+    c.appendChild(on);
+    if (!a.ready) c.appendChild(histEl('div', 'syNote syWarn', T('mac.adjNoKey')));
+    var ex = msInput(a.excludes, T('mac.adjExcludePh')), mx = msInput(String(a.maxMinutes), '20', 'number');
+    mx.min = '0'; mx.max = '600'; mx.style.maxWidth = '6em';
+    var r1 = histEl('div', 'msSetRow'); r1.appendChild(histEl('div', 'msSetLabel', T('mac.adjExclude'))); r1.appendChild(ex); c.appendChild(r1);
+    var r2 = histEl('div', 'msSetRow'); r2.appendChild(histEl('div', 'msSetLabel', T('mac.adjMax'))); r2.appendChild(mx); c.appendChild(r2);
+    var row = histEl('div', 'pbRow msAddRow');
+    row.appendChild(msButton(T('mac.save'), function(){
+      var m = parseInt(mx.value, 10);
+      msAdjSend({excludes: ex.value.trim(), maxMinutes: m >= 0 ? m : 0}, 'mac.adjSaved');
+    }, 'on'));
+    c.appendChild(row);
+  } else if (!msAdjMsg) c.appendChild(browseNote(T('hist.loading')));
+  if (msAdjMsg) c.appendChild(histEl('div', 'syNote' + (msAdjBad ? ' syWarn' : ''), msAdjMsg));
   return c;
 }
 

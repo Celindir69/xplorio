@@ -89,7 +89,16 @@ MC=$(sed -n 's/^MPD_CONF="\(.*\)"$/\1/p' "$SUPPORT/xplorio.conf" | head -1)
 if [ -f "$MC" ] && ! grep -q '^[[:space:]]*playlist_directory' "$MC"; then
   mkdir -p "$SUPPORT/mpd/playlists"
   printf 'playlist_directory "%s"\n' "$SUPPORT/mpd/playlists" >>"$MC"
+  CONF_CHANGED=1
 fi
+# VU meter: MPD's fifo output (name with "VU", fixed format; switched on by the tag service only while the meters show)
+if [ -f "$MC" ] && ! awk '{l=tolower($0)} l~/audio_output/{b=1;f=0;v=0} b&&l~/type[ \t]+"fifo"/{f=1} b&&l~/name[ \t]+"[^"]*vu/{v=1} b&&l~/}/{if(f&&v)x=1;b=0} END{exit !x}' "$MC"; then
+  mkdir -p "$SUPPORT/mpd"
+  printf 'audio_output {\n  type       "fifo"\n  name       "VU"\n  path       "%s"\n  format     "44100:16:2"\n  enabled    "no"\n}\n' "$SUPPORT/mpd/vu.fifo" >>"$MC"
+  CONF_CHANGED=1
+fi
+# mpd.conf changed while MPD runs: stop it, Xplorio starts it again with the new settings
+[ -n "$CONF_CHANGED" ] && command -v mpd >/dev/null && mpd --kill "$MC" >/dev/null 2>&1 || true
 # own settings of the interface; MPD as the player
 CL="$SUPPORT/config.local.js"
 [ -f "$CL" ] || echo "/* own settings (see web/config.js); kept when the program is rebuilt */" >"$CL"

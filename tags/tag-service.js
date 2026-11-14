@@ -2692,6 +2692,19 @@ var smartLists = new smartlists.Smart({mpd: function(cmds, cb){ mpdPlayer.mpd(cm
                                        log: function(t){ console.error(t); }});
 setInterval(function(){ if (playerIsMpd()) smartLists.tick(); }, 2 * 60 * 1000).unref();   /* cheap: one stats, one stat */
 setTimeout(function(){ if (playerIsMpd()) smartLists.tick(); }, 60 * 1000).unref();
+var autodjlib = require('./autodj.js');                 /* endless playback without Volumio: similar artists (Last.fm), own library */
+var autoDj = new autodjlib.AutoDJ({
+  mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, file: path.join(DATA_DIR, 'autodj.json'),
+  ready: function(){ return !!keys.lastfm().key; },
+  similar: function(artist, cb){
+    doLastfmApi({method: 'artist.getsimilar', artist: artist, limit: '20', autocorrect: '1'}, function(code, d){
+      var a = d && d.similarartists && d.similarartists.artist;
+      cb(null, (Array.isArray(a) ? a : a ? [a] : []).map(function(x){ return x && x.name; }).filter(Boolean));
+    });
+  },
+  log: function(t){ console.error(t); }
+});
+setInterval(function(){ if (playerIsMpd()) autoDj.tick(); }, 15 * 1000).unref();   /* cheap while not needed: one status */
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
@@ -2724,6 +2737,17 @@ function doMpd(req, res, route) {
     var stop = mpdPlayer.listen(res);
     var beat = setInterval(function(){ try { res.write(': \n\n'); } catch (e) { /* gone */ } }, 15000);
     req.on('close', function(){ clearInterval(beat); stop(); });
+    return;
+  }
+  if (req.method === 'POST' && route === '/mpd/autodj') {
+    var ad = '';
+    req.setEncoding('utf8');
+    req.on('data', function(d){ ad += d; if (ad.length > MAX_BODY) req.destroy(); });
+    req.on('end', function(){
+      var ab;
+      try { ab = JSON.parse(ad || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      autoDj.api(ab, function(r){ send(res, r.ok ? 200 : 400, r); });
+    });
     return;
   }
   if (req.method === 'POST' && route === '/mpd/smart') {
@@ -2774,14 +2798,15 @@ var macSettings = new macsettings.MacSettings({
   },
   essentiaStatus: function(){ return audioStore.status(); }
 });
-/* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MPD_CONF from xplorio-services.sh */
+/* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MAC_MPD_CONF from xplorio-services.sh
+   (only there; MPD_CONF above falls back to Volumio's /etc/mpd.conf, which Xplorio never writes) */
 var macaudio = require('./macaudio.js');
-var MPD_CONF = process.env.MPD_CONF || '';
+var MAC_MPD_CONF = process.env.MPD_CONF || '';
 function mpdPing(tries, cb) {
   mpdPlayer.mpd(['ping'], function(e){ if (!e || tries <= 0) return cb(e); setTimeout(function(){ mpdPing(tries - 1, cb); }, 500); });
 }
 var macAudio = new macaudio.MacAudio({
-  mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, confFile: MPD_CONF,
+  mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, confFile: MAC_MPD_CONF,
   devices: function(cb){
     if (process.env.XPLORIO_AUDIO_DEVICES) return fs.readFile(process.env.XPLORIO_AUDIO_DEVICES, 'utf8', cb);   /* tests */
     if (process.platform !== 'darwin') return cb(new Error('nodevices'));
@@ -2791,9 +2816,9 @@ var macAudio = new macaudio.MacAudio({
   },
   restart: function(cb){
     var bin = process.env.MPD_BIN || 'mpd';
-    cp.execFile(bin, ['--kill', MPD_CONF], {timeout: 15000}, function(){
+    cp.execFile(bin, ['--kill', MAC_MPD_CONF], {timeout: 15000}, function(){
       setTimeout(function(){
-        cp.execFile(bin, [MPD_CONF], {timeout: 30000}, function(e){
+        cp.execFile(bin, [MAC_MPD_CONF], {timeout: 30000}, function(e){
           if (e) console.error('MPD restart failed: ' + e.message);
           mpdPing(40, cb);
         });
@@ -2806,13 +2831,13 @@ function doMacAudio(body, cb) {
     if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
     macAudio.status(function(e2, st){
       if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
-      st.ok = true; st.done = body.action; st.canScan = !!MPD_CONF; if (extra) st.devices = extra.devices;
+      st.ok = true; st.done = body.action; st.canScan = !!MAC_MPD_CONF; if (extra) st.devices = extra.devices;
       cb(200, st);
     });
   }
   if (body.action === 'audioSelect') return macAudio.select(+body.id, answer);
   if (body.action === 'audioScan') {
-    if (!MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
+    if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.scan(!!body.exclusive, answer);
   }
   answer(null);

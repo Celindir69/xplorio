@@ -78,6 +78,9 @@ t('test setup in ~/xplorio-mpd is taken over (library, port, history); own setti
   fs.appendFileSync(cl, "window.APP_CONFIG.LANGUAGE = 'de';\n");
   make(d);
   assert.strictEqual((fs.readFileSync(path.join(x, 'mpd.conf'), 'utf8').match(/playlist_directory/g) || []).length, 1);   /* only once */
+  var mc = fs.readFileSync(path.join(x, 'mpd.conf'), 'utf8');
+  assert.strictEqual((mc.match(/type       "fifo"/g) || []).length, 1);                        /* VU meter output, only once */
+  assert.ok(/name       "VU"[\s\S]*format     "44100:16:2"[\s\S]*enabled    "no"/.test(mc));
   var s = fs.readFileSync(cl, 'utf8');
   assert.ok(/LANGUAGE = 'de'/.test(s));
   assert.strictEqual((s.match(/PLAYER/g) || []).length, 1);
