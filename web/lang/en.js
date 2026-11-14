@@ -528,7 +528,7 @@ langRegister('en', 'English', {
   'mac.audioUse': 'Use',
   'mac.audioNone': 'No output found. Please “Find devices”.',
   'mac.audioExclusive': 'Exclusive (USB DAC)',
-  'mac.audioExclusiveNote': 'Exclusive: no other program plays on the device at the same time, the sample rate follows the music. Not for the system output and AirPlay.',
+  'mac.audioExclusiveNote': 'Exclusive: no other program plays on the device at the same time, the sample rate follows the music. Not for the system output, AirPlay and Bluetooth.',
   'mac.audioScan': 'Find devices',
   'mac.audioScanning': 'Looking for devices, MPD restarts briefly …',
   'mac.audioScanned': '{n} devices found.',

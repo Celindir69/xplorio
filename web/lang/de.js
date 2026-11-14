@@ -526,7 +526,7 @@ langRegister('de', 'Deutsch', {
   'mac.audioUse': 'Verwenden',
   'mac.audioNone': 'Keine Ausgabe gefunden. Bitte „Geräte suchen“.',
   'mac.audioExclusive': 'Exklusiv (USB-DAC)',
-  'mac.audioExclusiveNote': 'Exklusiv: Kein anderes Programm spielt gleichzeitig auf dem Gerät, die Abtastrate folgt der Musik. Gilt nicht für die Systemausgabe und AirPlay.',
+  'mac.audioExclusiveNote': 'Exklusiv: Kein anderes Programm spielt gleichzeitig auf dem Gerät, die Abtastrate folgt der Musik. Gilt nicht für die Systemausgabe, AirPlay und Bluetooth.',
   'mac.audioScan': 'Geräte suchen',
   'mac.audioScanning': 'Suche Geräte, MPD startet kurz neu …',
   'mac.audioScanned': '{n} Geräte gefunden.',

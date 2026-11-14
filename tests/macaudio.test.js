@@ -15,6 +15,7 @@ var PROFILER = {SPAudioDataType: [{_name: 'Devices', _items: [
   {_name: 'Wohnzimmer', coreaudio_device_output: 2, coreaudio_device_transport: 'coreaudio_device_type_airplay'},
   {_name: 'Say "Hi"', coreaudio_device_output: 2}
 ]}]};
+var BT = '{"devices":[{"name":"B&W Headphones","transport":"bluetooth","outputs":2},{"name":"RME","transport":"usb","outputs":2}]}';
 var CONF = 'music_directory "/m"\nport "6600"\naudio_output {\n  type       "osx"\n  name       "Mac"\n  mixer_type "software"\n}\n' +
            'audio_output {\n  type "fifo"\n  name "vu"\n  path "/tmp/vu"\n}\n';
 
@@ -36,6 +37,8 @@ t('mpd.conf: osx outputs replaced by system output and one per device; other out
   var off = ma.writeConf(c, d, false);
   assert.ok(ma.blocks(off).every(function(x){ return !x.hog; }));
   assert.strictEqual((off.match(/audio_output/g) || []).length, 6);
+  var bt = ma.blocks(ma.writeConf(CONF, ma.parseDevices(BT), true)).map(function(x){ return [x.name, x.hog]; });
+  assert.deepStrictEqual(bt.slice(2), [['B&W Headphones', false], ['RME', true]]);   /* Bluetooth: never exclusive, it stays silent */
 });
 
 function fakeMpd(conf) {

@@ -527,7 +527,7 @@ langRegister('fr', 'Français', {
   'mac.audioUse': 'Utiliser',
   'mac.audioNone': 'Aucune sortie trouvée. Lance « Chercher les appareils ».',
   'mac.audioExclusive': 'Exclusif (DAC USB)',
-  'mac.audioExclusiveNote': 'Exclusif : aucun autre programme ne joue en même temps sur l\'appareil, la fréquence suit la musique. Pas pour la sortie système ni AirPlay.',
+  'mac.audioExclusiveNote': 'Exclusif : aucun autre programme ne joue en même temps sur l\'appareil, la fréquence suit la musique. Pas pour la sortie système, AirPlay ni Bluetooth.',
   'mac.audioScan': 'Chercher les appareils',
   'mac.audioScanning': 'Recherche des appareils, MPD redémarre brièvement …',
   'mac.audioScanned': '{n} appareils trouvés.',

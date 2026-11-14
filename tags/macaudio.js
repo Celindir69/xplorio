@@ -12,6 +12,7 @@ var fs = require('fs');
 var BEGIN = '# ---- Xplorio: audio outputs (settings page; replaced on every device scan) ----';
 var END = '# ---- Xplorio: end of audio outputs ----';
 var SYSTEM = 'Systemausgabe';
+var NO_HOG = /^(airplay|bluetooth)$/;          /* exclusive (hog_device) keeps these silent: macOS does not hand them over */
 
 /* devices that can play -> [{name, kind}]: from audiodevices (tools/mac/audiodevices.swift), else from system_profiler */
 function parseDevices(json) {
@@ -66,7 +67,7 @@ function writeConf(text, devices, exclusive) {
     while (names.indexOf(name) >= 0) name += ' ';
     names.push(name);
     lines.push('audio_output {', '  type       "osx"', '  name       ' + q(name), '  device     ' + q(d.name));
-    if (exclusive && d.kind !== 'airplay') lines.push('  hog_device "yes"');
+    if (exclusive && !NO_HOG.test(d.kind)) lines.push('  hog_device "yes"');
     lines.push('  mixer_type "software"', '}');
   });
   lines.push(END);

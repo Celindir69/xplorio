@@ -526,7 +526,7 @@ langRegister('it', 'Italiano', {
   'mac.audioUse': 'Usa',
   'mac.audioNone': 'Nessuna uscita trovata. Premi «Cerca dispositivi».',
   'mac.audioExclusive': 'Esclusivo (DAC USB)',
-  'mac.audioExclusiveNote': 'Esclusivo: nessun altro programma suona contemporaneamente sul dispositivo, la frequenza segue la musica. Non per l\'uscita di sistema e AirPlay.',
+  'mac.audioExclusiveNote': 'Esclusivo: nessun altro programma suona contemporaneamente sul dispositivo, la frequenza segue la musica. Non per l\'uscita di sistema, AirPlay e Bluetooth.',
   'mac.audioScan': 'Cerca dispositivi',
   'mac.audioScanning': 'Ricerca dispositivi, MPD si riavvia un attimo …',
   'mac.audioScanned': '{n} dispositivi trovati.',
