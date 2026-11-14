@@ -751,7 +751,7 @@ var trash = require('./trash.js');
 /* journal of what went into "Xplorio Trash" (trash.js): from where, when, why; for the Papierkorb view */
 var TRASH_FILE = path.join(DATA_DIR, 'trash.json');
 function trashJournal() { try { var j = JSON.parse(fs.readFileSync(TRASH_FILE, 'utf8')); return Array.isArray(j) ? j : []; } catch (e) { return []; } }
-function trashJournalSave(j) { try { mkdirs(DATA_DIR); writeAtomic(TRASH_FILE, JSON.stringify(j)); } catch (e) { console.error('cannot write ' + TRASH_FILE + ': ' + e.message); } }
+function trashJournalSave(j) { trashLast = null; try { mkdirs(DATA_DIR); writeAtomic(TRASH_FILE, JSON.stringify(j)); } catch (e) { console.error('cannot write ' + TRASH_FILE + ': ' + e.message); } }
 function trashNote(moved, reasonOf) {
   var at = Date.now();
   trashJournalSave(trash.journalAdd(trashJournal(), moved.map(function(m){ return {to: m.to, from: m.from, at: at, reason: reasonOf(m.from)}; }), MUSIC_ROOT));
@@ -884,9 +884,27 @@ function doFileMove(body, cb) {
 
 /* ---------- Papierkorb: what is in "Xplorio Trash" on the drives (trash.js) ---------- */
 /* GET /trash -> {ok, drives: [{drive, bytes, entries: [{path, kind, from, at, reason, bytes, files}]}], bytes, count} */
+/* in its own process (trash-worker.js): measuring large trash folders on slow drives held up every other request.
+   Requests at the same time share one run; a result counts for a few seconds */
+var trashRun = null, trashLast = null, TRASH_FRESH_MS = 5000;
 function doTrashGet(cb) {
-  try { var l = trash.list(MUSIC_ROOT, trashJournal()); l.ok = true; cb(200, l); }
-  catch (e) { cb(200, {ok: false, error: e.message}); }
+  if (trashLast && Date.now() - trashLast.at < TRASH_FRESH_MS) return cb(200, trashLast.r);
+  if (trashRun) return trashRun.push(cb);
+  trashRun = [cb];
+  var done = false, child;
+  function finish(r) {
+    if (done) return; done = true;
+    var waiting = trashRun; trashRun = null;
+    if (r.ok) trashLast = {at: Date.now(), r: r};
+    waiting.forEach(function(f){ f(200, r); });
+  }
+  try { child = cp.fork(path.join(__dirname, 'trash-worker.js'), [], {silent: true}); }
+  catch (e) { return finish({ok: false, error: e.message}); }
+  var timer = setTimeout(function(){ try { child.kill(); } catch (e) { /* gone */ } finish({ok: false, error: 'timeout'}); }, 120000);
+  child.on('message', function(r){ clearTimeout(timer); finish(r || {ok: false, error: 'empty'}); });
+  child.on('error', function(e){ clearTimeout(timer); finish({ok: false, error: e.message}); });
+  child.on('exit', function(){ clearTimeout(timer); finish({ok: false, error: 'worker ended'}); });
+  child.send({root: MUSIC_ROOT, journal: trashJournal()});
 }
 /* GET /trashfiles?p=<entry>: the files of a folder entry, to put back or delete one by one */
 function doTrashFiles(query, cb) {
