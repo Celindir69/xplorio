@@ -37,6 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         web.navigationDelegate = self
         web.uiDelegate = self
         web.setValue(false, forKey: "drawsBackground")
+        if #available(macOS 13.3, *) { web.isInspectable = true }       // right click -> Inspect Element (Safari's tools), for finding errors
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
