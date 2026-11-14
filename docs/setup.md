@@ -808,3 +808,12 @@ server; closing the window (or ⌘ Q) stops all three. The first time the script
 in `~/xplorio-mpd` is taken over with its library and history. Settings live in `~/Library/Application Support/Xplorio`
 (`xplorio.conf`, `config.local.js`, `mpd/`), logs in `~/Library/Logs/Xplorio`. For a newer version run the script again
 from the new folder; the settings stay. The program is compiled on the Mac itself (swiftc from Apple's command line tools).
+
+**Settings** (gear → Settings, only without Volumio) replace the plugin's settings page:
+- **Music folders:** add or remove folders as links under INTERNAL, USB or NAS (only the link is removed, never music).
+  MPD reads the library again afterwards.
+- **Audio analysis:** link `essentia.jsonl` (best the file `analyse.py` writes: every new analysis counts at once) or
+  upload a copy. A copy there before is kept as `essentia.jsonl.bak`.
+- **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
+- **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts.
+  Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.

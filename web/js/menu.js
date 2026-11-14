@@ -1,5 +1,5 @@
 /* Menu behind the gear at the top right: tools that do not belong to the search.
-   Classic script, shared global scope; loaded after check.js, history.js, system.js, trash.js, files.js, playback.js and volumio.js (help.js after it, openHelp only on tap).
+   Classic script, shared global scope; loaded after check.js, history.js, system.js, trash.js, files.js, playback.js, macsettings.js and volumio.js (help.js after it, openHelp only on tap).
    More entries: one line in MENU_ITEMS (needsTags: only when the tag service is running). */
 var overlayMenu = document.getElementById('overlayMenu');
 var menuBody    = document.getElementById('menuBody');
@@ -18,7 +18,9 @@ var MENU_ITEMS = [
    icon: 'M3 13h4l3-8 4 14 3-6h4v2h-2.8L14 22 10 9.4 8.4 15H3z'},
   {id: 'playback', needsTags: !ROTEL_ON, title: T('menu.playback'), sub: T('menu.playbackSub'), open: function(){ openPlayback(); },
    icon: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z'},
-  {id: 'volumio', title: T('menu.volumio'), sub: T('menu.volumioSub'), open: function(){ openVolumio(); },
+  {id: 'macsettings', needsTags: true, mpdOnly: true, title: T('mac.title'), sub: T('mac.menuSub'), open: function(){ openMacSettings(); },
+   icon: 'M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7 7 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.67 8.48a.5.5 0 0 0 .12.61l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54a7.3 7.3 0 0 0 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.61zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z'},
+  {id: 'volumio', volumioOnly: true, title: T('menu.volumio'), sub: T('menu.volumioSub'), open: function(){ openVolumio(); },
    icon: 'M3 4h4.2l4.8 11.3L16.8 4H21l-7 16h-4L3 4z'},
   {id: 'files', needsTags: true, title: T('files.title'), sub: T('files.menuSub'), open: function(){ openFiles(); },
    icon: 'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2zm4 13v-3h-4v-2h4V9l4 4-4 4z'},
@@ -44,6 +46,8 @@ function menuRender() {
   menuBody.appendChild(listEl);
   MENU_ITEMS.forEach(function(it){
     if (it.needsTags && !menuTags) return;
+    if (it.mpdOnly && player.kind !== 'mpd') return;               /* Mac settings: only without Volumio */
+    if (it.volumioOnly && player.kind === 'mpd') return;
     var row = document.createElement('div'); row.className = 'menuRow';
     var icon = document.createElement('div'); icon.className = 'menuIcon'; icon.appendChild(menuSvg(it.icon));
     var text = document.createElement('div'); text.className = 'menuText';

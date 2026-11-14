@@ -1075,3 +1075,12 @@ eine Test-Einrichtung in `~/xplorio-mpd` wird samt Bibliothek und Verlauf übern
 `~/Library/Application Support/Xplorio` (`xplorio.conf`, `config.local.js`, `mpd/`), Protokolle in
 `~/Library/Logs/Xplorio`. Für eine neuere Version das Skript aus dem neuen Ordner noch einmal ausführen; die
 Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc aus Apples Befehlszeilenwerkzeugen).
+
+**Einstellungen** (Zahnrad → Einstellungen, nur ohne Volumio) ersetzen die Einstellungsseite des Plugins:
+- **Musikordner:** Ordner als Verknüpfung unter INTERNAL, USB oder NAS eintragen oder entfernen (entfernt wird nur die
+  Verknüpfung, nie Musik). Danach liest MPD die Bibliothek neu ein.
+- **Audioanalyse:** `essentia.jsonl` verknüpfen (am besten die Datei, die `analyse.py` schreibt: jede neue Analyse zählt
+  dann sofort) oder als Kopie hochladen. Eine vorhandene Kopie bleibt als `essentia.jsonl.bak`.
+- **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
+- **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
+  weitere Adressen. Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.

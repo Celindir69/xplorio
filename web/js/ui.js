@@ -34,6 +34,8 @@ function closeAllOverlays() {
   if (ot) ot.classList.remove('on');
   var osm = document.getElementById('overlaySmart');
   if (osm) osm.classList.remove('on');
+  var oms = document.getElementById('overlayMacSettings');
+  if (oms) oms.classList.remove('on');
   if (window.closeVolumioFrame) closeVolumioFrame();
 }
 function toggleOverlay(overlay) {

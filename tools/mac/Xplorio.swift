@@ -22,7 +22,7 @@ func services(_ command: String) -> (Int32, String) {
     return (p.terminationStatus, String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     var window: NSWindow!
     var web: WKWebView!
     var stopped = false
@@ -32,6 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         let config = WKWebViewConfiguration()
         config.websiteDataStore = WKWebsiteDataStore.default()          // settings of the page stay (localStorage)
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.userContentController.add(self, name: "xplorioChoose")  // folder/file dialog for the settings page
         web = WKWebView(frame: NSRect(x: 0, y: 0, width: 1200, height: 800), configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
@@ -153,6 +154,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         panel.canChooseDirectories = parameters.allowsDirectories
         panel.canChooseFiles = true
         completionHandler(panel.runModal() == .OK ? panel.urls : nil)
+    }
+
+    // settings page (web/js/macsettings.js): postMessage("folder" | "file") -> window.xplorioChosen(path)
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "xplorioChoose" else { return }
+        let folder = (message.body as? String) != "file"
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = folder
+        panel.canChooseFiles = !folder
+        panel.allowsMultipleSelection = false
+        panel.message = folder ? "Musikordner wählen" : "essentia.jsonl wählen"
+        guard panel.runModal() == .OK, let path = panel.url?.path,
+              let data = try? JSONSerialization.data(withJSONObject: [path]),
+              let json = String(data: data, encoding: .utf8) else { return }
+        web.evaluateJavaScript("window.xplorioChosen && window.xplorioChosen(\(json)[0])", completionHandler: nil)
     }
 
     // closing the window ends the program, and with it MPD, tag service and web server

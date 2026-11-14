@@ -2707,6 +2707,41 @@ function doMpd(req, res, route) {
   send(res, 404, {ok: false, error: 'unknown path'});
 }
 
+/* ---------- settings page on the Mac (only with PLAYER 'mpd'; macsettings.js, web/js/macsettings.js) ----------
+   GET /mac/settings -> music folders, audio analysis, Last.fm (set or not), interface settings;
+   POST /mac/settings {action: musicAdd|musicRemove|essentiaLink|settings|lastfm|choose, …} */
+var macsettings = require('./macsettings.js');
+var macSettings = new macsettings.MacSettings({
+  musicRoot: MUSIC_ROOT, configFile: path.join(APP_CONFIG_DIR, 'config.local.js'), keys: keys, essentiaFile: ESSENTIA_FILE,
+  scan: function(cb){ mpdPlayer.mpd(['update'], function(e){ cb(e); }); },
+  choose: function(kind, cb){
+    var what = kind === 'file' ? 'choose file with prompt "essentia.jsonl"' : 'choose folder with prompt "Musikordner"';
+    cp.execFile('osascript', ['-e', 'POSIX path of (' + what + ')'], {timeout: 300000}, function(e, out){
+      cb(e, e ? '' : String(out).trim().replace(/\/$/, '') || '');
+    });
+  },
+  essentiaStatus: function(){ return audioStore.status(); }
+});
+function doMac(req, res, route) {
+  if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
+  if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method === 'GET') return send(res, 200, macSettings.read(appConfig()));
+  if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    macSettings.command(body, appConfig(), function(c, o){
+      if (o && o.ok && o.done === 'essentiaLink') audioStore.reload(true);
+      if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; }
+      send(res, c, o);
+    });
+  });
+}
+
 /* ---------- HTTP ---------- */
 
 function send(res, code, obj) {
@@ -2738,6 +2773,7 @@ function handle(req, res) {
   var route = req.url.split('?')[0];
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (route.indexOf('/mpd/') === 0) return doMpd(req, res, route);
+  if (route.indexOf('/mac/') === 0) return doMac(req, res, route);
   if (req.method === 'GET' && route === '/stream')  return doStream(req, res);
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
