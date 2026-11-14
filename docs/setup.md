@@ -815,5 +815,8 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
 - **Audio analysis:** link `essentia.jsonl` (best the file `analyse.py` writes: every new analysis counts at once) or
   upload a copy. A copy there before is kept as `essentia.jsonl.bak`.
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
+- **Audio output:** “Find devices” adds every sound device of the Mac as an MPD output to `mpd.conf` (MPD restarts
+  briefly), plus “System output”, which follows the Mac's sound output (AirPlay too). One output plays at a time.
+  “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.
 - **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts.
   Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.

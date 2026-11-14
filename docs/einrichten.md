@@ -1082,5 +1082,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
 - **Audioanalyse:** `essentia.jsonl` verknüpfen (am besten die Datei, die `analyse.py` schreibt: jede neue Analyse zählt
   dann sofort) oder als Kopie hochladen. Eine vorhandene Kopie bleibt als `essentia.jsonl.bak`.
 - **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
+- **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
+  dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
+  Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
 - **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
   weitere Adressen. Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.

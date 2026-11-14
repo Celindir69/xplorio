@@ -2722,8 +2722,51 @@ var macSettings = new macsettings.MacSettings({
   },
   essentiaStatus: function(){ return audioStore.status(); }
 });
+/* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MPD_CONF from xplorio-services.sh */
+var macaudio = require('./macaudio.js');
+var MPD_CONF = process.env.MPD_CONF || '';
+function mpdPing(tries, cb) {
+  mpdPlayer.mpd(['ping'], function(e){ if (!e || tries <= 0) return cb(e); setTimeout(function(){ mpdPing(tries - 1, cb); }, 500); });
+}
+var macAudio = new macaudio.MacAudio({
+  mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, confFile: MPD_CONF,
+  devices: function(cb){
+    if (process.env.XPLORIO_AUDIO_DEVICES) return fs.readFile(process.env.XPLORIO_AUDIO_DEVICES, 'utf8', cb);   /* tests */
+    if (process.platform !== 'darwin') return cb(new Error('nodevices'));
+    cp.execFile('system_profiler', ['SPAudioDataType', '-json'], {timeout: 30000, maxBuffer: 4 * 1024 * 1024}, function(e, out){ cb(e, out); });
+  },
+  restart: function(cb){
+    var bin = process.env.MPD_BIN || 'mpd';
+    cp.execFile(bin, ['--kill', MPD_CONF], {timeout: 15000}, function(){
+      setTimeout(function(){
+        cp.execFile(bin, [MPD_CONF], {timeout: 30000}, function(e){
+          if (e) console.error('MPD restart failed: ' + e.message);
+          mpdPing(40, cb);
+        });
+      }, 1000);
+    });
+  }
+});
+function doMacAudio(body, cb) {
+  function answer(e, extra) {
+    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
+    macAudio.status(function(e2, st){
+      if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
+      st.ok = true; st.done = body.action; st.canScan = !!MPD_CONF; if (extra) st.devices = extra.devices;
+      cb(200, st);
+    });
+  }
+  if (body.action === 'audioSelect') return macAudio.select(+body.id, answer);
+  if (body.action === 'audioScan') {
+    if (!MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
+    return macAudio.scan(!!body.exclusive, answer);
+  }
+  answer(null);
+}
+
 function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
+  if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') return send(res, 200, macSettings.read(appConfig()));
   if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
@@ -2734,6 +2777,7 @@ function doMac(req, res, route) {
     var body;
     try { body = JSON.parse(data) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
     macSettings.command(body, appConfig(), function(c, o){
       if (o && o.ok && o.done === 'essentiaLink') audioStore.reload(true);
       if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; }

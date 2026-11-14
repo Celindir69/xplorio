@@ -61,7 +61,7 @@ fi
 
 cd "$APP" || exit 1
 if ! up "$TAGS_PORT"; then
-  XPLORIO_PLAYER=mpd MPD_HOST=127.0.0.1 MPD_PORT="$MPD_PORT" MUSIC_ROOT="$MUSIC_ROOT" TAGS_DATA="$TAGS_DATA" HTTP_PORT="$TAGS_PORT" \
+  XPLORIO_PLAYER=mpd MPD_HOST=127.0.0.1 MPD_PORT="$MPD_PORT" MPD_CONF="$MPD_CONF" MPD_BIN="$MPD" MUSIC_ROOT="$MUSIC_ROOT" TAGS_DATA="$TAGS_DATA" HTTP_PORT="$TAGS_PORT" \
     nohup "$NODE" tags/tag-service.js >>"$LOG/tags.log" 2>&1 </dev/null &
   echo $! >"$RUN/tags.pid"
 fi

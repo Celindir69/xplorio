@@ -6,8 +6,10 @@
    Classic script, shared global scope; see xplorio.html for load order. */
 var overlayMacSettings = document.getElementById('overlayMacSettings');
 var msBody = document.getElementById('msBody');
+var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs'];
+var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
 function msToken() { return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem !== 'undefined' && sysSvcMem) || ''; }
@@ -19,11 +21,67 @@ function openMacSettings() {
   while (msBody.firstChild) msBody.removeChild(msBody.firstChild);
   msBody.appendChild(browseNote(T('hist.loading')));
   var seq = msSeq;
+  msAudioLoad();
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
     msData = r;
   }).catch(function(){ msMsg = T('mac.offline'); msMsgBad = true; }).then(function(){ if (seq === msSeq) msRender(); });
+}
+
+/* ---------- audio output (GET /mac/audio, POST /mac/settings {action: audioSelect|audioScan}) ---------- */
+function msAudioLoad() {
+  var seq = msSeq;
+  msAudio = null; msAudioMsg = ''; msAudioBusy = false;
+  tagGetJson('/mac/audio').then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.ok) msAudio = r; else msAudioMsg = T(MS_AUDIO_ERRORS.indexOf(r && r.error) >= 0 ? 'mac.err.' + r.error : 'mac.err.audio.mpd');
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msAudioMsg = T('mac.err.audio.mpd'); if (msData) msRender(); } });
+}
+function msAudioSend(body, okText) {
+  var seq = msSeq;
+  body.token = msToken();
+  msAudioBusy = true; msAudioMsg = body.action === 'audioScan' ? T('mac.audioScanning') : ''; msRender();
+  tagPostJson('/mac/settings', body).then(function(r){
+    if (seq !== msSeq) return;
+    msAudioBusy = false;
+    msAudioBad = !(r && r.ok);
+    if (r && r.ok) { msAudio = r; msAudioMsg = okText ? T(okText, {n: r.devices || 0}) : ''; }
+    else msAudioMsg = T(MS_AUDIO_ERRORS.indexOf(r && r.error) >= 0 ? 'mac.err.' + r.error : 'mac.err.audio.mpd');
+    msRender();
+  }).catch(function(){ if (seq === msSeq) { msAudioBusy = false; msAudioBad = true; msAudioMsg = T('mac.err.audio.mpd'); msRender(); } });
+}
+function msAudioCard() {
+  var c = sysCard(T('mac.audio'), 'syWide'), a = msAudio;
+  c.appendChild(histEl('div', 'syNote', T('mac.audioNote')));
+  if (a) {
+    a.outputs.forEach(function(o){
+      var row = histEl('div', 'msItem');
+      var tx = histEl('div', 'msItemText');
+      tx.appendChild(histEl('div', 'msItemName', o.system ? T('mac.audioSystem') : o.name));
+      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.hog ? T('mac.audioExclusiveOn') : ''));
+      row.appendChild(tx);
+      if (o.enabled) row.appendChild(histEl('div', 'mxChip mxSmall on', T('mac.audioActive')));
+      else row.appendChild(msButton(T('mac.audioUse'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioSelect', id: o.id}); }));
+      c.appendChild(row);
+    });
+    if (!a.outputs.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.audioNone')));
+    if (a.canScan) {
+      var ex = histEl('div', 'msSetRow');
+      ex.appendChild(histEl('div', 'msSetLabel', T('mac.audioExclusive')));
+      ex.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.exclusive, function(v){
+        if (!msAudioBusy) msAudioSend({action: 'audioScan', exclusive: v}, 'mac.audioScanned');
+      }));
+      c.appendChild(ex);
+      c.appendChild(histEl('div', 'syNote', T('mac.audioExclusiveNote')));
+      var row = histEl('div', 'pbRow msAddRow');
+      row.appendChild(msButton(T('mac.audioScan'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioScan', exclusive: !!a.exclusive}, 'mac.audioScanned'); }, 'on'));
+      c.appendChild(row);
+    }
+  } else if (!msAudioMsg) c.appendChild(browseNote(T('hist.loading')));
+  if (msAudioMsg) c.appendChild(histEl('div', 'syNote' + (msAudioBad || (!msAudio && !msAudioBusy) ? ' syWarn' : ''), msAudioMsg));
+  return c;
 }
 
 /* body {action, …} -> new state; ok(r) after success */
@@ -75,6 +133,7 @@ function msRender() {
   if (msMsg) grid.appendChild(histEl('div', 'syNote pbFoot' + (msMsgBad ? ' syWarn' : ''), msMsg));
   if (!d) return;
   grid.appendChild(msMusicCard(d));
+  grid.appendChild(msAudioCard());
   grid.appendChild(msEssentiaCard(d));
   grid.appendChild(msLastfmCard(d));
   grid.appendChild(msUiCard(d));
