@@ -139,3 +139,12 @@ function restart() {
   });
 }
 function KEEP() { return 800000 + 25 * 3600000; }
+
+/* Mac: no kernel log, so no "kernel log not readable" note either */
+(function(){
+  var mac = new sw.Warnings({platform: 'darwin', run: function(){ throw new Error('no dmesg on the Mac'); }});
+  var called = false;
+  mac.kernel(Date.now(), function(){ called = true; });
+  assert.ok(called); assert.strictEqual(mac.source, 'off');
+  console.log('ok   Mac: kernel log off, no warning about it');
+})();

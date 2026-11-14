@@ -48,6 +48,7 @@ function defaultRun(file, args, cb) {
 
 function Warnings(opts) {
   opts = opts || {};
+  this.platform = opts.platform || process.platform;
   this.root = opts.root || '';
   this.file = opts.file || '';
   this.run = opts.run || defaultRun;
@@ -95,6 +96,7 @@ Warnings.prototype.settle = function(id) { var it = this.find(id); if (it) it.ac
 
 /* kernel log: only lines after the last one seen in this boot */
 Warnings.prototype.kernel = function(now, cb) {
+  if (this.platform !== 'linux') { this.source = 'off'; return cb(); }   /* Mac: no kernel log to read, no warning about it */
   var self = this, up = parseFloat(this.read('/proc/uptime'));
   var mountOf = {};                                    /* sda -> where it is mounted, for the name on the page */
   this.read('/proc/mounts').split('\n').forEach(function(l){
