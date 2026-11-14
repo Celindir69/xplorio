@@ -26,7 +26,12 @@ function openMacSettings() {
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
     msData = r;
-  }).catch(function(){ msMsg = T('mac.offline'); msMsgBad = true; }).then(function(){ if (seq === msSeq) msRender(); });
+  }).catch(function(){ msMsg = T('mac.offline'); msMsgBad = true; }).then(function(){ if (seq === msSeq) msRender(); })
+    .catch(function(e){                                  /* an error while drawing: show it instead of "Loading" forever */
+      while (msBody.firstChild) msBody.removeChild(msBody.firstChild);
+      msBody.appendChild(histEl('div', 'syNote syWarn', T('mac.err.fs') + ' ' + (e && e.message || e) + (e && e.stack ? ' · ' + String(e.stack).split('\n')[0] : '')));
+      if (window.console) console.error(e);
+    });
 }
 
 /* ---------- audio output (GET /mac/audio, POST /mac/settings {action: audioSelect|audioScan}) ---------- */
