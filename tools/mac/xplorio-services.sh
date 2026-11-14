@@ -56,7 +56,9 @@ if [ -z "$NODE" ] || [ -z "$MPD" ]; then
 fi
 
 if ! up "$MPD_PORT"; then
-  "$MPD" "$MPD_CONF" >>"$LOG/mpd.log" 2>&1
+  # in the foreground, sent to the background here: MPD's own way (fork) dies silently on older macOS (MacPorts' MPD 0.24).
+  # The file before the options: that MPD takes no file after --no-daemon ("too many arguments")
+  nohup "$MPD" "$MPD_CONF" --no-daemon >>"$LOG/mpd.log" 2>&1 </dev/null &
   if ! waitUp "$MPD_PORT" 20; then
     echo "MPD startet nicht. Den Grund zeigt die Datei $LOG/mpd.log"
     exit 1

@@ -2829,10 +2829,10 @@ var macAudio = new macaudio.MacAudio({
     var bin = process.env.MPD_BIN || 'mpd';
     cp.execFile(bin, ['--kill', MAC_MPD_CONF], {timeout: 15000}, function(){
       setTimeout(function(){
-        cp.execFile(bin, [MAC_MPD_CONF], {timeout: 30000}, function(e){
-          if (e) console.error('MPD restart failed: ' + e.message);
-          mpdPing(40, cb);
-        });
+        try {                                            /* as xplorio-services.sh: in the foreground, detached (MPD's own fork dies on older macOS) */
+          cp.spawn(bin, [MAC_MPD_CONF, '--no-daemon'], {detached: true, stdio: 'ignore'}).on('error', function(e){ console.error('MPD restart failed: ' + e.message); }).unref();
+        } catch (e) { console.error('MPD restart failed: ' + e.message); }
+        mpdPing(40, cb);
       }, 1000);
     });
   }

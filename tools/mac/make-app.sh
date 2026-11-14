@@ -173,7 +173,7 @@ command -v xattr >/dev/null && xattr -dr com.apple.quarantine "$APPS/Xplorio.app
 # a new library: start MPD once and read the music in, so the first start shows it
 if [ -n "$NEW_LIBRARY" ] && command -v mpc >/dev/null; then
   echo "Lese die Musik ein (läuft im Hintergrund weiter) …"
-  mpd "$MPD_CONF" >/dev/null 2>&1 || true
+  (nohup mpd "$MPD_CONF" --no-daemon >/dev/null 2>&1 </dev/null &)   # as xplorio-services.sh starts it
   sleep 1
   mpc -p "$MPD_PORT" update >/dev/null 2>&1 || true
 fi
