@@ -22,6 +22,8 @@ t('devices: only those that play, with their kind', function(){
   assert.deepStrictEqual(ma.parseDevices(JSON.stringify(PROFILER)), [
     {name: 'RME ADI-2 DAC', kind: 'usb'}, {name: 'MacBook Pro-Lautsprecher', kind: 'builtin'}, {name: 'Wohnzimmer', kind: 'airplay'}, {name: 'Say "Hi"', kind: 'other'}]);
   assert.deepStrictEqual(ma.parseDevices('kaputt'), []);
+  assert.deepStrictEqual(ma.parseDevices('{"devices":[{"name":"ROTEL USB Audio 2.0 ","transport":"usb","outputs":2},{"name":"Mikro","transport":"usb","outputs":0}]}'),
+    [{name: 'ROTEL USB Audio 2.0 ', kind: 'usb'}]);                          /* Core Audio's name exactly, even with a space */
 });
 
 t('mpd.conf: osx outputs replaced by system output and one per device; other outputs stay; again gives the same', function(){

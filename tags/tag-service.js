@@ -2751,6 +2751,8 @@ var macAudio = new macaudio.MacAudio({
   devices: function(cb){
     if (process.env.XPLORIO_AUDIO_DEVICES) return fs.readFile(process.env.XPLORIO_AUDIO_DEVICES, 'utf8', cb);   /* tests */
     if (process.platform !== 'darwin') return cb(new Error('nodevices'));
+    var helper = path.join(__dirname, '..', 'mac', 'audiodevices');     /* Core Audio's own names: the ones MPD looks for */
+    if (fs.existsSync(helper)) return cp.execFile(helper, [], {timeout: 15000}, function(e, out){ cb(e, out); });
     cp.execFile('system_profiler', ['SPAudioDataType', '-json'], {timeout: 30000, maxBuffer: 4 * 1024 * 1024}, function(e, out){ cb(e, out); });
   },
   restart: function(cb){

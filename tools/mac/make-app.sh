@@ -129,6 +129,7 @@ cat >"$B/Info.plist" <<EOF
 EOF
 if [ -z "$XPLORIO_NO_SWIFT" ]; then
   swiftc -O -o "$B/MacOS/Xplorio" "$SRC/tools/mac/Xplorio.swift" || fail "Übersetzen fehlgeschlagen (Meldungen oben)"
+  swiftc -O -o "$R/mac/audiodevices" "$SRC/tools/mac/audiodevices.swift" || echo "Hinweis: Geräteliste nicht übersetzt, Xplorio nimmt die Namen aus system_profiler."
 else
   printf '#!/bin/bash\nexec /bin/bash "$(dirname "$0")/../Resources/xplorio/mac/xplorio-services.sh" start\n' >"$B/MacOS/Xplorio"
   chmod +x "$B/MacOS/Xplorio"

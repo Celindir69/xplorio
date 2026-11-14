@@ -5,7 +5,7 @@
    New devices: scan -> the managed part of mpd.conf is written again and MPD restarts.
    "Exclusive" (hog_device): no other program plays on the device at the same time, the sample rate follows the music.
    Node 8, ES5 only.
-   opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (system_profiler SPAudioDataType -json),
+   opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
          restart(cb) (MPD stops and starts again) */
 var fs = require('fs');
 
@@ -13,10 +13,17 @@ var BEGIN = '# ---- Xplorio: audio outputs (settings page; replaced on every dev
 var END = '# ---- Xplorio: end of audio outputs ----';
 var SYSTEM = 'Systemausgabe';
 
-/* system_profiler's answer -> [{name, kind}] of the devices that can play */
+/* devices that can play -> [{name, kind}]: from audiodevices (tools/mac/audiodevices.swift), else from system_profiler */
 function parseDevices(json) {
   var out = [], data = json;
   if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { return out; } }
+  if (data && Array.isArray(data.devices)) {               /* audiodevices (Core Audio names, exactly as MPD looks for them) */
+    data.devices.forEach(function(d){
+      if (!d || typeof d.name !== 'string' || !d.name || !(d.outputs > 0)) return;
+      if (!out.some(function(o){ return o.name === d.name; })) out.push({name: d.name, kind: /^(usb|builtin|airplay|bluetooth|hdmi|virtual)$/.test(d.transport) ? d.transport : 'other'});
+    });
+    return out;
+  }
   var groups = (data && data.SPAudioDataType) || [];
   groups.forEach(function(g){
     (g._items || []).forEach(function(d){
