@@ -2685,13 +2685,28 @@ setInterval(function(){                                  /* nobody watching, but
    GET /mpd/state, /mpd/queue (like Volumio's getState, getQueue), /mpd/events (server-sent events "state", "queue"),
    /mpd/art?file=… (cover), /mpd/albumart?path=…&web=… (cover for Volumio's /albumart addresses), /mpd/browse?uri=…,
    /mpd/search?query=… (like Volumio's browse and search; mpdlibrary.js), POST /mpd/cmd {action, …} */
+var mpdlists = require('./mpdlists.js');
+var mpdLists = new mpdlists.Lists({mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, radioFile: path.join(DATA_DIR, 'radio-favourites.json')});
+var smartlists = require('./smartlists.js');            /* smart playlists without Volumio: rules of the plugin, MPD playlists */
+var smartLists = new smartlists.Smart({mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, dir: path.join(DATA_DIR, 'smart-playlists'),
+                                       log: function(t){ console.error(t); }});
+setInterval(function(){ if (playerIsMpd()) smartLists.tick(); }, 10 * 60 * 1000).unref();
+setTimeout(function(){ if (playerIsMpd()) smartLists.tick(); }, 60 * 1000).unref();
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
   if (req.method === 'GET' && route === '/mpd/state') return mpdPlayer.state(reply);
   if (req.method === 'GET' && route === '/mpd/queue') return mpdPlayer.queue(reply);
   var query = url.parse(req.url, true).query;
-  if (req.method === 'GET' && route === '/mpd/browse') return mpdlibrary.browse(mpdPlayer.mpd, String(query.uri || ''), reply);
+  if (req.method === 'GET' && route === '/mpd/browse') {
+    var bu = String(query.uri || '');
+    if (bu === 'favourites') return mpdLists.favourites(reply);
+    if (bu === 'radio' || bu === 'radio/favourites' || bu === 'radio/myWebRadio') return reply(null, mpdLists.radio());
+    return mpdlibrary.browse(mpdPlayer.mpd, bu, reply);
+  }
+  if (req.method === 'GET' && route === '/mpd/radiosearch') {
+    return radio.search(query.q, function(e, list){ send(res, e ? 502 : 200, e ? {ok: false, error: 'search'} : {ok: true, stations: list}); });
+  }
   if (req.method === 'GET' && route === '/mpd/search') return mpdlibrary.search(mpdPlayer.mpd, String(query.query || ''), reply);
   if (req.method === 'GET' && (route === '/mpd/art' || route === '/mpd/albumart')) {
     var which = route === '/mpd/art' ? function(cb){ cb(null, String(query.file || '')); } : function(cb){ mpdlibrary.artFile(mpdPlayer.mpd, query, cb); };
@@ -2711,6 +2726,17 @@ function doMpd(req, res, route) {
     req.on('close', function(){ clearInterval(beat); stop(); });
     return;
   }
+  if (req.method === 'POST' && route === '/mpd/smart') {
+    var sd = '';
+    req.setEncoding('utf8');
+    req.on('data', function(d){ sd += d; if (sd.length > MAX_BODY) req.destroy(); });
+    req.on('end', function(){
+      var sb;
+      try { sb = JSON.parse(sd) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      smartLists.api(sb, function(o){ send(res, 200, o); });
+    });
+    return;
+  }
   if (req.method === 'POST' && route === '/mpd/cmd') {
     var data = '';
     req.setEncoding('utf8');
@@ -2718,7 +2744,15 @@ function doMpd(req, res, route) {
     req.on('end', function(){
       var body;
       try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-      mpdPlayer.command(body || {}, function(c, o){ send(res, c, o); });
+      body = body || {};
+      var la = body.action, done = function(e){ send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd'} : {ok: true}); };
+      if (la === 'favAdd') return mpdLists.favAdd(body.uri, done);
+      if (la === 'favRemove') return mpdLists.favRemove(body.uri, done);
+      try {
+        if (la === 'radioAdd') { var ra = mpdLists.radioAdd(body); return send(res, 200, ra.error ? {ok: false, error: ra.error} : ra); }
+        if (la === 'radioRemove') return send(res, 200, mpdLists.radioRemove(String(body.uri || '')));
+      } catch (e) { return send(res, 500, {ok: false, error: 'fs'}); }
+      mpdPlayer.command(body, function(c, o){ send(res, c, o); });
     });
     return;
   }

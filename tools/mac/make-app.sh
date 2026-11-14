@@ -84,6 +84,12 @@ if [ ! -f "$SUPPORT/xplorio.conf" ]; then
     printf 'SUPPORT="%s"\nMPD_CONF="%s"\nMPD_PORT="%s"\nMUSIC_ROOT="%s"\nTAGS_DATA="%s"\n' "$SUPPORT" "$MPD_CONF" "$MPD_PORT" "$MUSIC_ROOT" "$TAGS_DATA"
   } >"$SUPPORT/xplorio.conf"
 fi
+# MPD's own playlists (smart playlists, favourites): a folder for them, also in a setup from before
+MC=$(sed -n 's/^MPD_CONF="\(.*\)"$/\1/p' "$SUPPORT/xplorio.conf" | head -1)
+if [ -f "$MC" ] && ! grep -q '^[[:space:]]*playlist_directory' "$MC"; then
+  mkdir -p "$SUPPORT/mpd/playlists"
+  printf 'playlist_directory "%s"\n' "$SUPPORT/mpd/playlists" >>"$MC"
+fi
 # own settings of the interface; MPD as the player
 CL="$SUPPORT/config.local.js"
 [ -f "$CL" ] || echo "/* own settings (see web/config.js); kept when the program is rebuilt */" >"$CL"

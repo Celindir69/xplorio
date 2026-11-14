@@ -1,7 +1,7 @@
 /* Smart playlists: editor for the rules of the Smart Playlists plugin (Volumio), over its REST endpoint
    POST /api/v1/pluginEndpoint {endpoint: 'smart_playlists', data: {action: …}}. The rules stay in the plugin,
    Xplorio only shows and edits them; a run of the plugin creates the playlist.
-   Without the plugin nothing of this appears.
+   Without the plugin nothing of this appears. Without Volumio (player.kind 'mpd') the tag service takes the plugin's place.
    Classic script, shared global scope; load order see xplorio.html. */
 
 var SMART_DOM = typeof document !== 'undefined';
@@ -20,6 +20,11 @@ var SMART_NEW_SVG = '<svg viewBox="0 0 24 24"><path d="M8 9h2.2v4.4h4.4v2.2h-4.4
 var TRASH_SVG = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
 function smartCall(data) {
+  if (player.kind === 'mpd') {                    /* without Volumio: the same rules, run by the tag service (tags/smartlists.js) */
+    return withTimeout(tagPostJson('/mpd/smart', data), data.action === 'preview' ? 200000 : 30000)
+      .then(function(j){ return (j && typeof j.ok === 'boolean') ? j : {ok: false, error: 'offline'}; })
+      .catch(function(){ return {ok: false, error: 'offline'}; });
+  }
   return withTimeout(fetch('/api/v1/pluginEndpoint', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({endpoint: 'smart_playlists', data: data})

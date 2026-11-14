@@ -46,6 +46,7 @@ t('new setup: music folder as USB, MPD settings, program with the interface and 
   var mc = fs.readFileSync(c.MPD_CONF, 'utf8');
   assert.ok(mc.indexOf('music_directory "' + c.MUSIC_ROOT + '"') >= 0);
   assert.ok(/bind_to_address "127\.0\.0\.1"/.test(mc));
+  assert.ok(/playlist_directory ".*mpd\/playlists"/.test(mc));
   var app = path.join(e.XPLORIO_APPS, 'Xplorio.app', 'Contents');
   assert.ok(/<key>CFBundleExecutable<\/key><string>Xplorio<\/string>/.test(fs.readFileSync(path.join(app, 'Info.plist'), 'utf8')));
   assert.ok(fs.existsSync(path.join(app, 'MacOS', 'Xplorio')));
@@ -72,9 +73,11 @@ t('test setup in ~/xplorio-mpd is taken over (library, port, history); own setti
   assert.strictEqual(c.MUSIC_ROOT, '/Users/a/xplorio-mpd/musik');
   assert.strictEqual(c.MPD_PORT, '6611');
   assert.strictEqual(c.TAGS_DATA, path.join(x, 'xplorio-daten'));
+  assert.strictEqual((fs.readFileSync(path.join(x, 'mpd.conf'), 'utf8').match(/playlist_directory/g) || []).length, 1);
   var cl = path.join(e.XPLORIO_SUPPORT, 'config.local.js');
   fs.appendFileSync(cl, "window.APP_CONFIG.LANGUAGE = 'de';\n");
   make(d);
+  assert.strictEqual((fs.readFileSync(path.join(x, 'mpd.conf'), 'utf8').match(/playlist_directory/g) || []).length, 1);   /* only once */
   var s = fs.readFileSync(cl, 'utf8');
   assert.ok(/LANGUAGE = 'de'/.test(s));
   assert.strictEqual((s.match(/PLAYER/g) || []).length, 1);

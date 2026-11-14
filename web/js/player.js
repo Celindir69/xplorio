@@ -44,7 +44,14 @@ var playerVolumio = {
   connected: function(){ return socket.connected; },
   on: function(ev, fn){ socket.on(ev === 'state' ? 'pushState' : ev, fn); },
   browse: function(uri){ return fetch('/api/v1/browse?uri=' + volumioArg(uri)).then(volumioJson); },
-  search: function(q){ return fetch('/api/v1/search?query=' + volumioArg(q)).then(volumioJson); }
+  search: function(q){ return fetch('/api/v1/search?query=' + volumioArg(q)).then(volumioJson); },
+  /* favourites ("thumbs up"): Volumio's own list */
+  favAdd: function(t){
+    socket.emit('addToFavourites', {uri: t.uri, title: t.title || '', service: t.service || 'mpd',
+                                    artist: t.artist || '', album: t.album || '', albumart: t.albumart || ''});
+    return Promise.resolve();
+  },
+  favRemove: function(fav, title){ socket.emit('removeFromFavourites', {uri: fav.uri, service: fav.service || 'mpd', name: title || ''}); return Promise.resolve(); }
 };
 
 /* MPD through the tag service (its address as in tagedit.js) */
@@ -102,6 +109,12 @@ function playerMpdMake() {
     on: function(ev, fn){ if (handlers[ev]) handlers[ev].push(fn); listen(); },
     browse: function(uri){ return get('/mpd/browse?uri=' + encodeURIComponent(uri)); },
     search: function(q){ return get('/mpd/search?query=' + encodeURIComponent(q)); },
+    favAdd: function(t){ return post({action: 'favAdd', uri: t.uri}); },
+    favRemove: function(fav){ return post({action: 'favRemove', uri: fav.uri}); },
+    /* radio stations of their own (tags/mpdlists.js) and the station search (radio-browser.info) */
+    radioSearch: function(q){ return get('/mpd/radiosearch?q=' + encodeURIComponent(q)); },
+    radioAdd: function(st){ return post({action: 'radioAdd', title: st.title, uri: st.uri, albumart: st.albumart || ''}); },
+    radioRemove: function(uri){ return post({action: 'radioRemove', uri: uri}); },
     /* Volumio's cover addresses (/albumart?…) and the tag service's own (/mpd/…) -> address at the tag service */
     art: function(a){ return a.indexOf('/albumart') === 0 ? base + '/mpd' + a : a.indexOf('/mpd/') === 0 ? base + a : a; }
   };

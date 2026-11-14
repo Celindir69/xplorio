@@ -41,11 +41,10 @@ function favRefresh(force) {
 function rateTrackSet(t, v) {
   var k = rateFileKey(t.uri), fav = favMap[k];
   if (v === 1 && !fav) {
-    socket.emit('addToFavourites', {uri: t.uri, title: t.title || '', service: t.service || 'mpd',
-                                    artist: t.artist || '', album: t.album || '', albumart: t.albumart || ''});
+    player.favAdd(t).catch(function(){});
     favMap[k] = {uri: t.uri, service: t.service || 'mpd'};
   } else if (v !== 1 && fav) {
-    socket.emit('removeFromFavourites', {uri: fav.uri, service: fav.service || 'mpd', name: t.title || ''});
+    player.favRemove(fav, t.title).catch(function(){});
     delete favMap[k];
   }
   favAt = Date.now();                                  /* Volumio needs a moment until the list is correct */

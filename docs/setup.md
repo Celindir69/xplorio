@@ -820,3 +820,10 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.
 - **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts.
   Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.
+
+Without Volumio Xplorio also takes over:
+- **Radio:** search stations on radio-browser.info, tap plays, **+** saves to “My stations” (`radio-favourites.json` in the data folder).
+- **Favourites** (thumbs up): as the MPD playlist “Xplorio Favoriten” (hidden in the playlist list).
+- **Smart playlists:** the same rules and editor as with the plugin; the tag service evaluates them and writes MPD
+  playlists (after saving, when the library changes, and once a day). Rules in `smart-playlists/smart_playlists.txt`
+  in the data folder. MPD needs `playlist_directory` for this (added by `make-app.sh`).

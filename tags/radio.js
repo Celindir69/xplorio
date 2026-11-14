@@ -88,4 +88,25 @@ function logoLookup(name, cb, extra) {
   }
 }
 
-module.exports = {songLookup: songLookup, logoLookup: logoLookup, mime: mime};
+/* station search (radio-browser.info), for the radio tab without Volumio -> cb(err, [{title, uri, albumart, info}]) */
+function search(q, cb) {
+  q = String(q || '').trim().slice(0, 100);
+  if (q.length < 2) return cb(null, []);
+  json(RADIOB + '/json/stations/search?name=' + encodeURIComponent(q) + '&limit=40&hidebroken=true&order=clickcount&reverse=true', function(e, list){
+    if (e || !Array.isArray(list)) return cb(e || new Error('answer'));
+    var seen = {};
+    cb(null, list.filter(function(s){
+      var u = s && (s.url_resolved || s.url);
+      if (!u || !/^https?:\/\//i.test(u) || seen[u]) return false;
+      seen[u] = true;
+      return true;
+    }).map(function(s){
+      var info = [s.country, s.codec && s.bitrate ? s.codec + ' ' + s.bitrate + ' kbit/s' : s.codec, s.tags && String(s.tags).split(',').slice(0, 2).join(', ')]
+        .filter(Boolean).join(' · ');
+      return {title: String(s.name || '').trim() || (s.url_resolved || s.url), uri: s.url_resolved || s.url,
+              albumart: /^https?:\/\//i.test(s.favicon || '') ? s.favicon : '', info: info};
+    }));
+  });
+}
+
+module.exports = {songLookup: songLookup, logoLookup: logoLookup, mime: mime, search: search};

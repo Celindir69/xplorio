@@ -1087,3 +1087,11 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
 - **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
   weitere Adressen. Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.
+
+Ohne Volumio übernimmt Xplorio außerdem selbst:
+- **Radio:** Sender über radio-browser.info suchen, antippen spielt, **+** speichert unter „Meine Sender“
+  (`radio-favourites.json` im Datenordner).
+- **Favoriten** (Daumen hoch): als MPD-Playlist „Xplorio Favoriten“ (in der Playlist-Liste ausgeblendet).
+- **Smart Playlists:** dieselben Regeln und derselbe Editor wie mit dem Plugin; der Tag-Dienst wertet sie aus und
+  schreibt MPD-Playlists (nach dem Speichern, wenn sich die Bibliothek ändert, und einmal am Tag). Regeln in
+  `smart-playlists/smart_playlists.txt` im Datenordner. MPD braucht dafür `playlist_directory` (trägt `make-app.sh` ein).

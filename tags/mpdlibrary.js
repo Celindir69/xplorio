@@ -158,7 +158,7 @@ function browse(mpd, uri, cb) {
   if (uri === 'playlists') {
     return mpd(['listplaylists'], function(err, lists){
       if (err) return cb(err);
-      cb(null, nav([list('', entries(lists[0]).filter(function(e){ return e.playlist; }).sort(function(a, b){ return cmp(a.playlist, b.playlist); }).map(function(e){
+      cb(null, nav([list('', entries(lists[0]).filter(function(e){ return e.playlist && e.playlist !== FAV_LIST; }).sort(function(a, b){ return cmp(a.playlist, b.playlist); }).map(function(e){
         return {service: 'mpd', type: 'playlist', title: e.playlist, uri: 'playlists/' + e.playlist};
       }))], null, ''));
     });
@@ -176,6 +176,7 @@ function browse(mpd, uri, cb) {
 /* search term -> cb(err, answer like Volumio's search): lists "Artists", "Albums", "Tracks". "*": everything
    (all artists and albums, the first ALL_TRACKS tracks) */
 var ALL_TRACKS = 2000;
+var FAV_LIST = 'Xplorio Favoriten';                      /* favourite tracks (mpdlists.js): not among the playlists */
 function searchAll(mpd, cb) {
   mpd(['list albumartist', 'list album group albumartist', 'search title "" window 0:' + ALL_TRACKS], function(err, lists){
     if (err) return cb(err);
