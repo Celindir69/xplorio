@@ -2705,6 +2705,34 @@ var autoDj = new autodjlib.AutoDJ({
   log: function(t){ console.error(t); }
 });
 setInterval(function(){ if (playerIsMpd()) autoDj.tick(); }, 15 * 1000).unref();   /* cheap while not needed: one status */
+/* TIDAL without Volumio (tags/tidal/: the user's own TIDAL login, proxy for MPD on 127.0.0.1:7780). Only with PLAYER 'mpd'
+   and a Node with fetch (18 or newer); loaded on first use, so Volumio's tag service never touches it */
+var tidal = null;
+function tidalGet() {
+  if (tidal !== null) return tidal || null;
+  if (!playerIsMpd()) return null;
+  tidal = false;
+  if (typeof fetch !== 'function') { console.error('TIDAL: needs Node 18 or newer'); return null; }
+  try {
+    var tidalLib = require('./tidal/service.js');
+    tidal = new tidalLib.TidalService({
+      dataDir: DATA_DIR, mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); },
+      port: parseInt(process.env.TIDAL_PORT, 10) || 7780, cacheMb: parseInt(process.env.TIDAL_CACHE_MB, 10) || 1024,
+      cacheDir: process.env.TIDAL_CACHE || '', ffmpeg: process.env.FFMPEG || 'ffmpeg',
+      logger: {info: function(t){ console.error(t); }, warn: function(t){ console.error(t); }, error: function(t){ console.error(t); }}
+    });
+    tidal.start();
+  } catch (e) { console.error('TIDAL: ' + e.message); tidal = false; }
+  return tidal || null;
+}
+mpdPlayer.expand = function(item, cb){
+  var t = tidalGet();
+  if (!t || !t.handles(item)) return false;
+  t.expand(item).then(function(files){ cb(null, files); }, function(e){ console.error('TIDAL: ' + e.message); cb(e); });
+  return true;
+};
+mpdPlayer.decorate = function(file, o){ var t = tidal || null; if (t && /^http:/.test(file)) t.decorate(file, o); };
+setTimeout(tidalGet, 3000).unref();
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   function reply(e, o) { send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd', detail: e.message} : o); }
@@ -2715,12 +2743,46 @@ function doMpd(req, res, route) {
     var bu = String(query.uri || '');
     if (bu === 'favourites') return mpdLists.favourites(reply);
     if (bu === 'radio' || bu === 'radio/favourites' || bu === 'radio/myWebRadio') return reply(null, mpdLists.radio());
+    if (/^tidal([:\/]|$)/.test(bu)) {
+      var tb = tidalGet();
+      if (!tb) return send(res, 404, {ok: false, error: 'tidal'});
+      return tb.browse(bu).then(function(j){ reply(null, j); }, function(e){ reply(e); });
+    }
     return mpdlibrary.browse(mpdPlayer.mpd, bu, reply);
   }
   if (req.method === 'GET' && route === '/mpd/radiosearch') {
     return radio.search(query.q, function(e, list){ send(res, e ? 502 : 200, e ? {ok: false, error: 'search'} : {ok: true, stations: list}); });
   }
-  if (req.method === 'GET' && route === '/mpd/search') return mpdlibrary.search(mpdPlayer.mpd, String(query.query || ''), reply);
+  if (req.method === 'GET' && route === '/mpd/search') {
+    var sq = String(query.query || '');
+    return mpdlibrary.search(mpdPlayer.mpd, sq, function(e, r){
+      var ts = tidalGet();
+      if (e || !ts || !ts.loggedIn()) return reply(e, r);
+      var late = false, wait = setTimeout(function(){ late = true; reply(null, r); }, 10000);   /* TIDAL slow: own hits only */
+      ts.search(sq).then(function(lists){
+        if (late) return;
+        clearTimeout(wait);
+        r.navigation.lists = r.navigation.lists.concat(lists || []);
+        reply(null, r);
+      }, function(e2){ if (late) return; clearTimeout(wait); console.error('TIDAL search: ' + e2.message); reply(null, r); });
+    });
+  }
+  if (req.method === 'POST' && route === '/mpd/tidal') {
+    var td = '';
+    req.setEncoding('utf8');
+    req.on('data', function(d){ td += d; if (td.length > MAX_BODY) req.destroy(); });
+    req.on('end', function(){
+      var tbody;
+      try { tbody = JSON.parse(td || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      var tt = tidalGet();
+      if (!tt) return send(res, 200, {ok: false, available: false, error: 'node'});
+      var changes = tbody.action || tbody.quality !== undefined || tbody.searchLimit !== undefined;
+      if (changes && adminAuth.isSet() && !adminAuth.check(tbody.token)) return send(res, 200, {ok: false, error: 'auth'});   /* password like the settings */
+      delete tbody.token;
+      tt.handle(tbody).then(function(o){ send(res, 200, o); }, function(e){ console.error('TIDAL: ' + e.message); send(res, 200, {ok: false, error: 'login'}); });
+    });
+    return;
+  }
   if (req.method === 'GET' && (route === '/mpd/art' || route === '/mpd/albumart')) {
     var which = route === '/mpd/art' ? function(cb){ cb(null, String(query.file || '')); } : function(cb){ mpdlibrary.artFile(mpdPlayer.mpd, query, cb); };
     return which(function(e0, file){ if (e0) file = ''; mpdPlayer.art(file, function(e, img){
@@ -2770,6 +2832,12 @@ function doMpd(req, res, route) {
       try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
       body = body || {};
       var la = body.action, done = function(e){ send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd'} : {ok: true}); };
+      if (la === 'seek' && tidal && /^\d{1,6}$/.test(String(body.sec))) {   /* TIDAL track: seeks in its own way */
+        return tidal.seek(+body.sec).then(function(r){
+          if (r) return send(res, 200, r);
+          mpdPlayer.command(body, function(c, o){ send(res, c, o); });
+        }, function(e){ send(res, 200, {ok: false, error: e.code || 'seek'}); });
+      }
       if (la === 'favAdd') return mpdLists.favAdd(body.uri, done);
       if (la === 'favRemove') return mpdLists.favRemove(body.uri, done);
       try {

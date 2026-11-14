@@ -1064,7 +1064,7 @@ Xplorio kann statt Volumio auch MPD allein steuern, z. B. auf einem Mac (`brew i
 Ordner oder in der Datei), der Verlauf zählt ebenfalls mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie
 MPD-Playlisten liefert der Tag-Dienst ebenfalls aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten).
 
-Noch nicht dabei: Streamingdienste, Volumios Favoriten und Webradio-Liste, AutoDJ sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
+Noch nicht dabei: Streamingdienste außer TIDAL (Qobuz, HIGHRESAUDIO, Spotify) sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
 sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.
 
 ### Als Mac-Programm
@@ -1107,3 +1107,12 @@ Ohne Volumio übernimmt Xplorio außerdem selbst:
   gleich wiederholt, Ausschluss-Wörter (Titel oder Album) und eine Höchstlänge. Bei Wiederholen pausiert er.
 - **VU-Meter:** `make-app.sh` trägt den Fifo-Ausgang „VU“ (`44100:16:2`, aus) in `mpd.conf` ein; der Tag-Dienst schaltet
   ihn nur ein, solange jemand die Zeiger sieht. Danach startet MPD einmal neu.
+- **TIDAL:** mit dem eigenen TIDAL-Konto (Karte „TIDAL“ in den Einstellungen: **Bei TIDAL anmelden** zeigt einen Code,
+  den man unter link.tidal.com bestätigt; kein Passwort in Xplorio). Danach liefert die Suche TIDAL-Treffer, Künstler-
+  und Albumseiten, und Abspielen legt die Titel in MPDs Warteschlange. Die Bausteine stammen aus Michal Tamas'
+  Volumio-TIDAL-Plugin (MIT, `tags/tidal/`). MPD bekommt Adressen eines kleinen Proxys auf dem Mac
+  (`127.0.0.1:7780`, `TIDAL_PORT`): er holt den Stream erst beim Abspielen, ffmpeg macht aus TIDALs Segmenten eine
+  FLAC-Datei und legt sie im Zwischenspeicher ab (`tidal-cache` im Datenordner, 1 GB, `TIDAL_CACHE_MB`). Spulen geht,
+  sobald ein Titel ganz geladen ist. Qualität (Max/Hi-Res, HiFi, AAC 320) und Zahl der Suchtreffer (10/20/50) auf der
+  Karte. Braucht Node 18 oder neuer und ffmpeg (`brew install ffmpeg` bzw. `sudo port install ffmpeg`), ohne ffmpeg
+  nur AAC. Die Anmeldung liegt in `tidal.json` im Datenordner (nur für den Benutzer lesbar).

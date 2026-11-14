@@ -127,6 +127,12 @@ player.on('state', function(st){
 var appCfg = window.APP_CONFIG || {};
 var tidalOn = false;                                   /* shorthand for places that concern TIDAL only */
 function streamCap(s) { return s.id.charAt(0).toUpperCase() + s.id.slice(1); }
+function streamMpdSources() {
+  fetch(player.base + '/mpd/tidal', {method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: '{}'})
+    .then(function(r){ return r.json(); })
+    .then(function(r){ streamConfigure(appCfg, r && r.loggedIn ? [{plugin_name: 'tidal'}] : []); streamsApply(); })
+    .catch(function(){});
+}
 function streamsApply() {
   var root = document.documentElement;
   STREAMS.forEach(function(s){
@@ -143,7 +149,10 @@ function streamsApply() {
   }
 }
 streamConfigure(appCfg, null);
-if (streamNeedsSources(appCfg)) {
+if (player.kind === 'mpd') {                           /* no Volumio: TIDAL when the tag service is logged in (tags/tidal/) */
+  streamConfigure(appCfg, []);
+  if (streamNeedsSources(appCfg)) streamMpdSources();
+} else if (streamNeedsSources(appCfg)) {
   socket.on('pushBrowseSources', function(list){ streamConfigure(appCfg, list || []); streamsApply(); });
   socket.emit('getBrowseSources');
 }

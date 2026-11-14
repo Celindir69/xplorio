@@ -6,7 +6,7 @@
    title: heading of a result list of this service */
 var STREAMS = [
   {id: 'tidal', name: 'TIDAL', short: 'TIDAL', cfg: 'TIDAL', key: /^tidal/i, title: /tidal/,
-   uriRe: /^tidal:/i, artistRe: /^tidal:\/\/artist\/\d+$/i},
+   uriRe: /^tidal:/i, artistRe: /^tidal:(\/\/artist\/|artist:)\d+$/i},
   /* Volumio's Qobuz plugin: addresses like qobuz://artist/123 (older versions qobuz/artist/123) */
   {id: 'qobuz', name: 'Qobuz', short: 'Qobuz', cfg: 'QOBUZ', key: /^qobuz/i, title: /qobuz/,
    uriRe: /^qobuz(:\/\/|\/)/i, artistRe: /^qobuz(:\/\/|\/)artists?\/[\w-]+$/i},

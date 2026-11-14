@@ -181,11 +181,17 @@ function bySong(a, b) {                                   /* album by album, the
 }
 /* items -> cb(null, ['add "…"', …], skipped). Albums, artists and genres are looked up (sorted like an album);
    an album without album artist tag is searched by artist */
-function addCommands(mpd, items, cb) {
+function addCommands(mpd, items, cb, expand) {
   var list = (items || []).slice(0, 2000), out = [], skipped = 0, i = 0;
   (function next(){
     if (i >= list.length) return cb(null, out, skipped);
-    var t = itemTarget(list[i++]);
+    var it = list[i++];
+    if (expand && expand(it, function(err, files){            /* streaming service (TIDAL): addresses of its own */
+      if (err || !files || !files.length) skipped++;
+      (files || []).forEach(function(f){ out.push('add ' + quote(f)); });
+      next();
+    })) return;
+    var t = itemTarget(it);
     if (!t) { skipped++; return next(); }
     if (t.add) { out.push('add ' + quote(t.add)); return next(); }
     if (t.load) { out.push('load ' + quote(t.load)); return next(); }
@@ -218,19 +224,30 @@ function Player(opts) {
   this.clients = [];
   this.stopIdle = null;
   this.pushTimer = null; this.pushQueue = false;
+  /* streaming services (tag-service.js: TIDAL): expand(item, cb(err, [MPD addresses])) -> true if it takes the item;
+     decorate(file, entry) puts the service's own title, cover and address on a state or queue entry */
+  this.expand = opts.expand || null;
+  this.decorate = opts.decorate || null;
 }
 
 Player.prototype.state = function(cb) {
   var self = this;
   this.mpd(['status', 'currentsong'], function(err, lists){
     if (err) return cb(err);
-    cb(null, toState(fields(lists[0]), songs(lists[1])[0] || fields(lists[1]), self.muted !== null));
+    var song = songs(lists[1])[0] || fields(lists[1]), st = toState(fields(lists[0]), song, self.muted !== null);
+    if (self.decorate && song.file) self.decorate(song.file, st);
+    cb(null, st);
   });
 };
 Player.prototype.queue = function(cb) {
+  var self = this;
   this.mpd(['playlistinfo'], function(err, lists){
     if (err) return cb(err);
-    cb(null, {queue: songs(lists[0]).map(toItem)});
+    cb(null, {queue: songs(lists[0]).map(function(s){
+      var it = toItem(s);
+      if (self.decorate) self.decorate(s.file, it);
+      return it;
+    })});
   });
 };
 
@@ -299,7 +316,7 @@ Player.prototype.command = function(body, cb) {
         self.mpd(cmds, function(e2){
           cb(e2 ? 502 : 200, e2 ? {ok: false, error: 'mpd', detail: e2.message} : {ok: true, added: adds.length, skipped: skipped});
         });
-      });
+      }, this.expand);
   }
   cb(400, {ok: false, error: 'unknown action'});
 };

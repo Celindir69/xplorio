@@ -797,7 +797,7 @@ via `/mpd/events`), covers come from MPD itself (image in the folder or in the f
 Search, artist, album, genre and folder views and MPD playlists also come from MPD through the tag service
 (`/mpd/browse`, `/mpd/search`, shaped like Volumio's answers).
 
-Not there yet: streaming services, Volumio's favourites and web radio list, AutoDJ, and starting without Volumio's web
+Not there yet: streaming services other than TIDAL (Qobuz, HIGHRESAUDIO, Spotify) and starting without Volumio's web
 server. These follow step by step; until then they stay empty with
 MPD. With Volumio (the default) nothing changes.
 
@@ -838,3 +838,12 @@ Without Volumio Xplorio also takes over:
   and a maximum length. It pauses while repeat is on.
 - **VU meter:** `make-app.sh` adds the fifo output “VU” (`44100:16:2`, off) to `mpd.conf`; the tag service switches it on
   only while someone looks at the needles. MPD restarts once after that.
+- **TIDAL:** with your own TIDAL account (card “TIDAL” on the settings page: **Sign in to TIDAL** shows a code that you
+  confirm at link.tidal.com; no password in Xplorio). Then the search gives TIDAL hits, artist and album pages, and
+  playing puts the tracks into MPD's queue. The building blocks come from Michal Tamas' Volumio TIDAL plugin (MIT,
+  `tags/tidal/`). MPD gets addresses of a small proxy on the Mac (`127.0.0.1:7780`, `TIDAL_PORT`): it fetches the stream
+  only when the track plays, ffmpeg turns TIDAL's segments into one FLAC file and keeps it in the cache (`tidal-cache` in
+  the data folder, 1 GB, `TIDAL_CACHE_MB`). Seeking works once a track has fully loaded. Quality (Max/hi-res, HiFi,
+  AAC 320) and the number of search hits (10/20/50) on the card. Needs Node 18 or newer and ffmpeg (`brew install
+  ffmpeg` or `sudo port install ffmpeg`); without ffmpeg AAC only. The login is kept in `tidal.json` in the data folder
+  (readable by the user only).

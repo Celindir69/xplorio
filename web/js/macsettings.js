@@ -1,6 +1,6 @@
 /* "Settings" page on the Mac (gear menu, only with PLAYER 'mpd'): what the Volumio plugin's settings page does on the player.
    Music folders (links in the music folder), audio output, the audio analysis file (essentia.jsonl: link or upload), Last.fm
-   access, endless playback (AutoDJ, POST /mpd/autodj, tags/autodj.js) and the interface settings (written to config.local.js, the page loads again after saving).
+   access, TIDAL (own account, POST /mpd/tidal, tags/tidal/), endless playback (AutoDJ, POST /mpd/autodj, tags/autodj.js) and the interface settings (written to config.local.js, the page loads again after saving).
    Tag service: GET/POST /mac/settings (tags/macsettings.js), POST /essentia (upload). The folder and file dialog comes from the
    Mac program (message handler "xplorioChoose", tools/mac/Xplorio.swift), otherwise from the tag service (osascript).
    Classic script, shared global scope; see xplorio.html for load order. */
@@ -8,6 +8,7 @@ var overlayMacSettings = document.getElementById('overlayMacSettings');
 var msBody = document.getElementById('msBody');
 var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
 var msAdj = null, msAdjMsg = '', msAdjBad = false;
+var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
@@ -25,6 +26,8 @@ function openMacSettings() {
   msAudioLoad();
   msAdj = null; msAdjMsg = ''; msAdjBad = false;
   msAdjSend({});
+  msTidal = null; msTidalMsg = ''; msTidalBad = false; msTidalWas = null;
+  msTidalSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -144,6 +147,7 @@ function msRender() {
   grid.appendChild(msAudioCard());
   grid.appendChild(msEssentiaCard(d));
   grid.appendChild(msLastfmCard(d));
+  grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
   grid.appendChild(msRotelCard(d));
   grid.appendChild(msUiCard(d));
@@ -248,6 +252,65 @@ function msLastfmCard(d) {
   var link = histEl('a', 'sHint listLink pbLink', T('mac.lfGet'));
   link.href = 'https://www.last.fm/api/account/create'; link.target = '_blank'; link.rel = 'noopener';
   c.appendChild(link);
+  return c;
+}
+
+/* ---------- TIDAL with the user's own account (POST /mpd/tidal, tags/tidal/service.js): {} = state,
+   {action: login|logout}, {quality}, {searchLimit}. While the code waits for confirmation the state is asked every 3 s ---------- */
+var MS_TIDAL_ERRORS = {auth: 'mac.err.auth', value: 'mac.err.value', login: 'mac.tidalErrLogin'};
+function msTidalSend(body, okText) {
+  var seq = msSeq;
+  if (Object.keys(body).length) body.token = msToken();
+  tagPostJson('/mpd/tidal', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && (r.ok || r.error === 'node')) {
+      msTidal = r; msTidalBad = false; msTidalMsg = okText ? T(okText) : '';
+      if (r.error === 'expired') { msTidalMsg = T('mac.tidalExpired'); msTidalBad = true; }
+      if (msTidalWas !== null && msTidalWas !== !!r.loggedIn && typeof streamMpdSources === 'function') streamMpdSources();
+      msTidalWas = !!r.loggedIn;
+      if (r.login) setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msTidalSend({}); }, 3000);
+    } else { msTidalBad = true; msTidalMsg = T(MS_TIDAL_ERRORS[r && r.error] || 'mac.err.fs'); }
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msTidalBad = true; msTidalMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msTidalCard() {
+  var c = sysCard('TIDAL', 'syWide'), a = msTidal;
+  function line(label, ctl) {
+    var r = histEl('div', 'msSetRow');
+    r.appendChild(histEl('div', 'msSetLabel', label));
+    r.appendChild(ctl);
+    c.appendChild(r);
+  }
+  c.appendChild(histEl('div', 'syNote', T('mac.tidalNote')));
+  if (!a) { if (!msTidalMsg) c.appendChild(browseNote(T('hist.loading'))); }
+  else if (!a.available) c.appendChild(histEl('div', 'syNote syWarn', T('mac.tidalNode')));
+  else {
+    if (a.ffmpeg === false) c.appendChild(histEl('div', 'syNote syWarn', T('mac.tidalFfmpeg')));
+    var kv = histEl('div', 'syKv');
+    kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
+    kv.appendChild(histEl('span', 'syV', a.loggedIn ? T('mac.tidalAs', {user: a.username || '?'}) + (a.plan ? ' · ' + a.plan : '') : T('mac.tidalOut')));
+    c.appendChild(kv);
+    if (a.login) {
+      c.appendChild(histEl('div', 'syNote', T('mac.tidalStep')));
+      c.appendChild(histEl('div', 'msTidalCode', a.login.code));
+      var link = histEl('a', 'sHint listLink pbLink', a.login.url.replace(/^https:\/\//, ''));
+      link.href = a.login.url; link.target = '_blank'; link.rel = 'noopener';
+      c.appendChild(link);
+      c.appendChild(histEl('div', 'syNote', T('mac.tidalWait')));
+    }
+    var row = histEl('div', 'pbRow msAddRow');
+    if (a.loggedIn) row.appendChild(msButton(T('mac.tidalLogout'), function(){
+      if (confirm(T('mac.tidalLogoutAsk'))) msTidalSend({action: 'logout'}, 'mac.tidalLoggedOut');
+    }));
+    else if (!a.login) row.appendChild(msButton(T('mac.tidalLogin'), function(){ msTidalSend({action: 'login'}); }, 'on'));
+    if (row.firstChild) c.appendChild(row);
+    if (a.loggedIn) {
+      line(T('mac.tidalQuality'), pbChips([['HI_RES_LOSSLESS', T('mac.tidalMax')], ['LOSSLESS', T('mac.tidalHifi')], ['HIGH', 'AAC 320']],
+        a.quality, function(v){ msTidalSend({quality: v}, 'mac.tidalSaved'); }));
+      line(T('mac.tidalHits'), pbChips([[10, '10'], [20, '20'], [50, '50']], a.searchLimit, function(v){ msTidalSend({searchLimit: v}, 'mac.tidalSaved'); }));
+    }
+  }
+  if (msTidalMsg) c.appendChild(histEl('div', 'syNote' + (msTidalBad ? ' syWarn' : ''), msTidalMsg));
   return c;
 }
 
