@@ -21,7 +21,10 @@ var FIELDS = [
   {id: 'colorMood',    key: 'COLOR_MOOD',    kind: 'bool', def: true},
   {id: 'm4aProbe',     key: 'M4A_PROBE',     kind: 'bool', def: true},
   {id: 'm4aLossless',  key: 'M4A_LOSSLESS',  kind: 'bool', def: true},
-  {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts', def: []}
+  {id: 'allowedHosts', key: 'ALLOWED_HOSTS', kind: 'hosts', def: []},
+  {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'num', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
+  {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic'], def: 'fast'},
+  {id: 'vuDelay',      key: 'VU_DELAY_MS',   kind: 'num', options: ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'], def: '400'}
 ];
 
 function lstat(p) { try { return fs.lstatSync(p); } catch (e) { return null; } }
@@ -131,11 +134,13 @@ function valueOf(f, cfg) {
   if (f.kind === 'bool') return v === undefined ? f.def : v !== false;
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : f.def;
   if (f.kind === 'hosts') return Array.isArray(v) ? v.filter(function(h){ return typeof h === 'string'; }).join(', ') : '';
+  if (f.kind === 'num') return v !== undefined && f.options.indexOf(String(v)) >= 0 ? String(v) : f.def;
   return v;
 }
 function check(f, v) {
   if (f.kind === 'bool') return typeof v === 'boolean' ? v : undefined;
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : undefined;
+  if (f.kind === 'num') return v !== undefined && v !== null && f.options.indexOf(String(v)) >= 0 ? String(v) : undefined;   /* written as a number */
   if (f.kind === 'hosts') {
     var list = String(v || '').split(/[\s,;]+/).filter(Boolean);
     return list.length <= 20 && list.every(function(h){ return /^[A-Za-z0-9.\-]{1,253}$/.test(h); }) ? list : undefined;
@@ -167,7 +172,7 @@ MacSettings.prototype.saveSettings = function(values, cfg) {
   lines.push('/* Xplorio on the Mac: written by the settings page (gear menu); changes above the marker are replaced. */');
   lines.push("window.APP_CONFIG.PLAYER = 'mpd';");
   FIELDS.forEach(function(f){
-    var v = f.kind === 'hosts' ? check(f, cur[f.id]) : cur[f.id];
+    var v = f.kind === 'hosts' ? check(f, cur[f.id]) : f.kind === 'num' ? Number(cur[f.id]) : cur[f.id];
     lines.push('window.APP_CONFIG.' + f.key + ' = ' + JSON.stringify(v) + ';');
   });
   var file = this.o.configFile, real = file;

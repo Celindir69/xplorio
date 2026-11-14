@@ -84,6 +84,12 @@ t('interface settings: written through the link, own lines stay, values the page
   s.saveSettings({language: 'en'}, c);
   c = cfgOf(file);
   assert.strictEqual(c.LANGUAGE, 'en'); assert.strictEqual(c.THEME, 'dark'); assert.strictEqual(c.MY_OWN, 1);
+  assert.deepStrictEqual([s.settings(c).vuRef, s.settings(c).vuNeedle, s.settings(c).vuDelay], ['-8', 'fast', '400']);   /* VU meter: defaults */
+  assert.strictEqual(s.saveSettings({vuRef: '-3'}, c).error, 'value');
+  s.saveSettings({vuRef: '-12', vuNeedle: 'classic', vuDelay: '600'}, c);
+  c = cfgOf(file);
+  assert.strictEqual(c.VU_REF_DBFS, -12); assert.strictEqual(c.VU_DELAY_MS, 600); assert.strictEqual(c.VU_NEEDLE, 'classic');   /* numbers, as the meter reads them */
+  assert.strictEqual(s.settings(c).vuRef, '-12');
 });
 
 ta('commands: Last.fm, folders with a rescan, unknown', function(done){

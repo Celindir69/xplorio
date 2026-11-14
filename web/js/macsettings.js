@@ -307,6 +307,21 @@ function msUiCard(d) {
   var hosts = msInput(cur('allowedHosts'), 'xplorio.local, 192.168.1.20');
   hosts.addEventListener('input', function(){ ch.allowedHosts = hosts.value; });
   line(T('mac.set.allowedHosts'), hosts);
+  /* VU meter (as on the plugin's page): level shown as 0 VU, needle, delay to the sound */
+  function pick(id, opts, label) {
+    var sel = histEl('select', 'pbNum msInput msSelect');
+    opts.forEach(function(o){ var e = histEl('option', '', label(o)); e.value = o; sel.appendChild(e); });
+    sel.value = cur(id);
+    sel.addEventListener('change', function(){ ch[id] = sel.value; });
+    return sel;
+  }
+  c.appendChild(histEl('div', 'msSetHead', T('mac.vu')));
+  line(T('mac.set.vuRef'), pick('vuRef', ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'],
+    function(o){ return o + ' dBFS' + (o === '-8' ? ' (' + T('mac.std') + ')' : ''); }));
+  line(T('mac.set.vuNeedle'), pbChips([['fast', T('mac.vuFast')], ['classic', T('mac.vuClassic')]], cur('vuNeedle'), function(v){ ch.vuNeedle = v; msRender(); }));
+  line(T('mac.set.vuDelay'), pick('vuDelay', ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'],
+    function(o){ return o + ' ms' + (o === '400' ? ' (' + T('mac.std') + ')' : ''); }));
+  c.appendChild(histEl('div', 'syNote', T('mac.vuNote')));
   c.appendChild(histEl('div', 'syNote', T('mac.uiNote')));
   var row = histEl('div', 'pbRow msAddRow');
   row.appendChild(msButton(T('mac.saveReload'), function(){

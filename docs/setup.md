@@ -818,7 +818,7 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
 - **Audio output:** “Find devices” adds every sound device of the Mac as an MPD output to `mpd.conf` (MPD restarts
   briefly), plus “System output”, which follows the Mac's sound output (AirPlay too). One output plays at a time.
   “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.
-- **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts.
+- **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts, VU meter (0 VU level, needle, delay).
   Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.
 
 Without Volumio Xplorio also takes over:
