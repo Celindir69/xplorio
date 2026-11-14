@@ -2,6 +2,7 @@
    drive usage (internal card, USB, each NAS connection), uptime and version.
    Reads only /proc, /sys and df; samples every 2 s (one small file), aggregates per minute and keeps 24 h in
    memory (saved to sysinfo.json every 10 min so a service restart does not erase the history).
+   On the Mac (no /proc): load from os.cpus(), memory from vm_stat, drives from mount and df, macOS version from sw_vers.
    Node 8, ES5 only. root: prefix for /proc etc. (tests) */
 var fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process');
 
@@ -82,6 +83,42 @@ function parseMounts(text) {
     .map(function(x){ return x[0]; });
 }
 
+/* os.cpus() -> {busy, total} like parseStat (the Mac has no /proc/stat) */
+function statFromCpus(cpus) {
+  var out = {all: null, cores: []}, all = {busy: 0, total: 0};
+  (cpus || []).forEach(function(c){
+    var t = c.times || {}, busy = (t.user || 0) + (t.nice || 0) + (t.sys || 0) + (t.irq || 0);
+    var r = {busy: busy, total: busy + (t.idle || 0)};
+    out.cores.push(r); all.busy += r.busy; all.total += r.total;
+  });
+  if (out.cores.length) out.all = all;
+  return out;
+}
+/* vm_stat (Mac) -> kB available: free, inactive, speculative and purgeable pages are there for programs */
+function parseVmStat(text, totalKb) {
+  var page = +((/page size of (\d+) bytes/.exec(text) || [])[1] || 4096), n = {};
+  String(text || '').split('\n').forEach(function(l){ var m = /^Pages ([\w ]+):\s+(\d+)/.exec(l); if (m) n[m[1].trim()] = +m[2]; });
+  if (n.free === undefined) return null;
+  var avail = ((n.free || 0) + (n.inactive || 0) + (n.speculative || 0) + (n.purgeable || 0)) * page / 1024;
+  return {total: totalKb, avail: Math.min(totalKb, Math.round(avail)), swapTotal: 0, swapFree: 0};
+}
+/* "mount" output (Mac) -> drives like parseMounts: the system disk and everything under /Volumes */
+function parseMacMounts(text) {
+  var out = [];
+  String(text || '').split('\n').forEach(function(l){
+    var m = /^(.+?) on (.+?) \(([^,)]+)/.exec(l);
+    if (!m) return;
+    var mount = m[2], type = m[3], net = /^(smbfs|nfs|afpfs|webdav)$/.test(type);
+    if (mount !== '/' && !/^\/Volumes\/[^/]+$/.test(mount)) return;
+    if (!net && !/^\/dev\//.test(m[1])) return;
+    out.push({mount: mount, type: type, net: net, kind: net ? 'net' : mount === '/' ? 'card' : 'usb'});
+  });
+  return out;
+}
+function runText(cmd, args, cb) {
+  cp.execFile(cmd, args, {timeout: DF_TIMEOUT}, function(e, out){ cb(e ? '' : String(out || '')); });
+}
+
 /* output of df -kP for one path -> kB */
 function parseDf(text) {
   var l = String(text || '').trim().split('\n')[1];
@@ -106,6 +143,10 @@ function Sysinfo(opts) {
   this.root = opts.root || '';
   this.file = opts.file || '';
   this.df = opts.df || dfRun;
+  this.mac = (opts.platform || process.platform) === 'darwin';
+  this.run = opts.run || runText;    /* Mac: vm_stat, mount, sw_vers */
+  this.vm = null;                    /* Mac: last memory reading */
+  this.macOs = '';
   this.prev = null;                  /* last /proc/stat sample */
   this.minA = null;                  /* sample at the start of the current minute */
   this.minStart = 0;
@@ -127,13 +168,20 @@ Sysinfo.prototype.temp = function() {
   return isFinite(t) ? Math.round(t / 100) / 10 : null;
 };
 
-Sysinfo.prototype.mem = function() { return parseMeminfo(this.read('/proc/meminfo')); };
+Sysinfo.prototype.mem = function() {
+  if (!this.mac) return parseMeminfo(this.read('/proc/meminfo'));
+  return this.vm || {total: Math.round(os.totalmem() / 1024), avail: Math.round(os.freemem() / 1024), swapTotal: 0, swapFree: 0};
+};
 
 /* one sample (every 2 s); now for tests */
 Sysinfo.prototype.sample = function(now) {
   now = now || Date.now();
-  var s = parseStat(this.read('/proc/stat'));
+  var s = this.mac ? statFromCpus(os.cpus()) : parseStat(this.read('/proc/stat'));
   if (!s.all) return;
+  if (this.mac) {                                        /* memory for the next report, without waiting */
+    var self = this, total = Math.round(os.totalmem() / 1024);
+    this.run('vm_stat', [], function(t){ var v = parseVmStat(t, total); if (v) self.vm = v; });
+  }
   if (this.prev) {
     this.cpu = pct(this.prev.all, s.all);
     var prev = this.prev;
@@ -219,7 +267,10 @@ Sysinfo.prototype.diskList = function(cb) {
   if (this.disks && Date.now() - this.disksAt < DISK_CACHE_MS) return cb(this.disks);
   if (this.disksWait) return this.disksWait.push(cb);
   this.disksWait = [cb];
-  var list = parseMounts(this.read('/proc/mounts')), left = list.length, res = [];
+  if (this.mac) return this.run('mount', [], function(t){ go(parseMacMounts(t)); });
+  go(parseMounts(this.read('/proc/mounts')));
+  function go(list) {
+  var left = list.length, res = [];
   function fin() {
     self.disks = res.filter(Boolean); self.disksAt = Date.now();
     var w = self.disksWait; self.disksWait = null;
@@ -232,12 +283,13 @@ Sysinfo.prototype.diskList = function(cb) {
       if (--left === 0) fin();
     });
   });
+  }
 };
 
 /* response for GET /sysinfo; full: with history, drives and static details */
 Sysinfo.prototype.report = function(full, cb) {
   this.watch();
-  var self = this, up = parseFloat(this.read('/proc/uptime'));
+  var self = this, up = this.mac ? os.uptime() : parseFloat(this.read('/proc/uptime'));
   var r = {ok: true, now: Date.now(), cpu: this.cpu, cores: this.cores, live: this.live, load: os.loadavg().map(function(x){ return Math.round(x * 100) / 100; }),
            mem: this.mem(), temp: this.temp(), uptime: isFinite(up) ? Math.round(up) : null};
   if (!full) return cb(r);
@@ -246,8 +298,16 @@ Sysinfo.prototype.report = function(full, cb) {
   r.sys = {host: os.hostname(), kernel: os.release(), arch: os.arch(), node: process.version,
            volumio: osr.VOLUMIO_VERSION || '', hardware: osr.VOLUMIO_HARDWARE || '', os: osr.PRETTY_NAME || '',
            cpuModel: cpus[0] ? String(cpus[0].model || '').trim() : '', cpuCount: cpus.length};
+  if (this.mac && !this.macOs) {
+    return this.run('sw_vers', ['-productVersion'], function(t){
+      self.macOs = 'macOS ' + (t.trim() || os.release());
+      r.sys.os = self.macOs;
+      self.diskList(function(d){ r.disks = d; cb(r); });
+    });
+  }
+  if (this.mac) r.sys.os = this.macOs;
   this.diskList(function(d){ r.disks = d; cb(r); });
 };
 
 module.exports = {Sysinfo: Sysinfo, parseStat: parseStat, pct: pct, parseMeminfo: parseMeminfo, parseMounts: parseMounts,
-                  parseDf: parseDf, parseOsRelease: parseOsRelease};
+                  parseDf: parseDf, parseOsRelease: parseOsRelease, statFromCpus: statFromCpus, parseVmStat: parseVmStat, parseMacMounts: parseMacMounts};
