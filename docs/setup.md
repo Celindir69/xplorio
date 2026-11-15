@@ -822,6 +822,8 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   On old Intel Macs without AVX2, with MacPorts: `sudo port install python311 py311-pip libsdl2`, then
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
+- **Password:** for the services on the "System" page and the file manager (which only works with a password).
+  Changing it needs the current one; a new one logs out all other devices.
 - **Audio output:** “Find devices” adds every sound device of the Mac as an MPD output to `mpd.conf` (MPD restarts
   briefly), plus “System output”, which follows the Mac's sound output (AirPlay too). One output plays at a time.
   “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.

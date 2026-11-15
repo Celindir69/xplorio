@@ -1090,6 +1090,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   `sudo port install python311 py311-pip libsdl2`, dann
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
 - **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
+- **Passwort:** für die Dienste auf der Seite „System“ und den Dateimanager (der geht nur mit Passwort). Ändern braucht
+  das aktuelle; ein neues meldet alle anderen Geräte ab.
 - **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
   dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
   Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.

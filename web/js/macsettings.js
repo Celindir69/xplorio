@@ -11,7 +11,7 @@ var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
-var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs'];
+var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs', 'short', 'locked'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
@@ -153,6 +153,7 @@ function msRender() {
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
   grid.appendChild(msRotelCard(d));
+  grid.appendChild(msPwCard(d));
   grid.appendChild(msUiCard(d));
 }
 
@@ -292,6 +293,28 @@ function msUpload(f) {
     openMacSettings();
     msMsg = T('mac.uploaded', {n: r.tracks, m: r.matched});
   }).catch(function(){ if (seq === msSeq) { msMsg = T('mac.err.upload'); msMsgBad = true; msRender(); } });
+}
+
+/* ---------- password for the System page and the file manager (POST /mac/settings {action: password}) ---------- */
+function msPwCard(d) {
+  var c = sysCard(T('mac.pw'), 'syWide');
+  c.appendChild(histEl('div', 'syNote', T('mac.pwNote')));
+  var kv = histEl('div', 'syKv');
+  kv.appendChild(histEl('span', 'syK', T('mac.essState')));
+  kv.appendChild(histEl('span', 'syV', T(d.pw ? 'mac.pwSet' : 'mac.pwUnset')));
+  c.appendChild(kv);
+  var cur = d.pw ? msInput('', T('mac.pwCurrent'), 'password') : null, nw = msInput('', T('mac.pwNew'), 'password'), again = msInput('', T('mac.pwAgain'), 'password');
+  [cur, nw, again].forEach(function(i){ if (i) { i.autocomplete = 'new-password'; var r = histEl('div', 'pbRow msAddRow'); r.appendChild(i); c.appendChild(r); } });
+  var row = histEl('div', 'pbRow msAddRow');
+  row.appendChild(msButton(T(d.pw ? 'mac.pwChange' : 'mac.pwSave'), function(){
+    if (nw.value.length < 4) { msMsg = T('mac.err.short'); msMsgBad = true; return msRender(); }
+    if (nw.value !== again.value) { msMsg = T('mac.pwMismatch'); msMsgBad = true; return msRender(); }
+    msSend({action: 'password', password: nw.value, current: cur ? cur.value : ''}, T('mac.pwSaved'), function(r){
+      if (r.token && typeof sysSvcToken === 'function') sysSvcMem = sysSvcToken(r.token);   /* this device stays logged in */
+    });
+  }, 'on'));
+  c.appendChild(row);
+  return c;
 }
 
 /* ---------- Last.fm ---------- */

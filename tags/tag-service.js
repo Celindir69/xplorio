@@ -2940,12 +2940,31 @@ function doMacAudio(body, cb) {
   answer(null);
 }
 
+/* password for the services and the file manager, set on the Mac's settings page (on Volumio: the plugin's page).
+   Changing it needs the current one; answers with a login key for this device (a new password logs out all others) */
+function doMacPassword(body, cb) {
+  var pw = String(body.password || '').slice(0, 200);
+  if (pw.length < adminpass.MIN_LEN) return cb(200, {ok: false, error: 'short'});
+  function set() {
+    try { adminAuth.setPassword(pw); } catch (e) { return cb(200, {ok: false, error: 'fs'}); }
+    adminAuth.login(pw, Date.now(), function(r){
+      var rd = macSettings.read(appConfig()); rd.ok = true; rd.pw = true; rd.done = 'password'; rd.token = r && r.ok ? r.token : '';
+      cb(200, rd);
+    });
+  }
+  if (!adminAuth.isSet()) return set();
+  adminAuth.verify(String(body.current || '').slice(0, 200), Date.now(), function(r){
+    if (!r || !r.ok) return cb(200, {ok: false, error: r && r.error === 'locked' ? 'locked' : 'auth', wait: r && r.wait});
+    set();
+  });
+}
+
 function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
-  if (req.method === 'GET') return send(res, 200, macSettings.read(appConfig()));
+  if (req.method === 'GET') { var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet(); return send(res, 200, rd); }
   if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '';
   req.setEncoding('utf8');
@@ -2953,6 +2972,7 @@ function doMac(req, res, route) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    if (body.action === 'password') return doMacPassword(body, function(c, o){ send(res, c, o); });
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
     if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
     macSettings.command(body, appConfig(), function(c, o){
