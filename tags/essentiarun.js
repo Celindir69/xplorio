@@ -43,7 +43,7 @@ function Runner(o) {
   this.now = o.now || Date.now;
   this.child = null; this.progress = null; this.tail = [];
   this.py = null; this.pyAt = 0; this.checking = null;
-  this.s = {nightly: false, lastStart: 0, lastEnd: 0, lastAnalysed: 0, lastError: '', lastNight: ''};
+  this.s = {nightly: false, lastStart: 0, lastEnd: 0, lastAnalysed: 0, lastError: '', lastNight: '', perFile: 0};
   try { var d = JSON.parse(fs.readFileSync(o.stateFile, 'utf8')); Object.keys(this.s).forEach(function(k){ if (d[k] !== undefined) this.s[k] = d[k]; }, this); }
   catch (e) { /* first start */ }
 }
@@ -87,7 +87,7 @@ Runner.prototype.status = function(cb, force) {
   this.python(!!force, function(py){
     cb({ok: true, python: py, script: fs.existsSync(self.o.script), running: !!self.child, progress: self.progress,
         tail: self.tail.slice(-8), nightly: s.nightly, lastStart: s.lastStart, lastEnd: s.lastEnd,
-        lastAnalysed: s.lastAnalysed, lastError: s.lastError});
+        lastAnalysed: s.lastAnalysed, lastError: s.lastError, perFile: s.perFile});
   });
 };
 
@@ -128,6 +128,7 @@ Runner.prototype.start = function(cb) {
       self.child = null;
       self.s.lastEnd = self.now();
       self.s.lastAnalysed = p.done || 0;
+      if (p.perFile) self.s.perFile = p.perFile;                /* for the estimate before the next run's first progress */
       if (!p.finished && !self.stopping) self.s.lastError = self.s.lastError || ('exit ' + code);
       self.stopping = false;
       self.save();

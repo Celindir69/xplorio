@@ -460,6 +460,8 @@ langRegister('es', 'Español', {
   'mac.anaCheck': 'Buscar de nuevo',
   'mac.anaProgress': '{n} de {m} analizadas',
   'mac.anaLeft': 'quedan unos {min} min',
+  'mac.anaEstimate': 'unos {t} estimados',
+  'mac.anaNone2': 'Nada nuevo que analizar.',
   'mac.anaPreparing': 'Preparando (cargando modelos, recorriendo carpetas) …',
   'mac.anaNothingYet': 'En marcha, primer avance tras 25 pistas …',
   'mac.anaLast': 'Última vez el {date}: {n} pistas analizadas',

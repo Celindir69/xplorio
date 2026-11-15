@@ -260,8 +260,11 @@ function msAnaPart(c) {
     var kv = histEl('div', 'syKv'), p = a.progress || {};
     kv.appendChild(histEl('span', 'syK', T('mac.essState')));
     var txt;
-    if (a.running) txt = p.total ? T('mac.anaProgress', {n: p.done || 0, m: p.total}) + (p.minutesLeft !== undefined && p.done ? ' · ' + T('mac.anaLeft', {min: p.minutesLeft}) : '')
-      : T(p.found !== undefined ? 'mac.anaNothingYet' : 'mac.anaPreparing');
+    var est = !p.done && p.total && (a.perFile || 10) * p.total / 60;   /* before the first progress: from the last run */
+    if (a.running) txt = p.total ? T('mac.anaProgress', {n: p.done || 0, m: p.total}) + (p.minutesLeft !== undefined && p.done ? ' · ' + T('mac.anaLeft', {min: p.minutesLeft})
+      : est ? ' · ' + T('mac.anaEstimate', {t: est >= 90 ? Math.round(est / 60) + ' h' : Math.max(1, Math.round(est)) + ' min'}) : '')
+      : p.found !== undefined ? T('mac.anaNone2')
+      : T('mac.anaPreparing');
     else if (a.lastEnd) txt = T('mac.anaLast', {date: langDate(a.lastEnd), n: a.lastAnalysed || 0}) + (a.lastError ? ' · ' + T('mac.anaStopped') : '');
     else txt = T('mac.anaNever');
     kv.appendChild(histEl('span', 'syV', txt));

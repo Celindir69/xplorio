@@ -460,6 +460,8 @@ langRegister('de', 'Deutsch', {
   'mac.anaCheck': 'Erneut suchen',
   'mac.anaProgress': '{n} von {m} analysiert',
   'mac.anaLeft': 'noch etwa {min} min',
+  'mac.anaEstimate': 'geschätzt etwa {t}',
+  'mac.anaNone2': 'Nichts Neues zu analysieren.',
   'mac.anaPreparing': 'Wird vorbereitet (Modelle laden, Ordner durchsuchen) …',
   'mac.anaNothingYet': 'Läuft, erster Zwischenstand nach 25 Titeln …',
   'mac.anaLast': 'Zuletzt am {date}: {n} Titel analysiert',

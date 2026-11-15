@@ -461,6 +461,8 @@ langRegister('fr', 'Français', {
   'mac.anaCheck': 'Chercher à nouveau',
   'mac.anaProgress': '{n} sur {m} analysés',
   'mac.anaLeft': 'encore environ {min} min',
+  'mac.anaEstimate': 'environ {t} estimées',
+  'mac.anaNone2': 'Rien de nouveau à analyser.',
   'mac.anaPreparing': 'Préparation (chargement des modèles, parcours des dossiers) …',
   'mac.anaNothingYet': 'En cours, premier point après 25 titres …',
   'mac.anaLast': 'Dernière fois le {date} : {n} titres analysés',

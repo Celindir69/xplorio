@@ -460,6 +460,8 @@ langRegister('it', 'Italiano', {
   'mac.anaCheck': 'Cerca di nuovo',
   'mac.anaProgress': '{n} di {m} analizzati',
   'mac.anaLeft': 'ancora circa {min} min',
+  'mac.anaEstimate': 'circa {t} stimati',
+  'mac.anaNone2': 'Niente di nuovo da analizzare.',
   'mac.anaPreparing': 'Preparazione (caricamento modelli, scansione cartelle) …',
   'mac.anaNothingYet': 'In corso, primo aggiornamento dopo 25 brani …',
   'mac.anaLast': 'Ultima volta il {date}: {n} brani analizzati',

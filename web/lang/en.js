@@ -462,6 +462,8 @@ langRegister('en', 'English', {
   'mac.anaCheck': 'Look again',
   'mac.anaProgress': '{n} of {m} analysed',
   'mac.anaLeft': 'about {min} min left',
+  'mac.anaEstimate': 'estimated about {t}',
+  'mac.anaNone2': 'Nothing new to analyse.',
   'mac.anaPreparing': 'Preparing (loading models, scanning folders) …',
   'mac.anaNothingYet': 'Running, first progress after 25 tracks …',
   'mac.anaLast': 'Last run {date}: {n} tracks analysed',
