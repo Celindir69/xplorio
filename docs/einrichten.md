@@ -1081,6 +1081,14 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   Verknüpfung, nie Musik). Danach liest MPD die Bibliothek neu ein.
 - **Audioanalyse:** `essentia.jsonl` verknüpfen (am besten die Datei, die `analyse.py` schreibt: jede neue Analyse zählt
   dann sofort) oder als Kopie hochladen. Eine vorhandene Kopie bleibt als `essentia.jsonl.bak`.
+  **Auf diesem Mac analysieren** startet `analyse.py` (liegt in der App) über alle Musikordner, mit niedriger Priorität
+  (`nice`), und schreibt in diese Datei (bei einer Verknüpfung in die verknüpfte). Nur neue und geänderte Titel; anhalten
+  oder Xplorio beenden geht jederzeit, der nächste Lauf macht dort weiter. Wahlweise jede Nacht um 3 Uhr. Braucht Python
+  mit Essentia ([siehe unten](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc)); die App nimmt das erste
+  `python3.11`, `python3.12` … aus Homebrew oder MacPorts, das `essentia` laden kann (`XPLORIO_PYTHON` in
+  `xplorio.conf` wählt ein bestimmtes). Auf alten Intel-Macs ohne AVX2 mit MacPorts:
+  `sudo port install python311 py311-pip libsdl2`, dann
+  `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
 - **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
 - **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
   dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein

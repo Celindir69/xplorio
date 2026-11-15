@@ -814,6 +814,13 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   MPD reads the library again afterwards.
 - **Audio analysis:** link `essentia.jsonl` (best the file `analyse.py` writes: every new analysis counts at once) or
   upload a copy. A copy there before is kept as `essentia.jsonl.bak`.
+  **Analyse on this Mac** runs `analyse.py` (included in the app) over all music folders with low priority (`nice`)
+  and writes into this file (into the linked one, if it is a link). Only new and changed tracks; stopping it or quitting
+  Xplorio is fine at any time, the next run continues there. Optionally every night at 3 am. Needs Python with Essentia
+  ([see below](#audio-analysis-with-essentia-optional-on-a-mac-or-windows-pc)); the app takes the first `python3.11`,
+  `python3.12` … from Homebrew or MacPorts that can load `essentia` (`XPLORIO_PYTHON` in `xplorio.conf` picks one).
+  On old Intel Macs without AVX2, with MacPorts: `sudo port install python311 py311-pip libsdl2`, then
+  `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
 - **Audio output:** “Find devices” adds every sound device of the Mac as an MPD output to `mpd.conf` (MPD restarts
   briefly), plus “System output”, which follows the Mac's sound output (AirPlay too). One output plays at a time.

@@ -9,6 +9,7 @@ var msBody = document.getElementById('msBody');
 var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
 var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
+var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
@@ -28,6 +29,8 @@ function openMacSettings() {
   msAdjSend({});
   msTidal = null; msTidalMsg = ''; msTidalBad = false; msTidalWas = null;
   msTidalSend({});
+  msAna = null; msAnaMsg = ''; msAnaBad = false;
+  msAnaSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -214,7 +217,66 @@ function msEssentiaCard(d) {
   var up = histEl('div', 'sHint listLink pbLink', T('mac.essUpload'));
   up.addEventListener('click', function(){ file.click(); });
   c.appendChild(up); c.appendChild(file);
+  msAnaPart(c);
   return c;
+}
+
+/* analysis on this Mac (POST /mac/analysis, tags/essentiarun.js): {} = state, {action: start|stop|check}, {nightly}.
+   While it runs the state is asked every 5 s */
+var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart'};
+function msAnaSend(body, okText) {
+  var seq = msSeq;
+  if (Object.keys(body).length) body.token = msToken();
+  clearTimeout(msAnaTimer);
+  tagPostJson('/mac/analysis', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.ok) {
+      msAna = r; msAnaBad = !!r.startError;
+      msAnaMsg = r.startError ? T(MS_ANA_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
+      if (r.running) msAnaTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msAnaSend({}); }, 5000);
+    } else if (r && r.available === false) msAna = r;
+    else { msAnaBad = true; msAnaMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msAnaBad = true; msAnaMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msAnaPart(c) {
+  var a = msAna;
+  if (a && a.available === false) return;              /* only on the Mac itself */
+  c.appendChild(histEl('div', 'syK msLabel', T('mac.ana')));
+  if (!a) { if (!msAnaMsg) c.appendChild(browseNote(T('hist.loading'))); }
+  else if (!a.python || !a.script) {
+    c.appendChild(histEl('div', 'syNote syWarn', T(a.script ? 'mac.anaNoPython' : 'mac.anaErrScript')));
+    if (a.script) {
+      c.appendChild(histEl('div', 'syNote', T('mac.anaInstall')));
+      c.appendChild(histEl('pre', 'msCode', 'sudo port install python311 py311-pip libsdl2\npython3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen'));
+      c.appendChild(histEl('div', 'syNote', T('mac.anaInstallNew')));
+      c.appendChild(histEl('pre', 'msCode', 'brew install python@3.11\npython3.11 -m pip install --user --break-system-packages essentia-tensorflow mutagen'));
+      var chk = histEl('div', 'pbRow msAddRow');
+      chk.appendChild(msButton(T('mac.anaCheck'), function(){ msAnaSend({action: 'check'}); }));
+      c.appendChild(chk);
+    }
+  } else {
+    c.appendChild(histEl('div', 'syNote', T('mac.anaNote')));
+    var kv = histEl('div', 'syKv'), p = a.progress || {};
+    kv.appendChild(histEl('span', 'syK', T('mac.essState')));
+    var txt;
+    if (a.running) txt = p.total ? T('mac.anaProgress', {n: p.done || 0, m: p.total}) + (p.minutesLeft !== undefined && p.done ? ' · ' + T('mac.anaLeft', {min: p.minutesLeft}) : '')
+      : T(p.found !== undefined ? 'mac.anaNothingYet' : 'mac.anaPreparing');
+    else if (a.lastEnd) txt = T('mac.anaLast', {date: langDate(a.lastEnd), n: a.lastAnalysed || 0}) + (a.lastError ? ' · ' + T('mac.anaStopped') : '');
+    else txt = T('mac.anaNever');
+    kv.appendChild(histEl('span', 'syV', txt));
+    c.appendChild(kv);
+    if (a.running && a.tail && a.tail.length) c.appendChild(histEl('div', 'msItemSub', a.tail[a.tail.length - 1]));
+    var row = histEl('div', 'pbRow msAddRow');
+    if (a.running) row.appendChild(msButton(T('mac.anaStop'), function(){ msAnaSend({action: 'stop'}, 'mac.anaStopping'); }));
+    else row.appendChild(msButton(T('mac.anaStart'), function(){ msAnaSend({action: 'start'}, 'mac.anaStarted'); }, 'on'));
+    c.appendChild(row);
+    var nr = histEl('div', 'msSetRow');
+    nr.appendChild(histEl('div', 'msSetLabel', T('mac.anaNightly')));
+    nr.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.nightly, function(v){ msAnaSend({nightly: v}, 'mac.tidalSaved'); }));
+    c.appendChild(nr);
+  }
+  if (msAnaMsg) c.appendChild(histEl('div', 'syNote' + (msAnaBad ? ' syWarn' : ''), msAnaMsg));
 }
 function msUpload(f) {
   var seq = msSeq;

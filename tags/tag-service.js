@@ -2943,6 +2943,7 @@ function doMacAudio(body, cb) {
 function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
+  if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') return send(res, 200, macSettings.read(appConfig()));
   if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
@@ -2961,6 +2962,50 @@ function doMac(req, res, route) {
     });
   });
 }
+
+/* ---------- audio analysis on the Mac (essentiarun.js, tools/essentia/analyse.py in the app): GET /mac/analysis = state,
+   POST /mac/analysis {action: start|stop|check} or {nightly: bool}; changes need the password if one is set.
+   Writes into essentia.jsonl, or into the file it links to (so the link stays a link). */
+var essentiarun = require('./essentiarun.js'), essRun = null;
+function essScript() {
+  var a = [path.join(__dirname, '..', 'essentia', 'analyse.py'), path.join(__dirname, '..', 'tools', 'essentia', 'analyse.py')];
+  return fs.existsSync(a[0]) ? a[0] : a[1];
+}
+function essOut() {
+  try { return fs.realpathSync(ESSENTIA_FILE); } catch (e) { /* not there yet, or a link to something missing */ }
+  try { return path.resolve(path.dirname(ESSENTIA_FILE), fs.readlinkSync(ESSENTIA_FILE)); } catch (e2) { return ESSENTIA_FILE; }
+}
+function essRunner() {
+  if (!essRun) essRun = new essentiarun.Runner({
+    script: essScript(), out: essOut, roots: function(){ return [MUSIC_ROOT]; }, stateFile: path.join(DATA_DIR, 'essentia-run.json'),
+    log: function(t){ console.error(t); }, onDone: function(){ audioStore.reload(true); }
+  });
+  return essRun;
+}
+function doMacAnalysis(req, res) {
+  if (!onMac()) return send(res, 200, {ok: false, available: false});
+  function state(extra, force) {
+    essRunner().status(function(st){ st.available = true; if (extra) Object.keys(extra).forEach(function(k){ st[k] = extra[k]; }); send(res, 200, st); }, force);
+  }
+  if (req.method === 'GET') return state();
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    var r = essRunner();
+    if (!body.action && body.nightly === undefined) return state();
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
+    if (body.action === 'check') return state({done: 'check'}, true);
+    if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
+    if (body.action === 'start') return r.start(function(e){ state(e ? {startError: e} : {done: 'start'}); });
+    send(res, 400, {ok: false, error: 'unknown action'});
+  });
+}
+setInterval(function(){ if (onMac()) essRunner().tick(); }, 5 * 60 * 1000).unref();
+process.on('exit', function(){ if (essRun) essRun.stop(); });   /* Ctrl-C for the run: what is done stays, the next run continues */
 
 /* ---------- Rotel bridge on the Mac (XPLORIO_ROTEL=manage, set by tools/mac/xplorio-services.sh) ----------
    On Volumio the plugin runs rotel/rotel-bridge.js as a service. On the Mac the tag service runs it as a child while

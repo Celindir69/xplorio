@@ -34,6 +34,7 @@ stopAll() {
     fi
   done
   pkill -f "$APP/rotel/rotel-bridge.js" 2>/dev/null   # run by the tag service (Rotel amplifier)
+  pkill -INT -f "$APP/essentia/analyse.py" 2>/dev/null   # audio analysis (like Ctrl-C: what is done stays, the next run continues)
   # the file before the option (MacPorts' MPD 0.24 takes no file after an option); the PID from the start as a fallback
   mpd "$MPD_CONF" --kill >/dev/null 2>&1
   if [ -f "$RUN/mpd.pid" ]; then
@@ -75,7 +76,7 @@ fi
 
 cd "$APP" || exit 1
 if ! up "$TAGS_PORT"; then
-  XPLORIO_PLAYER=mpd XPLORIO_ROTEL=manage XPLORIO_RUN="$RUN" XPLORIO_WEB_PORT="$WEB_PORT" MPD_HOST=127.0.0.1 MPD_PORT="$MPD_PORT" MPD_CONF="$MPD_CONF" MPD_BIN="$MPD" MUSIC_ROOT="$MUSIC_ROOT" TAGS_DATA="$TAGS_DATA" HTTP_PORT="$TAGS_PORT" \
+  XPLORIO_PLAYER=mpd XPLORIO_ROTEL=manage XPLORIO_RUN="$RUN" XPLORIO_WEB_PORT="$WEB_PORT" XPLORIO_PYTHON="${XPLORIO_PYTHON:-}" MPD_HOST=127.0.0.1 MPD_PORT="$MPD_PORT" MPD_CONF="$MPD_CONF" MPD_BIN="$MPD" MUSIC_ROOT="$MUSIC_ROOT" TAGS_DATA="$TAGS_DATA" HTTP_PORT="$TAGS_PORT" \
     nohup "$NODE" tags/tag-service.js >>"$LOG/tags.log" 2>&1 </dev/null &
   echo $! >"$RUN/tags.pid"
 fi
