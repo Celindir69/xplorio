@@ -1087,8 +1087,6 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
   Bluetooth-Geräte kann MPD nicht selbst öffnen (OSStatus -10851): Sie spielen über „Systemausgabe“, „Verwenden“ macht
   sie zur Tonausgabe des Macs.
-  AirPlay-Lautsprecher, die macOS gefunden hat, stehen einzeln in der Liste (Quellen des Geräts „AirPlay“); „Verwenden“
-  wählt den Lautsprecher und macht AirPlay zur Tonausgabe, gespielt wird über „Systemausgabe“. Immer nur einer.
 - **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der
   Tag-Dienst startet dann die Rotel-Bridge (`rotel/rotel-bridge.js`, Port 8765) selbst und nach jeder Änderung neu;
   Eingangsnamen (`ROTEL_INPUTS`) und eigene Profile wie unter Volumio als eigene Zeilen in `config.local.js`.

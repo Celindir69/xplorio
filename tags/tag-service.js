@@ -2888,10 +2888,10 @@ var macAudio = new macaudio.MacAudio({
     if (!fs.existsSync(helper)) return cb(new Error('nodevices'));
     cp.execFile(helper, [], {timeout: 10000}, function(e, out){ cb(e, out); });
   },
-  setDefault: function(uid, source, cb){                  /* source: AirPlay speaker (data source id) or null */
-    var helper = path.join(__dirname, '..', 'mac', 'audiodevices'), args = ['set', uid].concat(source === null ? [] : [String(source)]);
-    if (process.env.XPLORIO_AUDIO_SET) return fs.appendFile(process.env.XPLORIO_AUDIO_SET, args.slice(1).join(' ') + '\n', cb);   /* tests */
-    cp.execFile(helper, args, {timeout: 10000}, function(e){ cb(e); });
+  setDefault: function(uid, cb){
+    var helper = path.join(__dirname, '..', 'mac', 'audiodevices');
+    if (process.env.XPLORIO_AUDIO_SET) return fs.appendFile(process.env.XPLORIO_AUDIO_SET, uid + '\n', cb);       /* tests */
+    cp.execFile(helper, ['set', uid], {timeout: 10000}, function(e){ cb(e); });
   },
   restart: function(cb){
     var bin = process.env.MPD_BIN || 'mpd';

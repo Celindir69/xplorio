@@ -820,8 +820,6 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.
   MPD cannot open Bluetooth devices itself (OSStatus -10851): they play through “System output”, “Use” makes them the
   Mac's sound output.
-  AirPlay speakers macOS has found are listed one by one (data sources of the “AirPlay” device); “Use” picks the speaker
-  and makes AirPlay the Mac's sound output, playback goes through “System output”. One speaker at a time.
 - **Rotel amplifier:** on/off, address and model (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). The tag
   service then runs the Rotel bridge (`rotel/rotel-bridge.js`, port 8765) itself and restarts it after every change;
   input names (`ROTEL_INPUTS`) and own profiles as on Volumio, as own lines in `config.local.js`.

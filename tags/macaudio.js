@@ -4,11 +4,9 @@
    VU fifo or a stream stay as they are). MPD keeps the choice in its state file.
    New devices: scan -> the managed part of mpd.conf is written again and MPD restarts.
    "Exclusive" (hog_device): no other program plays on the device at the same time, the sample rate follows the music.
-   AirPlay: macOS's one "AirPlay" device has the speakers it found as data sources; each becomes an entry of its own that
-   plays through "Systemausgabe" (the helper picks the speaker and makes AirPlay the Mac's output).
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
-         restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, source|null, cb(err)) (audiodevices only:
+         restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, cb(err)) (audiodevices only:
          the Mac's sound output for devices played through "Systemausgabe") */
 var fs = require('fs');
 
@@ -18,7 +16,7 @@ var SYSTEM = 'Systemausgabe';
 var NO_HOG = /^(airplay|bluetooth)$/;          /* exclusive (hog_device) keeps these silent: macOS does not hand them over */
 /* MPD cannot open Bluetooth devices itself (OSStatus -10851): they play through "Systemausgabe", choosing one makes it the
    Mac's sound output (audiodevices set <uid>). Only with the helper's uid; without it they get an output like the others */
-function viaSystem(d) { return !!d.uid && (d.kind === 'bluetooth' || (d.kind === 'airplay' && !!(d.sources && d.sources.length))); }
+function viaSystem(d) { return d.kind === 'bluetooth' && !!d.uid; }
 
 /* devices that can play -> [{name, kind}]: from audiodevices (tools/mac/audiodevices.swift), else from system_profiler */
 function parseDevices(json) {
@@ -30,10 +28,6 @@ function parseDevices(json) {
       if (out.some(function(o){ return o.name === d.name; })) return;
       var o = {name: d.name, kind: /^(usb|builtin|airplay|bluetooth|hdmi|virtual)$/.test(d.transport) ? d.transport : 'other'};
       if (typeof d.uid === 'string' && d.uid) { o.uid = d.uid; o.def = d['default'] === true; }
-      if (o.kind === 'airplay' && Array.isArray(d.sources)) {
-        o.sources = d.sources.filter(function(x){ return x && /^\d{1,10}$/.test(String(x.id)) && typeof x.name === 'string' && x.name; })
-          .map(function(x){ return {id: +x.id, name: x.name, current: x.current === true}; });
-      }
       out.push(o);
     });
     return out;
@@ -121,15 +115,11 @@ MacAudio.prototype.status = function(cb) {
     function done(list) { cb(null, {outputs: list, exclusive: list.some(function(o){ return o.hog; }), managed: managed, busy: self.busy}); }
     var sys = outs.filter(function(o){ return o.system; })[0];
     if (!sys || !self.o.listDevices) return done(outs);
-    self.o.listDevices(function(e, json){                 /* Bluetooth and AirPlay speakers: through the system output */
-      var via = [];
-      (e ? [] : parseDevices(json).filter(viaSystem)).forEach(function(d){
-        if (!d.sources) return via.push({id: 'via:' + d.uid, name: d.name.trim(), enabled: sys.enabled && d.def, system: false, hog: false, via: true});
-        d.sources.forEach(function(x){
-          via.push({id: 'via:' + d.uid + '#' + x.id, name: x.name.trim(), enabled: sys.enabled && d.def && x.current, system: false, hog: false, via: true, airplay: true});
-        });
-      });
-      done(outs.concat(via));
+    self.o.listDevices(function(e, json){                 /* Bluetooth: through the system output */
+      var via = e ? [] : parseDevices(json).filter(viaSystem);
+      done(outs.concat(via.map(function(d){
+        return {id: 'via:' + d.uid, name: d.name.trim(), enabled: sys.enabled && d.def, system: false, hog: false, via: true};
+      })));
     });
   });
 };
@@ -143,8 +133,7 @@ MacAudio.prototype.select = function(id, cb) {
     if (!o) return cb(new Error('output'));
     if (o.via) {                                         /* make it the Mac's output, then play on the system output */
       var sys = st.outputs.filter(function(x){ return x.system; })[0];
-      var m = /^via:(.*?)(?:#(\d+))?$/.exec(String(id));
-      return self.o.setDefault(m[1], m[2] === undefined ? null : +m[2], function(e){
+      return self.o.setDefault(String(id).slice(4), function(e){
         if (e) return cb(new Error('output'));
         self.select(sys.id, cb);
       });

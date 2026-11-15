@@ -71,7 +71,7 @@ function msAudioCard() {
       var row = histEl('div', 'msItem');
       var tx = histEl('div', 'msItemText');
       tx.appendChild(histEl('div', 'msItemName', o.system ? T('mac.audioSystem') : o.name));
-      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.airplay ? T('mac.audioAirplay') : o.via ? T('mac.audioVia') : o.hog ? T('mac.audioExclusiveOn') : ''));
+      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.via ? T('mac.audioVia') : o.hog ? T('mac.audioExclusiveOn') : ''));
       row.appendChild(tx);
       if (o.enabled) row.appendChild(histEl('div', 'mxChip mxSmall on', T('mac.audioActive')));
       else row.appendChild(msButton(T('mac.audioUse'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioSelect', id: o.id}); }));
