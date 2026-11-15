@@ -102,11 +102,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
 
     @objc func reloadPage() { web.load(URLRequest(url: pageURL)) }
 
-    // links to other sites (Wikipedia, Last.fm, …) open in the normal browser
+    // other sites (Wikipedia, Last.fm login, …) open in the normal browser: links, and the page itself going there
+    // (e.g. location.href = the Last.fm login), so Xplorio stays in its window; frames inside the page stay
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if let url = navigationAction.request.url, let host = url.host,
-           navigationAction.navigationType == .linkActivated, host != "localhost", host != "127.0.0.1" {
+        let mainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+        if let url = navigationAction.request.url, let host = url.host, url.scheme == "http" || url.scheme == "https",
+           navigationAction.navigationType == .linkActivated || mainFrame, host != "localhost", host != "127.0.0.1" {
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
             return
@@ -116,8 +118,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     // target="_blank" and window.open: also in the normal browser
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let url = navigationAction.request.url { NSWorkspace.shared.open(url) }
-        return nil
+        if let url = navigationAction.request.url, url.scheme == "http" || url.scheme == "https" { NSWorkspace.shared.open(url) }
+        return nil      // window.open('about:blank') gets null: the page then goes there itself (see above)
     }
 
     // alert, confirm and prompt of the page (e.g. "Update library?"): without these WebKit answers "no" on its own
