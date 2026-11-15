@@ -103,12 +103,18 @@ def fetch_models(folder):
             url = MODEL_URL + m + ext
             print('Loading model ' + os.path.basename(dst) + ' …', flush=True)
             try:
+                got = 0
                 with urllib.request.urlopen(url, timeout=120) as r, open(dst + '.neu', 'wb') as f:
+                    want = int(r.headers.get('Content-Length') or 0)
                     while True:
                         b = r.read(1 << 20)
                         if not b:
                             break
                         f.write(b)
+                        got += len(b)
+                if want and got != want:            # a slow line can end early without an error: never keep half a model
+                    os.remove(dst + '.neu')
+                    raise IOError('download incomplete (%d of %d bytes), please start again' % (got, want))
                 os.replace(dst + '.neu', dst)
             except Exception as e:
                 sys.exit('Cannot load model: %s (%s)' % (url, e))
