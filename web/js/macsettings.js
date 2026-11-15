@@ -398,6 +398,8 @@ function msUiCard(d) {
   var hosts = msInput(cur('allowedHosts'), 'xplorio.local, 192.168.1.20');
   hosts.addEventListener('input', function(){ ch.allowedHosts = hosts.value; });
   line(T('mac.set.allowedHosts'), hosts);
+  line(T('mac.set.effects'), pbChips([['full', T('mac.fxFull')], ['lite', T('mac.fxLite')]], cur('effects'), function(v){ ch.effects = v; msRender(); }));
+  c.appendChild(histEl('div', 'syNote', T('mac.fxNote')));
   /* VU meter (as on the plugin's page): level shown as 0 VU, needle, delay to the sound */
   function pick(id, opts, label) {
     var sel = histEl('select', 'pbNum msInput msSelect');

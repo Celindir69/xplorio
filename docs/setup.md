@@ -823,7 +823,8 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
 - **Rotel amplifier:** on/off, address and model (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). The tag
   service then runs the Rotel bridge (`rotel/rotel-bridge.js`, port 8765) itself and restarts it after every change;
   input names (`ROTEL_INPUTS`) and own profiles as on Volumio, as own lines in `config.local.js`.
-- **Interface:** language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts, VU meter (0 VU level, needle, delay).
+- **Interface:** effects “Light” (`EFFECTS: 'lite'`: no blurred cover in the background, no frosted glass, VU meter at
+  30 instead of 60 frames a second; saves a lot of processing power on older Macs), language, appearance, history, release dates, artist names, moods, colour, M4A check, further hosts, VU meter (0 VU level, needle, delay).
   Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.
 
 Without Volumio Xplorio also takes over:

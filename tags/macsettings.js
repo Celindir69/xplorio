@@ -25,6 +25,7 @@ var FIELDS = [
   {id: 'rotel',        key: 'ROTEL',         kind: 'bool', def: false},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host', def: ''},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582'], def: 'RA-1572'},
+  {id: 'effects',      key: 'EFFECTS',       kind: 'select', options: ['full', 'lite'], def: 'full'},
   {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'num', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
   {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic'], def: 'fast'},
   {id: 'vuDelay',      key: 'VU_DELAY_MS',   kind: 'num', options: ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'], def: '400'}

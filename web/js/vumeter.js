@@ -34,6 +34,8 @@ function vuSetStyle(s) {
   vuStyle = s;
   document.documentElement.setAttribute('data-vu', s);
   try { localStorage.setItem(VU_STYLE_KEY, s); } catch (e) { /* private mode */ }
+  vuMeters.forEach(function(m){ m.faces.forEach(function(f){ f.shownDeg = f.shownLamp = null; }); });   /* draw the other style anew */
+  if (typeof vuWake === 'function') vuWake();
 }
 document.documentElement.setAttribute('data-vu', vuStyle);
 
@@ -199,25 +201,42 @@ function vuApply(w, now) {
   });
 }
 
+/* frames: 60 a second, 30 with EFFECTS 'lite' or VU_FPS (older Macs). Only what changed is drawn again, and once the
+   needles rest (pause, stop) the loop ends until levels come again */
+var VU_FRAME_MS = (function(){
+  var c = window.APP_CONFIG || {}, fps = +c.VU_FPS || (c.EFFECTS === 'lite' ? 30 : 0);
+  return fps > 0 && fps < 60 ? 1000 / fps : 0;
+})();
+function vuWake() { if (!vuRaf && vuShown()) { vuT = 0; vuRaf = requestAnimationFrame(vuFrame); } }
 function vuFrame() {
   vuRaf = 0;
   if (!vuShown()) return;
-  var now = Date.now(), dt = Math.min(0.1, (now - (vuT || now)) / 1000);
+  var now = Date.now();
+  if (VU_FRAME_MS && vuT && now - vuT < VU_FRAME_MS - 4) { vuRaf = requestAnimationFrame(vuFrame); return; }
+  var dt = Math.min(0.1, (now - (vuT || now)) / 1000), moving = false;
   vuT = now;
   if (vuOpt === 'demo') vuDemo(now);
   var lag = vuLag();
   while (vuQueue.length && vuQueue[0].at + lag <= now) vuApply(vuQueue.shift().w, now);
   var silent = vuSilent();
-  vuMeters.forEach(function(m){
+  var seen = vuMeters.map(function(m){ return m.box.offsetParent !== null; });   /* read before any write: no extra layout */
+  vuMeters.forEach(function(m, mi){
     m.faces.forEach(function(f){
       if (silent) f.target = VU_REST;                           /* pause, stop: the needles sink slowly */
       vuStep(f, dt);
       if (f.x > VU_POS0) f.until = now + VU_LAMP_MS;           /* lamp: when the needle itself is past 0 VU */
-      f.needle.setAttribute('transform', 'rotate(' + vuDeg(f.x).toFixed(2) + ' ' + VU_CX + ' ' + VU_CY + ')');
-      f.lamp.setAttribute('class', 'vuLamp' + (f.until > now ? ' on' : ''));
+      if (Math.abs(f.v) > 0.002 || Math.abs(f.target - f.x) > 0.002 || f.until > now) moving = true;
+      if (vuStyle === 'digital' || !seen[mi]) return;          /* instruments hidden: nothing to draw */
+      var deg = vuDeg(f.x).toFixed(1), lamp = f.until > now;
+      if (deg !== f.shownDeg) { f.shownDeg = deg; f.needle.setAttribute('transform', 'rotate(' + deg + ' ' + VU_CX + ' ' + VU_CY + ')'); }
+      if (lamp !== f.shownLamp) { f.shownLamp = lamp; f.lamp.setAttribute('class', 'vuLamp' + (lamp ? ' on' : '')); }
     });
-    if (vuStyle === 'digital') vuDigiStep(m.digi, m.faces, dt, now);
+    if (vuStyle === 'digital' && seen[mi]) {
+      vuDigiStep(m.digi, m.faces, dt, now);
+      if (m.digi.lit.some(function(x){ return x >= 0; }) || m.digi.hl.some(function(x){ return x >= 0; })) moving = true;
+    }
   });
+  if (!moving && silent && !vuQueue.length && vuOpt !== 'demo') return;   /* at rest: vuWake() starts again */
   vuRaf = requestAnimationFrame(vuFrame);
 }
 
@@ -250,7 +269,7 @@ function vuUpdate() {
     vuSrc = new EventSource(TAGS + '/vu');
     vuSrc.onmessage = function(e){
       var w = String(e.data).split(',').map(Number);
-      if (w.length === 4) vuQueue.push({at: Date.now(), w: w});
+      if (w.length === 4) { vuQueue.push({at: Date.now(), w: w}); vuWake(); }
       if (vuQueue.length > 1200) vuQueue.splice(0, vuQueue.length - 1200);   /* 30 s, enough for a long stream buffer */
     };
   } else if (!want && vuSrc) { vuSrc.close(); vuSrc = null; vuQueue = []; }

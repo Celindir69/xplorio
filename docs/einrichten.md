@@ -1090,7 +1090,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
 - **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der
   Tag-Dienst startet dann die Rotel-Bridge (`rotel/rotel-bridge.js`, Port 8765) selbst und nach jeder Änderung neu;
   Eingangsnamen (`ROTEL_INPUTS`) und eigene Profile wie unter Volumio als eigene Zeilen in `config.local.js`.
-- **Oberfläche:** Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
+- **Oberfläche:** Effekte „Sparsam“ (`EFFECTS: 'lite'`: kein unscharfes Cover im Hintergrund, kein Milchglas, VU-Meter
+  mit 30 statt 60 Bildern pro Sekunde; spart auf älteren Macs viel Rechenleistung), Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
   weitere Adressen, VU-Meter (0 VU entspricht, Nadel, Verzögerung). Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.
 
 Ohne Volumio übernimmt Xplorio außerdem selbst:

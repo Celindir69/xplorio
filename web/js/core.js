@@ -125,6 +125,8 @@ player.on('state', function(st){
 /* Streaming services (streaming.js): enabled according to APP_CONFIG.TIDAL / QOBUZ, 'auto' by Volumio's sources.
    Until the answer arrives, only TIDAL is assumed present (so nothing hangs while loading). */
 var appCfg = window.APP_CONFIG || {};
+/* EFFECTS 'lite': no blurred cover behind everything and no frosted glass (base.css). Blur costs a lot on older Macs */
+if (appCfg.EFFECTS === 'lite') document.documentElement.classList.add('fxLite');
 var tidalOn = false;                                   /* shorthand for places that concern TIDAL only */
 function streamCap(s) { return s.id.charAt(0).toUpperCase() + s.id.slice(1); }
 function streamMpdSources() {
