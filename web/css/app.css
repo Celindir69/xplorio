@@ -877,6 +877,13 @@ html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { d
 /* hint: panes side by side ("other column") or one above the other ("other area") */
 .fmHintWide { display:none; }
 @container (min-width: 620px) { .fmHintWide { display:inline; } .fmHintNarrow { display:none; } }
+/* browsers without container queries (Safari before 16, e.g. macOS Big Sur): by window width instead */
+@supports not (container-type: inline-size) {
+  @media (min-width: 760px) {
+    .fmPanes { flex-direction:row; } .fmPane { flex:1 1 0; } .fmList { height:min(58vh, 640px); }
+    .fmHintWide { display:inline; } .fmHintNarrow { display:none; }
+  }
+}
 .fmBar .ckBtn:disabled { opacity:.4; cursor:default; }
 .fmBar .trDel { margin-left:auto; }
 .fmJob { margin-top:calc(2 * var(--vw)); padding:calc(2.5 * var(--vw)) calc(3.5 * var(--vw)); border-radius:calc(2 * var(--vw)); background:rgba(var(--fg-rgb),.07);
