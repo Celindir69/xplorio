@@ -108,7 +108,7 @@ ta('Bluetooth (with uid): no MPD output of its own, choosing it switches the Mac
   var mpd = fakeMpd(conf), set = [];
   var a = new ma.MacAudio({mpd: mpd, confFile: conf, devices: function(cb){ cb(null, JSON.stringify(BTU)); },
                            listDevices: function(cb){ cb(null, JSON.stringify(BTU)); },
-                           setDefault: function(uid, cb){ set.push(uid); BTU.devices.forEach(function(d){ d['default'] = d.uid === uid; }); cb(); },
+                           setDefault: function(uid, src, cb){ assert.strictEqual(src, null); set.push(uid); BTU.devices.forEach(function(d){ d['default'] = d.uid === uid; }); cb(); },
                            restart: function(cb){ mpd.sync(); cb(); }});
   a.scan(true, function(e){
     assert.ifError(e);
@@ -126,4 +126,43 @@ ta('Bluetooth (with uid): no MPD output of its own, choosing it switches the Mac
       });
     });
   });
+});
+
+ta('AirPlay: each speaker macOS found is an entry; choosing one picks it on the AirPlay device and plays on the system output', function(done){
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplorio-audio-')), conf = path.join(dir, 'mpd.conf');
+  var AP = {devices: [{name: 'AirPlay', transport: 'airplay', outputs: 2, uid: 'ap-1', 'default': false,
+                       sources: [{id: 101, name: 'Wohnzimmer', current: true}, {id: 102, name: 'Küche', current: false}, {id: 'x', name: 'bad'}]},
+                      {name: 'RME', transport: 'usb', outputs: 2, uid: 'usb-1', 'default': true}]};
+  fs.writeFileSync(conf, CONF);
+  var mpd = fakeMpd(conf), set = [];
+  var a = new ma.MacAudio({mpd: mpd, confFile: conf, devices: function(cb){ cb(null, JSON.stringify(AP)); },
+                           listDevices: function(cb){ cb(null, JSON.stringify(AP)); },
+                           setDefault: function(uid, src, cb){
+                             set.push(uid + '#' + src);
+                             AP.devices.forEach(function(d){ d['default'] = d.uid === uid; if (d.sources) d.sources.forEach(function(x){ x.current = x.id === src; }); });
+                             cb();
+                           },
+                           restart: function(cb){ mpd.sync(); cb(); }});
+  a.scan(false, function(e){
+    assert.ifError(e);
+    assert.deepStrictEqual(ma.blocks(fs.readFileSync(conf, 'utf8')).map(function(b){ return b.name; }), ['vu', ma.SYSTEM, 'RME']);
+    a.status(function(e2, st){
+      var ap = st.outputs.filter(function(o){ return o.airplay; });
+      assert.deepStrictEqual(ap.map(function(o){ return [o.id, o.name, o.enabled]; }), [['via:ap-1#101', 'Wohnzimmer', false], ['via:ap-1#102', 'Küche', false]]);
+      a.select('via:ap-1#102', function(e3){
+        assert.ifError(e3);
+        assert.deepStrictEqual(set, ['ap-1#102']);
+        a.status(function(e4, st4){
+          assert.deepStrictEqual(st4.outputs.filter(function(o){ return o.enabled; }).map(function(o){ return o.name; }), [ma.SYSTEM, 'Küche']);
+          done();
+        });
+      });
+    });
+  });
+});
+
+ta('AirPlay without speaker list (older helper or system_profiler): an MPD output of its own as before', function(done){
+  assert.ok(!ma.viaSystem({name: 'AirPlay', kind: 'airplay', uid: 'ap-1'}));
+  assert.ok(!ma.viaSystem({name: 'AirPlay', kind: 'airplay', uid: 'ap-1', sources: []}));
+  done();
 });
