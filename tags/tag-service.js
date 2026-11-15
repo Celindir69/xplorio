@@ -2236,14 +2236,32 @@ function doWarningsRead(body, cb) {
 var services = require('./services.js'), svc = new services.Services();
 var SELF_UNIT = 'xplorio-tags';                                 /* the plugin's unit of this service */
 var adminpass = require('./adminpass.js'), adminAuth = new adminpass.Auth(DATA_DIR);
-function doServices(query, cb) { svc.status(function(r){ r.pw = adminAuth.isSet(); cb(r.ok ? 200 : 500, r); }); }
+/* on the Mac (Xplorio.app) the program's own services instead (macservices.js); password only if one is set */
+var macservices = require('./macservices.js'), macSvc = null, TAGS_STARTED = Date.now();
+function onMac() { return process.platform === 'darwin' && playerIsMpd(); }
+function services() {
+  if (!onMac()) return svc;
+  if (!macSvc) macSvc = new macservices.MacServices({
+    mpdPort: MPD_PORT, webPort: parseInt(process.env.XPLORIO_WEB_PORT, 10) || 4040, tagsStarted: TAGS_STARTED,
+    runDir: process.env.XPLORIO_RUN || '', script: path.join(__dirname, '..', 'mac', 'xplorio-services.sh'),
+    mpdRestart: function(cb){ macAudio.o.restart(cb); },
+    rotel: {on: function(){ return rotelWanted(); }, since: function(){ return rotelSince; }, restart: function(){ rotelKey = ''; rotelSync(); }}
+  });
+  return macSvc;
+}
+function doServices(query, cb) { services().status(function(r){ r.pw = adminAuth.isSet(); cb(r.ok ? 200 : 500, r); }); }
 function doService(body, cb) {
+  if (onMac()) {
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+    return services().act(String(body.unit || ''), String(body.action || ''), SELF_UNIT, cb);
+  }
   if (!adminAuth.isSet()) return cb(200, {ok: false, error: 'unset'});
   if (!adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   svc.act(String(body.unit || ''), String(body.action || ''), SELF_UNIT, cb);
 }
 /* POST /power {action: reboot|poweroff, token}: password only if one is set (Volumio itself never asks) */
 function doPower(body, cb) {
+  if (onMac()) return cb(400, {ok: false, error: 'not allowed'});   /* the Mac is not switched off from here */
   if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
   svc.power(String(body.action || ''), cb);
 }
@@ -2949,7 +2967,8 @@ function doMac(req, res, route) {
    APP_CONFIG.ROTEL is on and ROTEL_HOST is set, and starts it again when its settings change (it reads them at the start).
    xplorio-services.sh stop ends it together with the tag service. */
 var ROTEL_SCRIPT = path.join(__dirname, '..', 'rotel', 'rotel-bridge.js');
-var rotelChild = null, rotelKey = '', rotelTimer = null;
+var rotelChild = null, rotelKey = '', rotelTimer = null, rotelSince = null;
+function rotelWanted() { var c = appConfig(); return process.env.XPLORIO_ROTEL === 'manage' && c.ROTEL === true && !!c.ROTEL_HOST; }
 function rotelSync() {
   if (process.env.XPLORIO_ROTEL !== 'manage') return;
   var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
@@ -2958,7 +2977,7 @@ function rotelSync() {
   rotelKey = key;
   clearTimeout(rotelTimer);
   var old = rotelChild;
-  rotelChild = null;
+  rotelChild = null; rotelSince = null;
   if (old) { try { old.kill('SIGTERM'); } catch (e) { /* gone */ } }
   if (!want) return;
   rotelTimer = setTimeout(function(){                      /* the old one frees the port first */
@@ -2967,10 +2986,11 @@ function rotelSync() {
     env.APP_CONFIG_DIR = APP_CONFIG_DIR; env.HTTP_PORT = String(c.ROTEL_PORT || 8765);
     delete env.ROTEL_HOST; delete env.ROTEL_PORT; delete env.ROTEL_MODEL;
     var ch = rotelChild = cp.spawn(process.execPath, [ROTEL_SCRIPT], {env: env, stdio: ['ignore', 'inherit', 'inherit']});
+    rotelSince = Date.now();
     console.error('Rotel bridge started (' + c.ROTEL_HOST + ')');
     ch.on('exit', function(code){
       if (rotelChild !== ch) return;                       /* stopped here */
-      rotelChild = null; rotelKey = '';
+      rotelChild = null; rotelKey = ''; rotelSince = null;
       console.error('Rotel bridge ended (' + code + '), starting again in 10 s');
       rotelTimer = setTimeout(rotelSync, 10000);
     });

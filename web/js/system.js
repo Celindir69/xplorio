@@ -374,14 +374,14 @@ function sysPaintSvc() {
     var btns = histEl('div', 'sySvcBtns'), on = u.active === 'active' || u.active === 'activating';
     ['restart'].forEach(function(a){
       var label = a === 'restart' && !on ? T('sys.svc.do.start') : T('sys.svc.do.' + a);
-      var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || !sysSvc.pw ? ' off' : ''), label);
+      var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || (!sysSvc.pw && !sysSvc.mac) ? ' off' : ''), label);
       b.addEventListener('click', function(){ sysSvcAct(u, a); });
       btns.appendChild(b);
     });
     row.appendChild(btns);
     e.svc.appendChild(row);
   });
-  /* the whole player: restart and power off (with password only if one is set) */
+  /* the whole player: restart and power off (with password only if one is set); not on the Mac (Xplorio.app) */
   var pr = histEl('div', 'sySvc sySvcPlayer'), pb = sysSvcBusy.player;
   pr.appendChild(histEl('span', 'sySvcDot ' + (pb ? 'busy' : 'on')));
   var pt = histEl('div', 'sySvcText');
@@ -395,8 +395,8 @@ function sysPaintSvc() {
     pbs.appendChild(b);
   });
   pr.appendChild(pbs);
-  e.svc.appendChild(pr);
-  var note = sysSvcMsg || [sysSvc.pw ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
+  if (!sysSvc.mac) e.svc.appendChild(pr);
+  var note = sysSvcMsg || [sysSvc.pw || sysSvc.mac ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
   e.svcNote.textContent = note;
   e.svcNote.className = 'syNote' + (note ? ' syWarn' : '');
   e.svcLogin.style.display = sysSvcPending ? '' : 'none';
@@ -462,7 +462,7 @@ function sysSvcAct(u, action) {
 }
 function sysSvcRun(u, action) {
   var token = sysSvcToken() || sysSvcMem, player = u.id === 'player';
-  if (!token && (!player || sysSvc.pw)) return sysSvcAskLogin(u, action);
+  if (!token && (sysSvc.pw || (!player && !sysSvc.mac))) return sysSvcAskLogin(u, action);   /* Mac: password only if one is set */
   var seq = sysSeq;
   sysSvcBusy[u.id] = player ? action : true; sysSvcMsg = '';
   sysPaintSvc();

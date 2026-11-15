@@ -1107,6 +1107,8 @@ Ohne Volumio übernimmt Xplorio außerdem selbst:
   gleich wiederholt, Ausschluss-Wörter (Titel oder Album) und eine Höchstlänge. Bei Wiederholen pausiert er.
 - **VU-Meter:** `make-app.sh` trägt den Fifo-Ausgang „VU“ (`44100:16:2`, aus) in `mpd.conf` ein; der Tag-Dienst schaltet
   ihn nur ein, solange jemand die Zeiger sieht. Danach startet MPD einmal neu.
+- **System-Seite:** MPD, Tag-Dienst, Webserver und (wenn eingeschaltet) die Rotel-Bridge mit „Neu starten“; Passwort
+  nur, wenn eines gesetzt ist. Kein Neustart oder Ausschalten des Macs.
 - **TIDAL:** mit dem eigenen TIDAL-Konto (Karte „TIDAL“ in den Einstellungen: **Bei TIDAL anmelden** zeigt einen Code,
   den man unter link.tidal.com bestätigt; kein Passwort in Xplorio). Danach liefert die Suche TIDAL-Treffer, Künstler-
   und Albumseiten, und Abspielen legt die Titel in MPDs Warteschlange. Die Bausteine stammen aus Michal Tamas'
