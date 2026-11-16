@@ -2976,6 +2976,8 @@ function doMac(req, res, route) {
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route === '/mac/rsgain') return doMacRsgain(req, res);
   if (route === '/mac/import') return doMacImport(req, res);
+  if (route === '/mac/backup') return doMacBackup(req, res);
+  if (route === '/mac/update') return doMacUpdate(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') {
     var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet();
@@ -3090,6 +3092,80 @@ function doMacImport(req, res) {
   });
 }
 process.on('exit', function(){ if (rgRun) rgRun.stop(); });
+
+/* backup of Xplorio's own data (macbackup.js): GET /mac/backup = state; POST {action: 'start'}, {target}, {nightly}.
+   Settings folder: XPLORIO_SUPPORT (xplorio-services.sh), else the folder of XPLORIO_RUN */
+var os = require('os'), macbackup = require('./macbackup.js'), macupdate = require('./macupdate.js'), macBak = null, macUpd = null;
+function macSupport() {
+  return process.env.XPLORIO_SUPPORT || (process.env.XPLORIO_RUN ? path.dirname(process.env.XPLORIO_RUN) : path.join(os.homedir(), 'Library', 'Application Support', 'Xplorio'));
+}
+function macBackup() {
+  if (macBak) return macBak;
+  var sup = macSupport(), settings = [{from: path.join(sup, 'xplorio.conf'), as: 'einstellungen/xplorio.conf'},
+                                      {from: path.join(sup, 'config.local.js'), as: 'einstellungen/config.local.js'}];
+  if (MAC_MPD_CONF) {
+    settings.push({from: MAC_MPD_CONF, as: 'einstellungen/mpd.conf'});
+    var pl = '';
+    try { pl = (fs.readFileSync(MAC_MPD_CONF, 'utf8').match(/^\s*playlist_directory\s+"([^"]+)"/m) || [])[1] || ''; } catch (e) { /* none */ }
+    if (pl) settings.push({from: pl, as: 'einstellungen/playlists'});
+  }
+  macBak = new macbackup.Backup({dataDir: DATA_DIR, settings: settings, stateFile: path.join(DATA_DIR, 'backup-run.json'),
+                                 log: function(t){ console.error(t); }});
+  return macBak;
+}
+function macBody(req, res, cb) {
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    cb(body);
+  });
+}
+function doMacBackup(req, res) {
+  if (!onMac()) return send(res, 200, {ok: false, available: false});
+  function state(extra) { var st = macBackup().status(); st.available = true; if (extra) Object.keys(extra).forEach(function(k){ st[k] = extra[k]; }); send(res, 200, st); }
+  if (req.method === 'GET') return state();
+  macBody(req, res, function(body){
+    var b = macBackup();
+    if (!body.action && body.nightly === undefined && body.target === undefined) return state();
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (body.target !== undefined) { var e = b.setTarget(String(body.target).slice(0, 1000)); return state(e ? {setError: e} : {done: 'target'}); }
+    if (body.nightly !== undefined) { b.setNightly(!!body.nightly); return state({done: 'nightly'}); }
+    if (body.action === 'start') return b.start(function(e2){ state(e2 ? {startError: e2} : {done: 'start'}); });
+    send(res, 400, {ok: false, error: 'unknown action'});
+  });
+}
+setInterval(function(){ if (onMac()) macBackup().tick(); }, 5 * 60 * 1000).unref();
+
+/* updating Xplorio (macupdate.js, tools/mac/xplorio-update.sh): GET /mac/update = installed and newest version;
+   POST {action: 'check'} asks GitHub again, {action: 'install'} starts the update (Xplorio quits and starts again) */
+function macUpdater() {
+  if (!macUpd) {
+    var a = [path.join(__dirname, '..', 'mac', 'xplorio-update.sh'), path.join(__dirname, '..', 'tools', 'mac', 'xplorio-update.sh')];
+    macUpd = new macupdate.Updater({repo: process.env.XPLORIO_REPO || 'Celindir69/xplorio',
+      branch: function(){ return process.env.XPLORIO_UPDATE_BRANCH || ''; },
+      stateFile: path.join(macSupport(), 'update.json'), script: fs.existsSync(a[0]) ? a[0] : a[1],
+      logFile: path.join(os.homedir(), 'Library', 'Logs', 'Xplorio', 'update.log'), env: {XPLORIO_SUPPORT: macSupport()}});
+  }
+  return macUpd;
+}
+function doMacUpdate(req, res) {
+  if (!onMac()) return send(res, 200, {ok: false, available: false});
+  function state(force, extra) {
+    macUpdater().status(force, function(st){ st.available = true; if (extra) Object.keys(extra).forEach(function(k){ st[k] = extra[k]; }); send(res, 200, st); });
+  }
+  if (req.method === 'GET') return state(false);
+  macBody(req, res, function(body){
+    if (body.action === 'check') return state(true, {done: 'check'});
+    if (body.action !== 'install') return state(false);
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if ((essRun && essRun.child) || (rgRun && rgRun.running()) || (musicImp && musicImp.running()) || (macBak && macBak.running()))
+      return state(false, {startError: 'busy'});
+    macUpdater().install(function(e){ state(false, e ? {startError: e} : {done: 'install'}); });
+  });
+}
 function doMacAnalysis(req, res) {
   if (!onMac()) return send(res, 200, {ok: false, available: false});
   function state(extra, force) {

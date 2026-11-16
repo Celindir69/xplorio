@@ -830,6 +830,17 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   tags) with low priority, optionally every night at 2 am (the audio analysis then starts from 3 am, once rsgain is
   done). Needs rsgain (`brew install rsgain`) and write access to the music. The files rsgain changes are taken over by
   the audio analysis with their new size and time, without analysing them again; MPD then reads the library.
+- **Backup:** copies Xplorio's own data (data folder with analysis, history, ratings, smart playlists, check results)
+  and the settings (`xplorio.conf`, `config.local.js`, `mpd.conf`, MPD's playlists) to
+  `<target folder>/Xplorio-Sicherung/<date>`, with a button or every night at 1 am. Unchanged files are hard links to the
+  previous backup, yet each one is complete; the last 7 are kept. Caches (artist photos, radio covers, TIDAL cache,
+  track lists) and sign-ins (`tidal.json`, `lastfm.json`, `keys.json`, `admin.json`) are left out. To restore: quit
+  Xplorio, copy `daten/` of a backup into the data folder (`TAGS_DATA` in `xplorio.conf`), start Xplorio and sign in to
+  TIDAL and Last.fm again.
+- **Update Xplorio:** shows the installed version (commit, from `update.json` in the settings folder) and the newest
+  commit of the branch on GitHub. "Update now" runs `xplorio-update.sh` (inside the app): downloads the zip, quits
+  Xplorio, rebuilds the app and starts it again. The log is in `~/Library/Logs/Xplorio/update.log`; if something fails,
+  the previous version starts again. Another branch: `XPLORIO_UPDATE_BRANCH` in the tag service's environment.
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
 - **Password:** for the services on the "System" page and the file manager (which only works with a password).
   Changing it needs the current one; a new one logs out all other devices.

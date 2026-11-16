@@ -221,4 +221,4 @@ Import.prototype.check = function(dest, mpdPath, cb) {
   });
 };
 
-module.exports = {Import: Import, checkTags: checkTags, list: list};
+module.exports = {Import: Import, checkTags: checkTags, list: list, removeTree: removeTree};

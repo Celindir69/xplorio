@@ -118,6 +118,7 @@ cp -R "$SRC/web" "$SRC/server" "$SRC/tags" "$SRC/rotel" "$R/"
 rm -f "$R/web/config.local.js"
 ln -s "$CL" "$R/web/config.local.js"
 cp "$SRC/tools/mac/xplorio-services.sh" "$R/mac/"
+cp "$SRC/tools/mac/xplorio-update.sh" "$R/mac/"      # update from the settings page
 mkdir -p "$R/essentia"
 cp "$SRC/tools/essentia/analyse.py" "$R/essentia/"   # audio analysis (settings page; needs Python with Essentia)
 chmod +x "$R/mac/xplorio-services.sh"

@@ -12,6 +12,8 @@ var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
 var msRg = null, msRgMsg = '', msRgBad = false, msRgTimer = null;
 var msImpWasRunning = false;
+var msBak = null, msBakMsg = '', msBakBad = false, msBakTimer = null, msBakEdit = null;
+var msUpd = null, msUpdMsg = '', msUpdBad = false;
 var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs', 'short', 'locked'];
@@ -38,6 +40,10 @@ function openMacSettings() {
   msRgSend({});
   msImp = null; msImpForm = null; msImpMsg = ''; msImpBad = false;
   msImpSend({});
+  msBak = null; msBakMsg = ''; msBakBad = false; msBakEdit = null;
+  msBakSend({});
+  msUpd = null; msUpdMsg = ''; msUpdBad = false;
+  msUpdSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -161,7 +167,9 @@ function msRender() {
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
   grid.appendChild(msRotelCard(d));
+  if (msBak && msBak.available) grid.appendChild(msBakCard());
   grid.appendChild(msPwCard(d));
+  if (msUpd && msUpd.available) grid.appendChild(msUpdCard());
   grid.appendChild(msUiCard(d));
 }
 
@@ -455,6 +463,101 @@ function msRgCard() {
     c.appendChild(nr);
   }
   if (msRgMsg) c.appendChild(histEl('div', 'syNote' + (msRgBad ? ' syWarn' : ''), msRgMsg));
+  return c;
+}
+/* ---------- backup of Xplorio's own data (POST /mac/backup, tags/macbackup.js): {} = state, {target}, {nightly}, {action: start} ---------- */
+var MS_BAK_ERRORS = {unset: 'mac.bakErrUnset', target: 'mac.bakErrTarget', missing: 'mac.bakErrTarget', write: 'mac.bakErrWrite',
+                     inside: 'mac.bakErrInside', running: 'mac.bakRunning', fs: 'mac.err.fs'};
+function msBakSend(body, okText) {
+  var seq = msSeq;
+  if (Object.keys(body).length) body.token = msToken();
+  clearTimeout(msBakTimer);
+  tagPostJson('/mac/backup', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.ok) {
+      var was = msBak && msBak.running, err = r.startError || r.setError;
+      msBak = r; msBakBad = !!err;
+      if (r.setError === undefined && body.target !== undefined) msBakEdit = null;
+      msBakMsg = err ? T(MS_BAK_ERRORS[err] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T(r.lastError ? 'mac.bakFailed' : 'mac.bakDone') : msBakMsg;
+      if (r.running) msBakTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msBakSend({}); }, 3000);
+    } else if (r && r.available === false) msBak = r;
+    else { msBakBad = true; msBakMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msBakBad = true; msBakMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msBakCard() {
+  var c = sysCard(T('mac.bak'), 'syWide'), a = msBak, p = a.progress || {};
+  c.appendChild(histEl('div', 'syNote', T('mac.bakNote')));
+  var kv = histEl('div', 'syKv');
+  kv.appendChild(histEl('span', 'syK', T('mac.essState')));
+  kv.appendChild(histEl('span', 'syV', a.running ? (p.phase === 'copying' ? T('mac.bakCopying', {n: p.done, m: p.total}) : T('mac.bakListing'))
+    : a.lastEnd ? (a.lastError ? T('mac.bakLastErr', {date: langDate(a.lastEnd)})
+                               : T('mac.bakLast', {date: langDate(a.lastEnd), n: a.lastFiles || 0, size: msSize(a.lastBytes || 0), k: a.lastCopied || 0}))
+    : T('mac.anaNever')));
+  c.appendChild(kv);
+  if (a.target && a.backups) {
+    var kv2 = histEl('div', 'syKv');
+    kv2.appendChild(histEl('span', 'syK', T('mac.bakWhere')));
+    kv2.appendChild(histEl('span', 'syV', a.folder + ' · ' + T('mac.bakCount', {n: a.backups.length})));
+    c.appendChild(kv2);
+  }
+  c.appendChild(histEl('div', 'syK msLabel', T('mac.bakTarget')));
+  var inp = msInput(msBakEdit !== null ? msBakEdit : a.target, '/Volumes/…');
+  inp.addEventListener('input', function(){ msBakEdit = inp.value; });
+  var r1 = histEl('div', 'pbRow msAddRow');
+  r1.appendChild(inp);
+  if (msCanChoose()) r1.appendChild(msButton(T('mac.choose'), function(){ msChoose('folder', function(pth){ msBakEdit = pth; msRender(); }); }));
+  r1.appendChild(msButton(T('mac.bakSave'), function(){ msBakSend({target: inp.value}, 'mac.tidalSaved'); }));
+  c.appendChild(r1);
+  if (a.target && !a.targetOk) c.appendChild(histEl('div', 'syNote syWarn', T('mac.bakErrTarget')));
+  var row = histEl('div', 'pbRow msAddRow');
+  if (!a.running && a.target) row.appendChild(msButton(T('mac.bakStart'), function(){ msBakSend({action: 'start'}, 'mac.bakStarted'); }, 'on'));
+  c.appendChild(row);
+  var nr = histEl('div', 'msSetRow');
+  nr.appendChild(histEl('div', 'msSetLabel', T('mac.bakNightly')));
+  nr.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.nightly, function(v){ msBakSend({nightly: v}, 'mac.tidalSaved'); }));
+  c.appendChild(nr);
+  c.appendChild(histEl('div', 'syNote', T('mac.bakRestore')));
+  if (msBakMsg) c.appendChild(histEl('div', 'syNote' + (msBakBad ? ' syWarn' : ''), msBakMsg));
+  return c;
+}
+
+/* ---------- updating Xplorio (POST /mac/update, tags/macupdate.js): {} = state, {action: check|install} ---------- */
+var MS_UPD_ERRORS = {busy: 'mac.updBusy', running: 'mac.updRunning', script: 'mac.updErrScript', fs: 'mac.err.fs', start: 'mac.err.fs'};
+function msUpdSend(body, okText) {
+  var seq = msSeq;
+  if (body.action === 'install') body.token = msToken();
+  if (body.action === 'check') { msUpdMsg = T('mac.updChecking'); msUpdBad = false; if (msData) msRender(); }
+  tagPostJson('/mac/update', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.ok) {
+      msUpd = r; msUpdBad = !!r.startError;
+      msUpdMsg = r.startError ? T(MS_UPD_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
+    } else if (r && r.available === false) msUpd = r;
+    else { msUpdBad = true; msUpdMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msUpdBad = true; msUpdMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msUpdCard() {
+  var c = sysCard(T('mac.upd'), 'syWide'), a = msUpd, inst = a.installed || {}, l = a.latest || {};
+  function short(sha) { return String(sha || '').slice(0, 7); }
+  function kv(k, v) { var e = histEl('div', 'syKv'); e.appendChild(histEl('span', 'syK', k)); e.appendChild(histEl('span', 'syV', v)); c.appendChild(e); }
+  kv(T('mac.updBranch'), a.branch);
+  kv(T('mac.updInstalled'), inst.sha ? short(inst.sha) + (inst.at ? ' · ' + langDate(Date.parse(inst.at)) : '') : T('mac.updUnknown'));
+  kv(T('mac.updLatest'), l.sha ? short(l.sha) + (l.date ? ' · ' + langDate(Date.parse(l.date)) : '') + (l.message ? ' · ' + l.message : '') : T('mac.updNoNet'));
+  if (inst.ok === false) {
+    c.appendChild(histEl('div', 'syNote syWarn', T('mac.updFailed', {step: inst.error || '?'})));
+    if (a.log && a.log.length) c.appendChild(histEl('pre', 'msCode', a.log.join('\n')));
+  }
+  if (a.running) c.appendChild(histEl('div', 'syNote', T('mac.updStarted')));
+  else if (l.sha) c.appendChild(histEl('div', 'syNote', T(a.newer ? (inst.sha ? 'mac.updNewer' : 'mac.updFirst') : 'mac.updCurrent')));
+  var row = histEl('div', 'pbRow msAddRow');
+  if (!a.running && a.script) row.appendChild(msButton(T(a.newer || !l.sha ? 'mac.updInstall' : 'mac.updAgain'), function(){
+    if (confirm(T('mac.updAsk'))) msUpdSend({action: 'install'}, 'mac.updStarted');
+  }, a.newer ? 'on' : ''));
+  row.appendChild(msButton(T('mac.updCheck'), function(){ msUpdSend({action: 'check'}); }));
+  c.appendChild(row);
+  if (msUpdMsg) c.appendChild(histEl('div', 'syNote' + (msUpdBad ? ' syWarn' : ''), msUpdMsg));
   return c;
 }
 function msUpload(f) {

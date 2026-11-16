@@ -31,7 +31,7 @@ function conf(e) {
 }
 
 t('scripts are valid bash', function(){
-  ['make-app.sh', 'xplorio-services.sh'].forEach(function(f){
+  ['make-app.sh', 'xplorio-services.sh', 'xplorio-update.sh'].forEach(function(f){
     assert.strictEqual(cp.spawnSync('bash', ['-n', path.join(ROOT, 'tools', 'mac', f)]).status, 0, f);
   });
 });
@@ -50,7 +50,7 @@ t('new setup: music folder as USB, MPD settings, program with the interface and 
   var app = path.join(e.XPLORIO_APPS, 'Xplorio.app', 'Contents');
   assert.ok(/<key>CFBundleExecutable<\/key><string>Xplorio<\/string>/.test(fs.readFileSync(path.join(app, 'Info.plist'), 'utf8')));
   assert.ok(fs.existsSync(path.join(app, 'MacOS', 'Xplorio')));
-  ['xplorio.html', 'web/js/player.js', 'tags/mpdplayer.js', 'server/xplorio-server.js', 'mac/xplorio-services.sh', 'rotel/rotel-bridge.js', 'essentia/analyse.py'].forEach(function(f){
+  ['xplorio.html', 'web/js/player.js', 'tags/mpdplayer.js', 'server/xplorio-server.js', 'mac/xplorio-services.sh', 'mac/xplorio-update.sh', 'rotel/rotel-bridge.js', 'essentia/analyse.py'].forEach(function(f){
     assert.ok(fs.existsSync(path.join(app, 'Resources', 'xplorio', f)), f);
   });
   assert.ok(/PLAYER = 'mpd'/.test(fs.readFileSync(path.join(app, 'Resources', 'xplorio', 'web', 'config.local.js'), 'utf8')));
