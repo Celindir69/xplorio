@@ -8,7 +8,7 @@ var n = 0, pending = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
 function ta(name, fn) { pending++; fn(function(){ n++; console.log('ok   ' + name); if (!--pending) console.log(n + ' tests passed'); }); }
 
-var NOW = Date.parse('2026-11-14T12:00:00Z') / 1000;
+var NOW = Math.floor(Date.now() / 1000);   /* the REST test runs the rules with the real clock, so the dates follow it  */
 function iso(daysAgo) { return new Date((NOW - daysAgo * 86400) * 1000).toISOString(); }
 var DB = [
   {file: 'USB/DM/Violator/01.flac', AlbumArtist: 'Depeche Mode', Artist: 'Depeche Mode', Title: 'World in My Eyes', Album: 'Violator', Genre: 'Synthpop', Date: '1990-03-19', Track: '1', duration: '266.1', 'Last-Modified': iso(400)},
