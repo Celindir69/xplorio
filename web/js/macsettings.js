@@ -103,18 +103,20 @@ function msAudioCard() {
         Object.keys(change || {}).forEach(function(k){ b[k] = change[k]; });
         msAudioSend(b, 'mac.audioScanned');
       };
-      var sw = function(label, key, note, ask){
+      /* inverted: the switch shows the opposite of the setting (software volume on = fixedVolume off); ask before setting it */
+      var sw = function(label, key, note, ask, inverted){
         var r = histEl('div', 'msSetRow');
         r.appendChild(histEl('div', 'msSetLabel', T(label)));
-        r.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a[key], function(v){
-          if (v && ask && !confirm(T(ask))) return;
-          var ch = {}; ch[key] = v; scan(ch);
+        r.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], inverted ? !a[key] : !!a[key], function(v){
+          var val = inverted ? !v : v;
+          if (val && ask && !confirm(T(ask))) return;
+          var ch = {}; ch[key] = val; scan(ch);
         }));
         c.appendChild(r);
         c.appendChild(histEl('div', 'syNote', T(note)));
       };
       sw('mac.audioExclusive', 'exclusive', 'mac.audioExclusiveNote');
-      sw('mac.audioFixed', 'fixedVolume', 'mac.audioFixedNote', 'mac.audioFixedAsk');
+      sw('mac.audioFixed', 'fixedVolume', 'mac.audioFixedNote', 'mac.audioFixedAsk', true);
       sw('mac.audioDop', 'dop', 'mac.audioDopNote', 'mac.audioDopAsk');
       var row = histEl('div', 'pbRow msAddRow');
       row.appendChild(msButton(T('mac.audioScan'), function(){ scan({}); }, 'on'));
