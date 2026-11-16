@@ -171,6 +171,18 @@ function msMusicCard(d) {
     c.appendChild(kv);
     if (lb.updated) c.appendChild(histEl('div', 'msItemSub', T('mac.libraryUpdated', {date: langDate(lb.updated)})));
   }
+  if (d.library) {
+    var lr = histEl('div', 'pbRow msAddRow');
+    if (d.library.updating) lr.appendChild(histEl('div', 'syNote', T('mac.libraryScanning')));
+    else {
+      lr.appendChild(msButton(T('mac.libraryScan'), function(){ msSend({action: 'libraryScan'}, T('mac.libraryScanStarted'), msLibraryWatch); }, 'on'));
+      lr.appendChild(msButton(T('mac.libraryRescan'), function(){
+        if (confirm(T('mac.libraryRescanAsk'))) msSend({action: 'libraryScan', full: true}, T('mac.libraryScanStarted'), msLibraryWatch);
+      }));
+    }
+    c.appendChild(lr);
+    if (d.library.updating) msLibraryWatch();
+  }
   d.music.forEach(function(m){
     var row = histEl('div', 'msItem');
     var tx = histEl('div', 'msItemText');
@@ -197,6 +209,23 @@ function msMusicCard(d) {
   c.appendChild(row);
   c.appendChild(histEl('div', 'syNote', T('mac.musicScan')));
   return c;
+}
+
+/* while MPD reads the library: ask again every 5 s, then show the new numbers */
+var msLibTimer = null;
+function msLibraryWatch() {
+  var seq = msSeq;
+  clearTimeout(msLibTimer);
+  msLibTimer = setTimeout(function(){
+    if (seq !== msSeq || !overlayMacSettings.classList.contains('on')) return;
+    tagGetJson('/mac/settings').then(function(r){
+      if (seq !== msSeq || !r || !r.ok) return;
+      var was = msData && msData.library && msData.library.updating;
+      msData.library = r.library;
+      if (r.library && r.library.updating) { if (!was) msRender(); return msLibraryWatch(); }
+      msMsg = T('mac.libraryScanDone'); msMsgBad = false; msRender();
+    }).catch(function(){});
+  }, 5000);
 }
 
 /* ---------- audio analysis ---------- */

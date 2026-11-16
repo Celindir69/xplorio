@@ -2959,6 +2959,17 @@ function doMacPassword(body, cb) {
   });
 }
 
+/* library info like Volumio's (MPD stats) and whether MPD is reading it right now */
+function macLibrary(cb) {
+  var mc = {host: MPD_HOST, port: MPD_PORT};
+  libcheck.mpdCommand(mc, 'stats', function(err, st){
+    if (err || !st) return cb(null);
+    var lib = {artists: +st.artists || 0, albums: +st.albums || 0, songs: +st.songs || 0,
+               playtime: +st.db_playtime || 0, updated: (+st.db_update || 0) * 1000};
+    libcheck.mpdCommand(mc, 'status', function(e2, s2){ lib.updating = !e2 && !!(s2 && s2.updating_db); cb(lib); });
+  });
+}
+
 function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
@@ -2966,11 +2977,7 @@ function doMac(req, res, route) {
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') {
     var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet();
-    return libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'stats', function(err, st){   /* library info like Volumio's */
-      if (!err && st) rd.library = {artists: +st.artists || 0, albums: +st.albums || 0, songs: +st.songs || 0,
-                                    playtime: +st.db_playtime || 0, updated: (+st.db_update || 0) * 1000};
-      send(res, 200, rd);
-    });
+    return macLibrary(function(lib){ rd.library = lib; send(res, 200, rd); });
   }
   if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '';
@@ -2982,6 +2989,13 @@ function doMac(req, res, route) {
     if (body.action === 'password') return doMacPassword(body, function(c, o){ send(res, c, o); });
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
     if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
+    if (body.action === 'libraryScan') {                 /* "Update library": new and changed files; full: read everything again */
+      return mpdPlayer.mpd([body.full ? 'rescan' : 'update'], function(e){
+        if (e) return send(res, 200, {ok: false, error: 'fs'});
+        var o = macSettings.read(appConfig()); o.pw = adminAuth.isSet(); o.done = 'libraryScan';
+        setTimeout(function(){ macLibrary(function(lib){ o.library = lib; send(res, 200, o); }); }, 300);
+      });
+    }
     macSettings.command(body, appConfig(), function(c, o){
       if (o && o.ok && o.done === 'essentiaLink') audioStore.reload(true);
       if (o && o.ok && o.done === 'settings') { appConfigCache = null; extraHostsAt = 0; rotelSync(); }
