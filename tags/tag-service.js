@@ -2975,6 +2975,7 @@ function doMac(req, res, route) {
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route === '/mac/rsgain') return doMacRsgain(req, res);
+  if (route === '/mac/import') return doMacImport(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') {
     var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet();
@@ -3021,7 +3022,7 @@ function essRunner() {
   if (!essRun) essRun = new essentiarun.Runner({
     script: essScript(), out: essOut, roots: function(){ return [MUSIC_ROOT]; }, stateFile: path.join(DATA_DIR, 'essentia-run.json'),
     log: function(t){ console.error(t); }, onDone: function(){ audioStore.reload(true); },
-    busy: function(){ return !!(rgRun && rgRun.running()); }
+    busy: function(){ return !!(rgRun && rgRun.running()) || !!(musicImp && musicImp.running()); }
   });
   return essRun;
 }
@@ -3032,7 +3033,7 @@ function rgRunner() {
   if (!rgRun) rgRun = new rsgainrun.Runner({
     dirs: function(){ return macSettings.music().filter(function(m){ return !m.missing; }).map(function(m){ return m.target; }); },
     walkRoot: function(){ return path.resolve(MUSIC_ROOT); }, essentia: essOut, stateFile: path.join(DATA_DIR, 'rsgain-run.json'),
-    busy: function(){ return !!(essRun && essRun.child); }, log: function(t){ console.error(t); },
+    busy: function(){ return !!(essRun && essRun.child) || !!(musicImp && musicImp.running()); }, log: function(t){ console.error(t); },
     onDone: function(n){ audioStore.reload(true); if (n) mpdPlayer.mpd(['update'], function(){}); }
   });
   return rgRun;
@@ -3057,6 +3058,37 @@ function doMacRsgain(req, res) {
   });
 }
 setInterval(function(){ if (onMac()) rgRunner().tick(); }, 5 * 60 * 1000).unref();
+
+/* importing new music (musicimport.js): GET /mac/import = state of the current or last import;
+   POST {action: 'start', source, rel (a music folder from the settings page), move, rsgain, analysis} */
+var musicimport = require('./musicimport.js'), musicImp = null;
+function musicImport() {
+  if (!musicImp) musicImp = new musicimport.Import({musicRoot: path.resolve(MUSIC_ROOT), mpd: mpdPlayer.mpd, rsgain: rgRunner(), analysis: essRunner(),
+    log: function(t){ console.error(t); }, onDone: function(){ audioStore.reload(true); albumChecked = 0; }});
+  return musicImp;
+}
+function doMacImport(req, res) {
+  if (!onMac()) return send(res, 200, {ok: false, available: false});
+  if (req.method === 'GET') return send(res, 200, musicImport().status());
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    if (body.action !== 'start') return send(res, 200, musicImport().status());
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    var m = macSettings.music().filter(function(x){ return x.rel === String(body.rel) && !x.missing; })[0];
+    if (!m) return send(res, 200, {ok: false, error: 'target'});
+    if ((essRun && essRun.child) || (rgRun && rgRun.running())) return send(res, 200, {ok: false, error: 'busy'});
+    musicImport().start({source: String(body.source || ''), rel: m.rel, target: m.target, move: !!body.move,
+                         rsgain: !!body.rsgain, analysis: !!body.analysis}, function(e){
+      var st = musicImport().status();
+      if (e) { st.ok = false; st.error = e; }
+      send(res, 200, st);
+    });
+  });
+}
 process.on('exit', function(){ if (rgRun) rgRun.stop(); });
 function doMacAnalysis(req, res) {
   if (!onMac()) return send(res, 200, {ok: false, available: false});

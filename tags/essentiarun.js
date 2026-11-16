@@ -91,16 +91,17 @@ Runner.prototype.status = function(cb, force) {
   });
 };
 
-/* start a run -> cb(error code or null) */
-Runner.prototype.start = function(cb) {
+/* start a run -> cb(error code or null); run: {roots (only these folders, e.g. an import), done(progress) once it ends} */
+Runner.prototype.start = function(cb, run) {
   var self = this;
+  run = run || {};
   if (this.child) return cb('running');
   if (!fs.existsSync(this.o.script)) return cb('script');
-  if (this.o.busy && this.o.busy()) return cb('busy');        /* ReplayGain tags are being written */
+  if (!run.own && this.o.busy && this.o.busy()) return cb('busy');   /* ReplayGain tags are being written (own: by the import itself) */
   this.python(false, function(py){
     if (!py) return cb('python');
     if (self.child) return cb('running');
-    var out = self.o.out(), roots = self.o.roots().filter(function(r){ return fs.existsSync(r); });
+    var out = self.o.out(), roots = (run.roots || self.o.roots()).filter(function(r){ return fs.existsSync(r); });
     if (!roots.length) return cb('roots');
     var args = ['-n', '15', py, self.o.script, '--out', out].concat(roots);
     var ch;
@@ -135,6 +136,7 @@ Runner.prototype.start = function(cb) {
       self.save();
       self.log('Analysis ended (' + code + '): ' + (p.done || 0) + ' of ' + (p.total || 0) + ' analysed');
       if (self.o.onDone) self.o.onDone();
+      if (run.done) run.done(p);
     });
     cb(null);
   });

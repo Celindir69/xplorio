@@ -11,6 +11,8 @@ var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
 var msRg = null, msRgMsg = '', msRgBad = false, msRgTimer = null;
+var msImpWasRunning = false;
+var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs', 'short', 'locked'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
@@ -34,6 +36,8 @@ function openMacSettings() {
   msAnaSend({});
   msRg = null; msRgMsg = ''; msRgBad = false;
   msRgSend({});
+  msImp = null; msImpForm = null; msImpMsg = ''; msImpBad = false;
+  msImpSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -212,7 +216,87 @@ function msMusicCard(d) {
   }, 'on'));
   c.appendChild(row);
   c.appendChild(histEl('div', 'syNote', T('mac.musicScan')));
+  msImpPart(c, d);
   return c;
+}
+
+/* ---------- importing new music (POST /mac/import, tags/musicimport.js) ---------- */
+var MS_IMP_ERRORS = {source: 'mac.impErrSource', target: 'mac.impErrTarget', inside: 'mac.impErrInside', exists: 'mac.impErrExists',
+  running: 'mac.impErrRunning', busy: 'mac.impErrBusy', fs: 'mac.impErrFs', mpd: 'mac.err.audio.mpd', auth: 'mac.err.auth'};
+function msImpSend(body) {
+  var seq = msSeq;
+  if (body.action) body.token = msToken();
+  clearTimeout(msImpTimer);
+  tagPostJson('/mac/import', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.available === false) { msImp = r; return; }
+    if (r && r.ok) { msImp = r; if (body.action) { msImpForm = null; msImpMsg = ''; msImpBad = false; } }
+    else { msImpBad = true; msImpMsg = T(MS_IMP_ERRORS[r && r.error] || 'mac.impErrFs'); }
+    if (msImp && msImp.job && !msImp.job.end) msImpTimer = setTimeout(function(){
+      if (seq !== msSeq || !overlayMacSettings.classList.contains('on')) return;
+      if (msImp.job.step === 'analysis' && !(msAna && msAna.running)) msAnaSend({});   /* its progress, asked from then on */
+      msImpSend({});
+    }, 3000);
+    else if (body.action === undefined && msImp && msImp.job && msImp.job.end && msImpWasRunning) { msImpWasRunning = false; openMacSettings(); return; }
+    msImpWasRunning = !!(msImp && msImp.job && !msImp.job.end);
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msImpBad = true; msImpMsg = T('mac.impErrFs'); if (msData) msRender(); } });
+}
+function msImpPart(c, d) {
+  if (!msImp || msImp.available === false || !d.music.length) return;
+  c.appendChild(histEl('div', 'syK msLabel', T('mac.imp')));
+  var j = msImp.job, f = msImpForm;
+  if (j && !j.end) {
+    var pct = j.totalBytes ? Math.floor(j.bytes / j.totalBytes * 100) : 0;
+    var kv = histEl('div', 'syKv');
+    kv.appendChild(histEl('span', 'syK', j.dest.split('/').slice(-1)[0]));
+    kv.appendChild(histEl('span', 'syV', j.step === 'copy' ? T(j.move ? 'mac.impMoving' : 'mac.impCopying', {n: j.done, m: j.total, p: pct}) : T('mac.impStep.' + j.step)));
+    c.appendChild(kv);
+    if (j.step === 'analysis' && msAna && msAna.progress && msAna.progress.total) c.appendChild(histEl('div', 'msItemSub', T('mac.anaProgress', {n: msAna.progress.done || 0, m: msAna.progress.total})));
+  } else if (f) {
+    c.appendChild(histEl('div', 'msItemName', f.source));
+    function line(label, ctl) { var r = histEl('div', 'msSetRow'); r.appendChild(histEl('div', 'msSetLabel', label)); r.appendChild(ctl); c.appendChild(r); }
+    line(T('mac.impTo'), pbChips(d.music.filter(function(m){ return !m.missing; }).map(function(m){ return [m.rel, m.rel + '/import']; }), f.rel, function(v){ f.rel = v; msRender(); }));
+    line(T('mac.impHow'), pbChips([[false, T('mac.impCopy')], [true, T('mac.impMove')]], f.move, function(v){ f.move = v; msRender(); }));
+    if (msRg && msRg.rsgain) line('ReplayGain (rsgain)', pbChips([[true, T('pb.on')], [false, T('pb.off')]], f.rsgain, function(v){ f.rsgain = v; msRender(); }));
+    if (msAna && msAna.python && msAna.script) line(T('mac.impAnalysis'), pbChips([[true, T('pb.on')], [false, T('pb.off')]], f.analysis, function(v){ f.analysis = v; msRender(); }));
+    var row = histEl('div', 'pbRow msAddRow');
+    row.appendChild(msButton(T('mac.impStart'), function(){
+      msImpSend({action: 'start', source: f.source, rel: f.rel, move: f.move, rsgain: f.rsgain && !!(msRg && msRg.rsgain), analysis: f.analysis && !!(msAna && msAna.python)});
+    }, 'on'));
+    row.appendChild(msButton(T('mac.impCancel'), function(){ msImpForm = null; msRender(); }));
+    c.appendChild(row);
+  } else {
+    c.appendChild(histEl('div', 'syNote', T('mac.impNote')));
+    var r2 = histEl('div', 'pbRow msAddRow');
+    r2.appendChild(msButton(T('mac.impButton'), function(){
+      msChoose('folder', function(p){
+        var first = d.music.filter(function(m){ return !m.missing; })[0];
+        msImpForm = {source: p, rel: first ? first.rel : '', move: false, rsgain: true, analysis: true};
+        msImpMsg = ''; msRender();
+      });
+    }, 'on'));
+    c.appendChild(r2);
+    if (j && j.end) msImpResult(c, j);
+  }
+  if (msImpMsg) c.appendChild(histEl('div', 'syNote' + (msImpBad ? ' syWarn' : ''), msImpMsg));
+}
+function msImpResult(c, j) {
+  var name = j.dest.split('/').slice(-1)[0];
+  if (j.error) { c.appendChild(histEl('div', 'syNote syWarn', T('mac.impFailed', {name: name}) + ' ' + T(MS_IMP_ERRORS[j.error] || 'mac.impErrFs'))); return; }
+  var parts = [T('mac.impDone', {name: name, n: j.total, date: langDate(j.end)})];
+  if (j.keptSource) parts.push(T('mac.impKept'));
+  if (j.rsgainFiles !== undefined) parts.push(T('mac.impRg', {n: j.rsgainFiles}));
+  if (j.analysed !== undefined) parts.push(T('mac.impAna', {n: j.analysed}));
+  c.appendChild(histEl('div', 'syNote', parts.join(' ')));
+  var ck = j.check;
+  if (!ck) return;
+  var miss = Object.keys(ck.missing).filter(function(k){ return ck.missing[k]; });
+  if (!miss.length && !ck.noCover.length && ck.tracks === ck.audioFiles) { c.appendChild(histEl('div', 'syNote', T('mac.impTagsOk', {n: ck.tracks}))); return; }
+  if (ck.tracks < ck.audioFiles) c.appendChild(histEl('div', 'syNote syWarn', T('mac.impUnread', {n: ck.audioFiles - ck.tracks})));
+  if (miss.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.impMissing', {list: miss.map(function(k){ return T('mac.impField.' + k) + ' (' + ck.missing[k] + ')'; }).join(', ')})));
+  ck.examples.slice(0, 6).forEach(function(e){ c.appendChild(histEl('div', 'msItemSub', e.file.split('/').slice(-2).join('/') + ': ' + e.missing.map(function(k){ return T('mac.impField.' + k); }).join(', '))); });
+  if (ck.noCover.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.impNoCover', {list: ck.noCover.map(function(p){ return p.split('/').slice(-1)[0]; }).slice(0, 5).join(', ')})));
 }
 
 /* while MPD reads the library: ask again every 5 s, then show the new numbers */

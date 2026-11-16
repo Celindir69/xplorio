@@ -821,6 +821,11 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   `python3.12` … from Homebrew or MacPorts that can load `essentia` (`XPLORIO_PYTHON` in `xplorio.conf` picks one).
   On old Intel Macs without AVX2, with MacPorts: `sudo port install python311 py311-pip libsdl2`, then
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
+- **Import music:** "Import music …" picks a folder, then the destination (one of the music folders) and copy or
+  move. It ends up under `<music folder>/import/<folder name>`; MPD reads it, Xplorio checks the tags (missing artist,
+  album, title, track number, genre, year; albums without `cover.jpg`/`folder.jpg`) and, when switched on and
+  installed, runs rsgain and the audio analysis on this folder only. Moving to another drive deletes the source only
+  once everything has arrived.
 - **ReplayGain (rsgain):** "Add ReplayGain tags" runs `rsgain easy -S` over all music folders (only albums without
   tags) with low priority, optionally every night at 2 am (the audio analysis then starts from 3 am, once rsgain is
   done). Needs rsgain (`brew install rsgain`) and write access to the music. The files rsgain changes are taken over by

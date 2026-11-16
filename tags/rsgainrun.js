@@ -107,19 +107,23 @@ Runner.prototype.status = function() {
 };
 
 /* list the files, rsgain folder by folder, list again, carry the analysis along -> cb(error code or null) at the start */
-Runner.prototype.start = function(cb) {
+/* run: {dirs, walkRoot (only these, e.g. an import), own (started by the import: not busy), done(files) once it ends} */
+Runner.prototype.start = function(cb, run) {
   var self = this;
+  run = run || {};
   if (this.running()) return cb('running');
-  if (this.o.busy && this.o.busy()) return cb('busy');
+  if (!run.own && this.o.busy && this.o.busy()) return cb('busy');
   var bin = this.bin();
   if (!bin) return cb('rsgain');
-  var dirs = this.o.dirs().filter(function(d){ return fs.existsSync(d); });
+  var dirs = (run.dirs || this.o.dirs()).filter(function(d){ return fs.existsSync(d); });
   if (!dirs.length) return cb('roots');
   this.progress = {phase: 'listing', dir: 0, dirs: dirs.length}; this.tail = []; this.stopping = false;
   this.s.lastStart = this.now(); this.s.lastError = ''; this.save();
   this.log('ReplayGain started: ' + dirs.join(', '));
   cb(null);
-  walk(this.o.walkRoot(), function(before){
+  this.run = run;
+  var root = run.walkRoot || this.o.walkRoot();
+  walk(root, function(before){
     if (self.stopping) return self.finish(before, '');
     var i = 0;
     (function nextDir(){
@@ -152,7 +156,8 @@ Runner.prototype.finish = function(before, err) {
   var self = this;
   if (err) this.s.lastError = err;
   this.progress.phase = 'checking';
-  walk(this.o.walkRoot(), function(after){
+  var run = this.run || {};
+  walk(run.walkRoot || this.o.walkRoot(), function(after){
     var files = 0, carried = 0;
     Object.keys(after).forEach(function(p){ var a = before[p]; if (a && (a[0] !== after[p][0] || a[1] !== after[p][1])) files++; });
     try { carried = self.o.essentia ? carryAlong(self.o.essentia(), before, after) : 0; }
@@ -161,7 +166,9 @@ Runner.prototype.finish = function(before, err) {
     self.progress = null; self.stopping = false;
     self.save();
     self.log('ReplayGain ended: ' + files + ' files tagged, ' + carried + ' analysis entries carried along');
+    self.run = null;
     if (self.o.onDone) self.o.onDone(files);
+    if (run.done) run.done(files);
   });
 };
 
