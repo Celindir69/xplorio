@@ -3140,13 +3140,13 @@ function doMacBackup(req, res) {
 setInterval(function(){ if (onMac()) macBackup().tick(); }, 5 * 60 * 1000).unref();
 
 /* updating Xplorio (macupdate.js, tools/mac/xplorio-update.sh): GET /mac/update = installed and newest version;
-   POST {action: 'check'} asks GitHub again, {action: 'install'} starts the update (Xplorio quits and starts again) */
+   POST {action: 'check'} asks GitHub again, {branch} chooses the branch ('' = default), {action: 'install'} starts the update (Xplorio quits and starts again) */
 function macUpdater() {
   if (!macUpd) {
     var a = [path.join(__dirname, '..', 'mac', 'xplorio-update.sh'), path.join(__dirname, '..', 'tools', 'mac', 'xplorio-update.sh')];
     macUpd = new macupdate.Updater({repo: process.env.XPLORIO_REPO || 'Celindir69/xplorio',
       branch: function(){ return process.env.XPLORIO_UPDATE_BRANCH || ''; }, defaultBranch: 'claude/project-thread-6k5f1h',
-      stateFile: path.join(macSupport(), 'update.json'), script: fs.existsSync(a[0]) ? a[0] : a[1],
+      stateFile: path.join(macSupport(), 'update.json'), settingsFile: path.join(macSupport(), 'update-settings.json'), script: fs.existsSync(a[0]) ? a[0] : a[1],
       logFile: path.join(os.homedir(), 'Library', 'Logs', 'Xplorio', 'update.log'), env: {XPLORIO_SUPPORT: macSupport()}});
   }
   return macUpd;
@@ -3159,8 +3159,9 @@ function doMacUpdate(req, res) {
   if (req.method === 'GET') return state(false);
   macBody(req, res, function(body){
     if (body.action === 'check') return state(true, {done: 'check'});
-    if (body.action !== 'install') return state(false);
+    if (body.action !== 'install' && body.branch === undefined) return state(false);
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (body.branch !== undefined) { var be = macUpdater().setBranch(body.branch); return state(true, be ? {startError: be} : {done: 'branch'}); }
     if ((essRun && essRun.child) || (rgRun && rgRun.running()) || (musicImp && musicImp.running()) || (macBak && macBak.running()))
       return state(false, {startError: 'busy'});
     macUpdater().install(function(e){ state(false, e ? {startError: e} : {done: 'install'}); });

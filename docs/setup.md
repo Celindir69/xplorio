@@ -840,7 +840,7 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
 - **Update Xplorio:** shows the installed version (commit, from `update.json` in the settings folder) and the newest
   commit of the branch on GitHub. "Update now" runs `xplorio-update.sh` (inside the app): downloads the zip, quits
   Xplorio, rebuilds the app and starts it again. The log is in `~/Library/Logs/Xplorio/update.log`; if something fails,
-  the previous version starts again. Another branch: `XPLORIO_UPDATE_BRANCH` in the tag service's environment.
+  the previous version starts again. Another branch: enter it on the card (empty = default).
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
 - **Password:** for the services on the "System" page and the file manager (which only works with a password).
   Changing it needs the current one; a new one logs out all other devices.

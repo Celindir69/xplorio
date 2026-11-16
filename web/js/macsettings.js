@@ -523,10 +523,10 @@ function msBakCard() {
 }
 
 /* ---------- updating Xplorio (POST /mac/update, tags/macupdate.js): {} = state, {action: check|install} ---------- */
-var MS_UPD_ERRORS = {busy: 'mac.updBusy', running: 'mac.updRunning', script: 'mac.updErrScript', fs: 'mac.err.fs', start: 'mac.err.fs'};
+var MS_UPD_ERRORS = {value: 'mac.err.value', busy: 'mac.updBusy', running: 'mac.updRunning', script: 'mac.updErrScript', fs: 'mac.err.fs', start: 'mac.err.fs'};
 function msUpdSend(body, okText) {
   var seq = msSeq;
-  if (body.action === 'install') body.token = msToken();
+  if (body.action === 'install' || body.branch !== undefined) body.token = msToken();
   if (body.action === 'check') { msUpdMsg = T('mac.updChecking'); msUpdBad = false; if (msData) msRender(); }
   tagPostJson('/mac/update', body).then(function(r){
     if (seq !== msSeq) return;
@@ -542,7 +542,11 @@ function msUpdCard() {
   var c = sysCard(T('mac.upd'), 'syWide'), a = msUpd, inst = a.installed || {}, l = a.latest || {};
   function short(sha) { return String(sha || '').slice(0, 7); }
   function kv(k, v) { var e = histEl('div', 'syKv'); e.appendChild(histEl('span', 'syK', k)); e.appendChild(histEl('span', 'syV', v)); c.appendChild(e); }
-  kv(T('mac.updBranch'), a.branch);
+  c.appendChild(histEl('div', 'syK msLabel', T('mac.updBranch')));
+  var br = msInput(a.branch, 'claude/project-thread-6k5f1h'), r0 = histEl('div', 'pbRow msAddRow');
+  r0.appendChild(br);
+  r0.appendChild(msButton(T('mac.bakSave'), function(){ msUpdSend({branch: br.value}, 'mac.tidalSaved'); }));
+  c.appendChild(r0);
   kv(T('mac.updInstalled'), inst.sha ? short(inst.sha) + (inst.at ? ' · ' + langDate(Date.parse(inst.at)) : '') : T('mac.updUnknown'));
   kv(T('mac.updLatest'), l.sha ? short(l.sha) + (l.date ? ' · ' + langDate(Date.parse(l.date)) : '') + (l.message ? ' · ' + l.message : '') : T('mac.updNoNet'));
   if (inst.ok === false) {

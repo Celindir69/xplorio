@@ -2,7 +2,7 @@
    written by tools/mac/xplorio-update.sh), which one is the newest on GitHub (last commit of the branch), and the update
    itself: the script runs on its own (detached), quits Xplorio, builds the app again and starts it.
    Node 8, ES5 only.
-   opts: repo ("owner/name"), branch() -> branch (else the one of the last update, else defaultBranch), stateFile (update.json), script (xplorio-update.sh in the app),
+   opts: repo ("owner/name"), branch() -> branch from the environment, settingsFile (branch chosen on the card), defaultBranch, stateFile (update.json), script (xplorio-update.sh in the app),
          logFile, env (extra environment for the script), spawn, get(url, cb(err, json)), now(), tmpDir */
 var fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process'), https = require('https');
 
@@ -32,7 +32,23 @@ function Updater(o) {
   this.cache = null;          /* {at, branch, latest} */
   this.started = 0;
 }
-Updater.prototype.branch = function() { return (this.o.branch && this.o.branch()) || this.installed().branch || this.o.defaultBranch || 'main'; };
+/* the environment, else the one chosen on the card, else that of the last successful update, else defaultBranch */
+Updater.prototype.branch = function() {
+  var inst = this.installed();
+  return (this.o.branch && this.o.branch()) || this.chosen() || (inst.ok && inst.sha && inst.branch) || this.o.defaultBranch || 'main';
+};
+Updater.prototype.chosen = function() {
+  try { return String(JSON.parse(fs.readFileSync(this.o.settingsFile, 'utf8')).branch || ''); } catch (e) { return ''; }
+};
+/* branch chosen on the card ('' = back to the default) -> error code or '' */
+Updater.prototype.setBranch = function(b) {
+  b = String(b || '').trim();
+  if (b && (!/^[A-Za-z0-9._\/-]{1,100}$/.test(b) || /\.\.|^[-\/]|\/$/.test(b))) return 'value';
+  try { fs.writeFileSync(this.o.settingsFile + '.neu', JSON.stringify({branch: b})); fs.renameSync(this.o.settingsFile + '.neu', this.o.settingsFile); }
+  catch (e) { return 'fs'; }
+  this.cache = null;
+  return '';
+};
 
 /* update.json: {sha, branch, at, ok, error} */
 Updater.prototype.installed = function() {

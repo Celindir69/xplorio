@@ -1109,7 +1109,7 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   neuesten Commit des Zweigs auf GitHub. „Jetzt aktualisieren“ startet `xplorio-update.sh` (liegt in der App): lädt das
   Zip, beendet Xplorio, baut die App neu und startet sie wieder. Das Protokoll steht in
   `~/Library/Logs/Xplorio/update.log`; schlägt etwas fehl, startet die bisherige Fassung wieder. Anderer Zweig:
-  `XPLORIO_UPDATE_BRANCH` in der Umgebung des Tag-Dienstes.
+  auf der Karte eintragen (leer = Vorgabe).
 - **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
 - **Passwort:** für die Dienste auf der Seite „System“ und den Dateimanager (der geht nur mit Passwort). Ändern braucht
   das aktuelle; ein neues meldet alle anderen Geräte ab.

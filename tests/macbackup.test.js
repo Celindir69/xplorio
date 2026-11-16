@@ -127,6 +127,14 @@ t('update: installed and newest version, newer only when the commit differs; ins
     fs.unlinkSync(state);                                    /* nothing installed through the button yet: the default branch */
     var u2 = new mu.Updater({repo: 'o/r', branch: function(){ return ''; }, defaultBranch: 'zweig', stateFile: state, script: script, logFile: path.join(d, 'l.log')});
     assert.strictEqual(u2.branch(), 'zweig');
+    fs.writeFileSync(state, JSON.stringify({sha: 'aaa', branch: 'main', ok: false, error: 'unzip'}));
+    assert.strictEqual(u2.branch(), 'zweig');                /* a failed update does not decide the branch */
+    u2.o.settingsFile = path.join(d, 'update-settings.json');
+    assert.strictEqual(u2.setBranch('../x'), 'value');
+    assert.strictEqual(u2.setBranch('claude/anders'), '');
+    assert.strictEqual(u2.branch(), 'claude/anders');
+    assert.strictEqual(u2.setBranch(''), '');
+    assert.strictEqual(u2.branch(), 'zweig');
   });
 });
 
