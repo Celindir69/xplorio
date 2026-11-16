@@ -75,6 +75,7 @@ function msAudioSend(body, okText) {
     msAudioBusy = false;
     msAudioBad = !(r && r.ok);
     if (r && r.ok) { msAudio = r; msAudioMsg = okText ? T(okText, {n: r.devices || 0}) : ''; }
+    else if (r && r.error === 'auth') { msAuthLost(); msAudioMsg = T('mac.err.auth'); }
     else msAudioMsg = T(MS_AUDIO_ERRORS.indexOf(r && r.error) >= 0 ? 'mac.err.' + r.error : 'mac.err.audio.mpd');
     msRender();
   }).catch(function(){ if (seq === msSeq) { msAudioBusy = false; msAudioBad = true; msAudioMsg = T('mac.err.audio.mpd'); msRender(); } });
@@ -140,6 +141,7 @@ function msSend(body, okText, ok) {
       if (ok) ok(r);
     } else {
       var e = r && r.error;
+      if (e === 'auth') msAuthLost();
       msMsg = T('mac.err.' + (MS_ERRORS.indexOf(e) >= 0 ? e : 'fs')); msMsgBad = true;
     }
     msRender();
@@ -153,7 +155,39 @@ function msChoose(kind, cb) {
   tagPostJson('/mac/settings', {action: 'choose', kind: kind, token: msToken()}).then(function(r){ if (r && r.ok && r.path) cb(r.path); }).catch(function(){});
 }
 window.xplorioChosen = function(p){ var cb = msChooseCb; msChooseCb = null; if (cb && p) cb(String(p)); };
-function msCanChoose() { return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.xplorioChoose) || !!(msData && msData.mac); }
+/* opened from another device (iPhone, other computer): the tag service's dialog would open on the Mac's screen */
+function msRemote() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.xplorioChoose) return false;
+  return !/^(localhost|127\.0\.0\.1|\[::1\]|::1)$/.test(location.hostname);
+}
+function msCanChoose() { return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.xplorioChoose) || (!!(msData && msData.mac) && !msRemote()); }
+
+/* password set, but this device is not logged in: changes would answer "auth" */
+function msLoggedIn() { return !msData || !msData.pw || !!msToken(); }
+function msAuthLost() { if (typeof sysSvcToken === 'function') sysSvcMem = sysSvcToken(null); }
+function msLoginCard() {
+  var c = sysCard(T('mac.login'), 'syWide');
+  c.appendChild(histEl('div', 'syNote', T('mac.loginNote')));
+  var f = histEl('form', 'pbRow msAddRow'), inp = msInput('', T('sys.svc.password'), 'password');
+  inp.autocomplete = 'current-password';
+  f.appendChild(inp);
+  var ok = histEl('button', 'mxChip mxSmall msBtn on', T('sys.svc.login'));
+  ok.type = 'submit';
+  f.appendChild(ok);
+  var err = histEl('div', 'syNote syWarn', '');
+  f.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    if (!inp.value) return;
+    tagPostJson('/servicelogin', {password: inp.value}).then(function(r){
+      if (r && r.ok) { sysSvcMem = sysSvcToken(r.token); msMsg = ''; return openMacSettings(); }
+      inp.value = '';
+      err.textContent = r && r.error === 'locked' ? T('sys.svc.locked', {s: r.wait}) : r && r.error === 'wrong' ? T('sys.svc.wrong') : T('sys.svc.error');
+    }).catch(function(){ err.textContent = T('sys.svc.error'); });
+  });
+  c.appendChild(f);
+  c.appendChild(err);
+  return c;
+}
 
 function msButton(text, fn, cls) {
   var b = histEl('div', 'mxChip mxSmall msBtn' + (cls ? ' ' + cls : ''), text);
@@ -175,6 +209,8 @@ function msRender() {
   msBody.appendChild(grid);
   if (msMsg) grid.appendChild(histEl('div', 'syNote pbFoot' + (msMsgBad ? ' syWarn' : ''), msMsg));
   if (!d) return;
+  if (!msLoggedIn()) grid.appendChild(msLoginCard());
+  if (msRemote()) grid.appendChild(histEl('div', 'syNote pbFoot', T('mac.remoteNote')));
   grid.appendChild(msMusicCard(d));
   grid.appendChild(msAudioCard());
   grid.appendChild(msEssentiaCard(d));
@@ -293,13 +329,17 @@ function msImpPart(c, d) {
   } else {
     c.appendChild(histEl('div', 'syNote', T('mac.impNote')));
     var r2 = histEl('div', 'pbRow msAddRow');
-    r2.appendChild(msButton(T('mac.impButton'), function(){
-      msChoose('folder', function(p){
-        var first = d.music.filter(function(m){ return !m.missing; })[0];
-        msImpForm = {source: p, rel: first ? first.rel : '', move: false, rsgain: true, analysis: true};
-        msImpMsg = ''; msRender();
-      });
-    }, 'on'));
+    var form = function(p){
+      var first = d.music.filter(function(m){ return !m.missing; })[0];
+      msImpForm = {source: p, rel: first ? first.rel : '', move: false, rsgain: true, analysis: true};
+      msImpMsg = ''; msRender();
+    };
+    if (msCanChoose()) r2.appendChild(msButton(T('mac.impButton'), function(){ msChoose('folder', form); }, 'on'));
+    else {                                               /* from another device: the path, typed */
+      var ip = msInput('', T('mac.impPathPh'));
+      r2.appendChild(ip);
+      r2.appendChild(msButton(T('mac.impNext'), function(){ var p = String(ip.value || '').trim(); if (p) form(p); }, 'on'));
+    }
     c.appendChild(r2);
     if (j && j.end) msImpResult(c, j);
   }
@@ -390,7 +430,7 @@ function msAnaSend(body, okText) {
       msAnaMsg = r.startError ? T(MS_ANA_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
       if (r.running) msAnaTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msAnaSend({}); }, 5000);
     } else if (r && r.available === false) msAna = r;
-    else { msAnaBad = true; msAnaMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msAnaBad = true; if (r && r.error === 'auth') msAuthLost(); msAnaMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msAnaBad = true; msAnaMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -450,7 +490,7 @@ function msRgSend(body, okText) {
       msRgMsg = r.startError ? T(MS_RG_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T('mac.rgDone') : msRgMsg;
       if (r.running) msRgTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msRgSend({}); }, 5000);
     } else if (r && r.available === false) msRg = r;
-    else { msRgBad = true; msRgMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msRgBad = true; if (r && r.error === 'auth') msAuthLost(); msRgMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msRgBad = true; msRgMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -497,7 +537,7 @@ function msBakSend(body, okText) {
       msBakMsg = err ? T(MS_BAK_ERRORS[err] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T(r.lastError ? 'mac.bakFailed' : 'mac.bakDone') : msBakMsg;
       if (r.running) msBakTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msBakSend({}); }, 3000);
     } else if (r && r.available === false) msBak = r;
-    else { msBakBad = true; msBakMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msBakBad = true; if (r && r.error === 'auth') msAuthLost(); msBakMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msBakBad = true; msBakMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -550,7 +590,7 @@ function msUpdSend(body, okText) {
       msUpd = r; msUpdBad = !!r.startError;
       msUpdMsg = r.startError ? T(MS_UPD_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
     } else if (r && r.available === false) msUpd = r;
-    else { msUpdBad = true; msUpdMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msUpdBad = true; if (r && r.error === 'auth') msAuthLost(); msUpdMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msUpdBad = true; msUpdMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
