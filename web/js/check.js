@@ -78,7 +78,9 @@ function checkLoad() {
     var res = both[0];
     if (!overlayCheck.classList.contains('on')) return;
     checkMood = both[1];
-    if (res.result === 'same' && checkShown && checkShown.running && res.running) {
+    if (res.result === 'same' && res.fix === 'same' && !res.running && checkShown && !checkShown.running) {
+      /* nothing new (asked again while MusicBrainz looks for years): leave the page as it is */
+    } else if (res.result === 'same' && checkShown && checkShown.running && res.running) {
       checkShown.info.textContent = checkRunText(res.running) + (res.error ? T('check.errorSuffix', {error: res.error}) : '');
     } else {
       if (res.result === 'same') res.result = checkShown ? checkShown.res.result : null;
@@ -90,6 +92,9 @@ function checkLoad() {
     var mt = checkMood && checkMood.enabled && checkMood.status;
     if (res.running) checkTimer = setTimeout(checkLoad, 2000);
     else if (mt && mt.state === 'läuft') checkTimer = setTimeout(checkLoad, 10000);
+    else if ((checkShown && checkShown.res && checkShown.res.yearFix || []).some(function(it){ return it.missing && !it.suggest; })) {
+      checkTimer = setTimeout(checkLoad, 15000);               /* albums without a year: MusicBrainz suggestions appear by themselves */
+    }
   }).catch(function(){
     while (checkBody.firstChild) checkBody.removeChild(checkBody.firstChild);
     checkBody.appendChild(browseNote(T('check.serviceDownPort', {port: (window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766})));
