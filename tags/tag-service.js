@@ -2964,7 +2964,14 @@ function doMac(req, res, route) {
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
-  if (req.method === 'GET') { var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet(); return send(res, 200, rd); }
+  if (req.method === 'GET') {
+    var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet();
+    return libcheck.mpdCommand({host: MPD_HOST, port: MPD_PORT}, 'stats', function(err, st){   /* library info like Volumio's */
+      if (!err && st) rd.library = {artists: +st.artists || 0, albums: +st.albums || 0, songs: +st.songs || 0,
+                                    playtime: +st.db_playtime || 0, updated: (+st.db_update || 0) * 1000};
+      send(res, 200, rd);
+    });
+  }
   if (req.method !== 'POST') return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '';
   req.setEncoding('utf8');

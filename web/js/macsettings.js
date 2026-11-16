@@ -162,6 +162,15 @@ function msMusicCard(d) {
   var c = sysCard(T('mac.music'), 'syWide');
   c.appendChild(histEl('div', 'syNote', T('mac.musicNote')));
   if (!d.music.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.musicNone')));
+  if (d.library && d.library.songs) {                    /* MPD's stats, like Volumio's library info */
+    var lb = d.library, h = Math.floor(lb.playtime / 3600), days = Math.floor(h / 24);
+    var kv = histEl('div', 'syKv');
+    kv.appendChild(histEl('span', 'syK', T('mac.library')));
+    kv.appendChild(histEl('span', 'syV', T('mac.libraryInfo', {ar: histNum(lb.artists), al: histNum(lb.albums), ti: histNum(lb.songs),
+      time: days ? T('mac.libraryDays', {d: days, h: h % 24}) : T('mac.libraryHours', {h: h, m: Math.floor(lb.playtime % 3600 / 60)})})));
+    c.appendChild(kv);
+    if (lb.updated) c.appendChild(histEl('div', 'msItemSub', T('mac.libraryUpdated', {date: langDate(lb.updated)})));
+  }
   d.music.forEach(function(m){
     var row = histEl('div', 'msItem');
     var tx = histEl('div', 'msItemText');
