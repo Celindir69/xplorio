@@ -1116,6 +1116,9 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
 - **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
   dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
   Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
+  „Lautstärke am Verstärker“ (`mixer_type "none"`) lässt die Samples unverändert (bitgenau); die Lautstärke regelt dann
+  der Verstärker oder DAC. „DSD als DoP“ (`dop`) schickt DSD-Dateien unverändert an USB-DACs, nur für DACs mit DoP
+  (andere spielen Rauschen). Systemausgabe, AirPlay und Bluetooth behalten die Lautstärke in MPD.
   Bluetooth-Geräte kann MPD nicht selbst öffnen (OSStatus -10851): Sie spielen über „Systemausgabe“, „Verwenden“ macht
   sie zur Tonausgabe des Macs.
 - **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der

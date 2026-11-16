@@ -847,6 +847,9 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
 - **Audio output:** “Find devices” adds every sound device of the Mac as an MPD output to `mpd.conf` (MPD restarts
   briefly), plus “System output”, which follows the Mac's sound output (AirPlay too). One output plays at a time.
   “Exclusive” (`hog_device`) reserves USB DACs and the like for Xplorio; the sample rate then follows the music.
+  “Volume on the amplifier” (`mixer_type "none"`) leaves the samples untouched (bit-perfect); the amplifier or DAC sets
+  the volume. “DSD as DoP” (`dop`) sends DSD files unchanged to USB DACs, only for DACs with DoP (others play noise).
+  The system output, AirPlay and Bluetooth keep MPD's volume.
   MPD cannot open Bluetooth devices itself (OSStatus -10851): they play through “System output”, “Use” makes them the
   Mac's sound output.
 - **Rotel amplifier:** on/off, address and model (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). The tag

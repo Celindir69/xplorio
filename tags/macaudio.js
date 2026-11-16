@@ -4,6 +4,9 @@
    VU fifo or a stream stay as they are). MPD keeps the choice in its state file.
    New devices: scan -> the managed part of mpd.conf is written again and MPD restarts.
    "Exclusive" (hog_device): no other program plays on the device at the same time, the sample rate follows the music.
+   "Volume on the amplifier" (mixer_type "none" on the device outputs): MPD does not touch the samples (bit-perfect),
+   the volume is set on the amplifier/DAC. "DSD as DoP" (dop): DSD files go to USB DACs unchanged, packed in PCM frames
+   (only for DACs that understand DoP; others play noise).
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
          restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, cb(err)) (audiodevices only:
@@ -52,14 +55,18 @@ function blocks(text) {
   while ((m = re.exec(text))) {
     var b = m[0];
     function val(k) { var x = new RegExp('^\\s*' + k + '\\s+"((?:[^"\\\\]|\\\\.)*)"', 'm').exec(b); return x ? x[1].replace(/\\(.)/g, '$1') : ''; }
-    out.push({start: m.index, end: m.index + b.length, type: val('type'), name: val('name'), device: val('device'), hog: val('hog_device') === 'yes'});
+    out.push({start: m.index, end: m.index + b.length, type: val('type'), name: val('name'), device: val('device'), hog: val('hog_device') === 'yes',
+              mixer: val('mixer_type'), dop: val('dop') === 'yes'});
   }
   return out;
 }
 function q(s) { return '"' + String(s).replace(/[\\"]/g, '\\$&').replace(/[\r\n]/g, ' ') + '"'; }
 
-/* mpd.conf with all "osx" outputs replaced by the managed part: Systemausgabe and one per device */
-function writeConf(text, devices, exclusive) {
+/* mpd.conf with all "osx" outputs replaced by the managed part: Systemausgabe and one per device.
+   opts: {exclusive, fixedVolume, dop} (or just exclusive as a boolean) */
+function writeConf(text, devices, opts) {
+  if (typeof opts !== 'object' || !opts) opts = {exclusive: !!opts};
+  var exclusive = !!opts.exclusive;
   var keep = '', pos = 0, i0 = text.indexOf(BEGIN), i1 = text.indexOf(END);
   if (i0 >= 0 && i1 > i0) text = text.slice(0, i0) + text.slice(i1 + END.length).replace(/^\n/, '');
   blocks(text).forEach(function(b){
@@ -76,7 +83,8 @@ function writeConf(text, devices, exclusive) {
     names.push(name);
     lines.push('audio_output {', '  type       "osx"', '  name       ' + q(name), '  device     ' + q(d.name));
     if (exclusive && !NO_HOG.test(d.kind)) lines.push('  hog_device "yes"');
-    lines.push('  mixer_type "software"', '}');
+    if (opts.dop && d.kind === 'usb') lines.push('  dop        "yes"');
+    lines.push('  mixer_type ' + (opts.fixedVolume && !NO_HOG.test(d.kind) ? '"none"' : '"software"'), '}');
   });
   lines.push(END);
   return keep.replace(/\n*$/, '\n') + lines.join('\n') + '\n';
@@ -109,10 +117,13 @@ MacAudio.prototype.status = function(cb) {
       return b ? b.type === 'osx' : o.plugin === 'osx';
     }).map(function(o){
       var b = conf.filter(function(x){ return x.name === o.name; })[0] || {};
-      return {id: o.id, name: o.name.trim(), enabled: o.enabled, system: !b.device, hog: !!b.hog};
+      return {id: o.id, name: o.name.trim(), enabled: o.enabled, system: !b.device, hog: !!b.hog, fixed: b.mixer === 'none', dop: !!b.dop};
     });
     var managed = self.conf().indexOf(BEGIN) >= 0;
-    function done(list) { cb(null, {outputs: list, exclusive: list.some(function(o){ return o.hog; }), managed: managed, busy: self.busy}); }
+    function done(list) {
+      cb(null, {outputs: list, exclusive: list.some(function(o){ return o.hog; }), fixedVolume: list.some(function(o){ return o.fixed; }),
+                dop: list.some(function(o){ return o.dop; }), managed: managed, busy: self.busy});
+    }
     var sys = outs.filter(function(o){ return o.system; })[0];
     if (!sys || !self.o.listDevices) return done(outs);
     self.o.listDevices(function(e, json){                 /* Bluetooth: through the system output */
@@ -144,8 +155,9 @@ MacAudio.prototype.select = function(id, cb) {
   });
 };
 
-/* look for devices, write mpd.conf, restart MPD, the output playing before plays again (by name) */
-MacAudio.prototype.scan = function(exclusive, cb) {
+/* look for devices, write mpd.conf, restart MPD, the output playing before plays again (by name).
+   opts: {exclusive, fixedVolume, dop} or just exclusive */
+MacAudio.prototype.scan = function(opts, cb) {
   var self = this;
   if (this.busy) return cb(new Error('busy'));
   this.busy = true;
@@ -156,7 +168,7 @@ MacAudio.prototype.scan = function(exclusive, cb) {
       if (err) return done(err);
       var devices = parseDevices(json), text = self.conf();
       if (!text) return done(new Error('conf'));
-      var neu = writeConf(text, devices, !!exclusive);
+      var neu = writeConf(text, devices, opts);
       if (neu !== text) {
         try { fs.writeFileSync(self.o.confFile + '.neu', neu); fs.renameSync(self.o.confFile + '.neu', self.o.confFile); }
         catch (e) { return done(e); }

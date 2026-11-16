@@ -87,7 +87,8 @@ function msAudioCard() {
       var row = histEl('div', 'msItem');
       var tx = histEl('div', 'msItemText');
       tx.appendChild(histEl('div', 'msItemName', o.system ? T('mac.audioSystem') : o.name));
-      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.via ? T('mac.audioVia') : o.hog ? T('mac.audioExclusiveOn') : ''));
+      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.via ? T('mac.audioVia')
+        : [o.hog ? T('mac.audioExclusiveOn') : '', o.fixed ? T('mac.audioFixedOn') : '', o.dop ? 'DoP' : ''].filter(Boolean).join(' · ')));
       row.appendChild(tx);
       if (o.enabled) row.appendChild(histEl('div', 'mxChip mxSmall on', T('mac.audioActive')));
       else row.appendChild(msButton(T('mac.audioUse'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioSelect', id: o.id}); }));
@@ -95,15 +96,28 @@ function msAudioCard() {
     });
     if (!a.outputs.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.audioNone')));
     if (a.canScan) {
-      var ex = histEl('div', 'msSetRow');
-      ex.appendChild(histEl('div', 'msSetLabel', T('mac.audioExclusive')));
-      ex.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.exclusive, function(v){
-        if (!msAudioBusy) msAudioSend({action: 'audioScan', exclusive: v}, 'mac.audioScanned');
-      }));
-      c.appendChild(ex);
-      c.appendChild(histEl('div', 'syNote', T('mac.audioExclusiveNote')));
+      /* every change writes all three into mpd.conf (MPD restarts) */
+      var scan = function(change){
+        if (msAudioBusy) return;
+        var b = {action: 'audioScan', exclusive: !!a.exclusive, fixedVolume: !!a.fixedVolume, dop: !!a.dop};
+        Object.keys(change || {}).forEach(function(k){ b[k] = change[k]; });
+        msAudioSend(b, 'mac.audioScanned');
+      };
+      var sw = function(label, key, note, ask){
+        var r = histEl('div', 'msSetRow');
+        r.appendChild(histEl('div', 'msSetLabel', T(label)));
+        r.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a[key], function(v){
+          if (v && ask && !confirm(T(ask))) return;
+          var ch = {}; ch[key] = v; scan(ch);
+        }));
+        c.appendChild(r);
+        c.appendChild(histEl('div', 'syNote', T(note)));
+      };
+      sw('mac.audioExclusive', 'exclusive', 'mac.audioExclusiveNote');
+      sw('mac.audioFixed', 'fixedVolume', 'mac.audioFixedNote', 'mac.audioFixedAsk');
+      sw('mac.audioDop', 'dop', 'mac.audioDopNote', 'mac.audioDopAsk');
       var row = histEl('div', 'pbRow msAddRow');
-      row.appendChild(msButton(T('mac.audioScan'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioScan', exclusive: !!a.exclusive}, 'mac.audioScanned'); }, 'on'));
+      row.appendChild(msButton(T('mac.audioScan'), function(){ scan({}); }, 'on'));
       c.appendChild(row);
     }
   } else if (!msAudioMsg) c.appendChild(browseNote(T('hist.loading')));

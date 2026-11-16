@@ -41,6 +41,20 @@ t('mpd.conf: osx outputs replaced by system output and one per device; other out
   assert.deepStrictEqual(bt.slice(2), [['B&W Headphones', false], ['RME', true]]);   /* Bluetooth: never exclusive, it stays silent */
 });
 
+t('volume on the amplifier (mixer none) and DSD as DoP (USB DACs only); the system output keeps its volume', function(){
+  var d = ma.parseDevices(PROFILER), c = ma.writeConf(CONF, d, {exclusive: true, fixedVolume: true, dop: true}), b = ma.blocks(c);
+  var osx = b.filter(function(x){ return x.type === 'osx'; }).map(function(x){ return [x.name, x.mixer, x.dop]; });
+  var kinds = {}; d.forEach(function(x){ kinds[x.name] = x.kind; });
+  osx.forEach(function(o){
+    if (o[0] === ma.SYSTEM) return assert.deepStrictEqual(o.slice(1), ['software', false]);
+    assert.strictEqual(o[2], kinds[o[0]] === 'usb', o[0]);
+    assert.strictEqual(o[1], /^(airplay|bluetooth)$/.test(kinds[o[0]]) ? 'software' : 'none', o[0]);
+  });
+  assert.ok(osx.some(function(o){ return o[2]; }), 'one USB DAC with DoP');
+  var back = ma.blocks(ma.writeConf(c, d, {exclusive: true}));
+  assert.ok(back.every(function(x){ return x.type !== 'osx' || (x.mixer === 'software' && !x.dop); }));
+});
+
 function fakeMpd(conf) {
   var outs = [];
   function sync() {

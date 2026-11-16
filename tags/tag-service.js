@@ -2935,7 +2935,7 @@ function doMacAudio(body, cb) {
   if (body.action === 'audioSelect') return macAudio.select(/^via:/.test(String(body.id)) ? String(body.id) : +body.id, answer);
   if (body.action === 'audioScan') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
-    return macAudio.scan(!!body.exclusive, answer);
+    return macAudio.scan({exclusive: !!body.exclusive, fixedVolume: !!body.fixedVolume, dop: !!body.dop}, answer);
   }
   answer(null);
 }
