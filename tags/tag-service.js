@@ -653,7 +653,7 @@ function yearFix(last) {
   (last.yearMixed || []).forEach(function(it){
     var mb = mbOf(it.dir);
     at[it.dir] = out.length;
-    out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: it.years, mb: mb,
+    out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: it.years, mb: mb, missing: !!it.missing,
               suggest: mb || it.most, src: mb ? 'mb' : 'most', files: it.files});
   });
   (last.releaseDate || []).forEach(function(it){
@@ -662,7 +662,7 @@ function yearFix(last) {
     out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: [{name: it.tag, count: it.count}], mb: mb,
               suggest: mb, src: 'mb', files: it.files});
   });
-  return out.filter(function(it){ return it.suggest; })
+  return out.filter(function(it){ return it.suggest || it.missing; })   /* no year at all: listed even without a suggestion (pen) */
     .sort(function(a, b){ return String(a.artist).localeCompare(b.artist) || String(a.name).localeCompare(b.name); });
 }
 /* album name not the same in all tracks: suggestion is the MusicBrainz spelling, else the most common name without a disc

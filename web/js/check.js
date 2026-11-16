@@ -754,7 +754,8 @@ function checkFixRow(cat, it, kept) {
   var vals = (cat === 'year' ? it.years : it.names).map(function(v){
     return T('check.fix.value', {name: v.name || T('check.releaseNone'), n: checkNum(v.count)});
   }).join(', ');
-  var sub = T('check.fix.sub', {values: vals, suggest: it.suggest, src: it.src === 'mb' ? 'MusicBrainz' : T('check.fix.most')});
+  var sub = it.suggest ? T('check.fix.sub', {values: vals, suggest: it.suggest, src: it.src === 'mb' ? 'MusicBrainz' : T('check.fix.most')})
+    : T('check.fix.noYear');                                /* no year at all and MusicBrainz knows none (yet): pen */
   if (cat === 'albumName' && it.files.some(function(f){ return f.disc; })) sub += ' · ' + T('check.fix.disc');
   var row = checkRow(cat + '|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), sub, function(){
     openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: cat === 'year' ? 'date' : 'album', value: it.suggest});

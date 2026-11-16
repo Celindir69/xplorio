@@ -76,7 +76,8 @@ function checkTags(lines, imageDirs) {
     dirs[path.dirname(t.file)] = true;
   });
   var noCover = Object.keys(dirs).filter(function(d){ return !imageDirs[d]; }).sort();
-  return {tracks: tracks.length, missing: missing, examples: examples, noCover: noCover};
+  return {tracks: tracks.length, missing: missing, examples: examples, noCover: noCover,
+          files: tracks.slice(0, 2000).map(function(t){ return t.file; })};   /* for the tag editor */
 }
 
 function Import(o) {

@@ -501,9 +501,9 @@ function analyze(songs, hasCover, audioOf, extra, done) {
         o.album = s.album || '';
       })}));
     }
-    if (years.length > 1) {
+    if (years.length > 1 || !years[0].name) {             /* mixed, or no track has a year at all */
       var most = years.filter(function(x){ return x.name; });
-      res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', files: files()}));
+      res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', missing: !most.length, files: files()}));
     }
     var mq = mixedQuality(list);
     if (mq) res.mixedQuality.push(merge(base, merge(mq, {files: files()})));

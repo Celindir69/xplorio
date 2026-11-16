@@ -297,6 +297,10 @@ function msImpResult(c, j) {
   if (miss.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.impMissing', {list: miss.map(function(k){ return T('mac.impField.' + k) + ' (' + ck.missing[k] + ')'; }).join(', ')})));
   ck.examples.slice(0, 6).forEach(function(e){ c.appendChild(histEl('div', 'msItemSub', e.file.split('/').slice(-2).join('/') + ': ' + e.missing.map(function(k){ return T('mac.impField.' + k); }).join(', '))); });
   if (ck.noCover.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.impNoCover', {list: ck.noCover.map(function(p){ return p.split('/').slice(-1)[0]; }).slice(0, 5).join(', ')})));
+  var row = histEl('div', 'pbRow msAddRow');                 /* fix it: all imported tracks in the bulk editor, or the library check */
+  if (ck.files && ck.files.length && typeof openBulkEditor === 'function') row.appendChild(msButton(T('mac.impEdit'), function(){ openBulkEditor(ck.files, name); }, 'on'));
+  if (typeof openCheck === 'function') row.appendChild(msButton(T('mac.impCheck'), function(){ openCheck(); }));
+  c.appendChild(row);
 }
 
 /* while MPD reads the library: ask again every 5 s, then show the new numbers */
