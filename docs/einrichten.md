@@ -1089,6 +1089,10 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   `xplorio.conf` wählt ein bestimmtes). Auf alten Intel-Macs ohne AVX2 mit MacPorts:
   `sudo port install python311 py311-pip libsdl2`, dann
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
+- **ReplayGain (rsgain):** „ReplayGain-Tags ergänzen“ ruft `rsgain easy -S` über alle Musikordner auf (nur Alben ohne
+  Tags), mit niedriger Priorität, wahlweise jede Nacht um 2 Uhr (die Audioanalyse startet dann ab 3 Uhr, sobald rsgain
+  fertig ist). Braucht rsgain (`brew install rsgain`) und Schreibzugriff auf die Musik. Die Dateien, die rsgain ändert,
+  übernimmt die Audioanalyse mit neuer Größe und Zeit, ohne sie neu zu analysieren; danach liest MPD die Bibliothek ein.
 - **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
 - **Passwort:** für die Dienste auf der Seite „System“ und den Dateimanager (der geht nur mit Passwort). Ändern braucht
   das aktuelle; ein neues meldet alle anderen Geräte ab.

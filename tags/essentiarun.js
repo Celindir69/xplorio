@@ -6,7 +6,7 @@
    keeps the processor first. Optionally every night (03:00, once a day).
    Node 8, ES5 only.
    opts: script (analyse.py), out() -> result file, roots() -> [music folders], stateFile, spawn, execFile, now(),
-         pythons ([candidates]), log(text), onDone() */
+         pythons ([candidates]), busy() (ReplayGain running), log(text), onDone() */
 var fs = require('fs'), cp = require('child_process');
 
 var CHECK_MS = 10 * 60 * 1000;            /* "no Python with Essentia" is remembered this long */
@@ -96,6 +96,7 @@ Runner.prototype.start = function(cb) {
   var self = this;
   if (this.child) return cb('running');
   if (!fs.existsSync(this.o.script)) return cb('script');
+  if (this.o.busy && this.o.busy()) return cb('busy');        /* ReplayGain tags are being written */
   this.python(false, function(py){
     if (!py) return cb('python');
     if (self.child) return cb('running');
@@ -153,10 +154,11 @@ Runner.prototype.kill = function() {
 
 Runner.prototype.setNightly = function(on) { this.s.nightly = !!on; this.save(); };
 
-/* every few minutes: at night, once a day */
+/* every few minutes: at night (from 03:00, at the latest 05:59 when ReplayGain runs longer), once a day */
 Runner.prototype.tick = function() {
   var d = new Date(this.now()), day = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
-  if (!this.s.nightly || this.child || d.getHours() !== NIGHT_HOUR || this.s.lastNight === day) return false;
+  if (!this.s.nightly || this.child || d.getHours() < NIGHT_HOUR || d.getHours() > NIGHT_HOUR + 2 || this.s.lastNight === day) return false;
+  if (this.o.busy && this.o.busy()) return false;             /* ReplayGain still running: try again until 05:59 */
   this.s.lastNight = day; this.save();
   var self = this;
   this.start(function(e){ if (e) self.log('Analysis at night not started: ' + e); });

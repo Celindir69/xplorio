@@ -35,6 +35,7 @@ stopAll() {
   done
   pkill -f "$APP/rotel/rotel-bridge.js" 2>/dev/null   # run by the tag service (Rotel amplifier)
   pkill -INT -f "$APP/essentia/analyse.py" 2>/dev/null   # audio analysis (like Ctrl-C: what is done stays, the next run continues)
+  pkill -INT -f "rsgain easy -S" 2>/dev/null   # ReplayGain tags (settings page): files already written keep their tags
   # the file before the option (MacPorts' MPD 0.24 takes no file after an option); the PID from the start as a fallback
   mpd "$MPD_CONF" --kill >/dev/null 2>&1
   if [ -f "$RUN/mpd.pid" ]; then

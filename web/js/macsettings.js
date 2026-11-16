@@ -10,6 +10,7 @@ var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
 var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
+var msRg = null, msRgMsg = '', msRgBad = false, msRgTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs', 'short', 'locked'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
@@ -31,6 +32,8 @@ function openMacSettings() {
   msTidalSend({});
   msAna = null; msAnaMsg = ''; msAnaBad = false;
   msAnaSend({});
+  msRg = null; msRgMsg = ''; msRgBad = false;
+  msRgSend({});
   tagGetJson('/mac/settings').then(function(r){
     if (seq !== msSeq) return;
     if (!r || !r.ok) throw new Error('keine Daten');
@@ -149,6 +152,7 @@ function msRender() {
   grid.appendChild(msMusicCard(d));
   grid.appendChild(msAudioCard());
   grid.appendChild(msEssentiaCard(d));
+  if (msRg && msRg.available) grid.appendChild(msRgCard());
   grid.appendChild(msLastfmCard(d));
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
@@ -262,7 +266,7 @@ function msEssentiaCard(d) {
 
 /* analysis on this Mac (POST /mac/analysis, tags/essentiarun.js): {} = state, {action: start|stop|check}, {nightly}.
    While it runs the state is asked every 5 s */
-var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart'};
+var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart', busy: 'mac.anaBusyRg'};
 function msAnaSend(body, okText) {
   var seq = msSeq;
   if (Object.keys(body).length) body.token = msToken();
@@ -319,6 +323,51 @@ function msAnaPart(c) {
     c.appendChild(nr);
   }
   if (msAnaMsg) c.appendChild(histEl('div', 'syNote' + (msAnaBad ? ' syWarn' : ''), msAnaMsg));
+}
+/* ReplayGain tags with rsgain (POST /mac/rsgain, tags/rsgainrun.js): {} = state, {action: start|stop}, {nightly} */
+var MS_RG_ERRORS = {rsgain: 'mac.rgErrBin', roots: 'mac.anaErrRoots', running: 'mac.rgRunning', busy: 'mac.rgBusyAna'};
+function msRgSend(body, okText) {
+  var seq = msSeq;
+  if (Object.keys(body).length) body.token = msToken();
+  clearTimeout(msRgTimer);
+  tagPostJson('/mac/rsgain', body).then(function(r){
+    if (seq !== msSeq) return;
+    if (r && r.ok) {
+      var was = msRg && msRg.running;
+      msRg = r; msRgBad = !!r.startError;
+      msRgMsg = r.startError ? T(MS_RG_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T('mac.rgDone') : msRgMsg;
+      if (r.running) msRgTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msRgSend({}); }, 5000);
+    } else if (r && r.available === false) msRg = r;
+    else { msRgBad = true; msRgMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    if (msData) msRender();
+  }).catch(function(){ if (seq === msSeq) { msRgBad = true; msRgMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+function msRgCard() {
+  var c = sysCard('ReplayGain (rsgain)', 'syWide'), a = msRg;
+  c.appendChild(histEl('div', 'syNote', T('mac.rgNote')));
+  if (!a.rsgain) {
+    c.appendChild(histEl('div', 'syNote syWarn', T('mac.rgNoBin')));
+    c.appendChild(histEl('pre', 'msCode', 'brew install rsgain\n# MacPorts: sudo port install rsgain'));
+  } else {
+    var kv = histEl('div', 'syKv'), p = a.progress || {};
+    kv.appendChild(histEl('span', 'syK', T('mac.essState')));
+    var txt = a.running ? (p.phase === 'tagging' ? T('mac.rgTagging', {n: p.dir, m: p.dirs}) : T(p.phase === 'checking' ? 'mac.rgChecking' : 'mac.rgListing'))
+      : a.lastEnd ? T('mac.rgLast', {date: langDate(a.lastEnd), n: a.lastFiles || 0, k: a.lastCarried || 0}) + (a.lastError ? ' · ' + T('mac.anaStopped') : '')
+      : T('mac.anaNever');
+    kv.appendChild(histEl('span', 'syV', txt));
+    c.appendChild(kv);
+    if (a.running && p.phase === 'tagging' && a.tail && a.tail.length) c.appendChild(histEl('div', 'msItemSub', a.tail[a.tail.length - 1]));
+    var row = histEl('div', 'pbRow msAddRow');
+    if (a.running) row.appendChild(msButton(T('mac.anaStop'), function(){ msRgSend({action: 'stop'}, 'mac.anaStopping'); }));
+    else row.appendChild(msButton(T('mac.rgStart'), function(){ if (confirm(T('mac.rgAsk'))) msRgSend({action: 'start'}, 'mac.rgStarted'); }, 'on'));
+    c.appendChild(row);
+    var nr = histEl('div', 'msSetRow');
+    nr.appendChild(histEl('div', 'msSetLabel', T('mac.rgNightly')));
+    nr.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.nightly, function(v){ msRgSend({nightly: v}, 'mac.tidalSaved'); }));
+    c.appendChild(nr);
+  }
+  if (msRgMsg) c.appendChild(histEl('div', 'syNote' + (msRgBad ? ' syWarn' : ''), msRgMsg));
+  return c;
 }
 function msUpload(f) {
   var seq = msSeq;

@@ -821,6 +821,10 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   `python3.12` … from Homebrew or MacPorts that can load `essentia` (`XPLORIO_PYTHON` in `xplorio.conf` picks one).
   On old Intel Macs without AVX2, with MacPorts: `sudo port install python311 py311-pip libsdl2`, then
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
+- **ReplayGain (rsgain):** "Add ReplayGain tags" runs `rsgain easy -S` over all music folders (only albums without
+  tags) with low priority, optionally every night at 2 am (the audio analysis then starts from 3 am, once rsgain is
+  done). Needs rsgain (`brew install rsgain`) and write access to the music. The files rsgain changes are taken over by
+  the audio analysis with their new size and time, without analysing them again; MPD then reads the library.
 - **Last.fm:** API key and secret (stored in `keys.json` in the data folder).
 - **Password:** for the services on the "System" page and the file manager (which only works with a password).
   Changing it needs the current one; a new one logs out all other devices.

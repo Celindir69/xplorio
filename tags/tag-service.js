@@ -2974,6 +2974,7 @@ function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
+  if (route === '/mac/rsgain') return doMacRsgain(req, res);
   if (route !== '/mac/settings') return send(res, 404, {ok: false, error: 'unknown path'});
   if (req.method === 'GET') {
     var rd = macSettings.read(appConfig()); rd.pw = adminAuth.isSet();
@@ -3019,10 +3020,44 @@ function essOut() {
 function essRunner() {
   if (!essRun) essRun = new essentiarun.Runner({
     script: essScript(), out: essOut, roots: function(){ return [MUSIC_ROOT]; }, stateFile: path.join(DATA_DIR, 'essentia-run.json'),
-    log: function(t){ console.error(t); }, onDone: function(){ audioStore.reload(true); }
+    log: function(t){ console.error(t); }, onDone: function(){ audioStore.reload(true); },
+    busy: function(){ return !!(rgRun && rgRun.running()); }
   });
   return essRun;
 }
+/* ReplayGain tags with rsgain (rsgainrun.js): GET /mac/rsgain = state, POST {action: start|stop} or {nightly}. Folders: the
+   music folders' targets; the analysis entries of the files it writes are carried along; MPD reads the library afterwards */
+var rsgainrun = require('./rsgainrun.js'), rgRun = null;
+function rgRunner() {
+  if (!rgRun) rgRun = new rsgainrun.Runner({
+    dirs: function(){ return macSettings.music().filter(function(m){ return !m.missing; }).map(function(m){ return m.target; }); },
+    walkRoot: function(){ return path.resolve(MUSIC_ROOT); }, essentia: essOut, stateFile: path.join(DATA_DIR, 'rsgain-run.json'),
+    busy: function(){ return !!(essRun && essRun.child); }, log: function(t){ console.error(t); },
+    onDone: function(n){ audioStore.reload(true); if (n) mpdPlayer.mpd(['update'], function(){}); }
+  });
+  return rgRun;
+}
+function doMacRsgain(req, res) {
+  if (!onMac()) return send(res, 200, {ok: false, available: false});
+  function state(extra) { var st = rgRunner().status(); st.available = true; if (extra) Object.keys(extra).forEach(function(k){ st[k] = extra[k]; }); send(res, 200, st); }
+  if (req.method === 'GET') return state();
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(d){ data += d; if (data.length > MAX_BODY) req.destroy(); });
+  req.on('end', function(){
+    var body;
+    try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    var r = rgRunner();
+    if (!body.action && body.nightly === undefined) return state();
+    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
+    if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
+    if (body.action === 'start') return r.start(function(e){ state(e ? {startError: e} : {done: 'start'}); });
+    send(res, 400, {ok: false, error: 'unknown action'});
+  });
+}
+setInterval(function(){ if (onMac()) rgRunner().tick(); }, 5 * 60 * 1000).unref();
+process.on('exit', function(){ if (rgRun) rgRun.stop(); });
 function doMacAnalysis(req, res) {
   if (!onMac()) return send(res, 200, {ok: false, available: false});
   function state(extra, force) {
