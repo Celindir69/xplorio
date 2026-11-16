@@ -122,7 +122,12 @@ t('update: installed and newest version, newer only when the commit differs; ins
     assert.strictEqual(fs.readFileSync(spawned[0][1][0], 'utf8'), 'echo hallo\n');
     assert.deepStrictEqual([spawned[0][2], spawned[0][3]], [true, state]);
     return new Promise(function(res){ u.install(res); });
-  }).then(function(e){ assert.strictEqual(e, 'running'); });
+  }).then(function(e){
+    assert.strictEqual(e, 'running');
+    fs.unlinkSync(state);                                    /* nothing installed through the button yet: the default branch */
+    var u2 = new mu.Updater({repo: 'o/r', branch: function(){ return ''; }, defaultBranch: 'zweig', stateFile: state, script: script, logFile: path.join(d, 'l.log')});
+    assert.strictEqual(u2.branch(), 'zweig');
+  });
 });
 
 t('update script: download, commit from the zip, quit, build, update.json, start again; on an error the old commit stays', function(){

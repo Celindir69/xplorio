@@ -2,7 +2,7 @@
    written by tools/mac/xplorio-update.sh), which one is the newest on GitHub (last commit of the branch), and the update
    itself: the script runs on its own (detached), quits Xplorio, builds the app again and starts it.
    Node 8, ES5 only.
-   opts: repo ("owner/name"), branch() -> branch, stateFile (update.json), script (xplorio-update.sh in the app),
+   opts: repo ("owner/name"), branch() -> branch (else the one of the last update, else defaultBranch), stateFile (update.json), script (xplorio-update.sh in the app),
          logFile, env (extra environment for the script), spawn, get(url, cb(err, json)), now(), tmpDir */
 var fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process'), https = require('https');
 
@@ -32,7 +32,7 @@ function Updater(o) {
   this.cache = null;          /* {at, branch, latest} */
   this.started = 0;
 }
-Updater.prototype.branch = function() { return (this.o.branch && this.o.branch()) || this.installed().branch || 'main'; };
+Updater.prototype.branch = function() { return (this.o.branch && this.o.branch()) || this.installed().branch || this.o.defaultBranch || 'main'; };
 
 /* update.json: {sha, branch, at, ok, error} */
 Updater.prototype.installed = function() {

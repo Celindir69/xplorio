@@ -3145,7 +3145,7 @@ function macUpdater() {
   if (!macUpd) {
     var a = [path.join(__dirname, '..', 'mac', 'xplorio-update.sh'), path.join(__dirname, '..', 'tools', 'mac', 'xplorio-update.sh')];
     macUpd = new macupdate.Updater({repo: process.env.XPLORIO_REPO || 'Celindir69/xplorio',
-      branch: function(){ return process.env.XPLORIO_UPDATE_BRANCH || ''; },
+      branch: function(){ return process.env.XPLORIO_UPDATE_BRANCH || ''; }, defaultBranch: 'claude/project-thread-6k5f1h',
       stateFile: path.join(macSupport(), 'update.json'), script: fs.existsSync(a[0]) ? a[0] : a[1],
       logFile: path.join(os.homedir(), 'Library', 'Logs', 'Xplorio', 'update.log'), env: {XPLORIO_SUPPORT: macSupport()}});
   }
