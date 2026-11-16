@@ -202,7 +202,19 @@ function msInput(value, placeholder, type) {
 }
 function msSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' kB'; }
 
+/* drawing again keeps the scroll position (the page would jump to the top while it is empty for a moment) */
 function msRender() {
+  var keep = [], el = msBody;
+  for (; el && el.nodeType === 1; el = el.parentNode) if (el.scrollTop) keep.push([el, el.scrollTop]);
+  var winY = window.pageYOffset || 0, h = msBody.offsetHeight;
+  if (h) msBody.style.minHeight = h + 'px';
+  try { msDraw(); } finally {
+    msBody.style.minHeight = '';
+    keep.forEach(function(k){ k[0].scrollTop = k[1]; });
+    if (winY) window.scrollTo(0, winY);
+  }
+}
+function msDraw() {
   var d = msData;
   while (msBody.firstChild) msBody.removeChild(msBody.firstChild);
   var grid = histEl('div', 'syGridBox');
