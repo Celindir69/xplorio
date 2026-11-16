@@ -670,7 +670,7 @@ langRegister('es', 'Español', {
   'mac.err.exists': 'Esta carpeta ya está.',
   'mac.err.notlink': 'No es un enlace; Xplorio no quita carpetas reales.',
   'mac.err.lastfm': 'Introduce una clave API válida (solo letras y cifras).',
-  'mac.err.auth': 'Inicia sesión primero con la contraseña en Sistema.',
+  'mac.err.auth': 'Inicia sesión primero con la contraseña arriba en esta página.',
   'mac.tidalNote': 'Con tu propia cuenta de TIDAL: búsqueda, álbumes, artistas y listas de TIDAL, reproducidos con MPD. Las pistas hi-res se guardan en caché al reproducirse; avanzar funciona cuando la pista se ha cargado entera.',
   'mac.tidalNode': 'TIDAL necesita Node 18 o más reciente (MacPorts: sudo port install nodejs20, Homebrew: brew install node). Después vuelve a crear Xplorio.',
   'mac.tidalFfmpeg': 'Falta ffmpeg; sin él TIDAL solo suena en calidad AAC. Instálalo con sudo port install ffmpeg (MacPorts) o brew install ffmpeg y reinicia Xplorio.',
