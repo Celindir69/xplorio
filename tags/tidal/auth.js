@@ -5,7 +5,9 @@ const AUTH_BASE = 'https://auth.tidal.com/v1/oauth2';
 const DEVICE_CLIENT = { id: 'fX2JxdmntZWK0ixT', secret: '1Nn9AfDAjxrgJFJbKNWLeAyKGVGmINuXPPLHVXAvxAg=' };
 const SCOPE = 'r_usr w_usr w_sub';
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
-const SESSION_KEYS = ['access_token', 'refresh_token', 'user_id', 'country_code', 'username', 'plan'];
+// Only the refresh token is written to the store (data economy, like Volumio). Everything else lives in memory:
+// after a restart the access token is fetched again and user ID and country come from GET /sessions (api.js).
+const IN_MEMORY = ['access_token', 'expires_at', 'user_id', 'country_code', 'username', 'plan'];
 
 class AuthError extends Error {
   constructor(code, message) {
@@ -20,6 +22,23 @@ class TidalAuth {
     this.fetch = fetch;
     this.now = now;
     this.logger = logger;
+    this.mem = {};
+    // older versions stored all of it: remove it from the file
+    const data = store && typeof store.data === 'function' ? store.data() : null;
+    if (data && IN_MEMORY.some((k) => k in data)) {
+      IN_MEMORY.forEach((k) => { delete data[k]; });
+      if (typeof store.save === 'function') store.save();
+    }
+  }
+
+  _get(k, d) {
+    if (IN_MEMORY.includes(k)) return this.mem[k] !== undefined ? this.mem[k] : d;
+    return this.store.get(k, d);
+  }
+
+  _set(k, v) {
+    if (IN_MEMORY.includes(k)) this.mem[k] = v;
+    else this.store.set(k, v);
   }
 
   async _post(path, data) {
@@ -64,22 +83,22 @@ class TidalAuth {
   }
 
   _saveTokens(json) {
-    this.store.set('access_token', json.access_token);
-    if (json.refresh_token) this.store.set('refresh_token', json.refresh_token);
-    this.store.set('expires_at', this.now() + (Number(json.expires_in) || 0) * 1000);
+    this._set('access_token', json.access_token);
+    if (json.refresh_token) this._set('refresh_token', json.refresh_token);
+    this._set('expires_at', this.now() + (Number(json.expires_in) || 0) * 1000);
     if (json.user) {
-      if (json.user.userId !== undefined) this.store.set('user_id', String(json.user.userId));
-      if (json.user.username) this.store.set('username', json.user.username);
-      if (json.user.countryCode) this.store.set('country_code', json.user.countryCode);
+      if (json.user.userId !== undefined) this._set('user_id', String(json.user.userId));
+      if (json.user.username) this._set('username', json.user.username);
+      if (json.user.countryCode) this._set('country_code', json.user.countryCode);
     }
   }
 
   isLoggedIn() {
-    return Boolean(this.store.get('refresh_token', ''));
+    return Boolean(this._get('refresh_token', ''));
   }
 
   async refresh() {
-    const refreshToken = this.store.get('refresh_token', '');
+    const refreshToken = this._get('refresh_token', '');
     if (!refreshToken) throw new AuthError('not_logged_in');
     const { status, json } = await this._post('/token', {
       grant_type: 'refresh_token',
@@ -101,26 +120,27 @@ class TidalAuth {
 
   async getAccessToken() {
     if (!this.isLoggedIn()) throw new AuthError('not_logged_in');
-    const expiresAt = Number(this.store.get('expires_at', 0)) || 0;
-    if (!this.store.get('access_token', '') || expiresAt - this.now() < REFRESH_MARGIN_MS) {
+    const expiresAt = Number(this._get('expires_at', 0)) || 0;
+    if (!this._get('access_token', '') || expiresAt - this.now() < REFRESH_MARGIN_MS) {
       await this.refresh();
     }
-    return this.store.get('access_token', '');
+    return this._get('access_token', '');
   }
 
   logout() {
-    for (const key of SESSION_KEYS) this.store.set(key, '');
-    this.store.set('expires_at', 0);
+    this.store.set('refresh_token', '');
+    this.mem = {};
   }
 
-  getUserId() { return this.store.get('user_id', ''); }
-  getCountryCode() { return this.store.get('country_code', ''); }
-  getUsername() { return this.store.get('username', ''); }
-  getPlan() { return this.store.get('plan', ''); }
+  getUserId() { return this._get('user_id', ''); }
+  getCountryCode() { return this._get('country_code', ''); }
+  getUsername() { return this._get('username', ''); }
+  getPlan() { return this._get('plan', ''); }
 
-  setSession({ countryCode, plan } = {}) {
-    if (countryCode) this.store.set('country_code', countryCode);
-    if (plan !== undefined) this.store.set('plan', plan);
+  setSession({ userId, countryCode, plan } = {}) {
+    if (userId !== undefined && userId !== null && userId !== '') this._set('user_id', String(userId));
+    if (countryCode) this._set('country_code', countryCode);
+    if (plan !== undefined) this._set('plan', plan);
   }
 }
 

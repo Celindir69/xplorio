@@ -551,7 +551,7 @@ function msTidalCard() {
     if (a.ffmpeg === false) c.appendChild(histEl('div', 'syNote syWarn', T('mac.tidalFfmpeg')));
     var kv = histEl('div', 'syKv');
     kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
-    kv.appendChild(histEl('span', 'syV', a.loggedIn ? T('mac.tidalAs', {user: a.username || '?'}) + (a.plan ? ' · ' + a.plan : '') : T('mac.tidalOut')));
+    kv.appendChild(histEl('span', 'syV', a.loggedIn ? (a.username ? T('mac.tidalAs', {user: a.username}) : T('mac.tidalIn')) + (a.plan ? ' · ' + a.plan : '') : T('mac.tidalOut')));
     c.appendChild(kv);
     if (a.login) {
       c.appendChild(histEl('div', 'syNote', T('mac.tidalStep')));

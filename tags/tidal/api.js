@@ -41,7 +41,19 @@ class TidalApi {
     return value;
   }
 
+  /* after a restart only the refresh token is known: user ID and country from GET /sessions, once */
+  ensureSession() {
+    if (this.auth.getUserId()) return Promise.resolve();
+    if (!this.sessionLoad) {
+      this.sessionLoad = this.loadSession()
+        .then(() => this.loadSubscription().catch(() => {}))
+        .then(() => { this.sessionLoad = null; }, (e) => { this.sessionLoad = null; throw e; });
+    }
+    return this.sessionLoad;
+  }
+
   async _request(path, params, allowRetry) {
+    if (path !== 'sessions' && !this.auth.getUserId()) await this.ensureSession();
     const token = await this.auth.getAccessToken();
     const url = new URL(path.replace(/^\//, ''), API_BASE);
     const countryCode = this.auth.getCountryCode();
@@ -90,7 +102,7 @@ class TidalApi {
 
   async loadSession() {
     const session = await this.get('sessions', {}, { ttl: 0 });
-    if (session && session.countryCode) this.auth.setSession({ countryCode: session.countryCode });
+    if (session) this.auth.setSession({ userId: session.userId, countryCode: session.countryCode });
     return session;
   }
 

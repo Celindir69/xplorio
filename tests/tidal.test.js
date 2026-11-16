@@ -25,7 +25,7 @@ function fakeTidal(state) {
       return json(200, {access_token: 'acc', refresh_token: 'ref', expires_in: 3600, user: {userId: 7, username: 'ich@example.org', countryCode: 'DE'}});
     }
     var p = new URL(url).pathname.replace('/v1/', '');
-    if (p === 'sessions') return json(200, {countryCode: 'DE'});
+    if (p === 'sessions') { state.sessions = (state.sessions || 0) + 1; return json(200, {userId: 7, countryCode: 'DE'}); }
     if (p === 'users/7/subscription') return json(200, {subscription: {type: 'HIFI_PLUS'}, highestSoundQuality: 'HI_RES_LOSSLESS'});
     if (p === 'search') return json(200, {artists: {items: [{id: 1, name: 'Daft Punk', picture: 'aa-bb'}]}, albums: {items: [{id: 2, title: 'Discovery', artists: [{name: 'Daft Punk'}], cover: 'cc-dd', releaseDate: '2001-03-12'}]},
                                           playlists: {items: []}, tracks: {items: [{id: 3, title: 'One More Time', artists: [{name: 'Daft Punk'}], album: {title: 'Discovery', cover: 'cc-dd'}, duration: 320}]}});
@@ -65,10 +65,29 @@ t('login with a device code: code and link first, then the account; tokens stay 
     assert.strictEqual(r.plan, 'HIFI_PLUS / HI_RES_LOSSLESS');
     assert.ok(!('access_token' in r) && JSON.stringify(r).indexOf('ref') < 0, 'no token in the answer');
     var file = path.join(s.o.dataDir, 'tidal.json');
-    assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).refresh_token, 'ref');
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, 'utf8')), {refresh_token: 'ref'});   /* only the refresh token */
     assert.strictEqual(fs.statSync(file).mode & 0o077, 0);
     return s.handle({action: 'logout'});
   }).then(function(r){ assert.strictEqual(r.loggedIn, false); return s.stop(); });
+});
+
+t('after a restart: access token fetched again, user ID and country from the session (once); old files cleaned up', function(){
+  var dir = tmp(), st = {polls: 0}, file = path.join(dir, 'tidal.json');
+  fs.writeFileSync(file, JSON.stringify({refresh_token: 'ref', access_token: 'alt', expires_at: 1, user_id: '7', username: 'ich@example.org', country_code: 'DE', plan: 'x', quality: 'LOSSLESS'}));
+  var s = service(st, {dataDir: dir});
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, 'utf8')), {refresh_token: 'ref', quality: 'LOSSLESS'});
+  return s.handle({}).then(function(r){
+    assert.strictEqual(r.loggedIn, true); assert.strictEqual(r.username, '');
+    return Promise.all([s.browser.my('tracks').catch(function(){}), s.search('daft')]);
+  }).then(function(){
+    assert.strictEqual(st.sessions, 1);
+    assert.strictEqual(s.auth.getUserId(), '7'); assert.strictEqual(s.auth.getCountryCode(), 'DE');
+    return s.handle({});
+  }).then(function(r){
+    assert.strictEqual(r.plan, 'HIFI_PLUS / HI_RES_LOSSLESS');
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, 'utf8')), {refresh_token: 'ref', quality: 'LOSSLESS'});
+    return s.stop();
+  });
 });
 
 t('settings: quality and search hits, other values refused', function(){

@@ -631,6 +631,7 @@ langRegister('fr', 'Français', {
   'mac.tidalNode': 'TIDAL nécessite Node 18 ou plus récent (MacPorts : sudo port install nodejs20, Homebrew : brew install node). Reconstruis ensuite Xplorio.',
   'mac.tidalFfmpeg': 'ffmpeg manque ; sans lui TIDAL ne joue qu\'en qualité AAC. Installe-le avec sudo port install ffmpeg (MacPorts) ou brew install ffmpeg, puis redémarre Xplorio.',
   'mac.tidalAs': 'Connecté en tant que {user}',
+  'mac.tidalIn': 'Connecté',
   'mac.tidalOut': 'Non connecté',
   'mac.tidalStep': 'Ouvre l\'adresse ci-dessous (sur le Mac ou le téléphone), connecte-toi à TIDAL et confirme ce code :',
   'mac.tidalWait': 'En attente de la confirmation chez TIDAL …',

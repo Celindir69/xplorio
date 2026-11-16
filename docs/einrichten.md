@@ -1137,4 +1137,4 @@ Ohne Volumio übernimmt Xplorio außerdem selbst:
   FLAC-Datei und legt sie im Zwischenspeicher ab (`tidal-cache` im Datenordner, 1 GB, `TIDAL_CACHE_MB`). Spulen geht,
   sobald ein Titel ganz geladen ist. Qualität (Max/Hi-Res, HiFi, AAC 320) und Zahl der Suchtreffer (10/20/50) auf der
   Karte. Braucht Node 18 oder neuer und ffmpeg (`brew install ffmpeg` bzw. `sudo port install ffmpeg`), ohne ffmpeg
-  nur AAC. Die Anmeldung liegt in `tidal.json` im Datenordner (nur für den Benutzer lesbar).
+  nur AAC. Von der Anmeldung speichert Xplorio nur den Refresh-Token, in `tidal.json` im Datenordner (nur für den Benutzer lesbar); Access-Token, Konto-ID und Land bleiben nur im Speicher.

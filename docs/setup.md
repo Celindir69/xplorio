@@ -866,5 +866,5 @@ Without Volumio Xplorio also takes over:
   only when the track plays, ffmpeg turns TIDAL's segments into one FLAC file and keeps it in the cache (`tidal-cache` in
   the data folder, 1 GB, `TIDAL_CACHE_MB`). Seeking works once a track has fully loaded. Quality (Max/hi-res, HiFi,
   AAC 320) and the number of search hits (10/20/50) on the card. Needs Node 18 or newer and ffmpeg (`brew install
-  ffmpeg` or `sudo port install ffmpeg`); without ffmpeg AAC only. The login is kept in `tidal.json` in the data folder
-  (readable by the user only).
+  ffmpeg` or `sudo port install ffmpeg`); without ffmpeg AAC only. Of the login only the refresh token is kept, in `tidal.json` in the data
+  folder (readable by the user only); access token, account ID and country stay in memory.
