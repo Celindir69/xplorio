@@ -147,6 +147,8 @@ function Sysinfo(opts) {
   this.run = opts.run || runText;    /* Mac: vm_stat, mount, sw_vers */
   this.vm = null;                    /* Mac: last memory reading */
   this.macOs = '';
+  this.mpdBin = opts.mpdBin || process.env.MPD_BIN || 'mpd';
+  this.mpdInfo = null; this.mpdAt = 0;  /* mpd --version, read again after a minute (MPD may have been updated) */
   this.prev = null;                  /* last /proc/stat sample */
   this.minA = null;                  /* sample at the start of the current minute */
   this.minStart = 0;
@@ -298,16 +300,35 @@ Sysinfo.prototype.report = function(full, cb) {
   r.sys = {host: os.hostname(), kernel: os.release(), arch: os.arch(), node: process.version,
            volumio: osr.VOLUMIO_VERSION || '', hardware: osr.VOLUMIO_HARDWARE || '', os: osr.PRETTY_NAME || '',
            cpuModel: cpus[0] ? String(cpus[0].model || '').trim() : '', cpuCount: cpus.length};
-  if (this.mac && !this.macOs) {
-    return this.run('sw_vers', ['-productVersion'], function(t){
-      self.macOs = 'macOS ' + (t.trim() || os.release());
-      r.sys.os = self.macOs;
-      self.diskList(function(d){ r.disks = d; cb(r); });
-    });
-  }
-  if (this.mac) r.sys.os = this.macOs;
-  this.diskList(function(d){ r.disks = d; cb(r); });
+  this.mpd(function(m){
+    if (m) { r.sys.mpd = m.version; r.sys.mpdFfmpeg = m.ffmpeg; }
+    if (self.mac && !self.macOs) {
+      return self.run('sw_vers', ['-productVersion'], function(t){
+        self.macOs = 'macOS ' + (t.trim() || os.release());
+        r.sys.os = self.macOs;
+        self.diskList(function(d){ r.disks = d; cb(r); });
+      });
+    }
+    if (self.mac) r.sys.os = self.macOs;
+    self.diskList(function(d){ r.disks = d; cb(r); });
+  });
+};
+
+/* MPD version and whether it decodes through ffmpeg, from mpd --version -> {version, ffmpeg} or null */
+function parseMpdVersion(text) {
+  var t = String(text || ''), m = /Music Player Daemon\s+(\d+(?:\.\d+)+)/.exec(t);
+  if (!m) return null;
+  var dec = /^\s*Decoders? plugins:\s*$([\s\S]*?)(?:^\s*$|^\S)/m.exec(t);
+  return {version: m[1], ffmpeg: /^\s*\[ffmpeg\]/m.test(dec ? dec[1] : t)};
+}
+Sysinfo.prototype.mpd = function(cb) {
+  var self = this, now = Date.now();
+  if (this.mpdAt && now - this.mpdAt < 60000) return cb(this.mpdInfo);
+  this.run(this.mpdBin, ['--version'], function(t){
+    self.mpdInfo = parseMpdVersion(t); self.mpdAt = Date.now();
+    cb(self.mpdInfo);
+  });
 };
 
 module.exports = {Sysinfo: Sysinfo, parseStat: parseStat, pct: pct, parseMeminfo: parseMeminfo, parseMounts: parseMounts,
-                  parseDf: parseDf, parseOsRelease: parseOsRelease, statFromCpus: statFromCpus, parseVmStat: parseVmStat, parseMacMounts: parseMacMounts};
+                  parseDf: parseDf, parseOsRelease: parseOsRelease, statFromCpus: statFromCpus, parseVmStat: parseVmStat, parseMacMounts: parseMacMounts, parseMpdVersion: parseMpdVersion};

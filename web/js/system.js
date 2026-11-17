@@ -327,6 +327,7 @@ function sysRender(st) {
   kv(info, T('sys.kernel'), s.kernel + (s.arch ? ' · ' + s.arch : ''));
   kv(info, T('sys.cpuModel'), (s.cpuCount ? T('sys.cores', {n: s.cpuCount}) : '') + (s.cpuModel ? ' · ' + s.cpuModel : ''));
   kv(info, T('sys.node'), s.node);
+  if (s.mpd) kv(info, T('sys.mpd'), s.mpd + ' · ' + T(s.mpdFfmpeg ? 'sys.mpdFf' : 'sys.mpdNoFf'));
   kv(info, T('sys.host'), s.host);
   sysEls.uptime = histEl('span', 'syV', '');
   var ur = histEl('div', 'syKv');
