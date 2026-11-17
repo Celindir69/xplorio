@@ -2929,7 +2929,7 @@ var macAudio = new macaudio.MacAudio({
 });
 function doMacAudio(body, cb) {
   function answer(e, extra) {
-    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
+    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
     macAudio.status(function(e2, st){
       if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
       st.ok = true; st.done = body.action; st.canScan = !!MAC_MPD_CONF; if (extra) st.devices = extra.devices;
@@ -2944,6 +2944,10 @@ function doMacAudio(body, cb) {
   if (body.action === 'audioDsd') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.setDsd(!!body.on, function(e){ answer(e); });
+  }
+  if (body.action === 'audioBuffer') {
+    if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
+    return macAudio.setBuffer(parseInt(body.kib, 10) || 0, function(e){ answer(e); });
   }
   answer(null);
 }

@@ -6,7 +6,7 @@
    Classic script, shared global scope; see xplorio.html for load order. */
 var overlayMacSettings = document.getElementById('overlayMacSettings');
 var msBody = document.getElementById('msBody');
-var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false;
+var msAudio = null, msAudioMsg = '', msAudioBusy = false, msAudioBad = false, msAudioExpert = false;
 var msAdj = null, msAdjMsg = '', msAdjBad = false;
 var msTidal = null, msTidalMsg = '', msTidalBad = false, msTidalWas = null;
 var msAna = null, msAnaMsg = '', msAnaBad = false, msAnaTimer = null;
@@ -104,6 +104,18 @@ function msAudioCard() {
         Object.keys(change || {}).forEach(function(k){ b[k] = change[k]; });
         msAudioSend(b, 'mac.audioScanned');
       };
+      var row = histEl('div', 'pbRow msAddRow');
+      row.appendChild(msButton(T('mac.audioScan'), function(){ scan({}); }, 'on'));
+      c.appendChild(row);
+      /* expert settings: folded away; folded, a line says what is on */
+      var on = [a.exclusive ? T('mac.audioExclusiveOn') : '', a.fixedVolume ? T('mac.audioFixedOn') : '', a.dsdFfmpeg ? T('mac.audioDsdFf') : '',
+                a.dop && !a.dsdFfmpeg ? 'DoP' : '', a.bufferKib ? T('mac.audioBufferMb', {n: a.bufferKib / 1024}) : ''].filter(Boolean);
+      var head = histEl('div', 'sHint listLink pbLink', (msAudioExpert ? '▾ ' : '▸ ') + T('mac.audioExpert') + (!msAudioExpert && on.length ? ' · ' + on.join(' · ') : ''));
+      head.addEventListener('click', function(){ msAudioExpert = !msAudioExpert; msRender(); });
+      c.appendChild(head);
+      var cc = c;                                        /* the rows below go into the folding part (drawn, but shown only unfolded) */
+      c = histEl('div', 'msExpert');
+      if (msAudioExpert) cc.appendChild(c);
       /* inverted: the switch shows the opposite of the setting (software volume on = fixedVolume off); ask before setting it */
       var sw = function(label, key, note, ask, inverted){
         var r = histEl('div', 'msSetRow');
@@ -129,9 +141,14 @@ function msAudioCard() {
       }
       if (!a.dsdFfmpeg) sw('mac.audioDop', 'dop', 'mac.audioDopNote', 'mac.audioDopAsk');
       if (!a.ffmpegDecoder && !a.dsdFfmpeg) c.appendChild(histEl('div', 'syNote', T('mac.audioDsdFfMissing')));
-      var row = histEl('div', 'pbRow msAddRow');
-      row.appendChild(msButton(T('mac.audioScan'), function(){ scan({}); }, 'on'));
-      c.appendChild(row);
+      var br = histEl('div', 'msSetRow');
+      br.appendChild(histEl('div', 'msSetLabel', T('mac.audioBuffer')));
+      br.appendChild(pbChips((a.buffers || [0]).map(function(k){ return [k, k ? T('mac.audioBufferMb', {n: k / 1024}) : T('mac.audioBufferStd')]; }), a.bufferKib || 0, function(v){
+        if (!msAudioBusy) msAudioSend({action: 'audioBuffer', kib: v}, 'mac.tidalSaved');
+      }));
+      c.appendChild(br);
+      c.appendChild(histEl('div', 'syNote', T('mac.audioBufferNote')));
+      c = cc;
     }
   } else if (!msAudioMsg) c.appendChild(browseNote(T('hist.loading')));
   if (msAudioMsg) c.appendChild(histEl('div', 'syNote' + (msAudioBad || (!msAudio && !msAudioBusy) ? ' syWarn' : ''), msAudioMsg));

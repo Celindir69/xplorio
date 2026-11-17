@@ -123,6 +123,15 @@ function writeDsd(text, on) {
     return 'decoder {\n  plugin     "' + p + '"\n  enabled    "no"\n}';
   }).join('\n') + '\n';
 }
+/* audio_buffer_size (KiB) of mpd.conf, 0 = MPD's default (4 MiB) */
+var BUFFERS = [0, 16384, 32768];
+function bufferSize(text) { var m = /^[ \t]*audio_buffer_size[ \t]+"?(\d+)/m.exec(text); return m ? +m[1] : 0; }
+function writeBuffer(text, kib) {
+  var t = text.replace(/^[ \t]*audio_buffer_size[ \t]+[^\n]*\n?/gm, '');
+  if (!kib) return t;
+  return t.replace(/\n*$/, '\n') + 'audio_buffer_size "' + kib + '"\n';
+}
+
 /* mpd --version lists a decoder plugin [ffmpeg] that knows dsf */
 function ffmpegDecodes(versionText) { return /^\s*\[ffmpeg\][^\n]*\bdsf\b/m.test(String(versionText || '')); }
 
@@ -159,7 +168,7 @@ MacAudio.prototype.status = function(cb) {
     var confText = self.conf();
     function done(list) {
       self.ffmpegOk(function(ff){
-      cb(null, {outputs: list, dsdFfmpeg: dsdViaFfmpeg(confText), ffmpegDecoder: ff, exclusive: list.some(function(o){ return o.hog; }), fixedVolume: list.some(function(o){ return o.fixed; }),
+      cb(null, {outputs: list, dsdFfmpeg: dsdViaFfmpeg(confText), ffmpegDecoder: ff, bufferKib: bufferSize(confText), buffers: BUFFERS, exclusive: list.some(function(o){ return o.hog; }), fixedVolume: list.some(function(o){ return o.fixed; }),
                 dop: list.some(function(o){ return o.dop; }), managed: managed, busy: self.busy});
       });
     }
@@ -183,12 +192,18 @@ MacAudio.prototype.ffmpegOk = function(cb) {
 };
 
 /* DSD through ffmpeg on/off: mpd.conf, MPD restarts */
-MacAudio.prototype.setDsd = function(on, cb) {
+MacAudio.prototype.setDsd = function(on, cb) { this.change(function(t){ return writeDsd(t, !!on); }, cb); };
+/* MPD's buffer for decoded music (KiB, one of BUFFERS; 0 = default): mpd.conf, MPD restarts */
+MacAudio.prototype.setBuffer = function(kib, cb) {
+  if (BUFFERS.indexOf(kib) < 0) return cb(new Error('value'));
+  this.change(function(t){ return writeBuffer(t, kib); }, cb);
+};
+MacAudio.prototype.change = function(fn, cb) {
   var self = this;
   if (this.busy) return cb(new Error('busy'));
   var text = this.conf();
   if (!text) return cb(new Error('conf'));
-  var neu = writeDsd(text, !!on);
+  var neu = fn(text);
   if (neu === text) return cb(null);
   try { fs.writeFileSync(this.o.confFile + '.neu', neu); fs.renameSync(this.o.confFile + '.neu', this.o.confFile); }
   catch (e) { return cb(e); }
@@ -249,4 +264,4 @@ MacAudio.prototype.scan = function(opts, cb) {
   });
 };
 
-module.exports = {MacAudio: MacAudio, writeDsd: writeDsd, dsdViaFfmpeg: dsdViaFfmpeg, ffmpegDecodes: ffmpegDecodes, decoderBlocks: decoderBlocks, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};
+module.exports = {MacAudio: MacAudio, writeBuffer: writeBuffer, bufferSize: bufferSize, BUFFERS: BUFFERS, writeDsd: writeDsd, dsdViaFfmpeg: dsdViaFfmpeg, ffmpegDecodes: ffmpegDecodes, decoderBlocks: decoderBlocks, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};

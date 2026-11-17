@@ -59,6 +59,19 @@ t('DSD through ffmpeg: MPD\'s dsf/dsdiff decoders off (also hand-written ones ar
   assert.strictEqual(ma.ffmpegDecodes('Decoder plugins:\n [dsf] dsf\n'), false);
 });
 
+t('buffer: audio_buffer_size written once, replaced, removed for the default; only the offered sizes', function(){
+  var t1 = ma.writeBuffer(CONF, 16384);
+  assert.strictEqual(ma.bufferSize(t1), 16384);
+  var t2 = ma.writeBuffer(t1, 32768);
+  assert.strictEqual(ma.bufferSize(t2), 32768);
+  assert.strictEqual((t2.match(/audio_buffer_size/g) || []).length, 1);
+  assert.strictEqual(ma.bufferSize(ma.writeBuffer(t2, 0)), 0);
+  assert.strictEqual(ma.writeBuffer(t2, 0).indexOf('audio_buffer_size'), -1);
+  assert.strictEqual(ma.blocks(t2).length, ma.blocks(CONF).length);
+  var a = new ma.MacAudio({confFile: '/gibt/es/nicht'});
+  a.setBuffer(1234, function(e){ assert.strictEqual(e && e.message, 'value'); });
+});
+
 t('volume on the amplifier (mixer none) and DSD as DoP (USB DACs only); the system output keeps its volume', function(){
   var d = ma.parseDevices(PROFILER), c = ma.writeConf(CONF, d, {exclusive: true, fixedVolume: true, dop: true}), b = ma.blocks(c);
   var osx = b.filter(function(x){ return x.type === 'osx'; }).map(function(x){ return [x.name, x.mixer, x.dop]; });
