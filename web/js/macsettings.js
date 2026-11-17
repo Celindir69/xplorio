@@ -80,6 +80,16 @@ function msAudioSend(body, okText) {
     msRender();
   }).catch(function(){ if (seq === msSeq) { msAudioBusy = false; msAudioBad = true; msAudioMsg = T('mac.err.audio.mpd'); msRender(); } });
 }
+/* how long the buffer lasts: CD 16 bit, 96 and 352.8 kHz as 24 bit (MPD keeps those in 4 bytes), stereo */
+function msBufferTime(kib) {
+  function dur(sec) {
+    if (sec < 10) return T('mac.durSec', {s: (Math.round(sec * 10) / 10).toLocaleString(LANG_LOCALE)});
+    var m = Math.floor(Math.round(sec) / 60), r = Math.round(sec) % 60;
+    return m ? T('mac.durMin', {m: m, s: r}) : T('mac.durSec', {s: r});
+  }
+  var b = kib * 1024;
+  return T('mac.audioBufferTime', {cd: dur(b / (44100 * 2 * 2)), hd: dur(b / (96000 * 2 * 4)), dsd: dur(b / (352800 * 2 * 4))});
+}
 function msAudioCard() {
   var c = sysCard(T('mac.audio'), 'syWide'), a = msAudio;
   c.appendChild(histEl('div', 'syNote', T('mac.audioNote')));
@@ -147,6 +157,7 @@ function msAudioCard() {
         if (!msAudioBusy) msAudioSend({action: 'audioBuffer', kib: v}, 'mac.tidalSaved');
       }));
       c.appendChild(br);
+      c.appendChild(histEl('div', 'syNote', msBufferTime(a.bufferKib || 4096)));
       c.appendChild(histEl('div', 'syNote', T('mac.audioBufferNote')));
       c = cc;
     }
