@@ -2911,6 +2911,10 @@ var macAudio = new macaudio.MacAudio({
     if (process.env.XPLORIO_AUDIO_SET) return fs.appendFile(process.env.XPLORIO_AUDIO_SET, uid + '\n', cb);       /* tests */
     cp.execFile(helper, ['set', uid], {timeout: 10000}, function(e){ cb(e); });
   },
+  decoders: function(cb){
+    if (process.env.XPLORIO_MPD_VERSION) return fs.readFile(process.env.XPLORIO_MPD_VERSION, 'utf8', cb);   /* tests */
+    cp.execFile(process.env.MPD_BIN || 'mpd', ['--version'], {timeout: 10000, maxBuffer: 1024 * 1024}, function(e, out){ cb(e, out); });
+  },
   restart: function(cb){
     var bin = process.env.MPD_BIN || 'mpd';
     cp.execFile(bin, [MAC_MPD_CONF, '--kill'], {timeout: 15000}, function(){
@@ -2936,6 +2940,10 @@ function doMacAudio(body, cb) {
   if (body.action === 'audioScan') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.scan({exclusive: !!body.exclusive, fixedVolume: !!body.fixedVolume, dop: !!body.dop}, answer);
+  }
+  if (body.action === 'audioDsd') {
+    if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
+    return macAudio.setDsd(!!body.on, function(e){ answer(e); });
   }
   answer(null);
 }

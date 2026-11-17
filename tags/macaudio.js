@@ -7,6 +7,9 @@
    "Volume on the amplifier" (mixer_type "none" on the device outputs): MPD does not touch the samples (bit-perfect),
    the volume is set on the amplifier/DAC. "DSD as DoP" (dop): DSD files go to USB DACs unchanged, packed in PCM frames
    (only for DACs that understand DoP; others play noise).
+   "DSD through ffmpeg": MPD's own DSD decoders (dsf, dsdiff) switched off, ffmpeg decodes DSD to PCM instead. MPD 0.24.0
+   (MacPorts) turns DSD into noise on the Mac; needs an MPD with ffmpeg (sudo port install mpd +mad +ffmpeg).
+   opts also: decoders(cb(err, text)) (mpd --version)
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
          restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, cb(err)) (audiodevices only:
@@ -90,6 +93,39 @@ function writeConf(text, devices, opts) {
   return keep.replace(/\n*$/, '\n') + lines.join('\n') + '\n';
 }
 
+/* decoder blocks of mpd.conf -> [{start, end, plugin, enabled}] */
+function decoderBlocks(text) {
+  var re = /^[ \t]*decoder[ \t]*\{[^}]*\}[ \t]*\n?/gm, m, out = [];
+  while ((m = re.exec(text))) {
+    var b = m[0], pl = /^\s*plugin\s+"([^"]*)"/m.exec(b), en = /^\s*enabled\s+"([^"]*)"/m.exec(b);
+    out.push({start: m.index, end: m.index + b.length, plugin: pl ? pl[1] : '', enabled: !en || en[1] !== 'no'});
+  }
+  return out;
+}
+var DSD_PLUGINS = ['dsf', 'dsdiff'];
+var DSD_NOTE = '# Xplorio: DSD through ffmpeg (settings page, audio output)';
+/* MPD's DSD decoders off (both) */
+function dsdViaFfmpeg(text) {
+  var off = decoderBlocks(text).filter(function(d){ return DSD_PLUGINS.indexOf(d.plugin) >= 0 && !d.enabled; }).map(function(d){ return d.plugin; });
+  return DSD_PLUGINS.every(function(p){ return off.indexOf(p) >= 0; });
+}
+/* mpd.conf with the dsf/dsdiff decoder blocks removed and, if on, written again (switched off) */
+function writeDsd(text, on) {
+  var keep = '', pos = 0;
+  decoderBlocks(text).forEach(function(d){
+    if (DSD_PLUGINS.indexOf(d.plugin) < 0) return;
+    keep += text.slice(pos, d.start); pos = d.end;
+  });
+  keep += text.slice(pos);
+  keep = keep.split('\n').filter(function(l){ return l !== DSD_NOTE; }).join('\n');
+  if (!on) return keep;
+  return keep.replace(/\n*$/, '\n') + DSD_NOTE + '\n' + DSD_PLUGINS.map(function(p){
+    return 'decoder {\n  plugin     "' + p + '"\n  enabled    "no"\n}';
+  }).join('\n') + '\n';
+}
+/* mpd --version lists a decoder plugin [ffmpeg] that knows dsf */
+function ffmpegDecodes(versionText) { return /^\s*\[ffmpeg\][^\n]*\bdsf\b/m.test(String(versionText || '')); }
+
 /* MPD's "outputs" lines -> [{id, name, plugin, enabled}] */
 function parseOutputs(lines) {
   var out = [], cur = null;
@@ -120,9 +156,12 @@ MacAudio.prototype.status = function(cb) {
       return {id: o.id, name: o.name.trim(), enabled: o.enabled, system: !b.device, hog: !!b.hog, fixed: b.mixer === 'none', dop: !!b.dop};
     });
     var managed = self.conf().indexOf(BEGIN) >= 0;
+    var confText = self.conf();
     function done(list) {
-      cb(null, {outputs: list, exclusive: list.some(function(o){ return o.hog; }), fixedVolume: list.some(function(o){ return o.fixed; }),
+      self.ffmpegOk(function(ff){
+      cb(null, {outputs: list, dsdFfmpeg: dsdViaFfmpeg(confText), ffmpegDecoder: ff, exclusive: list.some(function(o){ return o.hog; }), fixedVolume: list.some(function(o){ return o.fixed; }),
                 dop: list.some(function(o){ return o.dop; }), managed: managed, busy: self.busy});
+      });
     }
     var sys = outs.filter(function(o){ return o.system; })[0];
     if (!sys || !self.o.listDevices) return done(outs);
@@ -133,6 +172,28 @@ MacAudio.prototype.status = function(cb) {
       })));
     });
   });
+};
+
+/* does MPD have the ffmpeg decoder (with DSD)? asked once */
+MacAudio.prototype.ffmpegOk = function(cb) {
+  var self = this;
+  if (this.ffmpeg !== undefined) return cb(this.ffmpeg);
+  if (!this.o.decoders) return cb(false);
+  this.o.decoders(function(e, text){ self.ffmpeg = !e && ffmpegDecodes(text); cb(self.ffmpeg); });
+};
+
+/* DSD through ffmpeg on/off: mpd.conf, MPD restarts */
+MacAudio.prototype.setDsd = function(on, cb) {
+  var self = this;
+  if (this.busy) return cb(new Error('busy'));
+  var text = this.conf();
+  if (!text) return cb(new Error('conf'));
+  var neu = writeDsd(text, !!on);
+  if (neu === text) return cb(null);
+  try { fs.writeFileSync(this.o.confFile + '.neu', neu); fs.renameSync(this.o.confFile + '.neu', this.o.confFile); }
+  catch (e) { return cb(e); }
+  this.busy = true;
+  this.o.restart(function(e){ self.busy = false; cb(e); });
 };
 
 /* play on this output only */
@@ -188,4 +249,4 @@ MacAudio.prototype.scan = function(opts, cb) {
   });
 };
 
-module.exports = {MacAudio: MacAudio, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};
+module.exports = {MacAudio: MacAudio, writeDsd: writeDsd, dsdViaFfmpeg: dsdViaFfmpeg, ffmpegDecodes: ffmpegDecodes, decoderBlocks: decoderBlocks, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};

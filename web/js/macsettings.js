@@ -118,7 +118,17 @@ function msAudioCard() {
       };
       sw('mac.audioExclusive', 'exclusive', 'mac.audioExclusiveNote');
       sw('mac.audioFixed', 'fixedVolume', 'mac.audioFixedNote', 'mac.audioFixedAsk', true);
-      sw('mac.audioDop', 'dop', 'mac.audioDopNote', 'mac.audioDopAsk');
+      if (a.ffmpegDecoder || a.dsdFfmpeg) {                /* MPD's own DSD decoder off, ffmpeg decodes DSD (MPD 0.24.0 on the Mac: noise) */
+        var dr = histEl('div', 'msSetRow');
+        dr.appendChild(histEl('div', 'msSetLabel', T('mac.audioDsdFf')));
+        dr.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.dsdFfmpeg, function(v){
+          if (!msAudioBusy) msAudioSend({action: 'audioDsd', on: v}, 'mac.tidalSaved');
+        }));
+        c.appendChild(dr);
+        c.appendChild(histEl('div', 'syNote', T('mac.audioDsdFfNote')));
+      }
+      if (!a.dsdFfmpeg) sw('mac.audioDop', 'dop', 'mac.audioDopNote', 'mac.audioDopAsk');
+      if (!a.ffmpegDecoder && !a.dsdFfmpeg) c.appendChild(histEl('div', 'syNote', T('mac.audioDsdFfMissing')));
       var row = histEl('div', 'pbRow msAddRow');
       row.appendChild(msButton(T('mac.audioScan'), function(){ scan({}); }, 'on'));
       c.appendChild(row);

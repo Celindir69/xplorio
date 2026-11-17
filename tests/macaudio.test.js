@@ -41,6 +41,24 @@ t('mpd.conf: osx outputs replaced by system output and one per device; other out
   assert.deepStrictEqual(bt.slice(2), [['B&W Headphones', false], ['RME', true]]);   /* Bluetooth: never exclusive, it stays silent */
 });
 
+t('DSD through ffmpeg: MPD\'s dsf/dsdiff decoders off (also hand-written ones are taken over), on and off again; ffmpeg seen in mpd --version', function(){
+  var hand = CONF + 'decoder {\n  plugin "dsf"\n  enabled "no"\n}\ndecoder {\n  plugin "dsdiff"\n  enabled "no"\n}\ndecoder {\n  plugin "flac"\n}\n';
+  assert.strictEqual(ma.dsdViaFfmpeg(CONF), false);
+  assert.strictEqual(ma.dsdViaFfmpeg(hand), true);
+  var on = ma.writeDsd(hand, true);
+  assert.strictEqual(ma.dsdViaFfmpeg(on), true);
+  assert.strictEqual(ma.decoderBlocks(on).filter(function(d){ return d.plugin === 'dsf'; }).length, 1);   /* not twice */
+  assert.strictEqual(ma.writeDsd(on, true), on);
+  var off = ma.writeDsd(on, false);
+  assert.strictEqual(ma.dsdViaFfmpeg(off), false);
+  assert.deepStrictEqual(ma.decoderBlocks(off).map(function(d){ return d.plugin; }), ['flac']);   /* other decoders stay */
+  assert.strictEqual(ma.blocks(off).length, ma.blocks(CONF).length);                               /* outputs untouched */
+  var d = ma.parseDevices(PROFILER);
+  assert.strictEqual(ma.dsdViaFfmpeg(ma.writeConf(on, d, true)), true);                            /* a device scan keeps it */
+  assert.strictEqual(ma.ffmpegDecodes('Decoder plugins:\n [dsf] dsf\n [ffmpeg] 264 dff dsf flac\n'), true);
+  assert.strictEqual(ma.ffmpegDecodes('Decoder plugins:\n [dsf] dsf\n'), false);
+});
+
 t('volume on the amplifier (mixer none) and DSD as DoP (USB DACs only); the system output keeps its volume', function(){
   var d = ma.parseDevices(PROFILER), c = ma.writeConf(CONF, d, {exclusive: true, fixedVolume: true, dop: true}), b = ma.blocks(c);
   var osx = b.filter(function(x){ return x.type === 'osx'; }).map(function(x){ return [x.name, x.mixer, x.dop]; });

@@ -1119,6 +1119,9 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   „Software-Lautstärkeregler“ aus (`mixer_type "none"`): MPD spielt mit 100 % und lässt die Samples unverändert
   (bitgenau); die Lautstärke regelt dann der Verstärker oder DAC. „DSD als DoP“ (`dop`) schickt DSD-Dateien unverändert an USB-DACs, nur für DACs mit DoP
   (andere spielen Rauschen). Systemausgabe, AirPlay und Bluetooth behalten die Lautstärke in MPD.
+  „DSD über ffmpeg“ schaltet MPDs eigene DSD-Decoder (`dsf`, `dsdiff`) in `mpd.conf` ab, ffmpeg wandelt DSD dann in
+  PCM um. Nötig mit MPD 0.24.0 aus MacPorts, dessen DSD-Decoder auf dem Mac nur Rauschen liefert; braucht ein MPD mit
+  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht.
   Bluetooth-Geräte kann MPD nicht selbst öffnen (OSStatus -10851): Sie spielen über „Systemausgabe“, „Verwenden“ macht
   sie zur Tonausgabe des Macs.
 - **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der
