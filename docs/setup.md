@@ -865,7 +865,7 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   Stored in `config.local.js`; own lines below `/* ---- own additions (kept) ---- */` stay.
 
 Without Volumio Xplorio also takes over:
-- **Radio:** search stations on radio-browser.info, tap plays, **+** saves to “My stations” (`radio-favourites.json` in the data folder).
+- **Radio:** search stations on radio-browser.info, tap plays, **+** saves to “My stations” (`radio-favourites.json` in the data folder). TuneIn addresses from Volumio (`opml.radiotime.com/Tune.ashx?id=…`) and `.pls` and `.m3u` addresses are resolved to the actual stream when played.
 - **Favourites** (thumbs up): as the MPD playlist “Xplorio Favoriten” (hidden in the playlist list).
 - **Smart playlists:** the same rules and editor as with the plugin; the tag service evaluates them and writes MPD
   playlists (after saving, when the library changes, and once a day). Rules in `smart-playlists/smart_playlists.txt`

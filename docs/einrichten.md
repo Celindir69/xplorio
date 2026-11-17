@@ -1135,7 +1135,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
 
 Ohne Volumio übernimmt Xplorio außerdem selbst:
 - **Radio:** Sender über radio-browser.info suchen, antippen spielt, **+** speichert unter „Meine Sender“
-  (`radio-favourites.json` im Datenordner).
+  (`radio-favourites.json` im Datenordner). TuneIn-Adressen aus Volumio (`opml.radiotime.com/Tune.ashx?id=…`) sowie
+  `.pls`- und `.m3u`-Adressen löst Xplorio beim Abspielen selbst in die eigentliche Stream-Adresse auf.
 - **Favoriten** (Daumen hoch): als MPD-Playlist „Xplorio Favoriten“ (in der Playlist-Liste ausgeblendet).
 - **Smart Playlists:** dieselben Regeln und derselbe Editor wie mit dem Plugin; der Tag-Dienst wertet sie aus und
   schreibt MPD-Playlists (nach dem Speichern, wenn sich die Bibliothek ändert, und einmal am Tag). Regeln in

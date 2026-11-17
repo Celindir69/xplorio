@@ -2743,13 +2743,20 @@ function tidalGet() {
   } catch (e) { console.error('TIDAL: ' + e.message); tidal = false; }
   return tidal || null;
 }
+/* radio addresses that are playlists (TuneIn from Volumio's favourites, .pls, .m3u): the stream address to MPD */
+var radioresolve = require('./radioresolve.js');
+var radioResolver = new radioresolve.Resolver({log: function(t){ console.error(t); }});
 mpdPlayer.expand = function(item, cb){
+  if (radioResolver.handles(item)) { radioResolver.expand(item, cb); return true; }
   var t = tidalGet();
   if (!t || !t.handles(item)) return false;
   t.expand(item).then(function(files){ cb(null, files); }, function(e){ console.error('TIDAL: ' + e.message); cb(e); });
   return true;
 };
-mpdPlayer.decorate = function(file, o){ var t = tidal || null; if (t && /^http:/.test(file)) t.decorate(file, o); };
+mpdPlayer.decorate = function(file, o){
+  if (radioResolver.decorate(file, o)) return;
+  var t = tidal || null; if (t && /^http:/.test(file)) t.decorate(file, o);
+};
 setTimeout(tidalGet, 3000).unref();
 function doMpd(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
