@@ -262,6 +262,34 @@ function msDraw() {
   grid.appendChild(msPwCard(d));
   if (msUpd && msUpd.available) grid.appendChild(msUpdCard());
   grid.appendChild(msUiCard(d));
+  msFold(grid);
+}
+
+/* every card folds by its title (like the library check); open: music folders, audio output and sign-in, until changed.
+   Remembered per device (localStorage) */
+var msOpen = null;
+function msOpenGet() {
+  if (msOpen) return msOpen;
+  msOpen = {};
+  try { msOpen = JSON.parse(localStorage.getItem('xplorio.macOpen') || '{}') || {}; } catch (e) { msOpen = {}; }
+  return msOpen;
+}
+function msFold(grid) {
+  var open = msOpenGet(), always = [T('mac.login')], first = [T('mac.music'), T('mac.audio')];
+  [].slice.call(grid.children).forEach(function(card){
+    var t = card.classList.contains('syCard') && card.querySelector('.syTitle');
+    if (!t) return;
+    var key = t.textContent;
+    if (always.indexOf(key) >= 0) return;
+    var isOpen = open[key] !== undefined ? !!open[key] : first.indexOf(key) >= 0;
+    card.classList.add('msFoldable');
+    card.classList.toggle('msFolded', !isOpen);
+    t.addEventListener('click', function(){
+      var o = card.classList.toggle('msFolded');
+      msOpen[key] = !o;
+      try { localStorage.setItem('xplorio.macOpen', JSON.stringify(msOpen)); } catch (e) { /* private window */ }
+    });
+  });
 }
 
 /* ---------- music folders ---------- */
