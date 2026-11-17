@@ -286,13 +286,13 @@ function msOpenGet() {
   return msOpen;
 }
 function msFold(grid) {
-  var open = msOpenGet(), always = [T('mac.login')], first = [T('mac.music'), T('mac.audio')];
+  var open = msOpenGet(), always = [T('mac.login')];
   [].slice.call(grid.children).forEach(function(card){
     var t = card.classList.contains('syCard') && card.querySelector('.syTitle');
     if (!t) return;
     var key = t.textContent;
     if (always.indexOf(key) >= 0) return;
-    var isOpen = open[key] !== undefined ? !!open[key] : first.indexOf(key) >= 0;
+    var isOpen = !!open[key];                             /* all folded at first */
     card.classList.add('msFoldable');
     card.classList.toggle('msFolded', !isOpen);
     t.addEventListener('click', function(){
