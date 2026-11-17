@@ -92,6 +92,7 @@ Resolver.prototype.decorate = function(file, o) {
   o.uri = k.uri;
   if (k.title && (!o.title || o.title === file)) { o.title = k.title; if (o.name !== undefined) o.name = k.title; }
   if (k.albumart && !o.albumart) o.albumart = k.albumart;
+  if (k.title && o.title !== k.title && o.artist !== undefined && o.type === undefined) o.artist = k.title;   /* state: station below the title */
   return true;
 };
 

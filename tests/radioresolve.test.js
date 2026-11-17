@@ -40,6 +40,9 @@ srv.listen(0, '127.0.0.1', function(){
       var playing = {title: 'Shout', uri: '', albumart: ''};      /* ICY title from the station stays */
       r.decorate(base + '/stream.mp3', playing);
       assert.strictEqual(playing.title, 'Shout');
+      var state = {title: 'Animotion - I Engineer', artist: 'TFF RADIO', uri: ''};   /* state: the station below the title */
+      r.decorate(base + '/stream.mp3', state);
+      assert.strictEqual(state.artist, 'Tears for Fears Radio');
       assert.ok(!r.decorate('http://other/', {}));
     });
     r.expand({uri: base + '/moved.m3u'}, function(e2, f2){

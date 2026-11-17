@@ -146,6 +146,7 @@ function toState(st, song, mute) {
   };
   if (stream && song.name) out.album = '';                  /* radio: station name, not an album */
   if (stream && song.name && !song.title) out.title = song.name;
+  if (stream && song.name && !out.artist && out.title !== song.name) out.artist = song.name;   /* radio: station below the title */
   return out;
 }
 /* playlistinfo song -> queue entry like Volumio's getQueue */

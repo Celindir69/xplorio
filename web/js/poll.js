@@ -309,7 +309,7 @@ updateSyncedLyrics();
     if (preview) title = '';
 
     marqueeSet(mTitle, preview ? album : title);
-    mArtist.textContent = artist;
+    mArtist.textContent = artist || (radio && typeof radioStationName === 'function' ? radioStationName(st) : '');   /* radio: the station below the title */
     if ((radio || preview ? '' : album) !== curAlbumTitle || st.uri !== curAlbumUri) {   /* only on change: the year arrives later */
       curAlbumTitle = radio || preview ? '' : album; curAlbumUri = st.uri;
       mAlbum.textContent = curAlbumTitle;
