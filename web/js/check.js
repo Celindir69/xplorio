@@ -629,7 +629,7 @@ function checkCoverBest(row, it, key) {
       txt.textContent = T('tag.cover.preparing');
       fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
         .then(tagPrepareImage)
-        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64); })
+        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, function(t){ txt.textContent = t; }); })
         .then(function(batch){
           row.classList.add('done'); checkMarkDone(key);
           txt.textContent = T('check.coverq.saved');
@@ -664,24 +664,20 @@ function checkCoverBestAsk() {
   }).catch(function(){ if (!cbTimer) cbTimer = setTimeout(checkCoverBestAsk, 3 * CB_ASK_MS); });
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && cbRows.length) checkCoverBestAsk(); });
-/* one image into all files and as folder.jpg (replaced): in parts of 100 files under one batch -> batch */
-var CB_PART = 100;
-function checkCoverSave(uris, b64) {
-  var batch = Date.now().toString(36), parts = [], i;
-  for (i = 0; i < uris.length; i += CB_PART) parts.push(uris.slice(i, i + CB_PART));
-  var k = 0;
-  function next() {
-    if (k >= parts.length) return batch;
-    var body = {uris: parts[k], image: b64, embed: true, folder: k === 0, overwrite: true, batch: batch};
-    k++;
+/* one image into all files and as folder.jpg (replaced): in parts (tagParts, each well below 60 s) under one batch -> batch;
+   progress(text) while more than one part is needed */
+function checkCoverSave(uris, b64, progress) {
+  var batch = Date.now().toString(36), first = true;
+  return tagParts(uris, function(part, before, total){
+    if (progress && total > part.length) progress(T('tag.cover.writingFiles', {done: langNum(before), total: langNum(total)}));
+    var body = {uris: part, image: b64, embed: true, folder: first, overwrite: true, batch: batch};
+    first = false;
     return tagPost('/cover', body).then(function(res){
       if (!res || !res.ok) throw new Error((res && res.error) || T('tag.unknown'));
       var bad = (res.items || []).filter(function(r){ return !r.ok; }).concat((res.folders || []).filter(function(f){ return !f.ok; }));
       if (bad.length) throw new Error(bad[0].error || T('tag.unknown'));
-      return next();
     });
-  }
-  return Promise.resolve().then(next);
+  }).then(function(){ return batch; });
 }
 
 /* "ohne Titel: 3, ohne Künstler: 1 von 12 · 01.flac, 02.flac" */

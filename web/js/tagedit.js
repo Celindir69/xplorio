@@ -730,35 +730,33 @@ function tagCoverSection(good) {
       return tagPost('/cover', body);
     });
   }
-  /* more than TAG_COVER_PART files: in parts under one batch (one Undo); folder.jpg once, with one file per folder */
-  var TAG_COVER_PART = 100;
+  /* more than TAG_PART_FIRST files: in parts under one batch (one Undo), sized by tagParts; folder.jpg once, with one
+     file per folder */
   function send(body, done) {
     tagStatus.textContent = T('tag.cover.writing');
     pick.disabled = toFolder.disabled = apply.disabled = true;
-    var parts = [], files = 0, dirs = 0, errs = [], batch = null, declined = false;
-    if (body.uris.length <= TAG_COVER_PART) parts.push(body);
+    var files = 0, dirs = 0, errs = [], batch = null;
+    function handle(res) {
+      if (!res) return;                                      /* folder.jpg kept: go on with embedding */
+      if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+      files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+      dirs += (res.folders || []).filter(function(f){ return f.ok; }).length;
+      errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }), (res.folders || []).filter(function(f){ return !f.ok; }));
+      if (res.batch) batch = batch || res.batch;
+    }
+    var work;
+    if (body.uris.length <= TAG_PART_FIRST) work = post(body).then(handle);
     else {
       batch = Date.now().toString(36);
-      if (body.folder) {
-        var seen = {}, perDir = body.uris.filter(function(u){ var d = u.replace(/\/[^\/]*$/, ''); return seen[d] ? false : (seen[d] = 1); });
-        parts.push({uris: perDir, image: body.image, embed: false, folder: true, batch: batch});
-      }
-      if (body.embed) for (var i = 0; i < body.uris.length; i += TAG_COVER_PART)
-        parts.push({uris: body.uris.slice(i, i + TAG_COVER_PART), image: body.image, embed: true, folder: false, batch: batch});
-    }
-    var k = 0;
-    function next() {
-      if (k >= parts.length) return Promise.resolve();
-      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
-      return post(parts[k++]).then(function(res){
-        if (!res) { declined = true; return next(); }          /* folder.jpg kept: go on with embedding */
-        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
-        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
-        dirs += (res.folders || []).filter(function(f){ return f.ok; }).length;
-        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }), (res.folders || []).filter(function(f){ return !f.ok; }));
-        if (res.batch) batch = batch || res.batch;
-        return next();
-      });
+      var seen = {}, perDir = body.uris.filter(function(u){ var d = u.replace(/\/[^\/]*$/, ''); return seen[d] ? false : (seen[d] = 1); });
+      work = (body.folder ? post({uris: perDir, image: body.image, embed: false, folder: true, batch: batch}).then(handle) : Promise.resolve())
+        .then(function(){
+          if (!body.embed) return;
+          return tagParts(body.uris, function(part, before, total){
+            tagStatus.textContent = T('tag.cover.writingFiles', {done: langNum(before), total: langNum(total)});
+            return post({uris: part, image: body.image, embed: true, folder: false, batch: batch}).then(handle);
+          });
+        });
     }
     function end() {
       pick.disabled = toFolder.disabled = apply.disabled = false;
@@ -770,7 +768,7 @@ function tagCoverSection(good) {
       if (files || dirs) { if (done) done(); refresh(); tagRefreshView(); }
       return parts2;
     }
-    next().then(function(){
+    work.then(function(){
       var p2 = end();
       tagStatus.textContent = (p2.length ? T('tag.cover.written', {parts: p2.join(', ')}) : T('tag.nothingChanged')) +
         (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0].error}) : '');
@@ -804,19 +802,18 @@ function tagCoverSection(good) {
      DSF: MPD 0.20 drops all tags of a file whose tag block is larger than 1 MB, which big covers cause */
   strip.addEventListener('click', function(){
     if (!window.confirm(T('tag.cover.stripConfirm', {n: n}))) return;
-    var batch = Date.now().toString(36), files = 0, saved = 0, errs = [], k = 0, parts = [];
-    for (var i = 0; i < uris.length; i += TAG_COVER_PART) parts.push(uris.slice(i, i + TAG_COVER_PART));
+    var batch = Date.now().toString(36), files = 0, saved = 0, errs = [];
     pick.disabled = toFolder.disabled = apply.disabled = strip.disabled = true;
     tagStatus.textContent = T('tag.cover.stripping');
     function next() {
-      if (k >= parts.length) return Promise.resolve();
-      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
-      return tagPost('/cover', {uris: parts[k++], strip: true, batch: batch}).then(function(res){
-        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
-        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
-        saved += (res.saved || []).length;
-        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }));
-        return next();
+      return tagParts(uris, function(part, before, total){
+        if (total > part.length) tagStatus.textContent = T('tag.cover.strippingFiles', {done: langNum(before), total: langNum(total)});
+        return tagPost('/cover', {uris: part, strip: true, batch: batch}).then(function(res){
+          if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+          files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+          saved += (res.saved || []).length;
+          errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }));
+        });
       });
     }
     function end() {
@@ -905,6 +902,26 @@ function tagsCheck() {
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && !tagsHealth && tagsWaiters.length) { tagsTries = 0; tagsCheck(); } });
 function tagPostJson(route, body) { return tagPost(route, body); }
+
+/* writing many files (covers): in parts that each stay well below the 60 s after which Safari and the Mac app give up on a
+   request ("Tag-Dienst nicht erreichbar", while the service goes on writing). Starts with TAG_PART_FIRST files, then sizes
+   each part from the time per file so far (big 24/96 FLACs on USB 2: seconds per file; MP3s: a few ms) -> Promise.
+   fn(part, done, total): done = files finished before this part */
+var TAG_PART_MS = 20000, TAG_PART_FIRST = 3, TAG_PART_MAX = 100;
+function tagParts(list, fn) {
+  var i = 0, ms = 0, n = 0;
+  function size() {
+    if (!n) return TAG_PART_FIRST;
+    return Math.max(1, Math.min(TAG_PART_MAX, Math.floor(TAG_PART_MS / Math.max(ms / n, 1))));
+  }
+  function step() {
+    if (i >= list.length) return Promise.resolve();
+    var part = list.slice(i, i + size()), before = i, t0 = Date.now();
+    i += part.length;
+    return Promise.resolve(fn(part, before, list.length)).then(function(){ ms += Date.now() - t0; n += part.length; return step(); });
+  }
+  return step();
+}
 
 /* process a list in chunks one after another; fn(chunk) -> Promise */
 function tagInChunks(list, size, fn) {
