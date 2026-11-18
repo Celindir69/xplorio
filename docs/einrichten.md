@@ -186,6 +186,11 @@ CD1/CD2-Ordnern lassen sich so zusammen taggen, wenn beide im Editor offen sind 
 einen persönlichen Token aus dem Discogs-Konto (Settings > Developers > „Generate new token“): auf dem Mac unter
 Einstellungen > Discogs, auf Volumio als `"DISCOGS_TOKEN": "…"` in `/data/xplorio/data/keys.json`.
 
+Auf dem Mac zeigt der Tag-Editor **„Audioanalyse für dieses Album“**, solange Titel mit Künstler und Titel noch keine
+Audioanalyse haben (Stimmung, Tempo, Tonart). Der Knopf startet sie nur für den Ordner der geöffneten Titel; den
+Fortschritt zeigt Einstellungen > Audioanalyse. Titel ohne Künstler oder Titel überspringt die Analyse, sie zählen hier
+nicht mit.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,

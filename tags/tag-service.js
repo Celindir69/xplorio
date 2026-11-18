@@ -287,8 +287,12 @@ function doRead(body, cb) {
     else { jobs.push({op: 'read', path: p.full}); at.push(k); }
   });
   runPyMany(jobs, function(rs){
-    rs.forEach(function(r, k){ r.uri = uris[at[k]]; items[at[k]] = r; });
-    cb(200, {ok: true, items: items});
+    rs.forEach(function(r, k){
+      r.uri = uris[at[k]]; items[at[k]] = r;
+      var t = r.tags || {};                                /* audio analysis there (essentia.jsonl, by artist and title) */
+      if (r.ok !== false) r.analysed = !!(t.artist && t.title && audioStore.get(t.artist, t.title, t.album));
+    });
+    cb(200, {ok: true, items: items, analysis: onMac()});   /* on the Mac a single album can be analysed (POST /mac/analysis uris) */
   });
 }
 
@@ -3158,6 +3162,17 @@ function doMacRsgain(req, res) {
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
     if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
     if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
+    if (body.action === 'start' && Array.isArray(body.uris)) {   /* only the folders of these files (tag editor: one album) */
+      var roots = [];
+      for (var k = 0; k < body.uris.length && k < 2000; k++) {
+        var p = resolveUri(String(body.uris[k]));
+        if (!p || p.missing) return send(res, 200, {ok: false, startError: 'roots'});
+        var d = path.dirname(p.full);
+        if (roots.indexOf(d) < 0) roots.push(d);
+      }
+      if (!roots.length || roots.length > 20) return send(res, 200, {ok: false, startError: 'roots'});
+      return r.start(function(e){ state(e ? {startError: e} : {done: 'start', roots: roots.length}); }, {roots: roots, done: function(){}});
+    }
     if (body.action === 'start') return r.start(function(e){ state(e ? {startError: e} : {done: 'start'}); });
     send(res, 400, {ok: false, error: 'unknown action'});
   });
@@ -3294,6 +3309,17 @@ function doMacAnalysis(req, res) {
     if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
     if (body.action === 'check') return state({done: 'check'}, true);
     if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
+    if (body.action === 'start' && Array.isArray(body.uris)) {   /* only the folders of these files (tag editor: one album) */
+      var roots = [];
+      for (var k = 0; k < body.uris.length && k < 2000; k++) {
+        var p = resolveUri(String(body.uris[k]));
+        if (!p || p.missing) return send(res, 200, {ok: false, startError: 'roots'});
+        var d = path.dirname(p.full);
+        if (roots.indexOf(d) < 0) roots.push(d);
+      }
+      if (!roots.length || roots.length > 20) return send(res, 200, {ok: false, startError: 'roots'});
+      return r.start(function(e){ state(e ? {startError: e} : {done: 'start', roots: roots.length}); }, {roots: roots, done: function(){}});
+    }
     if (body.action === 'start') return r.start(function(e){ state(e ? {startError: e} : {done: 'start'}); });
     send(res, 400, {ok: false, error: 'unknown action'});
   });

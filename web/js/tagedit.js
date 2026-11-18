@@ -251,6 +251,7 @@ function openTagEditor(files, heading, opts) {
     return tagPost('/read', {uris: part}).then(function(res){
       if (!res.ok) throw new Error(res.error || T('tag.unknown'));
       items = items.concat(res.items);
+      tagCanAnalyse = !!res.analysis;
     });
   }).then(function(){
     if (seq === artSeq) tagRender(files, items);
@@ -264,7 +265,7 @@ function openTagEditor(files, heading, opts) {
 function tagRender(files, items) {
   tagBusy('');
   tagFiles = items.map(function(it, i){
-    return {uri: it.uri, ok: !!it.ok, error: it.error, tags: it.tags || {}, name: files[i] && files[i].title};
+    return {uri: it.uri, ok: !!it.ok, error: it.error, tags: it.tags || {}, name: files[i] && files[i].title, analysed: it.analysed};
   });
   var good = tagFiles.filter(function(f){ return f.ok; });
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
@@ -298,6 +299,7 @@ function tagRender(files, items) {
   }
 
   if (good.length > 1) { var rec = tagRecognizeSection(good); if (rec) tagBody.appendChild(rec); }
+  var ana = tagAnalyseSection(good); if (ana) tagBody.appendChild(ana);
 
   var h = document.createElement('div');
   h.className = 'infoSection tagSectionAa';
@@ -338,6 +340,29 @@ function tagRender(files, items) {
   if (tagMoveDirs && tagMoveDirs.length) tagBody.appendChild(tagMoveSection(tagMoveDirs));
   tagCompilShow();
   tagSave.disabled = false;
+}
+
+/* audio analysis of just these files' folders (Mac, POST /mac/analysis {uris}): only offered when tracks with artist and
+   title have no analysis yet (a track without them cannot be analysed and matched; the analysis skips it) */
+var tagCanAnalyse = false;
+function tagAnalyseSection(good) {
+  if (!tagCanAnalyse || good.some(function(f){ return f.analysed === undefined; })) return null;
+  var tagged = good.filter(function(f){ return f.tags.artist && f.tags.title; }), missing = tagged.filter(function(f){ return !f.analysed; });
+  if (!missing.length) return null;
+  var box = histEl('div', 'tagRec'), btn = document.createElement('button'), note = histEl('div', 'tagRecNote',
+    T(missing.length === tagged.length ? 'tag.ana.none' : 'tag.ana.part', {n: missing.length, m: tagged.length}));
+  btn.className = 'tagBtn'; btn.textContent = T('tag.ana.button');
+  box.appendChild(btn); box.appendChild(note);
+  btn.addEventListener('click', function(){
+    btn.disabled = true; note.textContent = T('tag.ana.starting');
+    var token = typeof msToken === 'function' ? msToken() : '';
+    tagPost('/mac/analysis', {action: 'start', uris: good.map(function(f){ return f.uri; }), token: token}).then(function(r){
+      if (r && r.startError) { btn.disabled = false; note.textContent = T('tag.ana.err.' + (['running', 'busy', 'python'].indexOf(r.startError) >= 0 ? r.startError : 'other')); return; }
+      if (r && r.error === 'auth') { btn.disabled = false; note.textContent = T('mac.err.auth'); return; }
+      note.textContent = T('tag.ana.started');
+    }).catch(function(){ btn.disabled = false; note.textContent = T('tag.serviceDown'); });
+  });
+  return box;
 }
 
 /* "Recognise album" (POST /albumid, tags/albumid.js): MusicBrainz by track count and lengths (the CD's table of
