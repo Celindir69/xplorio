@@ -12,7 +12,7 @@ cRepeat.addEventListener('click', function(){
   if (curRadio) return;
   var e = endless();
   var nx = repeatNext(repeatShown(stRepeatMode, e), e);
-  if (nx.repeat) socket.emit('setRepeat', nx.repeat);
+  if (nx.repeat) player.repeat(nx.repeat);
   stRepeatMode = nx.mode === 'inf' ? 'off' : nx.mode;
   if (nx.autodj !== null) endlessSet(nx.autodj);
   updateCtrlUI();
@@ -21,7 +21,7 @@ cRepeat.addEventListener('click', function(){
 cRandom.addEventListener('click', function(){
   if (curRadio) return;
   stRandom = !stRandom;
-  socket.emit('setRandom', {value: stRandom});
+  player.random(stRandom);
   updateCtrlUI();
 });
 
@@ -84,11 +84,11 @@ function sendRotelPower(want) {
 function stopPlaybackThen(done) {
   var tries = 0;
   function check() {
-    fetch('/api/v1/getState').then(function(r){ return r.json(); }).then(function(st){
+    player.state().then(function(st){
       if (st.status !== 'play' || ++tries > 12) { setTimeout(done, 500); } else { setTimeout(check, 300); }
     }).catch(function(){ setTimeout(done, 500); });
   }
-  fetch('/api/v1/getState').then(function(r){ return r.json(); }).then(function(st){
+  player.state().then(function(st){
     if (st.status === 'stop') { done(); return; }
     cmd('stop'); setTimeout(check, 300);
   }).catch(function(){ done(); });
@@ -231,7 +231,7 @@ function showVolumio(st) {
 function volumioVol(v) {
   v = Math.max(0, Math.min(100, v));
   vSlider.value = v; paintSlider();
-  socket.emit('volume', v);
+  player.volume(v);
 }
 
 /* SerialAmpControl plugin on (APP_CONFIG.AMP_PLUGIN, written by the Xplorio plugin): it has Volumio's volume, so the
@@ -271,7 +271,7 @@ document.getElementById('vUp').addEventListener('click', function(){
   rotel('/cmd?c=vol_up');
 });
 vMute.addEventListener('click', function(){
-  if (!ROTEL_ON) { socket.emit(rotelMute ? 'unmute' : 'mute'); return; }
+  if (!ROTEL_ON) { player.mute(!rotelMute); return; }
   rotel('/cmd?c=' + (rotelMute ? 'mute_off' : 'mute_on'));
 });
 

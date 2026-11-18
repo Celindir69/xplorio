@@ -14,6 +14,9 @@ window.APP_CONFIG = {
   VU_REF_DBFS: -8,    /* VU meter: level (dBFS RMS) the needle shows as 0 VU; lower = needles further right (docs/einrichten.md) */
   VU_NEEDLE: 'fast', /* VU meter: needle 'fast' or 'classic' (slow like a real VU meter, ~300 ms to the value) */
   VU_DELAY_MS: 400,   /* VU meter: the needles wait this long, MPD fills the fifo ahead of the amplifier's sound */
+  PLAYER: 'volumio',  /* who plays: 'volumio' (default) or 'mpd' = MPD alone, without Volumio (e.g. on a Mac with
+                         "brew install mpd"). Playback and queue then go through the tag service (tags/mpdplayer.js);
+                         streaming services and Volumio's own pages are not available there yet */
   TAGS_PORT: 8766,    /* port of the tag service (tag editor) on the player */
   ALLOWED_HOSTS: [],  /* tag service and Rotel bridge only answer on IP, names without a dot and .local/.lan/.home/.internal/
                          .home.arpa/.fritz.box. Add further names of the player here, e.g. ['player.example.net'] */

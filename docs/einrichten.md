@@ -164,6 +164,37 @@ Künstlerspalte; das gemeinsame Feld „Künstler“ entfällt. Wird der Haken g
 „Various Artists“. Speichern schreibt das Compilation-Tag so, wie der Haken steht, in alle Titel (mit Rückgängig).
 MPD 0.20 wertet das Tag nicht aus; andere Player wie die Musik-App oder Roon schon.
 
+### Album erkennen
+Zeigt der Album-Editor mehrere Titel aus einem Ordner (bis 99), sucht **„Album erkennen (MusicBrainz)“** das Album allein
+aus Titelanzahl und Titellängen, wie Mp3tag mit der CD-Kennung: Aus den Längen entsteht das Inhaltsverzeichnis einer CD
+und daraus die MusicBrainz-Disc-ID. Passt sie genau, ist es diese CD (Wahrscheinlichkeit ab 95 %). Sonst nennt
+MusicBrainz CDs mit ähnlichen Längen, und Xplorio sucht zusätzlich nach Album und Künstler aus dem Ordnernamen
+(`Künstler - Jahr - Album`, `Künstler/Album`, `CD2` als zweite CD) und vergleicht die Titel mit den Dateinamen; daraus
+ergibt sich die Reihenfolge und die angezeigte Wahrscheinlichkeit (höchstens 90 %). Die Reihenfolge der Dateien: nach
+Tracknummer, wenn alle verschieden sind, sonst nach Dateiname. „Übernehmen“ trägt Album, Album-Künstler, Jahr, CD-Nummer,
+Titel, Titelnummern und Künstler ein (Compilations mit „Various Artists“ und Künstler pro Titel); geschrieben wird erst mit
+„Speichern“, wie immer mit Rückgängig. Das Album muss vollständig sein und die Dateien so lang wie auf der CD; bei
+Vinyl- oder Streaming-Fassungen trifft es seltener. MusicBrainz wird höchstens einmal pro Sekunde gefragt.
+
+Findet das nichts (etwa bei ganz neuen Alben oder Deluxe-Fassungen), gibt es darunter **„Selbst suchen“**: Künstler und
+Album (vorbelegt aus den Tags oder dem Ordnernamen), dazu der Dienst: MusicBrainz, Discogs, Apple Music oder Deezer.
+Die Treffer zeigen Jahr, Land, Medium (CD, Vinyl, Datei), Titelanzahl und Zusätze wie „Deluxe Edition“; ✓ heißt, die
+Titelanzahl passt zu den Dateien. Ein Tipp auf einen Treffer zeigt die Vorschau: jede Datei mit Länge neben dem Titel, den
+sie bekommt (Längen, die mehr als 5 s abweichen, farbig). Hat das Album mehr Titel als Dateien da sind, bekommen nur die
+ersten Tags, mit Hinweis. „Übernehmen und speichern“ trägt alles ein und speichert gleich (mit Rückgängig). Auch Alben in
+CD1/CD2-Ordnern lassen sich so zusammen taggen, wenn beide im Editor offen sind (CD-Nummer pro Datei). Discogs braucht
+einen persönlichen Token aus dem Discogs-Konto (Settings > Developers > „Generate new token“): auf dem Mac unter
+Einstellungen > Discogs, auf Volumio als `"DISCOGS_TOKEN": "…"` in `/data/xplorio/data/keys.json`.
+
+Auf dem Mac zeigt der Tag-Editor **„Audioanalyse für dieses Album“**, solange Titel mit Künstler und Titel noch keine
+Audioanalyse haben (Stimmung, Tempo, Tonart). Der Knopf startet sie nur für den Ordner der geöffneten Titel; den
+Fortschritt zeigt Einstellungen > Audioanalyse. Titel ohne Künstler oder Titel überspringt die Analyse, sie zählen hier
+nicht mit.
+
+Haben Titel des Albums schon eine Audioanalyse, schlägt der Tag-Editor unter dem Feld „Genre“ ein Hauptgenre vor
+(Discogs-Oberkategorie wie in der Bibliotheksprüfung, mit den stärksten Unterstilen und dem Anteil in der Analyse; passt ein
+vorhandenes Genre-Tag, zählt es mit). „Übernehmen“ trägt es ein, geschrieben wird beim Speichern.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,
@@ -746,8 +777,8 @@ python3 analyse.py --upload http://<player>:8766
   den bisherigen Stand, wenn der Player gerade nicht spielt (`--upload-every 60` für jede Stunde, `0` nur am Ende). Ist die Freigabe beim
   Start nicht verbunden, bricht es ab, statt die bisherigen Ergebnisse dieses Ordners zu verwerfen.
 - `--seconds 120` (Standard) hört nur die mittleren zwei Minuten an (Valenz/Erregung davon die mittleren 45 s), `--jobs` legt die Zahl paralleler Prozesse fest.
-- Dauer: auf einem älteren Intel-Mac rund 9 s je Datei, also etwa 5 Tage für 50.000 Titel; Apple-Silicon-Macs
-  sind deutlich schneller. `--profile` zeigt die Zeit je Analyseschritt. Mehr Prozesse als Kerne bringen nichts.
+- Dauer: auf einem älteren Intel-Mac rund 9 s je Datei, also etwa 5 Tage für 50.000 Titel (auf Apple-Silicon-Macs
+  noch nicht getestet). `--profile` zeigt die Zeit je Analyseschritt. Mehr Prozesse als Kerne bringen nichts.
 - Ein Hochladen zwischendurch geht jederzeit; der Tag-Dienst nimmt dann den bisherigen Stand.
 - Stürzt die Analyse bei einer Datei ab (macOS meldet dann „Python wurde unerwartet beendet“), läuft das Skript weiter
   und trägt die Datei als Fehler ein; `--retry-errors` versucht solche Dateien später erneut. Dateien über 30 Minuten
@@ -1055,3 +1086,124 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
   nur den Zustand, `rollback` holt das Original zurück. Ein Paket-Update von libav würde den Patch überschreiben.
   Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
+
+## Ohne Volumio: nur MPD
+Xplorio kann statt Volumio auch einen MPD allein steuern. Für den Mac gibt es dafür ein fertiges Programm
+([Als Mac-Programm](#als-mac-programm), der empfohlene Weg): es startet alles selbst und bringt eine Einstellungsseite mit.
+Dieser Abschnitt beschreibt den Betriebsmodus darunter, für eigene Systeme, die man von Hand einrichtet, etwa einen
+Linux-Rechner oder Raspberry Pi mit MPD ohne Volumio, oder zum Entwickeln.
+
+**Einrichten von Hand:** MPD, Node.js (18 oder neuer) und Python 3 mit `mutagen` installieren. In `web/config.local.js`
+`window.APP_CONFIG.PLAYER = 'mpd';` setzen. Dann zwei Dienste starten (beide aus dem Xplorio-Ordner, am besten als
+Systemdienst, z. B. systemd):
+- Tag-Dienst: `cd tags && XPLORIO_PLAYER=mpd MPD_HOST=127.0.0.1 MPD_PORT=6600 MPD_CONF=/etc/mpd.conf MUSIC_ROOT=<Musikordner> TAGS_DATA=<Datenordner> node tag-service.js`
+  (Port 8766; `MUSIC_ROOT` ist MPDs `music_directory`, Xplorio braucht dort Schreibrechte für Tags und Cover).
+- Webserver: `HTTP_PORT=4040 node server/xplorio-server.js`, dann `http://<Rechner>:4040/` im Browser öffnen.
+
+Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst (`/mpd/state`,
+`/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im Ordner oder in
+der Datei), der Verlauf zählt mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie MPD-Playlisten liefert der
+Tag-Dienst aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten). Eigene Listen (Lieblingstitel,
+„Meine Sender“, Smart Playlists) liegen im Datenordner, TIDAL meldet sich selbst an.
+
+Nur mit dem Mac-Programm: die Einstellungsseite (Musikordner, Audio-Ausgabe, Sicherung, Update, Audioanalyse usw.); von
+Hand eingerichtet stellt man diese Dinge direkt in `mpd.conf` und `config.local.js` ein. Nicht dabei sind
+Streamingdienste außer TIDAL (Qobuz, HIGHRESAUDIO, Spotify). Mit Volumio (Voreinstellung) ändert sich nichts.
+
+### Als Mac-Programm
+`bash tools/mac/make-app.sh` (im heruntergeladenen Xplorio-Ordner, nach `brew install mpd mpc node`; auf Macs, die Homebrew nicht mehr unterstützt, mit MacPorts: `sudo port install mpd mpc nodejs18`) baut
+**Xplorio.app** in Programme: ein eigenes Fenster mit Xplorio und eigenem Symbol. Öffnen startet MPD, Tag-Dienst und
+Webserver, Schließen des Fensters (oder ⌘ Q) beendet alle drei. Beim ersten Mal fragt das Skript nach dem Musikordner;
+eine Test-Einrichtung in `~/xplorio-mpd` wird samt Bibliothek und Verlauf übernommen. Einstellungen liegen in
+`~/Library/Application Support/Xplorio` (`xplorio.conf`, `config.local.js`, `mpd/`), Protokolle in
+`~/Library/Logs/Xplorio`. Für eine neuere Version das Skript aus dem neuen Ordner noch einmal ausführen; die
+Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc aus Apples Befehlszeilenwerkzeugen).
+
+**Einstellungen** (Zahnrad → Einstellungen, nur ohne Volumio) ersetzen die Einstellungsseite des Plugins:
+- **Musikordner:** Ordner als Verknüpfung unter INTERNAL, USB oder NAS eintragen oder entfernen (entfernt wird nur die
+  Verknüpfung, nie Musik). Danach liest MPD die Bibliothek neu ein.
+- **Audioanalyse:** `essentia.jsonl` verknüpfen (am besten die Datei, die `analyse.py` schreibt: jede neue Analyse zählt
+  dann sofort) oder als Kopie hochladen. Eine vorhandene Kopie bleibt als `essentia.jsonl.bak`.
+  **Auf diesem Mac analysieren** startet `analyse.py` (liegt in der App) über alle Musikordner, mit niedriger Priorität
+  (`nice`), und schreibt in diese Datei (bei einer Verknüpfung in die verknüpfte). Nur neue und geänderte Titel; anhalten
+  oder Xplorio beenden geht jederzeit, der nächste Lauf macht dort weiter. Wahlweise jede Nacht um 3 Uhr. Braucht Python
+  mit Essentia ([siehe unten](#audio-analyse-mit-essentia-optional-auf-mac-oder-windows-pc)); die App nimmt das erste
+  `python3.11`, `python3.12` … aus Homebrew oder MacPorts, das `essentia` laden kann (`XPLORIO_PYTHON` in
+  `xplorio.conf` wählt ein bestimmtes). Auf alten Intel-Macs ohne AVX2 mit MacPorts:
+  `sudo port install python311 py311-pip libsdl2`, dann
+  `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
+- **Musik importieren:** „Musikdaten importieren …“ wählt einen Ordner, dann Ziel (einer der Musikordner) und
+  Kopieren oder Verschieben. Er landet unter `<Musikordner>/import/<Ordnername>`; MPD liest ihn ein, Xplorio prüft die Tags
+  (fehlende Künstler, Album, Titel, Titelnummer, Genre, Jahr; Alben ohne `cover.jpg`/`folder.jpg`). Ordner ohne Titel,
+  Künstler oder Album erkennt es wie unter [Album erkennen](#album-erkennen): Trifft die Disc-ID genau, schreibt es die
+  Tags gleich (mit „Rückgängig“ im Ergebnis), sonst steht der beste Treffer mit Wahrscheinlichkeit und „Übernehmen“ da;
+  „Im Tag-Editor prüfen“ zeigt alle Treffer. Fehlen danach noch Tags, hält der Import vor ReplayGain und Audioanalyse an
+  (die Analyse würde diese Titel sonst überspringen) und öffnet den Tag-Editor mit dem Ordner; „Weiter mit ReplayGain und
+  Analyse“ im Ergebnis setzt fort. Sonst führt es, wenn
+  eingeschaltet und installiert, rsgain und die Audioanalyse nur für diesen Ordner aus. Verschieben auf ein anderes
+  Laufwerk löscht die Quelle erst, wenn alles angekommen ist.
+- **ReplayGain (rsgain):** „ReplayGain-Tags ergänzen“ ruft `rsgain easy -S` über alle Musikordner auf (nur Alben ohne
+  Tags), mit niedriger Priorität, wahlweise jede Nacht um 2 Uhr (die Audioanalyse startet dann ab 3 Uhr, sobald rsgain
+  fertig ist). Braucht rsgain (`brew install rsgain`) und Schreibzugriff auf die Musik. Die Dateien, die rsgain ändert,
+  übernimmt die Audioanalyse mit neuer Größe und Zeit, ohne sie neu zu analysieren; danach liest MPD die Bibliothek ein.
+- **Datensicherung:** kopiert Xplorios eigene Daten (Datenordner mit Analyse, Verlauf, Bewertungen, Smart Playlists,
+  Prüfergebnissen) und die Einstellungen (`xplorio.conf`, `config.local.js`, `mpd.conf`, MPDs Playlists) nach
+  `<Zielordner>/Xplorio-Sicherung/<Datum>`, per Knopf oder jede Nacht um 1 Uhr. Unveränderte Dateien sind harte Links
+  auf die vorige Sicherung, jede ist trotzdem vollständig; die letzten 7 bleiben. Nicht gesichert werden Zwischenspeicher
+  (Künstlerfotos, Radio-Cover, TIDAL-Cache, Titellisten) und die Anmeldungen (`tidal.json`, `lastfm.json`, `keys.json`,
+  `admin.json`). Wiederherstellen: Xplorio beenden, `daten/` einer Sicherung in den Datenordner (`TAGS_DATA` in
+  `xplorio.conf`) kopieren, Xplorio starten und bei TIDAL und Last.fm neu anmelden.
+- **Xplorio aktualisieren:** zeigt die installierte Fassung (Commit, aus `update.json` im Einstellungsordner) und den
+  neuesten Commit des Zweigs auf GitHub. „Jetzt aktualisieren“ startet `xplorio-update.sh` (liegt in der App): lädt das
+  Zip, beendet Xplorio, baut die App neu und startet sie wieder. Das Protokoll steht in
+  `~/Library/Logs/Xplorio/update.log`; schlägt etwas fehl, startet die bisherige Fassung wieder. Anderer Zweig:
+  auf der Karte eintragen (leer = Vorgabe).
+- **Last.fm:** API-Schlüssel und Secret (landen in `keys.json` im Datenordner).
+- **Passwort:** für die Dienste auf der Seite „System“ und den Dateimanager (der geht nur mit Passwort). Ändern braucht
+  das aktuelle; ein neues meldet alle anderen Geräte ab.
+- **Audio-Ausgabe:** „Geräte suchen“ trägt jedes Audiogerät des Macs als MPD-Ausgang in `mpd.conf` ein (MPD startet
+  dabei kurz neu), dazu „Systemausgabe“, die der Tonausgabe des Macs folgt (so auch AirPlay). Es spielt immer ein
+  Ausgang. „Exklusiv“ (`hog_device`) reserviert USB-DACs und Co. für Xplorio, die Abtastrate folgt dann der Musik.
+  „Software-Lautstärkeregler“ aus (`mixer_type "none"`): MPD spielt mit 100 % und lässt die Samples unverändert
+  (bitgenau); die Lautstärke regelt dann der Verstärker oder DAC. „DSD als DoP“ (`dop`) schickt DSD-Dateien unverändert an USB-DACs, nur für DACs mit DoP
+  (andere spielen Rauschen). Systemausgabe, AirPlay und Bluetooth behalten die Lautstärke in MPD.
+  „DSD über ffmpeg“ schaltet MPDs eigene DSD-Decoder (`dsf`, `dsdiff`) in `mpd.conf` ab, ffmpeg wandelt DSD dann in
+  PCM um. Nötig mit MPD 0.24.0 aus MacPorts, dessen DSD-Decoder auf dem Mac nur Rauschen liefert; braucht ein MPD mit
+  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht. Ab MPD 0.24.19 (in MacPorts noch nicht, Skript `mpd-neu.sh` in den Anleitungen) ist der Fehler behoben.
+  Diese Schalter und der „Puffer“ (`audio_buffer_size`: Standard 4 MB, 16 oder 32 MB, gegen Aussetzer bei hohen Raten
+  und langsamen Platten) liegen unter „Experteneinstellungen“ zum Ausklappen.
+  Bluetooth-Geräte kann MPD nicht selbst öffnen (OSStatus -10851): Sie spielen über „Systemausgabe“, „Verwenden“ macht
+  sie zur Tonausgabe des Macs.
+- **Rotel-Verstärker:** an/aus, Adresse und Modell (`ROTEL`, `ROTEL_HOST`, `ROTEL_MODEL` in `config.local.js`). Der
+  Tag-Dienst startet dann die Rotel-Bridge (`rotel/rotel-bridge.js`, Port 8765) selbst und nach jeder Änderung neu;
+  Eingangsnamen (`ROTEL_INPUTS`) und eigene Profile wie unter Volumio als eigene Zeilen in `config.local.js`.
+- **Oberfläche:** Effekte „Sparsam“ (`EFFECTS: 'lite'`: kein unscharfes Cover im Hintergrund, kein Milchglas, VU-Meter
+  mit 30 statt 60 Bildern pro Sekunde; spart auf älteren Macs viel Rechenleistung), Sprache, Darstellung, Verlauf, Erscheinungsdaten, Künstlernamen, Stimmungen, Farbe, M4A-Prüfung,
+  weitere Adressen, VU-Meter (0 VU entspricht, Nadel, Verzögerung). Gespeichert in `config.local.js`; eigene Zeilen unter `/* ---- own additions (kept) ---- */` bleiben.
+
+Ohne Volumio übernimmt Xplorio außerdem selbst:
+- **Radio:** Sender über radio-browser.info suchen, antippen spielt, **+** speichert unter „Meine Sender“
+  (`radio-favourites.json` im Datenordner). TuneIn-Adressen aus Volumio (`opml.radiotime.com/Tune.ashx?id=…`) sowie
+  `.pls`- und `.m3u`-Adressen löst Xplorio beim Abspielen selbst in die eigentliche Stream-Adresse auf.
+- **Favoriten** (Daumen hoch): als MPD-Playlist „Xplorio Favoriten“ (in der Playlist-Liste ausgeblendet).
+- **Smart Playlists:** dieselben Regeln und derselbe Editor wie mit dem Plugin; der Tag-Dienst wertet sie aus und
+  schreibt MPD-Playlists (nach dem Speichern, wenn sich die Bibliothek ändert, und einmal am Tag). Regeln in
+  `smart-playlists/smart_playlists.txt` im Datenordner (eine kopierte Datei wird nach etwa 2 Minuten ausgewertet).
+  MPD braucht dafür `playlist_directory` (trägt `make-app.sh` ein).
+- **Endlos-Wiedergabe (AutoDJ):** ∞ an der Wiederholen-Taste oder die Karte in den Einstellungen. Sind nach dem
+  laufenden Titel nur noch 3 oder weniger übrig, hängt der Tag-Dienst einen Titel eines ähnlichen Künstlers (Last.fm,
+  braucht den API-Schlüssel) aus der eigenen Bibliothek an. Wie im Plugin: die letzten Künstler und Titel werden nicht
+  gleich wiederholt, Ausschluss-Wörter (Titel oder Album) und eine Höchstlänge. Bei Wiederholen pausiert er.
+- **VU-Meter:** `make-app.sh` trägt den Fifo-Ausgang „VU“ (`44100:16:2`, aus) in `mpd.conf` ein; der Tag-Dienst schaltet
+  ihn nur ein, solange jemand die Zeiger sieht. Danach startet MPD einmal neu.
+- **System-Seite:** MPD, Tag-Dienst, Webserver und (wenn eingeschaltet) die Rotel-Bridge mit „Neu starten“; Passwort
+  nur, wenn eines gesetzt ist. Kein Neustart oder Ausschalten des Macs.
+- **TIDAL:** mit dem eigenen TIDAL-Konto (Karte „TIDAL“ in den Einstellungen: **Bei TIDAL anmelden** zeigt einen Code,
+  den man unter link.tidal.com bestätigt; kein Passwort in Xplorio). Danach liefert die Suche TIDAL-Treffer, Künstler-
+  und Albumseiten, und Abspielen legt die Titel in MPDs Warteschlange. Die Bausteine stammen aus Michal Tamas'
+  Volumio-TIDAL-Plugin (MIT, `tags/tidal/`). MPD bekommt Adressen eines kleinen Proxys auf dem Mac
+  (`127.0.0.1:7780`, `TIDAL_PORT`): er holt den Stream erst beim Abspielen, ffmpeg macht aus TIDALs Segmenten eine
+  FLAC-Datei und legt sie im Zwischenspeicher ab (`tidal-cache` im Datenordner, 1 GB, `TIDAL_CACHE_MB`). Spulen geht,
+  sobald ein Titel ganz geladen ist. Qualität (Max/Hi-Res, HiFi, AAC 320) und Zahl der Suchtreffer (10/20/50) auf der
+  Karte. Braucht Node 18 oder neuer und ffmpeg (`brew install ffmpeg` bzw. `sudo port install ffmpeg`), ohne ffmpeg
+  nur AAC. Von der Anmeldung speichert Xplorio nur den Refresh-Token, in `tidal.json` im Datenordner (nur für den Benutzer lesbar); Access-Token, Konto-ID und Land bleiben nur im Speicher.

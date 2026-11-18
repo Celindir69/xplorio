@@ -43,7 +43,8 @@ t('album artist: compilation without and with inconsistent album artist', functi
 t('inconsistent: album name and year separately (same year in another format does not count)', function(){
   assert.deepStrictEqual(r.albumName.map(function(x){ return x.dir; }), ['USB/C/Mix']);
   assert.deepStrictEqual(r.albumName[0].names, [{name: 'Mix', count: 1}, {name: 'Mix 2', count: 1}]);
-  assert.deepStrictEqual(r.yearMixed.map(function(x){ return [x.dir, x.years.map(function(y){ return y.name; }), x.most]; }), [['USB/C/Mix', ['2001', '2003'], '2001']]);
+  assert.deepStrictEqual(r.yearMixed.map(function(x){ return [x.dir, x.years.map(function(y){ return y.name; }), x.most, x.missing]; }),
+    [['USB/C/Mix', ['2001', '2003'], '2001', false], ['USB/D/Cafe', [''], '', true], ['USB/D/Café', [''], '', true]]);   /* no year at all: missing */
 });
 t('album name: disc additions over disc folders, bare name, disc number only where empty', function(){
   var a = lc.analyze([S('U/B/Hits/CD1/01.flac', {artist: 'B', album: 'Hits (Disc 1)', title: 'a', track: '1', disc: '1'}),

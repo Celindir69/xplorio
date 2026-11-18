@@ -50,6 +50,10 @@ html, body { margin:0; padding:0; width:100%;
   #bg { position:fixed; top:0; left:0; right:0; bottom:-50px; z-index:0;
     background-size:cover; background-position:center;
     filter:var(--bg-filter); transform:scale(1.15); }
+  /* EFFECTS 'lite' (core.js): no blurred cover and no frosted glass; panels get the solid sheet instead */
+  html.fxLite #bg { display:none; }
+  html.fxLite * { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  html.fxLite .overlay, html.fxLite .wCard { background:var(--sheet-solid); }
   #bgTint { position:fixed; top:0; left:0; right:0; bottom:-50px; z-index:1; pointer-events:none;
     background-color:var(--bg-tint, transparent); transition:background-color .8s; }
   #scrim { position:fixed; top:0; left:0; right:0; bottom:-50px; z-index:1;

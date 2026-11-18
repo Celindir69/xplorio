@@ -28,11 +28,11 @@ function queuePlayAt(i) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   if (inp) { showToast(T('audio.otherInput', {name: inp.name})); return; }
   if (typeof amPlayMode === 'function' && amPlayMode()) { showToast(T('amexport.mode')); return; }   /* the queue at home stays untouched */
-  socket.emit('play', {value: i});
+  player.playAt(i);
 }
 function loadQueue() {
   var seq = ++queueSeq;
-  fetch('/api/v1/getQueue').then(function(r){ return r.json(); }).then(function(j){
+  player.queue().then(function(j){
     if (seq !== queueSeq) return;
     if (drag) { setTimeout(loadQueue, 500); return; }     /* do not rebuild under the finger */
     queueData = (j && j.queue) ? j.queue : [];
@@ -80,7 +80,7 @@ function loadQueue() {
       trash.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
       trash.addEventListener('click', function(e){
         e.stopPropagation();
-        socket.emit('removeFromQueue', {value: i});
+        player.remove(i);
         setTimeout(loadQueue, 300);
       });
 
@@ -96,7 +96,7 @@ function loadQueue() {
       del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
       del.addEventListener('click', function(e){
         e.stopPropagation();
-        socket.emit('removeFromQueue', {value: i});
+        player.remove(i);
         resetSwipe();
         setTimeout(loadQueue, 300);
       });
@@ -207,7 +207,7 @@ function loadQueue() {
           var wraps = queueList.querySelectorAll('.qRowWrap');
           for (var k = 0; k < wraps.length; k++) wraps[k].classList.remove('dragover');
           if (d.toIdx !== d.fromIdx) {
-            socket.emit('moveQueue', {from: d.fromIdx, to: d.toIdx});
+            player.move(d.fromIdx, d.toIdx);
             setTimeout(function(){ loadQueue(); poll(); }, 400);
           }
         };
@@ -273,7 +273,7 @@ document.addEventListener('touchend', function(e){
   d.row.classList.remove('dragging');
   queueList.querySelectorAll('.qRowWrap').forEach(function(w){ w.classList.remove('dragover'); });
   if (d.toIdx !== d.fromIdx) {
-    socket.emit('moveQueue', {from: d.fromIdx, to: d.toIdx});
+    player.move(d.fromIdx, d.toIdx);
     setTimeout(function(){ loadQueue(); poll(); }, 400);
   }
 }, {passive:true});

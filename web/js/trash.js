@@ -52,6 +52,7 @@ function trashLoad(note) {
 function trashError(r) {
   var e = (r && r.error) || '?';
   if (e === 'auth') return T('check.dup.auth');
+  if (e === 'pwneeded') return T('mac.err.pwneeded');
   if (e === 'exists') return T('trash.exists', {path: '/mnt/' + (r.conflict || '')});
   if (e === 'check running') return T('trash.checkRunning');
   return T('trash.error', {error: e});

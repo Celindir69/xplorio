@@ -26,7 +26,7 @@ function sysOpen() { return overlaySystem.classList.contains('on') && !document.
 function sysFull() {
   var seq = sysSeq;
   clearTimeout(sysFullTimer);
-  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(fetch('/api/v1/getState'), 8000).then(function(r){ return r.json(); }).catch(function(){ return null; }),
+  Promise.all([tagGetJson('/sysinfo?full=1'), withTimeout(player.state(), 8000).catch(function(){ return null; }),
                tagGetJson('/services').catch(function(){ return null; })])
     .then(function(res){
       if (seq !== sysSeq) return;
@@ -327,6 +327,7 @@ function sysRender(st) {
   kv(info, T('sys.kernel'), s.kernel + (s.arch ? ' · ' + s.arch : ''));
   kv(info, T('sys.cpuModel'), (s.cpuCount ? T('sys.cores', {n: s.cpuCount}) : '') + (s.cpuModel ? ' · ' + s.cpuModel : ''));
   kv(info, T('sys.node'), s.node);
+  if (s.mpd) kv(info, T('sys.mpd'), s.mpd + ' · ' + T(s.mpdFfmpeg ? 'sys.mpdFf' : 'sys.mpdNoFf'));
   kv(info, T('sys.host'), s.host);
   sysEls.uptime = histEl('span', 'syV', '');
   var ur = histEl('div', 'syKv');
@@ -374,14 +375,14 @@ function sysPaintSvc() {
     var btns = histEl('div', 'sySvcBtns'), on = u.active === 'active' || u.active === 'activating';
     ['restart'].forEach(function(a){
       var label = a === 'restart' && !on ? T('sys.svc.do.start') : T('sys.svc.do.' + a);
-      var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || !sysSvc.pw ? ' off' : ''), label);
+      var b = histEl('div', 'mxChip mxSmall sySvcBtn' + (sysSvcBusy[u.id] || (!sysSvc.pw && !sysSvc.mac) ? ' off' : ''), label);
       b.addEventListener('click', function(){ sysSvcAct(u, a); });
       btns.appendChild(b);
     });
     row.appendChild(btns);
     e.svc.appendChild(row);
   });
-  /* the whole player: restart and power off (with password only if one is set) */
+  /* the whole player: restart and power off (with password only if one is set); not on the Mac (Xplorio.app) */
   var pr = histEl('div', 'sySvc sySvcPlayer'), pb = sysSvcBusy.player;
   pr.appendChild(histEl('span', 'sySvcDot ' + (pb ? 'busy' : 'on')));
   var pt = histEl('div', 'sySvcText');
@@ -395,8 +396,8 @@ function sysPaintSvc() {
     pbs.appendChild(b);
   });
   pr.appendChild(pbs);
-  e.svc.appendChild(pr);
-  var note = sysSvcMsg || [sysSvc.pw ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
+  if (!sysSvc.mac) e.svc.appendChild(pr);
+  var note = sysSvcMsg || [sysSvc.pw || sysSvc.mac ? '' : T('sys.svc.nopw'), sysSvc.sudo === false ? T('sys.svc.nosudo') : ''].filter(Boolean).join(' ');
   e.svcNote.textContent = note;
   e.svcNote.className = 'syNote' + (note ? ' syWarn' : '');
   e.svcLogin.style.display = sysSvcPending ? '' : 'none';
@@ -462,7 +463,7 @@ function sysSvcAct(u, action) {
 }
 function sysSvcRun(u, action) {
   var token = sysSvcToken() || sysSvcMem, player = u.id === 'player';
-  if (!token && (!player || sysSvc.pw)) return sysSvcAskLogin(u, action);
+  if (!token && (sysSvc.pw || (!player && !sysSvc.mac))) return sysSvcAskLogin(u, action);   /* Mac: password only if one is set */
   var seq = sysSeq;
   sysSvcBusy[u.id] = player ? action : true; sysSvcMsg = '';
   sysPaintSvc();
@@ -577,6 +578,7 @@ function sysPaintLog() {
   if (sysLog.bottom) box.scrollTop = box.scrollHeight; else box.scrollTop = sysLog.scroll;
   var note = !d ? T('hist.loading')
     : d.error === 'auth' ? T('sys.log.auth')
+    : d.error === 'pwneeded' ? T('mac.err.pwneeded')
     : d.error === 'nojournal' ? T('sys.log.nojournal')
     : d.error === 'missing' ? T('sys.log.missing')
     : !d.ok ? T('sys.svc.error')

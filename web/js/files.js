@@ -20,10 +20,13 @@ function filesName(rel) { var p = String(rel).split('/'); return p[p.length - 1]
 function filesShown(rel) { return '/mnt/' + rel; }
 function filesClear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
 
+/* where the password is set: the plugin's page on Volumio, the settings page on the Mac */
+function filesNoPwKey() { return typeof player !== 'undefined' && player.kind === 'mpd' ? 'files.nopwMac' : 'files.nopw'; }
 function filesError(r) {
   var e = (r && r.error) || '?';
   if (e === 'auth') return T('check.dup.auth');
-  if (e === 'nopw') return T('files.nopw');
+  if (e === 'pwneeded') return T('mac.err.pwneeded');
+  if (e === 'nopw') return T(filesNoPwKey());
   if (e === 'check running') return T('trash.checkRunning');
   if (e === 'busy') return T('files.busy');
   if (e === 'exists') return T('files.exists');
@@ -86,7 +89,7 @@ function filesLogin() {
     tagPostJson('/servicelogin', {password: inp.value}).then(function(r){
       ok.disabled = false; inp.value = '';
       if (r && r.ok) { sysSvcMem = sysSvcToken(r.token); return filesStart(); }
-      err.textContent = r && r.error === 'unset' ? T('files.nopw') : r && r.error === 'locked' ? T('sys.svc.locked', {s: r.wait})
+      err.textContent = r && r.error === 'unset' ? T(filesNoPwKey()) : r && r.error === 'locked' ? T('sys.svc.locked', {s: r.wait})
         : r && r.error === 'wrong' ? T('sys.svc.wrong') + (r.wait ? ' ' + T('sys.svc.locked', {s: r.wait}) : '') : T('sys.svc.error');
     }).catch(function(){ ok.disabled = false; err.textContent = T('sys.svc.error'); });
   });

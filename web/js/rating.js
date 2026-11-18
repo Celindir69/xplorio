@@ -28,7 +28,7 @@ var favMap = {}, favAt = 0, favLoading = null;
 function favRefresh(force) {
   if (!force && Date.now() - favAt < 5000) return Promise.resolve(favMap);
   if (favLoading) return favLoading;
-  favLoading = fetch('/api/v1/browse?uri=favourites').then(function(r){ return r.json(); }).then(function(j){
+  favLoading = player.browse('favourites').then(function(j){
     var m = {};
     browseItems(j).forEach(function(it){ if (it.uri) m[rateFileKey(it.uri)] = it; });
     favMap = m; favAt = Date.now(); favLoading = null;
@@ -41,11 +41,10 @@ function favRefresh(force) {
 function rateTrackSet(t, v) {
   var k = rateFileKey(t.uri), fav = favMap[k];
   if (v === 1 && !fav) {
-    socket.emit('addToFavourites', {uri: t.uri, title: t.title || '', service: t.service || 'mpd',
-                                    artist: t.artist || '', album: t.album || '', albumart: t.albumart || ''});
+    player.favAdd(t).catch(function(){});
     favMap[k] = {uri: t.uri, service: t.service || 'mpd'};
   } else if (v !== 1 && fav) {
-    socket.emit('removeFromFavourites', {uri: fav.uri, service: fav.service || 'mpd', name: t.title || ''});
+    player.favRemove(fav, t.title).catch(function(){});
     delete favMap[k];
   }
   favAt = Date.now();                                  /* Volumio needs a moment until the list is correct */

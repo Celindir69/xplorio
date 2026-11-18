@@ -109,3 +109,31 @@ s.report(true, function(r){
     console.log(n + ' checks ok');
   });
 });
+
+/* Mac: no /proc; load from os.cpus(), memory from vm_stat, drives from mount, version from sw_vers */
+(function(){
+  var si = require('../tags/sysinfo.js');
+  var VM = 'Mach Virtual Memory Statistics: (page size of 4096 bytes)\nPages free:  1000.\nPages active:  5000.\nPages inactive:  2000.\nPages speculative:  500.\nPages purgeable:  500.\n';
+  var MOUNT = '/dev/disk1s1 on / (apfs, local, journaled)\ndevfs on /dev (devfs, local, nobrowse)\n/dev/disk1s4 on /System/Volumes/VM (apfs, local)\n' +
+              '/dev/disk2s1 on /Volumes/Musik USB (exfat, local, nodev, nosuid)\n//ich@nas/music on /Volumes/music (smbfs, nodev, nosuid, mounted by ich)\n';
+  var c = si.statFromCpus([{times: {user: 10, nice: 0, sys: 5, irq: 0, idle: 85}}, {times: {user: 20, nice: 0, sys: 0, irq: 0, idle: 80}}]);
+  assert.deepStrictEqual(c.all, {busy: 35, total: 200}); assert.strictEqual(c.cores.length, 2);
+  assert.deepStrictEqual(si.parseVmStat(VM, 100000), {total: 100000, avail: 16000, swapTotal: 0, swapFree: 0});   /* (1000+2000+500+500)·4 kB */
+  assert.deepStrictEqual(si.parseMacMounts(MOUNT).map(function(d){ return [d.mount, d.kind]; }), [['/', 'card'], ['/Volumes/Musik USB', 'usb'], ['/Volumes/music', 'net']]);
+  var s = new si.Sysinfo({platform: 'darwin', df: function(m, cb){ cb({size: 100, used: 40, avail: 60}); },
+    mpdBin: '/opt/local/bin/mpd',
+    run: function(cmd, args, cb){ cb(cmd === 'vm_stat' ? VM : cmd === 'mount' ? MOUNT : cmd === 'sw_vers' ? '11.7.10\n' :
+      cmd === '/opt/local/bin/mpd' ? 'Music Player Daemon 0.24.19 (v0.24.19)\n\nDecoder plugins:\n [mad] mp3\n [ffmpeg] dsf flac\n\nInput plugins:\n file\n' : ''); }});
+  s.sample(1000); s.sample(3000);
+  s.report(true, function(r){
+    assert.strictEqual(r.sys.os, 'macOS 11.7.10');
+    assert.strictEqual(r.sys.mpd, '0.24.19'); assert.strictEqual(r.sys.mpdFfmpeg, true);
+    assert.strictEqual(r.disks.length, 3);
+    assert.ok(r.mem.total > 0 && r.mem.avail > 0);
+    assert.ok(r.uptime > 0);
+    var noFf = 'Music Player Daemon 0.24 (v0.24)\n\nDecoder plugins:\n [dsf] dsf\n\nInput plugins:\n [ffmpeg] gopher\n';
+    assert.deepStrictEqual(si.parseMpdVersion(noFf), {version: '0.24', ffmpeg: false});   /* ffmpeg only as input plugin */
+    assert.strictEqual(si.parseMpdVersion(''), null);
+    console.log('ok   Mac: load, memory, drives, version and MPD version without /proc');
+  });
+})();

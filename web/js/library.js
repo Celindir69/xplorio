@@ -1,7 +1,7 @@
 /* Playlists, web radio and search
    Classic script, shared global scope; see xplorio.html for load order. */
 /* ---------- Playlists / radio ---------- */
-function renderPlList(items, container, clickFn, tiles, note) {   /* tiles: playlists with artist tile; note: notice at the top */
+function renderPlList(items, container, clickFn, tiles, note, side) {   /* tiles: playlists with artist tile; note: notice at the top; side(it): button at the end of the row */
   while (container.firstChild) container.removeChild(container.firstChild);
   if (note) container.appendChild(volumioLink(note));
   if (plTileSeen) plTileSeen.disconnect();                 /* stop observing old tiles (would otherwise fill up over days) */
@@ -29,6 +29,8 @@ function renderPlList(items, container, clickFn, tiles, note) {   /* tiles: play
     var nm = document.createElement('div');
     nm.className = 'plName'; nm.textContent = it.title || it.name || '';
     row.appendChild(icon); row.appendChild(nm);
+    var btn = side && side(it);
+    if (btn) { btn.addEventListener('click', function(e){ e.stopPropagation(); }); row.appendChild(btn); }
     row.addEventListener('click', function(){ clickFn(it); });
     container.appendChild(row);
   });
@@ -93,7 +95,7 @@ function plTileNext() {
   if (plTileBusy || !plTileQueue.length) return;
   var job = plTileQueue.shift();
   plTileBusy = true;
-  fetch('/api/v1/browse?uri=' + volumioArg(job.uri)).then(function(r){ return r.json(); }).then(function(j){
+  player.browse(job.uri).then(function(j){
     var tracks = browseItems(j).filter(function(it){ return it.uri && !/^folder/.test(it.type || ''); });
     var artists = plTileArtists(tracks);
     plTileCache(job.uri, artists);
@@ -124,8 +126,7 @@ function loadPlaylists() {
   hint.className = 'plHint'; hint.textContent = T('pl.loading');
   playlistResults.appendChild(hint);
 
-  fetch('/api/v1/browse?uri=playlists')
-    .then(function(r){ return r.json(); })
+  player.browse('playlists')
     .then(function(j){
       var items = (j && j.navigation && j.navigation.lists && j.navigation.lists[0])
                   ? j.navigation.lists[0].items : [];
@@ -164,26 +165,105 @@ function radioLogos(items, container) {
   });
 }
 
+/* playing a station (own list or search hit) */
+function radioPlay(it) {
+  if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
+  player.replaceAndPlay({uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio'}, true);
+  closeAllOverlays();
+}
+/* small round button at the end of a row (add, remove) */
+function radioSideBtn(path, title, fn) {
+  var b = document.createElement('div');
+  b.className = 'plSide'; b.title = title; b.setAttribute('role', 'button');
+  b.innerHTML = '<svg viewBox="0 0 24 24"><path d="' + path + '"/></svg>';
+  b.addEventListener('click', function(e){ e.stopPropagation(); fn(b); });
+  return b;
+}
+var RADIO_PLUS = 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z', RADIO_X = 'M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z';
+var radioQuery = '';
+/* without Volumio (player.kind 'mpd'): own stations with a search on radio-browser.info above them */
+function loadMyRadioMpd() {
+  while (radioPanel.firstChild) radioPanel.removeChild(radioPanel.firstChild);
+  var form = document.createElement('div'); form.className = 'radioSearch';
+  var inp = document.createElement('input');
+  inp.type = 'search'; inp.className = 'radioInput'; inp.placeholder = T('radio.searchPh'); inp.value = radioQuery;
+  inp.setAttribute('autocapitalize', 'off'); inp.spellcheck = false;
+  form.appendChild(inp);
+  var hits = document.createElement('div'), mine = document.createElement('div');
+  radioPanel.appendChild(form); radioPanel.appendChild(hits); radioPanel.appendChild(mine);
+  var own = {};
+  function showMine() {
+    player.browse('radio/favourites').then(function(j){
+      var items = browseItems(j);
+      own = {}; items.forEach(function(it){ own[it.uri] = true; });
+      renderPlList(items, mine, radioPlay, false, items.length ? '' : null, function(it){
+        return radioSideBtn(RADIO_X, T('radio.remove'), function(){
+          player.radioRemove(it.uri).then(showMine);
+        });
+      });
+      if (!items.length) { while (mine.firstChild) mine.removeChild(mine.firstChild); var h = document.createElement('div'); h.className = 'plHint'; h.textContent = T('radio.noneYet'); mine.appendChild(h); }
+      else { var head = document.createElement('div'); head.className = 'plHint radioHead'; head.textContent = T('radio.mine'); mine.insertBefore(head, mine.firstChild); radioLogos(items, mine); }
+    }).catch(function(){
+      while (mine.firstChild) mine.removeChild(mine.firstChild);
+      var err = document.createElement('div'); err.className = 'plHint'; err.textContent = T('pl.loadError'); mine.appendChild(err);
+    });
+  }
+  var seq = 0;
+  function search() {
+    var q = inp.value.trim(), my = ++seq;
+    radioQuery = q;
+    while (hits.firstChild) hits.removeChild(hits.firstChild);
+    if (q.length < 2) return;
+    var h = document.createElement('div'); h.className = 'plHint'; h.textContent = T('pl.loading'); hits.appendChild(h);
+    player.radioSearch(q).then(function(r){
+      if (my !== seq) return;
+      var list = (r && r.stations) || [];
+      var found = list.map(function(st){ return {title: st.title, uri: st.uri, albumart: st.albumart, service: 'webradio'}; });
+      renderPlList(found, hits, radioPlay, false, null, function(it){
+        if (own[it.uri]) return null;
+        return radioSideBtn(RADIO_PLUS, T('radio.add'), function(b){
+          player.radioAdd(it).then(function(a){
+            if (a && a.ok) { b.parentNode.removeChild(b); showToast(T('radio.added', {name: it.title})); showMine(); }
+          });
+        });
+      });
+      var head = document.createElement('div'); head.className = 'plHint radioHead';
+      head.textContent = list.length ? T('radio.hits', {n: list.length}) : T('radio.noHits');
+      hits.insertBefore(head, hits.firstChild);
+      radioLogos(found, hits);
+    }).catch(function(){
+      if (my !== seq) return;
+      while (hits.firstChild) hits.removeChild(hits.firstChild);
+      var e = document.createElement('div'); e.className = 'plHint'; e.textContent = T('radio.searchError'); hits.appendChild(e);
+    });
+  }
+  var timer = null;
+  inp.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(search, 500); });
+  inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') { clearTimeout(timer); search(); inp.blur(); } });
+  showMine();
+  if (radioQuery) search();
+}
+
 function loadMyRadio() {
+  if (player.kind === 'mpd') return loadMyRadioMpd();
   while (radioPanel.firstChild) radioPanel.removeChild(radioPanel.firstChild);
   var hint = document.createElement('div');
   hint.className = 'plHint'; hint.textContent = T('pl.loading');
   radioPanel.appendChild(hint);
 
-  fetch('/api/v1/browse?uri=' + volumioArg('radio/favourites'))
-    .then(function(r){ return r.json(); })
+  player.browse('radio/favourites')
     .then(function(j){
       var lists = (j && j.navigation && j.navigation.lists) || [];
       var items = [];
       lists.forEach(function(l){ items = items.concat(l.items || []); });
       renderPlList(items, radioPanel, function(it){
         if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
-        socket.emit('replaceAndPlay', {
+        player.replaceAndPlay({
           uri:      it.uri,
           title:    it.title || it.name || '',
           albumart: it.albumart || null,
           service:  it.service || 'webradio'
-        });
+        }, true);
         closeAllOverlays();
       }, false, T('radio.manageHint'));
       radioLogos(items, radioPanel);
@@ -233,7 +313,7 @@ document.getElementById('searchTabBar').querySelectorAll('.qTab').forEach(functi
 
 function triggerSearch() {
   var q = searchInput.value.trim();
-  if (q.length < 2) {
+  if (q.length < 2 && q !== '*') {                 /* "*": everything (MPD alone: mpdlibrary.js) */
     searchData = streamEmptySearch();
     searchSuggest = null;
     searchSeq++;
@@ -358,7 +438,7 @@ function doSearch(q) {
   searchMessage(T('search.searching'));
   superSearchStart(q, seq);
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
-  withTimeout(fetch('/api/v1/search?query=' + volumioArg(q)).then(function(r){ return r.json(); }), SEARCH_TIMEOUT_MS)
+  withTimeout(player.search(q), SEARCH_TIMEOUT_MS)
     .then(function(j){
       clearTimeout(slow);
       if (seq !== searchSeq) return;

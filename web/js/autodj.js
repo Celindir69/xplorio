@@ -1,5 +1,5 @@
 /* Endless playback: fourth state ∞ on the repeat button (off → all → one → ∞), via the AutoDJ plugin
-   (Celindir69/autodj-plugin, REST endpoint "autodj") or, without it, MyVolumio's Continuous Play (Infinity Playback,
+   (Celindir69/autodj-plugin, REST endpoint "autodj"; with PLAYER 'mpd' the tag service's own, POST /mpd/autodj) or, without it, MyVolumio's Continuous Play (Infinity Playback,
    Premium). AutoDJ pauses while repeat is on, so the states are mutually exclusive. With neither (or AutoDJ without
    a Last.fm key) there are only three states.
    Classic script, shared global scope; load order see xplorio.html. */
@@ -33,12 +33,15 @@ function repeatNext(shown, adj) {
 var autodjTimer = null;
 function autodjCall(data) {
   clearTimeout(autodjTimer);
-  return withTimeout(fetch('/api/v1/pluginEndpoint', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({endpoint: 'autodj', data: data || {}})
-  }), 5000).then(function(r){ return r.json(); })
+  var mpd = typeof player !== 'undefined' && player.kind === 'mpd';    /* without Volumio: the tag service's AutoDJ (tags/autodj.js) */
+  var ask = mpd ? tagPostJson('/mpd/autodj', data || {})
+    : withTimeout(fetch('/api/v1/pluginEndpoint', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({endpoint: 'autodj', data: data || {}})
+      }), 5000).then(function(r){ return r.json(); });
+  return ask
     .then(function(j){
-      autodj = autodjState(j && j.data);
+      autodj = autodjState(mpd ? j : j && j.data);
     })
     .catch(function(){ autodj = {avail: false, enabled: false, ready: false}; })
     .then(function(){
@@ -85,5 +88,6 @@ else {
   socket.on('connect', function(){ socket.emit('getInfinityPlayback'); });
   if (socket.connected) socket.emit('getInfinityPlayback');
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) autodjCall(); });
-  setTimeout(function(){ autodjCall(); }, 0);                               /* after all scripts have loaded */
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ autodjCall(); });   /* after all scripts have loaded */
+  else setTimeout(function(){ autodjCall(); }, 0);
 }

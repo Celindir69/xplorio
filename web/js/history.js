@@ -80,7 +80,7 @@ function histChips(list, cur, onPick) {
 
 /* uri or folder relative to /mnt ("USB/…"); '' for TIDAL and co. */
 function histRel(u) {
-  if (!u || /^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)\/|spotify:)/i.test(u)) return '';
+  if (!u || /^([a-z]+:\/\/|(tidal|qobuz|hra|highresaudio|hi_res_audio)[\/:]|spotify:)/i.test(u)) return '';
   return u.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
 }
 function histAlbumArt(artist, album, dir) {

@@ -6,7 +6,7 @@
    title: heading of a result list of this service */
 var STREAMS = [
   {id: 'tidal', name: 'TIDAL', short: 'TIDAL', cfg: 'TIDAL', key: /^tidal/i, title: /tidal/,
-   uriRe: /^tidal:/i, artistRe: /^tidal:\/\/artist\/\d+$/i},
+   uriRe: /^tidal:/i, artistRe: /^tidal:(\/\/artist\/|artist:)\d+$/i},
   /* Volumio's Qobuz plugin: addresses like qobuz://artist/123 (older versions qobuz/artist/123) */
   {id: 'qobuz', name: 'Qobuz', short: 'Qobuz', cfg: 'QOBUZ', key: /^qobuz/i, title: /qobuz/,
    uriRe: /^qobuz(:\/\/|\/)/i, artistRe: /^qobuz(:\/\/|\/)artists?\/[\w-]+$/i},
@@ -75,7 +75,7 @@ function streamSplitSearch(lists, query) {
       });
       return;
     }
-    if (cat === 'songs') {                                  /* local tracks: only real hits in title or artist */
+    if (cat === 'songs' && q !== '*') {                     /* local tracks: only real hits in title or artist ("*": all) */
       items = items.filter(function(it){
         return (it.title || it.name || '').toLowerCase().indexOf(q) > -1 || (it.artist || '').toLowerCase().indexOf(q) > -1;
       });

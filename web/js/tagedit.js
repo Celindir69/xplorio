@@ -196,6 +196,25 @@ function tagGenreMenu(input) {
   return sel;
 }
 
+/* main genre from the audio analysis (and the genre tags) of the tracks shown, as the library check suggests it:
+   a line below the genre field with "Use"; not shown when the field already says it */
+var tagGenreSuggest = null;
+function tagGenreHint(input) {
+  var g = tagGenreSuggest;
+  if (!g || !g.genre || String(input.value).trim().toLowerCase() === g.genre.toLowerCase()) return null;
+  var box = histEl('div', 'tagGenreHint'), use = document.createElement('button');
+  var why = g.how === 'table' ? T('tag.genreSug.tags') : T('tag.genreSug.audio', {p: Math.round((g.share || 0) * 100), n: g.tracks});
+  box.appendChild(histEl('span', '', T('tag.genreSug', {g: g.genre}) + (g.subs && g.subs.length ? ' (' + g.subs.join(', ') + ')' : '') + ' · ' + why));
+  use.type = 'button'; use.className = 'tagBtn'; use.textContent = T('tag.rec.use');
+  use.addEventListener('click', function(){
+    input.value = g.genre; input.setAttribute('data-dirty', '1'); input.placeholder = '';
+    input.dispatchEvent(new Event('input'));
+    box.parentNode.removeChild(box);
+  });
+  box.appendChild(use);
+  return box;
+}
+
 /* apply a text function to an input field and mark it as changed */
 function tagApplyFn(input, fn) {
   var v = fn(input.value);
@@ -244,15 +263,18 @@ function openTagEditor(files, heading, opts) {
   tagBatch = null; tagUndo.style.display = 'none'; tagSave.disabled = true; tagStatus.textContent = '';
   tagMsg(T('tag.loading'), true);
   overlayTags.classList.add('on');
-  var uris = files.map(function(f){ return f.uri; }), items = [];
+  var uris = files.map(function(f){ return f.uri; }), items = [], genre = null;
   tagInChunks(uris, TAG_CHUNK * 2, function(part, done){   /* in parts: the tag service takes at most 500 per request */
     if (seq !== artSeq) return Promise.reject(new Error('abgebrochen'));
     if (uris.length > part.length) tagMsg(T('tag.readingProgress', {done: langNum(Math.min(done, uris.length)), total: langNum(uris.length)}), true);
     return tagPost('/read', {uris: part}).then(function(res){
       if (!res.ok) throw new Error(res.error || T('tag.unknown'));
       items = items.concat(res.items);
+      tagCanAnalyse = !!res.analysis;
+      if (res.genre && (!genre || res.genre.tracks > genre.tracks)) genre = res.genre;   /* read in parts: the part with most analysed tracks */
     });
   }).then(function(){
+    tagGenreSuggest = genre;
     if (seq === artSeq) tagRender(files, items);
   }).catch(function(e){
     if (seq !== artSeq || e.message === 'abgebrochen') return;
@@ -264,7 +286,7 @@ function openTagEditor(files, heading, opts) {
 function tagRender(files, items) {
   tagBusy('');
   tagFiles = items.map(function(it, i){
-    return {uri: it.uri, ok: !!it.ok, error: it.error, tags: it.tags || {}, name: files[i] && files[i].title};
+    return {uri: it.uri, ok: !!it.ok, error: it.error, tags: it.tags || {}, name: files[i] && files[i].title, analysed: it.analysed};
   });
   var good = tagFiles.filter(function(f){ return f.ok; });
   while (tagBody.firstChild) tagBody.removeChild(tagBody.firstChild);
@@ -284,6 +306,7 @@ function tagRender(files, items) {
     var aa = fd[0] === 'date' || fd[0] === 'disc' ? null : fd[0] === 'comment' ? tagNoMixButton(tagCommon.comment) : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
     if (fd[0] === 'genre') { var both = document.createDocumentFragment(); both.appendChild(tagGenreMenu(inp)); both.appendChild(aa); aa = both; }
     tagCommon[fd[0]].field = tagBody.appendChild(tagField(fd[1], inp, aa));
+    if (fd[0] === 'genre') { var gs = tagGenreHint(inp); if (gs) tagBody.appendChild(gs); }
   });
   tagCompil = null;
   if (good.length > 1) tagBody.appendChild(tagCompilationBox(good));
@@ -296,6 +319,9 @@ function tagRender(files, items) {
     });
     tagBody.appendChild(bulk);
   }
+
+  if (good.length > 1) { var rec = tagRecognizeSection(good); if (rec) tagBody.appendChild(rec); }
+  var ana = tagAnalyseSection(good); if (ana) tagBody.appendChild(ana);
 
   var h = document.createElement('div');
   h.className = 'infoSection tagSectionAa';
@@ -336,6 +362,229 @@ function tagRender(files, items) {
   if (tagMoveDirs && tagMoveDirs.length) tagBody.appendChild(tagMoveSection(tagMoveDirs));
   tagCompilShow();
   tagSave.disabled = false;
+}
+
+/* audio analysis of just these files' folders (Mac, POST /mac/analysis {uris}): only offered when tracks with artist and
+   title have no analysis yet (a track without them cannot be analysed and matched; the analysis skips it) */
+var tagCanAnalyse = false;
+function tagAnalyseSection(good) {
+  if (!tagCanAnalyse || good.some(function(f){ return f.analysed === undefined; })) return null;
+  var tagged = good.filter(function(f){ return f.tags.artist && f.tags.title; }), missing = tagged.filter(function(f){ return !f.analysed; });
+  if (!missing.length) return null;
+  var box = histEl('div', 'tagRec'), btn = document.createElement('button'), note = histEl('div', 'tagRecNote',
+    T(missing.length === tagged.length ? 'tag.ana.none' : 'tag.ana.part', {n: missing.length, m: tagged.length}));
+  btn.className = 'tagBtn'; btn.textContent = T('tag.ana.button');
+  box.appendChild(btn); box.appendChild(note);
+  btn.addEventListener('click', function(){
+    btn.disabled = true; note.textContent = T('tag.ana.starting');
+    var token = typeof msToken === 'function' ? msToken() : '';
+    tagPost('/mac/analysis', {action: 'start', uris: good.map(function(f){ return f.uri; }), token: token}).then(function(r){
+      if (r && r.startError) { btn.disabled = false; note.textContent = T('tag.ana.err.' + (['running', 'busy', 'python'].indexOf(r.startError) >= 0 ? r.startError : 'other')); return; }
+      if (r && (r.error === 'auth' || r.error === 'pwneeded')) { btn.disabled = false; note.textContent = T('mac.err.' + r.error); return; }
+      note.textContent = T('tag.ana.started') + ' ';
+      if (typeof openMacSettings === 'function') {
+        var a = histEl('a', 'tagRecLink', T('tag.ana.progress'));
+        a.href = '#'; a.addEventListener('click', function(e){ e.preventDefault(); openMacSettings(T('mac.essentia')); });
+        note.appendChild(a);
+      }
+    }).catch(function(){ btn.disabled = false; note.textContent = T('tag.serviceDown'); });
+  });
+  return box;
+}
+
+/* "Recognise album" (POST /albumid, tags/albumid.js): MusicBrainz by track count and lengths (the CD's table of
+   contents), folder and file names as hints. A suggestion fills the fields; Save writes it as usual (with Undo).
+   Only for the files of one folder (one disc). tagAutoRecognize: start at once (import on the Mac) */
+var tagAutoRecognize = false;
+function tagAlbumIdText(c) {
+  var bits = [c.date ? c.date.slice(0, 4) : '', c.country, c.discs > 1 ? T('tag.rec.disc', {n: c.disc, m: c.discs}) : ''].filter(Boolean);
+  return c.title + ' – ' + c.artist + (bits.length ? ' (' + bits.join(', ') + ')' : '');
+}
+function tagAlbumIdWhy(c) { return T('tag.rec.chance', {p: c.chance}) + ' · ' + T('tag.rec.match.' + c.match); }
+function tagRecognizeSection(good) {
+  var dirs = {};
+  good.forEach(function(f){ var r = histRel(f.uri || ''); dirs[r.slice(0, r.lastIndexOf('/'))] = 1; });
+  var oneDir = Object.keys(dirs).length === 1 && good.length <= 99;
+  if (good.length > 300) return null;
+  var uris = good.map(function(f){ return f.uri; });
+  var box = document.createElement('div'), btn = document.createElement('button'), out = document.createElement('div');
+  box.className = 'tagRec';
+  btn.className = 'tagBtn'; btn.textContent = T('tag.rec.button');
+  out.className = 'tagRecList';
+  if (oneDir) box.appendChild(btn);
+
+  /* manual search: artist and album at MusicBrainz, Discogs (with a token), Apple Music or Deezer */
+  var form = histEl('div', 'tagRecForm'), ai = tagInput('', ''), al = tagInput('', ''), src = document.createElement('select'), go = document.createElement('button');
+  ai.placeholder = T('tag.field.artist'); al.placeholder = T('tag.field.album');
+  var hint = tagRecHints(good);
+  ai.value = (tagCommon.albumartist && !tagCommon.albumartist.mixed && tagCommon.albumartist.input.value) ||
+             (tagCommon.artist && !tagCommon.artist.mixed && tagCommon.artist.input.value) || hint.artist;
+  al.value = (tagCommon.album && !tagCommon.album.mixed && tagCommon.album.input.value) || hint.album;
+  ['mb', 'discogs', 'itunes', 'deezer'].forEach(function(s){
+    var o = document.createElement('option'); o.value = s; o.textContent = T('tag.rec.src.' + s); src.appendChild(o);
+  });
+  try { src.value = localStorage.getItem('tagRecSource') || 'mb'; } catch (e) { /* none */ }
+  if (!src.value) src.value = 'mb';
+  go.className = 'tagBtn'; go.textContent = T('tag.rec.search');
+  form.appendChild(histEl('div', 'tagRecLabel', T('tag.rec.manual')));
+  [ai, al].forEach(function(i){ form.appendChild(i); });
+  var line = histEl('div', 'tagRecLine'); line.appendChild(src); line.appendChild(go); form.appendChild(line);
+  box.appendChild(form); box.appendChild(out);
+  [ai, al].forEach(function(i){ i.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); search(); } }); });
+  go.addEventListener('click', search);
+
+  function apply(c) {
+    var by = {};
+    c.items.forEach(function(it){ by[it.uri] = it.tags; });
+    var first = c.items[0] && c.items[0].tags || {}, va = first.compilation === '1';
+    var discs = c.items.map(function(it){ return it.tags.disc || ''; }), oneDisc = discs.every(function(d){ return d === discs[0]; });
+    ['album', 'albumartist', 'date'].concat(oneDisc ? ['disc'] : []).concat(va ? [] : ['artist']).forEach(function(k){
+      var cf = tagCommon[k];
+      if (!cf || first[k] === undefined) return;
+      cf.input.value = first[k]; cf.input.setAttribute('data-dirty', '1'); cf.input.placeholder = '';
+    });
+    if (tagCompil) { tagCompil.box.checked = va; tagCompilShow(); }
+    tagFiles.forEach(function(f){
+      var t = by[f.uri];
+      f.recDisc = !oneDisc && t ? (t.disc || '') : undefined;     /* several discs in one go: each file its own */
+      if (!t || !f.ok) return;
+      if (f.trackIn) f.trackIn.value = t.track || '';
+      if (f.titleIn) f.titleIn.value = t.title || '';
+      if (f.artistIn) f.artistIn.value = t.artist || '';
+    });
+    tagStatus.textContent = T('tag.rec.filled');
+  }
+  function clear() { while (out.firstChild) out.removeChild(out.firstChild); }
+  function note(t) { clear(); out.appendChild(histEl('div', 'tagRecNote', t)); }
+  /* one entry; a tap opens the preview: file name and length next to the track title and length */
+  function row(c, load) {
+    var r = histEl('div', 'tagRecRow'), head = histEl('div', 'tagRecHead'), prev = histEl('div', 'tagRecPrev');
+    head.appendChild(histEl('div', 'tagRecName', (c.title || '?') + ' – ' + (c.artist || '?')));
+    var sub = histEl('div', 'tagRecWhy', tagRecSub(c));
+    head.appendChild(sub);
+    r.appendChild(head); r.appendChild(prev);
+    var open = false, loaded = null;
+    head.addEventListener('click', function(){
+      open = !open; r.classList.toggle('open', open);
+      if (!open) { prev.innerHTML = ''; return; }
+      if (loaded) return tagRecPreview(prev, loaded, apply);
+      prev.appendChild(histEl('div', 'tagRecNote', T('tag.rec.loading')));
+      load().then(function(s){
+        loaded = s;
+        if (open) { prev.innerHTML = ''; if (s) tagRecPreview(prev, s, apply); else prev.appendChild(histEl('div', 'tagRecNote', T('tag.rec.noTracks'))); }
+      }).catch(function(e){ prev.innerHTML = ''; prev.appendChild(histEl('div', 'tagRecNote', e.message || T('tag.serviceDown'))); });
+    });
+    r.refresh = function(x){ sub.textContent = tagRecSub(x); };
+    return r;
+  }
+  function release(c) {
+    return tagPost('/albumrelease', {uris: uris, source: c.source, id: c.id}).then(function(res){
+      if (!res.ok) throw new Error(T('tag.error', {error: res.error || T('tag.unknown')}));
+      return res.suggestion;
+    });
+  }
+  var seq = 0;
+  function search() {
+    var a = ai.value.trim(), b = al.value.trim(), s = src.value, my = ++seq;
+    if (!a && !b) return;
+    try { localStorage.setItem('tagRecSource', s); } catch (e) { /* none */ }
+    go.disabled = true; note(T('tag.rec.searching'));
+    tagPost('/albumsearch', {uris: uris, artist: a, album: b, source: s}).then(function(res){
+      go.disabled = false;
+      if (my !== seq) return;
+      if (!res.ok) return note(/discogs token/.test(res.error || '') ? T('tag.rec.noDiscogs') : T('tag.error', {error: res.error || T('tag.unknown')}));
+      var list = res.results || [];
+      if (!list.length) return note(T('tag.rec.noneFound'));
+      clear();
+      out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.results', {n: list.length, m: uris.length})));
+      var rows = list.map(function(c){
+        var cache = null, r = row(c, function(){ return cache || (cache = release(c)); });
+        out.appendChild(r);
+        return {c: c, r: r, load: function(){ return cache || (cache = release(c)); }};
+      });
+      /* Discogs names no track counts in its search: the first ones fetched one after the other (also fills the preview) */
+      (function next(i){
+        if (my !== seq || i >= rows.length || i >= 10) return;
+        var x = rows[i];
+        if (x.c.tracks !== null) return next(i + 1);
+        x.load().then(function(sg){
+          if (sg) { x.c.tracks = sg.tracksTotal; x.c.fits = sg.fit === 'ok'; x.c.format = x.c.format || sg.format; x.r.refresh(x.c); }
+          next(i + 1);
+        }).catch(function(){ next(i + 1); });
+      })(0);
+    }).catch(function(){ go.disabled = false; note(T('tag.serviceDown')); });
+  }
+  /* by track count and lengths (MusicBrainz disc ID) */
+  function show(res) {
+    clear();
+    var list = (res && res.candidates) || [];
+    if (!list.length) { out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.none'))); return; }
+    list.forEach(function(c, i){
+      c.fileNames = res.fileNames;
+      var r = row(c, function(){ return Promise.resolve(c); });
+      out.appendChild(r);
+      if (i === 0 && c.match === 'exact' && tagAutoRecognize) apply(c);
+    });
+  }
+  function run() {
+    btn.disabled = true;
+    note(T('tag.rec.searching'));
+    tagPost('/albumid', {uris: uris}).then(function(res){
+      btn.disabled = false;
+      if (!res.ok) { out.firstChild.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); return; }
+      show(res);
+      if (!(res.candidates || []).length && tagAutoRecognize) ai.focus();
+      tagAutoRecognize = false;
+    }).catch(function(){ btn.disabled = false; out.firstChild.textContent = T('tag.serviceDown'); tagAutoRecognize = false; });
+  }
+  btn.addEventListener('click', run);
+  if (tagAutoRecognize && oneDir) setTimeout(run, 0);
+  return box;
+}
+/* "2025 · DE · 2×CD · 16 Titel (passt) · Label · Deluxe" */
+function tagRecSub(c) {
+  var fmt = String(c.format || '').replace(/\b(File|Vinyl|Cassette)\b/g, function(k){ return T('tag.rec.fmt.' + k); });
+  var n = c.tracks === null || c.tracks === undefined ? '' :
+          T('tag.rec.nTracks', {n: c.tracks}) + (c.fits ? ' ✓' : '');
+  var bits = [c.date ? String(c.date).slice(0, 4) : '', c.country, fmt, n, c.label, c.note];
+  if (c.match && c.match !== 'manual' && c.chance !== undefined) bits.unshift(tagAlbumIdWhy(c));
+  else if (c.source) bits.unshift(T('tag.rec.src.' + c.source));
+  return bits.filter(Boolean).join(' · ');
+}
+function tagRecTime(s) { s = Math.round(s || 0); return s ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : ''; }
+/* the preview: each file next to the track it gets, lengths that differ by more than 5 s marked */
+function tagRecPreview(el, c, apply) {
+  el.innerHTML = '';
+  if (c.fit === 'count') el.appendChild(histEl('div', 'tagRecNote tagRecWarn', T('tag.rec.countWarn', {m: c.tracksTotal, n: c.files, k: c.items.length})));
+  var names = {};
+  (c.fileNames || []).forEach(function(f){ names[f.uri] = f; });
+  var grid = histEl('div', 'tagRecGrid');
+  grid.appendChild(histEl('div', 'tagRecTh', T('tag.rec.colFile')));
+  grid.appendChild(histEl('div', 'tagRecTh', T('tag.rec.colTrack')));
+  var order = (c.fileNames && c.fileNames.length ? c.fileNames.map(function(f){ return f.uri; }) : c.items.map(function(it){ return it.uri; }));
+  var by = {};
+  c.items.forEach(function(it, i){ by[it.uri] = i; });
+  order.forEach(function(u){
+    var f = names[u] || {name: String(u).split('/').slice(-1)[0], length: 0}, i = by[u], t = i === undefined ? null : c.tracks[i];
+    var off = t && f.length && t.length && Math.abs(f.length - t.length) > 5;
+    grid.appendChild(histEl('div', 'tagRecCell', f.name + (f.length ? ' (' + tagRecTime(f.length) + ')' : '')));
+    grid.appendChild(histEl('div', 'tagRecCell' + (off ? ' tagRecOff' : '') + (t ? '' : ' tagRecNone'),
+      t ? (t.disc ? t.disc + '-' : '') + t.n + '. ' + t.title + (t.artist && t.artist !== c.artist ? ' – ' + t.artist : '') + (t.length ? ' (' + tagRecTime(t.length) + ')' : '') : T('tag.rec.noTrack')));
+  });
+  el.appendChild(grid);
+  var b = document.createElement('button');
+  b.className = 'tagBtn tagRecUse'; b.textContent = T('tag.rec.useSave');
+  b.addEventListener('click', function(){ apply(c); if (!tagSave.disabled) tagSave.click(); });
+  el.appendChild(b);
+}
+/* artist and album from the folder name ("Artist - 2025 - Album [FLAC]", "Artist/Album", disc folders) */
+function tagRecHints(good) {
+  var rel = histRel(good[0].uri || ''), parts = rel.split('/').slice(0, -1);
+  if (parts.length && TAG_DISC_RE.test(parts[parts.length - 1])) parts.pop();
+  var folder = (parts.pop() || '').replace(/\s*[\[(][^\])]*[\])]\s*$/g, '').trim(), parent = parts.pop() || '';
+  var m = /^(.+?)\s+-\s+(?:(?:19|20)\d\d\s+-\s+)?(.+)$/.exec(folder);
+  if (m) return {artist: m[1], album: m[2]};
+  return {artist: /^(import|music|musik|usb|internal|nas)$/i.test(parent) ? '' : parent, album: folder.replace(/^(?:19|20)\d\d\s+-\s+/, '')};
 }
 
 /* "Compilation" in the album editor: the compilation tag (m4a cpil, ID3 TCMP, Vorbis COMPILATION) for all tracks.
@@ -436,7 +685,7 @@ function tagMoveSection(dirs) {
         return;
       }
       b.disabled = false;
-      note.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+      note.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
     }).catch(function(){ b.disabled = false; note.textContent = T('check.dup.error', {error: '?'}); });
   });
   box.appendChild(b); box.appendChild(note);
@@ -467,6 +716,7 @@ function tagCollect() {
     Object.keys(common).forEach(function(k){ t[k] = common[k]; });
     if (compil !== null) t.compilation = compil;
     if (compil && f.artistIn) t.artist = f.artistIn.value;   /* compilation: the artist of each track */
+    if (f.recDisc !== undefined && common.disc === undefined) t.disc = f.recDisc;   /* album recognised over several discs */
     if (nm && common.comment === undefined) t.comment = noMixAdd(f.tags.comment);   /* different comments: each keeps its own */
     return {uri: f.uri, tags: t};
   });
@@ -730,35 +980,33 @@ function tagCoverSection(good) {
       return tagPost('/cover', body);
     });
   }
-  /* more than TAG_COVER_PART files: in parts under one batch (one Undo); folder.jpg once, with one file per folder */
-  var TAG_COVER_PART = 100;
+  /* more than TAG_PART_FIRST files: in parts under one batch (one Undo), sized by tagParts; folder.jpg once, with one
+     file per folder */
   function send(body, done) {
     tagStatus.textContent = T('tag.cover.writing');
     pick.disabled = toFolder.disabled = apply.disabled = true;
-    var parts = [], files = 0, dirs = 0, errs = [], batch = null, declined = false;
-    if (body.uris.length <= TAG_COVER_PART) parts.push(body);
+    var files = 0, dirs = 0, errs = [], batch = null;
+    function handle(res) {
+      if (!res) return;                                      /* folder.jpg kept: go on with embedding */
+      if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+      files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+      dirs += (res.folders || []).filter(function(f){ return f.ok; }).length;
+      errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }), (res.folders || []).filter(function(f){ return !f.ok; }));
+      if (res.batch) batch = batch || res.batch;
+    }
+    var work;
+    if (body.uris.length <= TAG_PART_FIRST) work = post(body).then(handle);
     else {
       batch = Date.now().toString(36);
-      if (body.folder) {
-        var seen = {}, perDir = body.uris.filter(function(u){ var d = u.replace(/\/[^\/]*$/, ''); return seen[d] ? false : (seen[d] = 1); });
-        parts.push({uris: perDir, image: body.image, embed: false, folder: true, batch: batch});
-      }
-      if (body.embed) for (var i = 0; i < body.uris.length; i += TAG_COVER_PART)
-        parts.push({uris: body.uris.slice(i, i + TAG_COVER_PART), image: body.image, embed: true, folder: false, batch: batch});
-    }
-    var k = 0;
-    function next() {
-      if (k >= parts.length) return Promise.resolve();
-      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
-      return post(parts[k++]).then(function(res){
-        if (!res) { declined = true; return next(); }          /* folder.jpg kept: go on with embedding */
-        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
-        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
-        dirs += (res.folders || []).filter(function(f){ return f.ok; }).length;
-        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }), (res.folders || []).filter(function(f){ return !f.ok; }));
-        if (res.batch) batch = batch || res.batch;
-        return next();
-      });
+      var seen = {}, perDir = body.uris.filter(function(u){ var d = u.replace(/\/[^\/]*$/, ''); return seen[d] ? false : (seen[d] = 1); });
+      work = (body.folder ? post({uris: perDir, image: body.image, embed: false, folder: true, batch: batch}).then(handle) : Promise.resolve())
+        .then(function(){
+          if (!body.embed) return;
+          return tagParts(body.uris, function(part, before, total){
+            tagStatus.textContent = T('tag.cover.writingFiles', {done: langNum(before), total: langNum(total)});
+            return post({uris: part, image: body.image, embed: true, folder: false, batch: batch}).then(handle);
+          });
+        });
     }
     function end() {
       pick.disabled = toFolder.disabled = apply.disabled = false;
@@ -770,7 +1018,7 @@ function tagCoverSection(good) {
       if (files || dirs) { if (done) done(); refresh(); tagRefreshView(); }
       return parts2;
     }
-    next().then(function(){
+    work.then(function(){
       var p2 = end();
       tagStatus.textContent = (p2.length ? T('tag.cover.written', {parts: p2.join(', ')}) : T('tag.nothingChanged')) +
         (errs.length ? T('tag.errSuffix', {n: errs.length, error: errs[0].error}) : '');
@@ -804,19 +1052,18 @@ function tagCoverSection(good) {
      DSF: MPD 0.20 drops all tags of a file whose tag block is larger than 1 MB, which big covers cause */
   strip.addEventListener('click', function(){
     if (!window.confirm(T('tag.cover.stripConfirm', {n: n}))) return;
-    var batch = Date.now().toString(36), files = 0, saved = 0, errs = [], k = 0, parts = [];
-    for (var i = 0; i < uris.length; i += TAG_COVER_PART) parts.push(uris.slice(i, i + TAG_COVER_PART));
+    var batch = Date.now().toString(36), files = 0, saved = 0, errs = [];
     pick.disabled = toFolder.disabled = apply.disabled = strip.disabled = true;
     tagStatus.textContent = T('tag.cover.stripping');
     function next() {
-      if (k >= parts.length) return Promise.resolve();
-      if (parts.length > 1) tagStatus.textContent = T('tag.cover.writingProgress', {done: langNum(k + 1), total: langNum(parts.length)});
-      return tagPost('/cover', {uris: parts[k++], strip: true, batch: batch}).then(function(res){
-        if (!res.ok) throw new Error(res.error || T('tag.unknown'));
-        files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
-        saved += (res.saved || []).length;
-        errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }));
-        return next();
+      return tagParts(uris, function(part, before, total){
+        if (total > part.length) tagStatus.textContent = T('tag.cover.strippingFiles', {done: langNum(before), total: langNum(total)});
+        return tagPost('/cover', {uris: part, strip: true, batch: batch}).then(function(res){
+          if (!res.ok) throw new Error(res.error || T('tag.unknown'));
+          files += (res.items || []).filter(function(r){ return r.ok && r.changed; }).length;
+          saved += (res.saved || []).length;
+          errs = errs.concat((res.items || []).filter(function(r){ return !r.ok; }));
+        });
       });
     }
     function end() {
@@ -905,6 +1152,26 @@ function tagsCheck() {
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && !tagsHealth && tagsWaiters.length) { tagsTries = 0; tagsCheck(); } });
 function tagPostJson(route, body) { return tagPost(route, body); }
+
+/* writing many files (covers): in parts that each stay well below the 60 s after which Safari and the Mac app give up on a
+   request ("Tag-Dienst nicht erreichbar", while the service goes on writing). Starts with TAG_PART_FIRST files, then sizes
+   each part from the time per file so far (big 24/96 FLACs on USB 2: seconds per file; MP3s: a few ms) -> Promise.
+   fn(part, done, total): done = files finished before this part */
+var TAG_PART_MS = 20000, TAG_PART_FIRST = 3, TAG_PART_MAX = 100;
+function tagParts(list, fn) {
+  var i = 0, ms = 0, n = 0;
+  function size() {
+    if (!n) return TAG_PART_FIRST;
+    return Math.max(1, Math.min(TAG_PART_MAX, Math.floor(TAG_PART_MS / Math.max(ms / n, 1))));
+  }
+  function step() {
+    if (i >= list.length) return Promise.resolve();
+    var part = list.slice(i, i + size()), before = i, t0 = Date.now();
+    i += part.length;
+    return Promise.resolve(fn(part, before, list.length)).then(function(){ ms += Date.now() - t0; n += part.length; return step(); });
+  }
+  return step();
+}
 
 /* process a list in chunks one after another; fn(chunk) -> Promise */
 function tagInChunks(list, size, fn) {

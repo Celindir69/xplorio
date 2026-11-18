@@ -73,6 +73,7 @@ function mpdWalk(opts, cb, onProgress) {
 
 /* a single MPD command (e.g. "stats") -> cb(err, {key: value}) */
 function mpdCommand(opts, cmd, cb) {
+  if (/[\r\n]/.test(String(cmd))) return setImmediate(function(){ cb(new Error('invalid command'), {}); });   /* one command, one line */
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
   var buf = '', greeted = false, out = {}, finished = false;
   function finish(err) {
@@ -501,9 +502,9 @@ function analyze(songs, hasCover, audioOf, extra, done) {
         o.album = s.album || '';
       })}));
     }
-    if (years.length > 1) {
+    if (years.length > 1 || !years[0].name) {             /* mixed, or no track has a year at all */
       var most = years.filter(function(x){ return x.name; });
-      res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', files: files()}));
+      res.yearMixed.push(merge(base, {years: years, most: most.length ? most[0].name : '', missing: !most.length, files: files()}));
     }
     var mq = mixedQuality(list);
     if (mq) res.mixedQuality.push(merge(base, merge(mq, {files: files()})));

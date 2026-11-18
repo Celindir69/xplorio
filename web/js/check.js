@@ -78,7 +78,9 @@ function checkLoad() {
     var res = both[0];
     if (!overlayCheck.classList.contains('on')) return;
     checkMood = both[1];
-    if (res.result === 'same' && checkShown && checkShown.running && res.running) {
+    if (res.result === 'same' && res.fix === 'same' && !res.running && checkShown && !checkShown.running) {
+      /* nothing new (asked again while MusicBrainz looks for years): leave the page as it is */
+    } else if (res.result === 'same' && checkShown && checkShown.running && res.running) {
       checkShown.info.textContent = checkRunText(res.running) + (res.error ? T('check.errorSuffix', {error: res.error}) : '');
     } else {
       if (res.result === 'same') res.result = checkShown ? checkShown.res.result : null;
@@ -90,6 +92,9 @@ function checkLoad() {
     var mt = checkMood && checkMood.enabled && checkMood.status;
     if (res.running) checkTimer = setTimeout(checkLoad, 2000);
     else if (mt && mt.state === 'läuft') checkTimer = setTimeout(checkLoad, 10000);
+    else if ((checkShown && checkShown.res && checkShown.res.yearFix || []).some(function(it){ return it.missing && !it.suggest; })) {
+      checkTimer = setTimeout(checkLoad, 15000);               /* albums without a year: MusicBrainz suggestions appear by themselves */
+    }
   }).catch(function(){
     while (checkBody.firstChild) checkBody.removeChild(checkBody.firstChild);
     checkBody.appendChild(browseNote(T('check.serviceDownPort', {port: (window.APP_CONFIG && window.APP_CONFIG.TAGS_PORT) || 8766})));
@@ -624,7 +629,7 @@ function checkCoverBest(row, it, key) {
       txt.textContent = T('tag.cover.preparing');
       fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
         .then(tagPrepareImage)
-        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64); })
+        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, function(t){ txt.textContent = t; }); })
         .then(function(batch){
           row.classList.add('done'); checkMarkDone(key);
           txt.textContent = T('check.coverq.saved');
@@ -659,24 +664,20 @@ function checkCoverBestAsk() {
   }).catch(function(){ if (!cbTimer) cbTimer = setTimeout(checkCoverBestAsk, 3 * CB_ASK_MS); });
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && cbRows.length) checkCoverBestAsk(); });
-/* one image into all files and as folder.jpg (replaced): in parts of 100 files under one batch -> batch */
-var CB_PART = 100;
-function checkCoverSave(uris, b64) {
-  var batch = Date.now().toString(36), parts = [], i;
-  for (i = 0; i < uris.length; i += CB_PART) parts.push(uris.slice(i, i + CB_PART));
-  var k = 0;
-  function next() {
-    if (k >= parts.length) return batch;
-    var body = {uris: parts[k], image: b64, embed: true, folder: k === 0, overwrite: true, batch: batch};
-    k++;
+/* one image into all files and as folder.jpg (replaced): in parts (tagParts, each well below 60 s) under one batch -> batch;
+   progress(text) while more than one part is needed */
+function checkCoverSave(uris, b64, progress) {
+  var batch = Date.now().toString(36), first = true;
+  return tagParts(uris, function(part, before, total){
+    if (progress && total > part.length) progress(T('tag.cover.writingFiles', {done: langNum(before), total: langNum(total)}));
+    var body = {uris: part, image: b64, embed: true, folder: first, overwrite: true, batch: batch};
+    first = false;
     return tagPost('/cover', body).then(function(res){
       if (!res || !res.ok) throw new Error((res && res.error) || T('tag.unknown'));
       var bad = (res.items || []).filter(function(r){ return !r.ok; }).concat((res.folders || []).filter(function(f){ return !f.ok; }));
       if (bad.length) throw new Error(bad[0].error || T('tag.unknown'));
-      return next();
     });
-  }
-  return Promise.resolve().then(next);
+  }).then(function(){ return batch; });
 }
 
 /* "ohne Titel: 3, ohne Künstler: 1 von 12 · 01.flac, 02.flac" */
@@ -754,7 +755,8 @@ function checkFixRow(cat, it, kept) {
   var vals = (cat === 'year' ? it.years : it.names).map(function(v){
     return T('check.fix.value', {name: v.name || T('check.releaseNone'), n: checkNum(v.count)});
   }).join(', ');
-  var sub = T('check.fix.sub', {values: vals, suggest: it.suggest, src: it.src === 'mb' ? 'MusicBrainz' : T('check.fix.most')});
+  var sub = it.suggest ? T('check.fix.sub', {values: vals, suggest: it.suggest, src: it.src === 'mb' ? 'MusicBrainz' : T('check.fix.most')})
+    : T('check.fix.noYear');                                /* no year at all and MusicBrainz knows none (yet): pen */
   if (cat === 'albumName' && it.files.some(function(f){ return f.disc; })) sub += ' · ' + T('check.fix.disc');
   var row = checkRow(cat + '|' + it.dir, it.name + (it.artist ? ' · ' + it.artist : ''), sub, function(){
     openBulkEditor(it.files.map(function(f){ return f.uri; }), it.name, {field: cat === 'year' ? 'date' : 'album', value: it.suggest});
@@ -1031,7 +1033,7 @@ function checkDupRows(g, kept) {
           return;
         }
         btn.disabled = false;
-        msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+        msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
       }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
     });
     row.appendChild(btn);
@@ -1131,7 +1133,7 @@ function checkDupFillRow(g) {
   var token = function(){ return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : ''); };
   function fail(r, b) {
     b.disabled = false; msg.style.display = '';
-    msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+    msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
   }
   var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dupfill.add', {n: checkNum(count())});
   btn.disabled = !!checkDone[key] || !count();
@@ -1239,7 +1241,7 @@ function checkDupTrackFile(f, prefix) {                  /* prefix: done mark of
         return;
       }
       btn.disabled = false;
-      msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+      msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
     }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
   });
   row.appendChild(btn);
