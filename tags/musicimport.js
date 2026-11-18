@@ -67,17 +67,20 @@ function checkTags(lines, imageDirs) {
     if (k === 'directory' || k === 'playlist') { cur = null; return; }
     if (cur && v.trim()) cur[k] = v;
   });
-  var missing = {}, examples = [], dirs = {};
+  var missing = {}, examples = [], dirs = {}, byDir = {}, need = {};
   FIELDS.forEach(function(f){ missing[f] = 0; });
   tracks.forEach(function(t){
-    var lack = FIELDS.filter(function(f){ return !t[f]; });
+    var lack = FIELDS.filter(function(f){ return !t[f]; }), d = path.dirname(t.file);
     lack.forEach(function(f){ missing[f]++; });
     if (lack.length && examples.length < 20) examples.push({file: t.file, missing: lack});
-    dirs[path.dirname(t.file)] = true;
+    dirs[d] = true;
+    (byDir[d] = byDir[d] || []).push(t.file);
+    if (!t.title || !t.artist || !t.album) need[d] = true;   /* album recognition (albumid.js) for this folder */
   });
   var noCover = Object.keys(dirs).filter(function(d){ return !imageDirs[d]; }).sort();
   return {tracks: tracks.length, missing: missing, examples: examples, noCover: noCover,
-          files: tracks.slice(0, 2000).map(function(t){ return t.file; })};   /* for the tag editor */
+          files: tracks.slice(0, 2000).map(function(t){ return t.file; }),   /* for the tag editor */
+          needTags: Object.keys(need).sort().slice(0, 50).map(function(d){ return {dir: d, files: byDir[d]}; })};
 }
 
 function Import(o) {
@@ -123,7 +126,26 @@ Import.prototype.start = function(opts, cb) {
       });
     });
   }
+  /* folders without title, artist or album: recognised at MusicBrainz (track count and lengths, names as hints);
+     exact matches are written at once, the others wait on the settings page as suggestions */
   function afterCheck() {
+    var need = (job.check && job.check.needTags) || [];
+    if (!need.length || !self.o.recognize) return afterTags();
+    step('recognize');
+    job.recognized = [];
+    (function next(i){
+      if (i >= need.length) {
+        if (!job.recognized.some(function(r){ return r.state === 'written'; })) return afterTags();
+        step('rescan');
+        return self.scan(mpdPath, function(){                /* MPD reads the new tags, the check sees them */
+          step('check');
+          self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+        });
+      }
+      self.o.recognize(need[i].dir, need[i].files, function(r){ r.files = need[i].files; job.recognized.push(r); next(i + 1); });
+    })(0);
+  }
+  function afterTags() {
     if (!opts.rsgain || !self.o.rsgain || !self.o.rsgain.bin()) return analyse();
     step('rsgain');
     self.o.rsgain.start(function(e){ if (e) { job.rsgainError = e; analyse(); } },

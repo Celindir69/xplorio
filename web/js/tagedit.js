@@ -297,6 +297,8 @@ function tagRender(files, items) {
     tagBody.appendChild(bulk);
   }
 
+  if (good.length > 1) { var rec = tagRecognizeSection(good); if (rec) tagBody.appendChild(rec); }
+
   var h = document.createElement('div');
   h.className = 'infoSection tagSectionAa';
   var hl = document.createElement('span');
@@ -336,6 +338,80 @@ function tagRender(files, items) {
   if (tagMoveDirs && tagMoveDirs.length) tagBody.appendChild(tagMoveSection(tagMoveDirs));
   tagCompilShow();
   tagSave.disabled = false;
+}
+
+/* "Recognise album" (POST /albumid, tags/albumid.js): MusicBrainz by track count and lengths (the CD's table of
+   contents), folder and file names as hints. A suggestion fills the fields; Save writes it as usual (with Undo).
+   Only for the files of one folder (one disc). tagAutoRecognize: start at once (import on the Mac) */
+var tagAutoRecognize = false;
+function tagAlbumIdText(c) {
+  var bits = [c.date ? c.date.slice(0, 4) : '', c.country, c.discs > 1 ? T('tag.rec.disc', {n: c.disc, m: c.discs}) : ''].filter(Boolean);
+  return c.title + ' – ' + c.artist + (bits.length ? ' (' + bits.join(', ') + ')' : '');
+}
+function tagAlbumIdWhy(c) { return T('tag.rec.chance', {p: c.chance}) + ' · ' + T('tag.rec.match.' + c.match); }
+function tagRecognizeSection(good) {
+  var dirs = {};
+  good.forEach(function(f){ var r = histRel(f.uri || ''); dirs[r.slice(0, r.lastIndexOf('/'))] = 1; });
+  if (Object.keys(dirs).length !== 1 || good.length > 99) return null;
+  var box = document.createElement('div'), btn = document.createElement('button'), out = document.createElement('div');
+  box.className = 'tagRec';
+  btn.className = 'tagBtn'; btn.textContent = T('tag.rec.button');
+  out.className = 'tagRecList';
+  box.appendChild(btn); box.appendChild(out);
+  function apply(c) {
+    var by = {};
+    c.items.forEach(function(it){ by[it.uri] = it.tags; });
+    var first = c.items[0] && c.items[0].tags || {}, va = first.compilation === '1';
+    ['album', 'albumartist', 'date', 'disc'].concat(va ? [] : ['artist']).forEach(function(k){
+      var cf = tagCommon[k];
+      if (!cf || first[k] === undefined) return;
+      cf.input.value = first[k]; cf.input.setAttribute('data-dirty', '1'); cf.input.placeholder = '';
+    });
+    if (tagCompil) { tagCompil.box.checked = va; tagCompilShow(); }
+    tagFiles.forEach(function(f){
+      var t = by[f.uri];
+      if (!t || !f.ok) return;
+      if (f.trackIn) f.trackIn.value = t.track || '';
+      if (f.titleIn) f.titleIn.value = t.title || '';
+      if (f.artistIn) f.artistIn.value = t.artist || '';
+    });
+    tagStatus.textContent = T('tag.rec.filled');
+  }
+  function show(res) {
+    while (out.firstChild) out.removeChild(out.firstChild);
+    var list = (res && res.candidates) || [];
+    if (!list.length) { out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.none'))); return; }
+    list.forEach(function(c, i){
+      var row = document.createElement('div'), tx = document.createElement('div'), use = document.createElement('button');
+      row.className = 'tagRecRow';
+      tx.appendChild(histEl('div', 'tagRecName', tagAlbumIdText(c)));
+      tx.appendChild(histEl('div', 'tagRecWhy', tagAlbumIdWhy(c)));
+      var det = document.createElement('details'), sm = document.createElement('summary');
+      sm.textContent = T('tag.rec.tracks', {n: c.tracks.length});
+      det.appendChild(sm);
+      c.tracks.forEach(function(t){ det.appendChild(histEl('div', 'tagRecTrack', t.n + '. ' + t.title + (t.artist && t.artist !== c.artist ? ' – ' + t.artist : ''))); });
+      tx.appendChild(det);
+      use.className = 'tagBtn'; use.textContent = T('tag.rec.use');
+      use.addEventListener('click', function(){ apply(c); });
+      row.appendChild(tx); row.appendChild(use);
+      out.appendChild(row);
+      if (i === 0 && c.match === 'exact' && tagAutoRecognize) apply(c);
+    });
+  }
+  function run() {
+    btn.disabled = true;
+    while (out.firstChild) out.removeChild(out.firstChild);
+    out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.searching')));
+    tagPost('/albumid', {uris: good.map(function(f){ return f.uri; })}).then(function(res){
+      btn.disabled = false;
+      if (!res.ok) { out.firstChild.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); return; }
+      show(res);
+      tagAutoRecognize = false;
+    }).catch(function(){ btn.disabled = false; out.firstChild.textContent = T('tag.serviceDown'); tagAutoRecognize = false; });
+  }
+  btn.addEventListener('click', run);
+  if (tagAutoRecognize) setTimeout(run, 0);
+  return box;
 }
 
 /* "Compilation" in the album editor: the compilation tag (m4a cpil, ID3 TCMP, Vorbis COMPILATION) for all tracks.

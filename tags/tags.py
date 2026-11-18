@@ -134,6 +134,17 @@ def parse_pair(s):
         raise ValueError(u'Invalid number: %s' % s)
 
 
+def length_of(audio):
+    """playing time in seconds (FLAC: exact from the samples; album recognition rebuilds the CD's table of contents)"""
+    info = getattr(audio, 'info', None)
+    try:
+        if getattr(info, 'total_samples', 0) and getattr(info, 'sample_rate', 0):
+            return float(info.total_samples) / info.sample_rate
+        return float(getattr(info, 'length', 0) or 0)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 0.0
+
+
 def read_tags(audio, kind):
     out = dict((f, u'') for f in FIELDS)
     tags = audio.tags
@@ -546,7 +557,7 @@ def run_job(job):
         if op == 'hidden':
             return {'ok': True, 'found': read_hidden(audio, kind, before)}
         if op == 'read':
-            return {'ok': True, 'format': kind, 'tags': before}
+            return {'ok': True, 'format': kind, 'tags': before, 'length': length_of(audio)}
         new = dict((f, v) for f, v in (job.get('tags') or {}).items() if f in FIELDS and plain(v))
         new = dict((f, v) for f, v in new.items()
                    if (flag(v) if f == 'compilation' else txt(v).strip()) != before[f])

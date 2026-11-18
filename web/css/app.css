@@ -1567,3 +1567,11 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
   html:not(.stage) #app .ctrlBtn svg, html:not(.stage) #cRepeat svg, html:not(.stage) #cRandom svg,
   html:not(.stage) #actions .actBtn svg { max-width:none; max-height:none; }   /* the caps are for phone and laptop */
 }
+/* "Recognise album" in the tag editor (tagedit.js tagRecognizeSection) */
+.tagRec { margin:10px 0 4px; }
+.tagRecList { margin-top:8px; }
+.tagRecRow { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid rgba(var(--fg-rgb),.12); }
+.tagRecName { font-weight:600; }
+.tagRecWhy, .tagRecNote, .tagRecTrack { font-size:.85em; color:rgba(var(--fg-rgb),.65); }
+.tagRecRow details summary { cursor:pointer; font-size:.85em; color:rgba(var(--fg-rgb),.65); margin-top:2px; }
+.tagRecRow .tagBtn { flex:0 0 auto; }

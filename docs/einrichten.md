@@ -164,6 +164,18 @@ Künstlerspalte; das gemeinsame Feld „Künstler“ entfällt. Wird der Haken g
 „Various Artists“. Speichern schreibt das Compilation-Tag so, wie der Haken steht, in alle Titel (mit Rückgängig).
 MPD 0.20 wertet das Tag nicht aus; andere Player wie die Musik-App oder Roon schon.
 
+### Album erkennen
+Zeigt der Album-Editor mehrere Titel aus einem Ordner (bis 99), sucht **„Album erkennen (MusicBrainz)“** das Album allein
+aus Titelanzahl und Titellängen, wie Mp3tag mit der CD-Kennung: Aus den Längen entsteht das Inhaltsverzeichnis einer CD
+und daraus die MusicBrainz-Disc-ID. Passt sie genau, ist es diese CD (Wahrscheinlichkeit ab 95 %). Sonst nennt
+MusicBrainz CDs mit ähnlichen Längen, und Xplorio sucht zusätzlich nach Album und Künstler aus dem Ordnernamen
+(`Künstler - Jahr - Album`, `Künstler/Album`, `CD2` als zweite CD) und vergleicht die Titel mit den Dateinamen; daraus
+ergibt sich die Reihenfolge und die angezeigte Wahrscheinlichkeit (höchstens 90 %). Die Reihenfolge der Dateien: nach
+Tracknummer, wenn alle verschieden sind, sonst nach Dateiname. „Übernehmen“ trägt Album, Album-Künstler, Jahr, CD-Nummer,
+Titel, Titelnummern und Künstler ein (Compilations mit „Various Artists“ und Künstler pro Titel); geschrieben wird erst mit
+„Speichern“, wie immer mit Rückgängig. Das Album muss vollständig sein und die Dateien so lang wie auf der CD; bei
+Vinyl- oder Streaming-Fassungen trifft es seltener. MusicBrainz wird höchstens einmal pro Sekunde gefragt.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,
@@ -1103,7 +1115,10 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   `python3.11 -m pip install --user "essentia-tensorflow==2.1b6.dev1110" "numpy<2" mutagen`.
 - **Musik importieren:** „Musikdaten importieren …“ wählt einen Ordner, dann Ziel (einer der Musikordner) und
   Kopieren oder Verschieben. Er landet unter `<Musikordner>/import/<Ordnername>`; MPD liest ihn ein, Xplorio prüft die Tags
-  (fehlende Künstler, Album, Titel, Titelnummer, Genre, Jahr; Alben ohne `cover.jpg`/`folder.jpg`) und führt, wenn
+  (fehlende Künstler, Album, Titel, Titelnummer, Genre, Jahr; Alben ohne `cover.jpg`/`folder.jpg`). Ordner ohne Titel,
+  Künstler oder Album erkennt es wie unter [Album erkennen](#album-erkennen): Trifft die Disc-ID genau, schreibt es die
+  Tags gleich (mit „Rückgängig“ im Ergebnis), sonst steht der beste Treffer mit Wahrscheinlichkeit und „Übernehmen“ da;
+  „Im Tag-Editor prüfen“ zeigt alle Treffer. Danach führt es, wenn
   eingeschaltet und installiert, rsgain und die Audioanalyse nur für diesen Ordner aus. Verschieben auf ein anderes
   Laufwerk löscht die Quelle erst, wenn alles angekommen ist.
 - **ReplayGain (rsgain):** „ReplayGain-Tags ergänzen“ ruft `rsgain easy -S` über alle Musikordner auf (nur Alben ohne

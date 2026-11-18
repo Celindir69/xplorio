@@ -423,6 +423,44 @@ function msImpPart(c, d) {
   }
   if (msImpMsg) c.appendChild(histEl('div', 'syNote' + (msImpBad ? ' syWarn' : ''), msImpMsg));
 }
+/* album recognition after the import (tag service: albumid.js): exact matches already written (Undo), other matches as
+   a suggestion to take over with one tap or to check in the tag editor. msImpRecDone[dir]: what was done here since */
+var msImpRecDone = {};
+function msImpRecognized(c, j) {
+  (j.recognized || []).forEach(function(r){
+    var folder = String(r.dir || '').split('/').slice(-1)[0], done = msImpRecDone[j.start + '|' + r.dir] || {};
+    var box = histEl('div', 'msItem'), tx = histEl('div', 'msItemText'), row = histEl('div', 'pbRow');
+    var best = r.best || (r.candidates && r.candidates[0]);
+    function files() { return (r.files || []).map(function(u){ return {uri: u}; }); }
+    function mark(state, batch) { msImpRecDone[j.start + '|' + r.dir] = {state: state, batch: batch}; msRender(); }
+    var state = done.state || r.state, batch = done.batch || r.batch;
+    if (state === 'written' && best) {
+      tx.appendChild(histEl('div', 'msItemName', T('mac.recWritten', {folder: folder})));
+      tx.appendChild(histEl('div', 'msItemSub', tagAlbumIdText(best) + ' · ' + tagAlbumIdWhy(best)));
+      if (batch) row.appendChild(msButton(T('html.undo'), function(){
+        tagPost('/undo', {batch: batch}).then(function(res){ mark(res.ok ? 'undone' : 'written', res.ok ? '' : batch); }).catch(function(){});
+      }));
+    } else if (state === 'suggest' && best) {
+      tx.appendChild(histEl('div', 'msItemName', T('mac.recSuggest', {folder: folder})));
+      tx.appendChild(histEl('div', 'msItemSub', tagAlbumIdText(best) + ' · ' + tagAlbumIdWhy(best)));
+      row.appendChild(msButton(T('tag.rec.use'), function(){
+        tagPost('/write', {items: best.items}).then(function(res){
+          if (res.ok) mark('written', res.batch); else { msImpBad = true; msImpMsg = T('tag.error', {error: res.error || T('tag.unknown')}); msRender(); }
+        }).catch(function(){ msImpBad = true; msImpMsg = T('tag.serviceDown'); msRender(); });
+      }, 'on'));
+    } else if (state === 'undone') {
+      tx.appendChild(histEl('div', 'msItemName', T('mac.recUndone', {folder: folder})));
+    } else {
+      tx.appendChild(histEl('div', 'msItemName', T(state === 'error' ? 'mac.recError' : 'mac.recNone', {folder: folder})));
+    }
+    if (r.files && r.files.length && typeof openTagEditor === 'function') row.appendChild(msButton(T('mac.recEditor'), function(){
+      tagAutoRecognize = state !== 'written';
+      openTagEditor(files(), folder);
+    }));
+    box.appendChild(tx); box.appendChild(row);
+    c.appendChild(box);
+  });
+}
 function msImpResult(c, j) {
   var name = j.dest.split('/').slice(-1)[0];
   if (j.error) { c.appendChild(histEl('div', 'syNote syWarn', T('mac.impFailed', {name: name}) + ' ' + T(MS_IMP_ERRORS[j.error] || 'mac.impErrFs'))); return; }
@@ -431,6 +469,7 @@ function msImpResult(c, j) {
   if (j.rsgainFiles !== undefined) parts.push(T('mac.impRg', {n: j.rsgainFiles}));
   if (j.analysed !== undefined) parts.push(T('mac.impAna', {n: j.analysed}));
   c.appendChild(histEl('div', 'syNote', parts.join(' ')));
+  msImpRecognized(c, j);
   var ck = j.check;
   if (!ck) return;
   var miss = Object.keys(ck.missing).filter(function(k){ return ck.missing[k]; });

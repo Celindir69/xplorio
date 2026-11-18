@@ -79,6 +79,28 @@ t('then rsgain and the analysis only on the new folder (as the import\'s own run
   });
 });
 
+t('folders without title, artist or album: recognised; something written: MPD reads it again and the check is redone', function(done){
+  var x = setup(), asked = [], lists = 0;
+  var mpd = function(cmds, cb){
+    if (/^listallinfo/.test(cmds[0]) && !lists++) { x.log.push(cmds[0]); return cb(null, [['file: USB/import/Band - Album/01.flac', 'Artist: Band', 'Album: Album', 'Title: Eins',
+      'file: USB/import/Band - Album/CD2/01.flac', 'Track: 1']]); }
+    x.mpd(cmds, cb);
+  };
+  var imp = new mi.Import({musicRoot: x.music, mpd: mpd, recognize: function(dir, files, cb){
+    asked.push([dir, files]); setTimeout(function(){ cb({dir: dir, state: 'written', batch: 'abc123'}); }, 5);
+  }});
+  imp.start({source: x.src, rel: 'USB', target: x.disk}, function(){
+    waitEnd(imp, function(j){
+      assert.strictEqual(j.error, '');
+      assert.deepStrictEqual(asked, [['USB/import/Band - Album/CD2', ['USB/import/Band - Album/CD2/01.flac']]]);
+      assert.deepStrictEqual(j.recognized, [{dir: 'USB/import/Band - Album/CD2', state: 'written', batch: 'abc123', files: ['USB/import/Band - Album/CD2/01.flac']}]);
+      assert.deepStrictEqual(j.steps, ['copy', 'scan', 'check', 'recognize', 'rescan', 'check']);
+      assert.deepStrictEqual(j.check.needTags, []);                 /* the second check sees the new tags */
+      done();
+    });
+  });
+});
+
 t('refused: missing source, missing target, target inside the source', function(done){
   var x = setup(), imp = new mi.Import({musicRoot: x.music, mpd: x.mpd});
   imp.start({source: path.join(x.dir, 'gibt-es-nicht'), rel: 'USB', target: x.disk}, function(e){
