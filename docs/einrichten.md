@@ -176,6 +176,16 @@ Titel, Titelnummern und Künstler ein (Compilations mit „Various Artists“ un
 „Speichern“, wie immer mit Rückgängig. Das Album muss vollständig sein und die Dateien so lang wie auf der CD; bei
 Vinyl- oder Streaming-Fassungen trifft es seltener. MusicBrainz wird höchstens einmal pro Sekunde gefragt.
 
+Findet das nichts (etwa bei ganz neuen Alben oder Deluxe-Fassungen), gibt es darunter **„Selbst suchen“**: Künstler und
+Album (vorbelegt aus den Tags oder dem Ordnernamen), dazu der Dienst: MusicBrainz, Discogs, Apple Music oder Deezer.
+Die Treffer zeigen Jahr, Land, Medium (CD, Vinyl, Datei), Titelanzahl und Zusätze wie „Deluxe Edition“; ✓ heißt, die
+Titelanzahl passt zu den Dateien. Ein Tipp auf einen Treffer zeigt die Vorschau: jede Datei mit Länge neben dem Titel, den
+sie bekommt (Längen, die mehr als 5 s abweichen, farbig). Hat das Album mehr Titel als Dateien da sind, bekommen nur die
+ersten Tags, mit Hinweis. „Übernehmen und speichern“ trägt alles ein und speichert gleich (mit Rückgängig). Auch Alben in
+CD1/CD2-Ordnern lassen sich so zusammen taggen, wenn beide im Editor offen sind (CD-Nummer pro Datei). Discogs braucht
+einen persönlichen Token aus dem Discogs-Konto (Settings > Developers > „Generate new token“): auf dem Mac unter
+Einstellungen > Discogs, auf Volumio als `"DISCOGS_TOKEN": "…"` in `/data/xplorio/data/keys.json`.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,
@@ -1118,7 +1128,9 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   (fehlende Künstler, Album, Titel, Titelnummer, Genre, Jahr; Alben ohne `cover.jpg`/`folder.jpg`). Ordner ohne Titel,
   Künstler oder Album erkennt es wie unter [Album erkennen](#album-erkennen): Trifft die Disc-ID genau, schreibt es die
   Tags gleich (mit „Rückgängig“ im Ergebnis), sonst steht der beste Treffer mit Wahrscheinlichkeit und „Übernehmen“ da;
-  „Im Tag-Editor prüfen“ zeigt alle Treffer. Danach führt es, wenn
+  „Im Tag-Editor prüfen“ zeigt alle Treffer. Fehlen danach noch Tags, hält der Import vor ReplayGain und Audioanalyse an
+  (die Analyse würde diese Titel sonst überspringen) und öffnet den Tag-Editor mit dem Ordner; „Weiter mit ReplayGain und
+  Analyse“ im Ergebnis setzt fort. Sonst führt es, wenn
   eingeschaltet und installiert, rsgain und die Audioanalyse nur für diesen Ordner aus. Verschieben auf ein anderes
   Laufwerk löscht die Quelle erst, wenn alles angekommen ist.
 - **ReplayGain (rsgain):** „ReplayGain-Tags ergänzen“ ruft `rsgain easy -S` über alle Musikordner auf (nur Alben ohne

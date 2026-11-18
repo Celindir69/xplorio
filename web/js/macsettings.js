@@ -16,7 +16,7 @@ var msBak = null, msBakMsg = '', msBakBad = false, msBakTimer = null, msBakEdit 
 var msUpd = null, msUpdMsg = '', msUpdBad = false;
 var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
-var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'auth', 'value', 'fs', 'short', 'locked'];
+var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'value', 'fs', 'short', 'locked'];
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
@@ -266,6 +266,7 @@ function msDraw() {
   grid.appendChild(msEssentiaCard(d));
   if (msRg && msRg.available) grid.appendChild(msRgCard());
   grid.appendChild(msLastfmCard(d));
+  grid.appendChild(msDiscogsCard(d));
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
   grid.appendChild(msRotelCard(d));
@@ -375,7 +376,11 @@ function msImpSend(body) {
       if (msImp.job.step === 'analysis' && !(msAna && msAna.running)) msAnaSend({});   /* its progress, asked from then on */
       msImpSend({});
     }, 3000);
-    else if (body.action === undefined && msImp && msImp.job && msImp.job.end && msImpWasRunning) { msImpWasRunning = false; openMacSettings(); return; }
+    else if (body.action === undefined && msImp && msImp.job && msImp.job.end && msImpWasRunning) {
+      msImpWasRunning = false; openMacSettings();
+      msImpOpenEditor(msImp.job);
+      return;
+    }
     msImpWasRunning = !!(msImp && msImp.job && !msImp.job.end);
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msImpBad = true; msImpMsg = T('mac.impErrFs'); if (msData) msRender(); } });
@@ -454,12 +459,27 @@ function msImpRecognized(c, j) {
       tx.appendChild(histEl('div', 'msItemName', T(state === 'error' ? 'mac.recError' : 'mac.recNone', {folder: folder})));
     }
     if (r.files && r.files.length && typeof openTagEditor === 'function') row.appendChild(msButton(T('mac.recEditor'), function(){
-      tagAutoRecognize = state !== 'written';
+      tagAutoRecognize = state === 'suggest';
       openTagEditor(files(), folder);
     }));
     box.appendChild(tx); box.appendChild(row);
     c.appendChild(box);
   });
+}
+/* import waits for tags: the tag editor opens with the first folder still missing them (search fields filled from its name) */
+function msImpOpenEditor(j) {
+  var need = j && j.waitTags && j.check && j.check.needTags || [];
+  if (!need.length || typeof openTagEditor !== 'function') return;
+  var r = (j.recognized || []).filter(function(x){ return x.dir === need[0].dir; })[0];
+  tagAutoRecognize = !!(r && r.state === 'suggest');
+  var files = need[0].files, name = need[0].dir.split('/').slice(-1)[0], up = need[0].dir.slice(0, need[0].dir.lastIndexOf('/'));
+  if (typeof TAG_DISC_RE !== 'undefined' && TAG_DISC_RE.test(name)) {   /* CD1, CD2 …: the whole album at once */
+    files = [];
+    need.forEach(function(x){ if (x.dir.slice(0, x.dir.lastIndexOf('/')) === up) files = files.concat(x.files); });
+    name = up.split('/').slice(-1)[0];
+    tagAutoRecognize = false;
+  }
+  openTagEditor(files.map(function(u){ return {uri: u}; }), name);
 }
 function msImpResult(c, j) {
   var name = j.dest.split('/').slice(-1)[0];
@@ -469,6 +489,13 @@ function msImpResult(c, j) {
   if (j.rsgainFiles !== undefined) parts.push(T('mac.impRg', {n: j.rsgainFiles}));
   if (j.analysed !== undefined) parts.push(T('mac.impAna', {n: j.analysed}));
   c.appendChild(histEl('div', 'syNote', parts.join(' ')));
+  if (j.waitTags) {                                        /* tags still missing: rsgain and the analysis wait */
+    var need = (j.check && j.check.needTags) || [];
+    c.appendChild(histEl('div', 'syNote syWarn', T('mac.impWaitTags', {n: need.length})));
+    var wr = histEl('div', 'pbRow msAddRow');
+    wr.appendChild(msButton(T('mac.impResume'), function(){ msImpSend({action: 'resume'}); }, 'on'));
+    c.appendChild(wr);
+  }
   msImpRecognized(c, j);
   var ck = j.check;
   if (!ck) return;
@@ -769,6 +796,32 @@ function msPwCard(d) {
     });
   }, 'on'));
   c.appendChild(row);
+  return c;
+}
+
+/* ---------- Discogs (album search in the tag editor) ---------- */
+function msDiscogsCard(d) {
+  var c = sysCard('Discogs', 'syWide');
+  var kv = histEl('div', 'syKv');
+  kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
+  kv.appendChild(histEl('span', 'syV', T(d.discogs ? 'mac.dcSet' : 'mac.lfNone')));
+  c.appendChild(kv);
+  c.appendChild(histEl('div', 'syNote', T('mac.dcNote')));
+  var tok = msInput('', T(d.discogs ? 'mac.dcKeep' : 'mac.dcPh'), 'password'), r = histEl('div', 'pbRow msAddRow');
+  r.appendChild(tok); c.appendChild(r);
+  var row = histEl('div', 'pbRow msAddRow');
+  row.appendChild(msButton(T('mac.save'), function(){
+    var t = tok.value.trim();
+    if (!t) { msMsg = T('mac.err.discogs'); msMsgBad = true; return msRender(); }
+    msSend({action: 'discogs', token_discogs: t}, T('mac.dcSaved'));
+  }, 'on'));
+  if (d.discogs) row.appendChild(msButton(T('mac.lfClear'), function(){
+    if (confirm(T('mac.dcClearAsk'))) msSend({action: 'discogs', clear: true}, T('mac.dcCleared'));
+  }));
+  c.appendChild(row);
+  var link = histEl('a', 'sHint listLink pbLink', T('mac.dcGet'));
+  link.href = 'https://www.discogs.com/settings/developers'; link.target = '_blank'; link.rel = 'noopener';
+  c.appendChild(link);
   return c;
 }
 

@@ -1570,7 +1570,23 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
 /* "Recognise album" in the tag editor (tagedit.js tagRecognizeSection) */
 .tagRec { margin:10px 0 4px; }
 .tagRecList { margin-top:8px; }
-.tagRecRow { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid rgba(var(--fg-rgb),.12); }
+.tagRecRow { padding:8px 0; border-top:1px solid rgba(var(--fg-rgb),.12); }
+.tagRecHead { cursor:pointer; }
+.tagRecRow.open .tagRecHead .tagRecName::after { content:' ▾'; opacity:.5; }
+.tagRecForm { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+.tagRecForm .tagRecLabel, .tagRecForm .tagRecLine { grid-column:1 / -1; }
+.tagRecLabel { font-size:.85em; color:rgba(var(--fg-rgb),.65); }
+.tagRecLine { display:flex; gap:8px; align-items:center; }
+.tagRecLine select { flex:1 1 auto; min-width:0; padding:9px 8px; font-size:inherit; border-radius:6px; background:transparent; color:inherit; border:1px solid rgba(var(--fg-rgb),.25); }
+.tagRecPrev:not(:empty) { margin-top:8px; }
+.tagRecGrid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:2px 10px; font-size:.85em; }
+.tagRecTh { font-weight:600; color:rgba(var(--fg-rgb),.65); }
+.tagRecCell { overflow-wrap:anywhere; padding:2px 0; border-top:1px solid rgba(var(--fg-rgb),.06); }
+.tagRecOff { color:#c77700; }
+.tagRecNone { color:rgba(var(--fg-rgb),.45); font-style:italic; }
+.tagRecWarn { color:#c77700; margin-bottom:6px; }
+.tagRecUse { margin-top:8px; }
+@media (max-width:480px) { .tagRecForm { grid-template-columns:1fr; } }
 .tagRecName { font-weight:600; }
 .tagRecWhy, .tagRecNote, .tagRecTrack { font-size:.85em; color:rgba(var(--fg-rgb),.65); }
 .tagRecRow details summary { cursor:pointer; font-size:.85em; color:rgba(var(--fg-rgb),.65); margin-top:2px; }

@@ -91,12 +91,21 @@ function Import(o) {
 Import.prototype.log = function(t) { if (this.o.log) this.o.log(t); };
 Import.prototype.running = function() { return !!(this.job && !this.job.end); };
 Import.prototype.status = function() { return {ok: true, job: this.job}; };
+/* after "tags missing": rsgain and the analysis as chosen at the start (the tags are checked again first) */
+Import.prototype.resume = function(cb) {
+  if (!this.job || !this.job.waitTags || !this.resumeJob) return cb('nothing');
+  var go = this.resumeJob;
+  this.resumeJob = null;
+  go();
+  cb(null);
+};
 
 /* opts: {source (folder on this Mac), rel (music folder, e.g. "USB" or "USB/AllFlac"), target (its folder), move,
           rsgain, analysis} -> cb(error code or null) at the start */
 Import.prototype.start = function(opts, cb) {
   var self = this, src = path.resolve(String(opts.source || '')), name = path.basename(src);
   if (this.running()) return cb('running');
+  this.resumeJob = null;
   if (!opts.source || !fs.existsSync(src) || !fs.statSync(src).isDirectory()) return cb('source');
   if (!opts.target || !fs.existsSync(opts.target)) return cb('target');
   var destDir = path.join(opts.target, 'import'), dest = path.join(destDir, name);
@@ -130,20 +139,34 @@ Import.prototype.start = function(opts, cb) {
      exact matches are written at once, the others wait on the settings page as suggestions */
   function afterCheck() {
     var need = (job.check && job.check.needTags) || [];
-    if (!need.length || !self.o.recognize) return afterTags();
+    if (!need.length || !self.o.recognize) return gate();
     step('recognize');
     job.recognized = [];
     (function next(i){
       if (i >= need.length) {
-        if (!job.recognized.some(function(r){ return r.state === 'written'; })) return afterTags();
+        if (!job.recognized.some(function(r){ return r.state === 'written'; })) return gate();
         step('rescan');
         return self.scan(mpdPath, function(){                /* MPD reads the new tags, the check sees them */
           step('check');
-          self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+          self.check(dest, mpdPath, function(c){ job.check = c; gate(); });
         });
       }
       self.o.recognize(need[i].dir, need[i].files, function(r){ r.files = need[i].files; job.recognized.push(r); next(i + 1); });
     })(0);
+  }
+  /* still folders without title, artist or album: rsgain and the analysis wait (the analysis would skip those tracks);
+     the settings page shows the result and opens the tag editor, resume() carries on */
+  function gate() {
+    var still = (job.check && job.check.needTags) || [];
+    if (!still.length || !((opts.rsgain && self.o.rsgain && self.o.rsgain.bin()) || (opts.analysis && self.o.analysis))) return afterTags();
+    step('waitTags'); job.waitTags = true; job.end = self.now();
+    self.resumeJob = function(){
+      job.waitTags = false; job.end = 0;
+      step('check');
+      self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+    };
+    self.log('Import waits for tags: ' + still.length + ' folder(s) in ' + dest);
+    if (self.o.onDone) self.o.onDone(job);
   }
   function afterTags() {
     if (!opts.rsgain || !self.o.rsgain || !self.o.rsgain.bin()) return analyse();

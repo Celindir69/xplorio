@@ -296,13 +296,17 @@ function doRead(body, cb) {
    (the CD's table of contents), folder and file names as hints (albumid.js) -> {ok, discid, hints, candidates: [{…,
    items: [{uri, tags}]}]}; the device writes the chosen one with POST /write (Undo as usual) */
 var albumid = require('./albumid.js');
-var albumRec = new albumid.Recognizer({getJson: function(u, cb){
+var albumRec = new albumid.Recognizer({getJson: function(u, cb, headers){
   coversearch.fetchUrl(u, 4 * 1024 * 1024, function(e, r){
     if (e) return cb(e);
     try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(new Error('no JSON response')); }
-  });
-}});
+  }, {headers: headers});
+}, discogsToken: function(){ return keys.discogs(); }});
 function albumLookup(uris, cb) {
+  albumFiles(uris, function(e, files){ if (e) return cb(e); albumRec.lookup(files, cb); });
+}
+/* files of one album with length and tags, for albumid.js */
+function albumFiles(uris, cb) {
   var jobs = [], files = [];
   for (var k = 0; k < uris.length; k++) {
     var p = resolveUri(uris[k]);
@@ -313,7 +317,31 @@ function albumLookup(uris, cb) {
     var bad = rs.filter(function(r){ return !r.ok; })[0];
     if (bad) return cb(new Error(bad.error || 'read'));
     rs.forEach(function(r, i){ files[i].length = r.length || 0; files[i].tags = r.tags || {}; });
-    albumRec.lookup(files, cb);
+    cb(null, files);
+  });
+}
+/* POST /albumsearch {uris, artist, album, source: mb|discogs|itunes|deezer} -> {ok, results: [{source, id, title, artist, date,
+   country, format, tracks, fits, label, note}]}; {info: true} -> {ok, discogs: token set} */
+function doAlbumSearch(body, cb) {
+  if (body.info) return cb(200, {ok: true, discogs: !!keys.discogs()});
+  var uris = Array.isArray(body.uris) ? body.uris : [];
+  if (!uris.length || uris.length > 300) return cb(400, {ok: false, error: 'uris missing or too many'});
+  albumRec.search({source: String(body.source || 'mb'), artist: String(body.artist || ''), album: String(body.album || '')},
+                  uris.map(function(u){ return {uri: String(u)}; }), function(e, res){
+    if (e) return cb(200, {ok: false, error: e.message});
+    res.ok = true; cb(200, res);
+  });
+}
+/* POST /albumrelease {uris, source, id} -> {ok, suggestion: {…, fit: 'ok'|'count', tracks, items, fileNames}} (null: no tracks) */
+function doAlbumRelease(body, cb) {
+  var uris = Array.isArray(body.uris) ? body.uris.map(String) : [];
+  if (!uris.length || uris.length > 300) return cb(400, {ok: false, error: 'uris missing or too many'});
+  albumFiles(uris, function(e, files){
+    if (e) return cb(200, {ok: false, error: e.message});
+    albumRec.release({source: String(body.source || ''), id: String(body.id || '')}, files, function(e2, c){
+      if (e2) return cb(200, {ok: false, error: e2.message});
+      cb(200, {ok: true, suggestion: c});
+    });
   });
 }
 function doAlbumId(body, cb) {
@@ -3153,8 +3181,14 @@ function doMacImport(req, res) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    if (body.action !== 'start') return send(res, 200, musicImport().status());
+    if (body.action !== 'start' && body.action !== 'resume') return send(res, 200, musicImport().status());
     if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if ((essRun && essRun.child) || (rgRun && rgRun.running())) return send(res, 200, {ok: false, error: 'busy'});
+    if (body.action === 'resume') return musicImport().resume(function(e){
+      var st = musicImport().status();
+      if (e) { st.ok = false; st.error = e; }
+      send(res, 200, st);
+    });
     var m = macSettings.music().filter(function(x){ return x.rel === String(body.rel) && !x.missing; })[0];
     if (!m) return send(res, 200, {ok: false, error: 'target'});
     if ((essRun && essRun.child) || (rgRun && rgRun.running())) return send(res, 200, {ok: false, error: 'busy'});
@@ -3384,7 +3418,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings', '/coverbest', '/albumid'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings', '/coverbest', '/albumid', '/albumsearch', '/albumrelease'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -3392,7 +3426,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead, '/coverbest': doCoverBest, '/albumid': doAlbumId}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead, '/coverbest': doCoverBest, '/albumid': doAlbumId, '/albumsearch': doAlbumSearch, '/albumrelease': doAlbumRelease}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });

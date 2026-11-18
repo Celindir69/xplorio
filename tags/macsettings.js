@@ -197,7 +197,7 @@ MacSettings.prototype.read = function(cfg) {
   var es = this.essentia();
   if (this.o.essentiaStatus) { try { es.tracks = this.o.essentiaStatus().tracks || 0; } catch (e) { es.tracks = 0; } }
   return {ok: true, mac: process.platform === 'darwin', musicRoot: this.o.musicRoot, music: this.music(), essentia: es,
-          lastfm: {key: !!k.key, secret: !!k.secret}, settings: this.settings(cfg)};
+          lastfm: {key: !!k.key, secret: !!k.secret}, discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg)};
 };
 
 /* POST body {action, …} -> cb(code, answer). cfg: current APP_CONFIG */
@@ -224,6 +224,15 @@ MacSettings.prototype.command = function(body, cfg, cb) {
       if (body.clear) { delete k.LASTFM_KEY; delete k.LASTFM_SECRET; }
       else { k.LASTFM_KEY = key; if (secret) k.LASTFM_SECRET = secret; }
       this.o.keys.write(k);
+      return done({ok: true});
+    }
+    if (a === 'discogs') {                                  /* personal access token for the album search */
+      var tok = String(body.token_discogs || '').trim();
+      if (!body.clear && !/^[A-Za-z0-9]{10,100}$/.test(tok)) return done({error: 'discogs'});
+      var cur2 = this.o.keys.read(), k2 = {};
+      Object.keys(cur2).forEach(function(n){ k2[n] = cur2[n]; });
+      if (body.clear) delete k2.DISCOGS_TOKEN; else k2.DISCOGS_TOKEN = tok;
+      this.o.keys.write(k2);
       return done({ok: true});
     }
     if (a === 'choose') {

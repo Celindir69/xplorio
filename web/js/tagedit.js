@@ -352,17 +352,41 @@ function tagAlbumIdWhy(c) { return T('tag.rec.chance', {p: c.chance}) + ' · ' +
 function tagRecognizeSection(good) {
   var dirs = {};
   good.forEach(function(f){ var r = histRel(f.uri || ''); dirs[r.slice(0, r.lastIndexOf('/'))] = 1; });
-  if (Object.keys(dirs).length !== 1 || good.length > 99) return null;
+  var oneDir = Object.keys(dirs).length === 1 && good.length <= 99;
+  if (good.length > 300) return null;
+  var uris = good.map(function(f){ return f.uri; });
   var box = document.createElement('div'), btn = document.createElement('button'), out = document.createElement('div');
   box.className = 'tagRec';
   btn.className = 'tagBtn'; btn.textContent = T('tag.rec.button');
   out.className = 'tagRecList';
-  box.appendChild(btn); box.appendChild(out);
+  if (oneDir) box.appendChild(btn);
+
+  /* manual search: artist and album at MusicBrainz, Discogs (with a token), Apple Music or Deezer */
+  var form = histEl('div', 'tagRecForm'), ai = tagInput('', ''), al = tagInput('', ''), src = document.createElement('select'), go = document.createElement('button');
+  ai.placeholder = T('tag.field.artist'); al.placeholder = T('tag.field.album');
+  var hint = tagRecHints(good);
+  ai.value = (tagCommon.albumartist && !tagCommon.albumartist.mixed && tagCommon.albumartist.input.value) ||
+             (tagCommon.artist && !tagCommon.artist.mixed && tagCommon.artist.input.value) || hint.artist;
+  al.value = (tagCommon.album && !tagCommon.album.mixed && tagCommon.album.input.value) || hint.album;
+  ['mb', 'discogs', 'itunes', 'deezer'].forEach(function(s){
+    var o = document.createElement('option'); o.value = s; o.textContent = T('tag.rec.src.' + s); src.appendChild(o);
+  });
+  try { src.value = localStorage.getItem('tagRecSource') || 'mb'; } catch (e) { /* none */ }
+  if (!src.value) src.value = 'mb';
+  go.className = 'tagBtn'; go.textContent = T('tag.rec.search');
+  form.appendChild(histEl('div', 'tagRecLabel', T('tag.rec.manual')));
+  [ai, al].forEach(function(i){ form.appendChild(i); });
+  var line = histEl('div', 'tagRecLine'); line.appendChild(src); line.appendChild(go); form.appendChild(line);
+  box.appendChild(form); box.appendChild(out);
+  [ai, al].forEach(function(i){ i.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); search(); } }); });
+  go.addEventListener('click', search);
+
   function apply(c) {
     var by = {};
     c.items.forEach(function(it){ by[it.uri] = it.tags; });
     var first = c.items[0] && c.items[0].tags || {}, va = first.compilation === '1';
-    ['album', 'albumartist', 'date', 'disc'].concat(va ? [] : ['artist']).forEach(function(k){
+    var discs = c.items.map(function(it){ return it.tags.disc || ''; }), oneDisc = discs.every(function(d){ return d === discs[0]; });
+    ['album', 'albumartist', 'date'].concat(oneDisc ? ['disc'] : []).concat(va ? [] : ['artist']).forEach(function(k){
       var cf = tagCommon[k];
       if (!cf || first[k] === undefined) return;
       cf.input.value = first[k]; cf.input.setAttribute('data-dirty', '1'); cf.input.placeholder = '';
@@ -370,6 +394,7 @@ function tagRecognizeSection(good) {
     if (tagCompil) { tagCompil.box.checked = va; tagCompilShow(); }
     tagFiles.forEach(function(f){
       var t = by[f.uri];
+      f.recDisc = !oneDisc && t ? (t.disc || '') : undefined;     /* several discs in one go: each file its own */
       if (!t || !f.ok) return;
       if (f.trackIn) f.trackIn.value = t.track || '';
       if (f.titleIn) f.titleIn.value = t.title || '';
@@ -377,41 +402,137 @@ function tagRecognizeSection(good) {
     });
     tagStatus.textContent = T('tag.rec.filled');
   }
+  function clear() { while (out.firstChild) out.removeChild(out.firstChild); }
+  function note(t) { clear(); out.appendChild(histEl('div', 'tagRecNote', t)); }
+  /* one entry; a tap opens the preview: file name and length next to the track title and length */
+  function row(c, load) {
+    var r = histEl('div', 'tagRecRow'), head = histEl('div', 'tagRecHead'), prev = histEl('div', 'tagRecPrev');
+    head.appendChild(histEl('div', 'tagRecName', (c.title || '?') + ' – ' + (c.artist || '?')));
+    var sub = histEl('div', 'tagRecWhy', tagRecSub(c));
+    head.appendChild(sub);
+    r.appendChild(head); r.appendChild(prev);
+    var open = false, loaded = null;
+    head.addEventListener('click', function(){
+      open = !open; r.classList.toggle('open', open);
+      if (!open) { prev.innerHTML = ''; return; }
+      if (loaded) return tagRecPreview(prev, loaded, apply);
+      prev.appendChild(histEl('div', 'tagRecNote', T('tag.rec.loading')));
+      load().then(function(s){
+        loaded = s;
+        if (open) { prev.innerHTML = ''; if (s) tagRecPreview(prev, s, apply); else prev.appendChild(histEl('div', 'tagRecNote', T('tag.rec.noTracks'))); }
+      }).catch(function(e){ prev.innerHTML = ''; prev.appendChild(histEl('div', 'tagRecNote', e.message || T('tag.serviceDown'))); });
+    });
+    r.refresh = function(x){ sub.textContent = tagRecSub(x); };
+    return r;
+  }
+  function release(c) {
+    return tagPost('/albumrelease', {uris: uris, source: c.source, id: c.id}).then(function(res){
+      if (!res.ok) throw new Error(T('tag.error', {error: res.error || T('tag.unknown')}));
+      return res.suggestion;
+    });
+  }
+  var seq = 0;
+  function search() {
+    var a = ai.value.trim(), b = al.value.trim(), s = src.value, my = ++seq;
+    if (!a && !b) return;
+    try { localStorage.setItem('tagRecSource', s); } catch (e) { /* none */ }
+    go.disabled = true; note(T('tag.rec.searching'));
+    tagPost('/albumsearch', {uris: uris, artist: a, album: b, source: s}).then(function(res){
+      go.disabled = false;
+      if (my !== seq) return;
+      if (!res.ok) return note(/discogs token/.test(res.error || '') ? T('tag.rec.noDiscogs') : T('tag.error', {error: res.error || T('tag.unknown')}));
+      var list = res.results || [];
+      if (!list.length) return note(T('tag.rec.noneFound'));
+      clear();
+      out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.results', {n: list.length, m: uris.length})));
+      var rows = list.map(function(c){
+        var cache = null, r = row(c, function(){ return cache || (cache = release(c)); });
+        out.appendChild(r);
+        return {c: c, r: r, load: function(){ return cache || (cache = release(c)); }};
+      });
+      /* Discogs names no track counts in its search: the first ones fetched one after the other (also fills the preview) */
+      (function next(i){
+        if (my !== seq || i >= rows.length || i >= 10) return;
+        var x = rows[i];
+        if (x.c.tracks !== null) return next(i + 1);
+        x.load().then(function(sg){
+          if (sg) { x.c.tracks = sg.tracksTotal; x.c.fits = sg.fit === 'ok'; x.c.format = x.c.format || sg.format; x.r.refresh(x.c); }
+          next(i + 1);
+        }).catch(function(){ next(i + 1); });
+      })(0);
+    }).catch(function(){ go.disabled = false; note(T('tag.serviceDown')); });
+  }
+  /* by track count and lengths (MusicBrainz disc ID) */
   function show(res) {
-    while (out.firstChild) out.removeChild(out.firstChild);
+    clear();
     var list = (res && res.candidates) || [];
     if (!list.length) { out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.none'))); return; }
     list.forEach(function(c, i){
-      var row = document.createElement('div'), tx = document.createElement('div'), use = document.createElement('button');
-      row.className = 'tagRecRow';
-      tx.appendChild(histEl('div', 'tagRecName', tagAlbumIdText(c)));
-      tx.appendChild(histEl('div', 'tagRecWhy', tagAlbumIdWhy(c)));
-      var det = document.createElement('details'), sm = document.createElement('summary');
-      sm.textContent = T('tag.rec.tracks', {n: c.tracks.length});
-      det.appendChild(sm);
-      c.tracks.forEach(function(t){ det.appendChild(histEl('div', 'tagRecTrack', t.n + '. ' + t.title + (t.artist && t.artist !== c.artist ? ' – ' + t.artist : ''))); });
-      tx.appendChild(det);
-      use.className = 'tagBtn'; use.textContent = T('tag.rec.use');
-      use.addEventListener('click', function(){ apply(c); });
-      row.appendChild(tx); row.appendChild(use);
-      out.appendChild(row);
+      c.fileNames = res.fileNames;
+      var r = row(c, function(){ return Promise.resolve(c); });
+      out.appendChild(r);
       if (i === 0 && c.match === 'exact' && tagAutoRecognize) apply(c);
     });
   }
   function run() {
     btn.disabled = true;
-    while (out.firstChild) out.removeChild(out.firstChild);
-    out.appendChild(histEl('div', 'tagRecNote', T('tag.rec.searching')));
-    tagPost('/albumid', {uris: good.map(function(f){ return f.uri; })}).then(function(res){
+    note(T('tag.rec.searching'));
+    tagPost('/albumid', {uris: uris}).then(function(res){
       btn.disabled = false;
       if (!res.ok) { out.firstChild.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); return; }
       show(res);
+      if (!(res.candidates || []).length && tagAutoRecognize) ai.focus();
       tagAutoRecognize = false;
     }).catch(function(){ btn.disabled = false; out.firstChild.textContent = T('tag.serviceDown'); tagAutoRecognize = false; });
   }
   btn.addEventListener('click', run);
-  if (tagAutoRecognize) setTimeout(run, 0);
+  if (tagAutoRecognize && oneDir) setTimeout(run, 0);
   return box;
+}
+/* "2025 · DE · 2×CD · 16 Titel (passt) · Label · Deluxe" */
+function tagRecSub(c) {
+  var fmt = String(c.format || '').replace(/\b(File|Vinyl|Cassette)\b/g, function(k){ return T('tag.rec.fmt.' + k); });
+  var n = c.tracks === null || c.tracks === undefined ? '' :
+          T('tag.rec.nTracks', {n: c.tracks}) + (c.fits ? ' ✓' : '');
+  var bits = [c.date ? String(c.date).slice(0, 4) : '', c.country, fmt, n, c.label, c.note];
+  if (c.match && c.match !== 'manual' && c.chance !== undefined) bits.unshift(tagAlbumIdWhy(c));
+  else if (c.source) bits.unshift(T('tag.rec.src.' + c.source));
+  return bits.filter(Boolean).join(' · ');
+}
+function tagRecTime(s) { s = Math.round(s || 0); return s ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : ''; }
+/* the preview: each file next to the track it gets, lengths that differ by more than 5 s marked */
+function tagRecPreview(el, c, apply) {
+  el.innerHTML = '';
+  if (c.fit === 'count') el.appendChild(histEl('div', 'tagRecNote tagRecWarn', T('tag.rec.countWarn', {m: c.tracksTotal, n: c.files, k: c.items.length})));
+  var names = {};
+  (c.fileNames || []).forEach(function(f){ names[f.uri] = f; });
+  var grid = histEl('div', 'tagRecGrid');
+  grid.appendChild(histEl('div', 'tagRecTh', T('tag.rec.colFile')));
+  grid.appendChild(histEl('div', 'tagRecTh', T('tag.rec.colTrack')));
+  var order = (c.fileNames && c.fileNames.length ? c.fileNames.map(function(f){ return f.uri; }) : c.items.map(function(it){ return it.uri; }));
+  var by = {};
+  c.items.forEach(function(it, i){ by[it.uri] = i; });
+  order.forEach(function(u){
+    var f = names[u] || {name: String(u).split('/').slice(-1)[0], length: 0}, i = by[u], t = i === undefined ? null : c.tracks[i];
+    var off = t && f.length && t.length && Math.abs(f.length - t.length) > 5;
+    grid.appendChild(histEl('div', 'tagRecCell', f.name + (f.length ? ' (' + tagRecTime(f.length) + ')' : '')));
+    grid.appendChild(histEl('div', 'tagRecCell' + (off ? ' tagRecOff' : '') + (t ? '' : ' tagRecNone'),
+      t ? (t.disc ? t.disc + '-' : '') + t.n + '. ' + t.title + (t.artist && t.artist !== c.artist ? ' – ' + t.artist : '') + (t.length ? ' (' + tagRecTime(t.length) + ')' : '') : T('tag.rec.noTrack')));
+  });
+  el.appendChild(grid);
+  var b = document.createElement('button');
+  b.className = 'tagBtn tagRecUse'; b.textContent = T('tag.rec.useSave');
+  b.addEventListener('click', function(){ apply(c); if (!tagSave.disabled) tagSave.click(); });
+  el.appendChild(b);
+}
+/* artist and album from the folder name ("Artist - 2025 - Album [FLAC]", "Artist/Album", disc folders) */
+function tagRecHints(good) {
+  var rel = histRel(good[0].uri || ''), parts = rel.split('/').slice(0, -1);
+  if (parts.length && TAG_DISC_RE.test(parts[parts.length - 1])) parts.pop();
+  var folder = (parts.pop() || '').replace(/\s*[\[(][^\])]*[\])]\s*$/g, '').trim(), parent = parts.pop() || '';
+  var m = /^(.+?)\s+-\s+(?:(?:19|20)\d\d\s+-\s+)?(.+)$/.exec(folder);
+  if (m) return {artist: m[1], album: m[2]};
+  return {artist: /^(import|music|musik|usb|internal|nas)$/i.test(parent) ? '' : parent, album: folder.replace(/^(?:19|20)\d\d\s+-\s+/, '')};
 }
 
 /* "Compilation" in the album editor: the compilation tag (m4a cpil, ID3 TCMP, Vorbis COMPILATION) for all tracks.
@@ -543,6 +664,7 @@ function tagCollect() {
     Object.keys(common).forEach(function(k){ t[k] = common[k]; });
     if (compil !== null) t.compilation = compil;
     if (compil && f.artistIn) t.artist = f.artistIn.value;   /* compilation: the artist of each track */
+    if (f.recDisc !== undefined && common.disc === undefined) t.disc = f.recDisc;   /* album recognised over several discs */
     if (nm && common.comment === undefined) t.comment = noMixAdd(f.tags.comment);   /* different comments: each keeps its own */
     return {uri: f.uri, tags: t};
   });

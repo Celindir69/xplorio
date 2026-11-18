@@ -101,6 +101,33 @@ t('folders without title, artist or album: recognised; something written: MPD re
   });
 });
 
+t('tags still missing: rsgain and the analysis wait; resume() checks again and carries on', function(done){
+  var x = setup(), calls = [], lists = 0;
+  var mpd = function(cmds, cb){
+    if (/^listallinfo/.test(cmds[0]) && lists++ < 2) return cb(null, [['file: USB/import/Band - Album/01.flac', 'Track: 1']]);
+    x.mpd(cmds, cb);
+  };
+  var rsgain = {bin: function(){ return '/bin/rsgain'; }, start: function(cb, run){ calls.push('rsgain'); cb(null); setTimeout(function(){ run.done(0); }, 5); }};
+  var analysis = {start: function(cb, run){ calls.push('analysis'); cb(null); setTimeout(function(){ run.done({done: 2}); }, 5); }};
+  var imp = new mi.Import({musicRoot: x.music, mpd: mpd, rsgain: rsgain, analysis: analysis,
+                           recognize: function(dir, files, cb){ setTimeout(function(){ cb({dir: dir, state: 'none'}); }, 5); }});
+  imp.start({source: x.src, rel: 'USB', target: x.disk, rsgain: true, analysis: true}, function(){
+    waitEnd(imp, function(j){
+      assert.deepStrictEqual([j.step, j.waitTags, calls], ['waitTags', true, []]);
+      assert.deepStrictEqual(j.check.needTags.map(function(d){ return d.dir; }), ['USB/import/Band - Album']);
+      imp.resume(function(e){
+        assert.strictEqual(e, null);
+        assert.ok(!j.end);
+        waitEnd(imp, function(j2){
+          assert.deepStrictEqual([j2.step, j2.waitTags, calls], ['done', false, ['rsgain', 'analysis']]);
+          assert.deepStrictEqual(j2.steps.slice(-5), ['recognize', 'waitTags', 'check', 'rsgain', 'analysis']);
+          imp.resume(function(e2){ assert.strictEqual(e2, 'nothing'); done(); });
+        });
+      });
+    });
+  });
+});
+
 t('refused: missing source, missing target, target inside the source', function(done){
   var x = setup(), imp = new mi.Import({musicRoot: x.music, mpd: x.mpd});
   imp.start({source: path.join(x.dir, 'gibt-es-nicht'), rel: 'USB', target: x.disk}, function(e){

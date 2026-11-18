@@ -96,3 +96,72 @@ ta('wrong track count or MusicBrainz not reachable: no suggestion, no error', fu
     done();
   });
 });
+
+/* manual search: artist and album at MusicBrainz, Discogs, Apple Music, Deezer; a release fitted to the files */
+var FILES2 = [1, 2, 3, 4].map(function(i){ return {uri: 'USB/x/CD' + (i < 3 ? 1 : 2) + '/0' + i + '.flac', rel: 'USB/x/CD' + (i < 3 ? 1 : 2) + '/0' + i + '.flac', length: 100 * i}; });
+ta('manual search at MusicBrainz: the editions that fit the file count first, with format and track count', function(done){
+  var r = new a.Recognizer({stepMs: 0, getJson: function(u, cb){
+    assert.ok(/release%3A%22Big%20Chair%22%20AND%20artist%3A%22TFF%22/.test(u), u);
+    cb(null, {releases: [{id: 'a', title: 'Big Chair', 'artist-credit': [{name: 'TFF'}], date: '1985', media: [{format: '12" Vinyl', 'track-count': 8}], 'track-count': 8},
+                         {id: 'b', title: 'Big Chair', 'artist-credit': [{name: 'TFF'}], date: '2014', country: 'XE', status: 'Official', disambiguation: 'Deluxe',
+                          media: [{format: 'CD', 'track-count': 2}, {format: 'CD', 'track-count': 2}], 'track-count': 4}]});
+  }});
+  r.search({source: 'mb', artist: 'TFF', album: 'Big Chair'}, FILES2, function(e, res){
+    assert.ifError(e);
+    assert.deepStrictEqual(res.results.map(function(x){ return [x.id, x.format, x.tracks, x.fits, x.note]; }),
+      [['b', '2×CD', 4, true, 'Deluxe'], ['a', 'Vinyl', 8, false, '']]);
+    done();
+  });
+});
+ta('Discogs: only with a token (sent along); release with two CDs fitted over both folders, disc per file', function(done){
+  var seen = [];
+  var r = new a.Recognizer({stepMs: 0, discogsToken: function(){ return 'abc123tok'; }, getJson: function(u, cb, h){
+    seen.push([u.replace(/^https:\/\/api\.discogs\.com/, ''), h.Authorization]);
+    if (/database\/search/.test(u)) return cb(null, {results: [{id: 7, title: 'TFF - Big Chair', year: 2014, country: 'Europe', formats: [{name: 'CD', qty: '2', descriptions: ['Album', 'Deluxe Edition']}], label: ['Mercury']}]});
+    cb(null, {id: 7, title: 'Big Chair', year: 2014, artists: [{name: 'Tears For Fears (2)', join: ''}], formats: [{name: 'CD', qty: '2'}],
+              tracklist: [{position: '', type_: 'heading', title: 'CD 1'}, {position: '1-1', type_: 'track', title: 'Shout', duration: '1:41'},
+                          {position: '1-2', type_: 'track', title: 'Mothers Talk', duration: '3:20'},
+                          {position: '2-1', type_: 'track', title: 'Pale Shelter', duration: '5:00'}, {position: '2-2', type_: 'track', title: 'Broken', duration: '6:40'}]});
+  }});
+  new a.Recognizer({stepMs: 0, getJson: function(){ throw new Error('no request without token'); }}).search({source: 'discogs', album: 'x'}, FILES2, function(e0){
+    assert.ok(/token/.test(e0.message));
+    r.search({source: 'discogs', artist: 'TFF', album: 'Big Chair'}, FILES2, function(e, res){
+      assert.ifError(e);
+      assert.deepStrictEqual([res.results[0].artist, res.results[0].title, res.results[0].format, res.results[0].tracks, res.results[0].note], ['TFF', 'Big Chair', '2×CD', null, 'Deluxe Edition']);
+      r.release({source: 'discogs', id: '7'}, FILES2, function(e2, c){
+        assert.ifError(e2);
+        assert.strictEqual(c.fit, 'ok');
+        assert.deepStrictEqual(c.items.map(function(i){ return [i.tags.disc, i.tags.track, i.tags.title, i.tags.artist]; }),
+          [['1', '1', 'Shout', 'Tears For Fears'], ['1', '2', 'Mothers Talk', 'Tears For Fears'], ['2', '1', 'Pale Shelter', 'Tears For Fears'], ['2', '2', 'Broken', 'Tears For Fears']]);
+        assert.strictEqual(c.avgDiff, 0.3);
+        assert.deepStrictEqual(c.fileNames.map(function(f){ return f.name; }), ['01.flac', '02.flac', '03.flac', '04.flac']);
+        assert.ok(seen.every(function(x){ return x[1] === 'Discogs token=abc123tok'; }));
+        r.release({source: 'discogs', id: '7'}, FILES2, function(){ assert.strictEqual(seen.length, 2); done(); });   /* from the cache */
+      });
+    });
+  });
+});
+ta('Apple Music and Deezer: track counts in the list; more tracks than files: only as many get tags', function(done){
+  var r = new a.Recognizer({stepMs: 0, getJson: function(u, cb){
+    if (/itunes.*\/search/.test(u)) return cb(null, {results: [{collectionId: 11, collectionName: 'Big Chair (Deluxe)', artistName: 'TFF', trackCount: 4, releaseDate: '2014-11-10T08:00:00Z', country: 'DEU'}]});
+    if (/itunes.*\/lookup/.test(u)) return cb(null, {results: [{wrapperType: 'collection', collectionId: 11, collectionName: 'Big Chair (Deluxe)', artistName: 'TFF', releaseDate: '2014-11-10T08:00:00Z'}].concat(
+      [1, 2, 3, 4, 5].map(function(n){ return {wrapperType: 'track', kind: 'song', discNumber: 1, trackNumber: n, trackName: 'T' + n, trackTimeMillis: n * 100000, artistName: n === 5 ? 'TFF feat. X' : 'TFF'}; }))});
+    if (/deezer.*\/search\/album/.test(u)) { assert.ok(/artist%3A%22TFF%22%20album%3A%22Big%20Chair%22/.test(u), u); return cb(null, {data: [{id: 22, title: 'Big Chair', artist: {name: 'TFF'}, nb_tracks: 3, record_type: 'album'}]}); }
+    if (/deezer.*\/album\/22\/tracks/.test(u)) return cb(null, {data: [{title: 'A', duration: 100, disk_number: 1, track_position: 1, artist: {name: 'TFF'}}]});
+    if (/deezer.*\/album\/22/.test(u)) return cb(null, {id: 22, title: 'Big Chair', artist: {name: 'TFF'}, release_date: '1985-02-25'});
+    cb(new Error('unexpected ' + u));
+  }});
+  r.search({source: 'itunes', artist: 'TFF', album: 'Big Chair'}, FILES2, function(e, res){
+    assert.deepStrictEqual([res.results[0].tracks, res.results[0].fits, res.results[0].format, res.results[0].date], [4, true, 'File', '2014-11-10']);
+    r.release({source: 'itunes', id: '11'}, FILES2, function(e2, c){
+      assert.deepStrictEqual([c.fit, c.tracksTotal, c.items.length], ['count', 5, 4]);
+      r.search({source: 'deezer', artist: 'TFF', album: 'Big Chair'}, FILES2, function(e3, res3){
+        assert.deepStrictEqual([res3.results[0].tracks, res3.results[0].fits], [3, false]);
+        r.release({source: 'deezer', id: '22'}, FILES2, function(e4, c4){
+          assert.deepStrictEqual([c4.fit, c4.items.length, c4.items[0].tags.title, c4.items[0].tags.date], ['count', 1, 'A', '1985-02-25']);
+          r.release({source: 'mb', id: '../etc'}, FILES2, function(e5){ assert.ok(e5); done(); });
+        });
+      });
+    });
+  });
+});

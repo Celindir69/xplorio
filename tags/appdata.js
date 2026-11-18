@@ -43,4 +43,9 @@ Keys.prototype.lastfm = function() {
   return {key: process.env.LASTFM_KEY || k.LASTFM_KEY || '', secret: process.env.LASTFM_SECRET || k.LASTFM_SECRET || ''};
 };
 
+/* Discogs personal access token (album search in the tag editor) */
+Keys.prototype.discogs = function() {
+  return String(process.env.DISCOGS_TOKEN || this.read().DISCOGS_TOKEN || '');
+};
+
 module.exports = {prepare: prepare, Keys: Keys};

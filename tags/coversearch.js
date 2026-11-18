@@ -51,11 +51,12 @@ function fetchUrl(u, maxBytes, cb, o) {
     protocol: p.protocol, hostname: p.hostname, port: p.port, path: p.path,
     headers: {'User-Agent': UA, 'Accept': '*/*'}
   };
+  Object.keys(o.headers || {}).forEach(function(k){ opts.headers[k] = o.headers[k]; });   /* e.g. Discogs' Authorization */
   if (o.pub) opts.lookup = publicLookup;
   var req = (p.protocol === 'https:' ? https : http).get(opts, function(res){
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hops < 4) {
       res.resume();
-      return fetchUrl(url.resolve(u, res.headers.location), maxBytes, finish, {hops: hops + 1, pub: o.pub});
+      return fetchUrl(url.resolve(u, res.headers.location), maxBytes, finish, {hops: hops + 1, pub: o.pub, headers: o.headers});
     }
     if (res.statusCode !== 200) { res.resume(); return finish(new Error('HTTP ' + res.statusCode)); }
     var parts = [], size = 0;
