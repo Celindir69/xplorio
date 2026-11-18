@@ -287,12 +287,20 @@ function doRead(body, cb) {
     else { jobs.push({op: 'read', path: p.full}); at.push(k); }
   });
   runPyMany(jobs, function(rs){
+    var audio = [], values = {};
     rs.forEach(function(r, k){
       r.uri = uris[at[k]]; items[at[k]] = r;
       var t = r.tags || {};                                /* audio analysis there (essentia.jsonl, by artist and title) */
-      if (r.ok !== false) r.analysed = !!(t.artist && t.title && audioStore.get(t.artist, t.title, t.album));
+      if (r.ok === false) return;
+      var e = t.artist && t.title ? audioStore.get(t.artist, t.title, t.album) : null;
+      r.analysed = !!e;
+      if (e) audio.push(e);
+      if (t.genre) values[t.genre] = (values[t.genre] || 0) + 1;
     });
-    cb(200, {ok: true, items: items, analysis: onMac()});   /* on the Mac a single album can be analysed (POST /mac/analysis uris) */
+    /* main genre for these tracks (Discogs top categories, as the library check): from the audio analysis, with the genre tags */
+    var vote = audio.length ? genres.audioVote(audio) : null, sg = vote ? genres.suggest(values, vote) : null;
+    if (sg) { sg.subs = sg.genre === vote.order[0] ? vote.subs : []; sg.tracks = vote.tracks; }
+    cb(200, {ok: true, items: items, analysis: onMac(), genre: sg});   /* on the Mac a single album can be analysed (POST /mac/analysis uris) */
   });
 }
 

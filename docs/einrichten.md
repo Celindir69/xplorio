@@ -191,6 +191,10 @@ Audioanalyse haben (Stimmung, Tempo, Tonart). Der Knopf startet sie nur für den
 Fortschritt zeigt Einstellungen > Audioanalyse. Titel ohne Künstler oder Titel überspringt die Analyse, sie zählen hier
 nicht mit.
 
+Haben Titel des Albums schon eine Audioanalyse, schlägt der Tag-Editor unter dem Feld „Genre“ ein Hauptgenre vor
+(Discogs-Oberkategorie wie in der Bibliotheksprüfung, mit den stärksten Unterstilen und dem Anteil in der Analyse; passt ein
+vorhandenes Genre-Tag, zählt es mit). „Übernehmen“ trägt es ein, geschrieben wird beim Speichern.
+
 ### Bibliothek prüfen
 Im Menü (Zahnrad oben rechts, nur wenn der Tag-Dienst läuft): findet Alben ohne Cover, Compilations ohne
 einheitlichen Album-Künstler, Künstler in mehreren (Vorschlag: die häufigste Schreibweise,

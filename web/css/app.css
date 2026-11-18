@@ -1592,3 +1592,6 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
 .tagRecWhy, .tagRecNote, .tagRecTrack { font-size:.85em; color:rgba(var(--fg-rgb),.65); }
 .tagRecRow details summary { cursor:pointer; font-size:.85em; color:rgba(var(--fg-rgb),.65); margin-top:2px; }
 .tagRecRow .tagBtn { flex:0 0 auto; }
+
+.tagGenreHint { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:-4px 0 10px; font-size:.85em; color:rgba(var(--fg-rgb),.7); }
+.tagGenreHint .tagBtn { flex:0 0 auto; }

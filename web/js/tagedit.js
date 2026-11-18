@@ -196,6 +196,25 @@ function tagGenreMenu(input) {
   return sel;
 }
 
+/* main genre from the audio analysis (and the genre tags) of the tracks shown, as the library check suggests it:
+   a line below the genre field with "Use"; not shown when the field already says it */
+var tagGenreSuggest = null;
+function tagGenreHint(input) {
+  var g = tagGenreSuggest;
+  if (!g || !g.genre || String(input.value).trim().toLowerCase() === g.genre.toLowerCase()) return null;
+  var box = histEl('div', 'tagGenreHint'), use = document.createElement('button');
+  var why = g.how === 'table' ? T('tag.genreSug.tags') : T('tag.genreSug.audio', {p: Math.round((g.share || 0) * 100), n: g.tracks});
+  box.appendChild(histEl('span', '', T('tag.genreSug', {g: g.genre}) + (g.subs && g.subs.length ? ' (' + g.subs.join(', ') + ')' : '') + ' · ' + why));
+  use.type = 'button'; use.className = 'tagBtn'; use.textContent = T('tag.rec.use');
+  use.addEventListener('click', function(){
+    input.value = g.genre; input.setAttribute('data-dirty', '1'); input.placeholder = '';
+    input.dispatchEvent(new Event('input'));
+    box.parentNode.removeChild(box);
+  });
+  box.appendChild(use);
+  return box;
+}
+
 /* apply a text function to an input field and mark it as changed */
 function tagApplyFn(input, fn) {
   var v = fn(input.value);
@@ -244,7 +263,7 @@ function openTagEditor(files, heading, opts) {
   tagBatch = null; tagUndo.style.display = 'none'; tagSave.disabled = true; tagStatus.textContent = '';
   tagMsg(T('tag.loading'), true);
   overlayTags.classList.add('on');
-  var uris = files.map(function(f){ return f.uri; }), items = [];
+  var uris = files.map(function(f){ return f.uri; }), items = [], genre = null;
   tagInChunks(uris, TAG_CHUNK * 2, function(part, done){   /* in parts: the tag service takes at most 500 per request */
     if (seq !== artSeq) return Promise.reject(new Error('abgebrochen'));
     if (uris.length > part.length) tagMsg(T('tag.readingProgress', {done: langNum(Math.min(done, uris.length)), total: langNum(uris.length)}), true);
@@ -252,8 +271,10 @@ function openTagEditor(files, heading, opts) {
       if (!res.ok) throw new Error(res.error || T('tag.unknown'));
       items = items.concat(res.items);
       tagCanAnalyse = !!res.analysis;
+      if (res.genre && (!genre || res.genre.tracks > genre.tracks)) genre = res.genre;   /* read in parts: the part with most analysed tracks */
     });
   }).then(function(){
+    tagGenreSuggest = genre;
     if (seq === artSeq) tagRender(files, items);
   }).catch(function(e){
     if (seq !== artSeq || e.message === 'abgebrochen') return;
@@ -285,6 +306,7 @@ function tagRender(files, items) {
     var aa = fd[0] === 'date' || fd[0] === 'disc' ? null : fd[0] === 'comment' ? tagNoMixButton(tagCommon.comment) : tagAaMenu(function(fn){ tagApplyFn(inp, fn); });
     if (fd[0] === 'genre') { var both = document.createDocumentFragment(); both.appendChild(tagGenreMenu(inp)); both.appendChild(aa); aa = both; }
     tagCommon[fd[0]].field = tagBody.appendChild(tagField(fd[1], inp, aa));
+    if (fd[0] === 'genre') { var gs = tagGenreHint(inp); if (gs) tagBody.appendChild(gs); }
   });
   tagCompil = null;
   if (good.length > 1) tagBody.appendChild(tagCompilationBox(good));
