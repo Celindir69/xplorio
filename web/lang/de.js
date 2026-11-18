@@ -720,7 +720,7 @@ langRegister('de', 'Deutsch', {
   'mac.durSec': '{s} s',
   'mac.audioBufferNote': 'Speicher für bereits dekodierte Musik. Bei 352,8 kHz reichen die 4 MB nur gut eine Sekunde; ein größerer Puffer überbrückt Aussetzer, wenn die Platte kurz hängt (USB 2, SMR-Festplatten). Kostet nur Arbeitsspeicher. MPD startet beim Umschalten kurz neu.',
   'mac.audioDsdFf': 'DSD über ffmpeg',
-  'mac.audioDsdFfNote': 'An: ffmpeg wandelt DSD-Dateien in PCM um statt MPDs eigenem DSD-Decoder, der in MPD 0.24.0 auf dem Mac rauscht. DoP ist dann ohne Wirkung. MPD startet beim Umschalten kurz neu.',
+  'mac.audioDsdFfNote': 'An: ffmpeg wandelt DSD-Dateien in PCM um statt MPDs eigenem DSD-Decoder, der in MPD 0.24.0 auf dem Mac rauscht (ab 0.24.19 behoben, dann nicht nötig). DoP ist dann ohne Wirkung. MPD startet beim Umschalten kurz neu.',
   'mac.audioDsdFfMissing': 'Rauschen bei DSD-Dateien? MPD mit ffmpeg installieren (sudo port upgrade --enforce-variants mpd +mad +ffmpeg), dann erscheint hier der Schalter „DSD über ffmpeg“.',
   'mac.audioScan': 'Geräte suchen',
   'mac.audioScanning': 'Suche Geräte, MPD startet kurz neu …',

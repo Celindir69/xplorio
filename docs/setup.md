@@ -852,7 +852,7 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   The system output, AirPlay and Bluetooth keep MPD's volume.
   “DSD through ffmpeg” switches off MPD's own DSD decoders (`dsf`, `dsdiff`) in `mpd.conf`; ffmpeg then converts DSD
   to PCM. Needed with MPD 0.24.0 from MacPorts, whose DSD decoder only produces noise on the Mac; needs an MPD with
-  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), otherwise the switch does not appear.
+  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), otherwise the switch does not appear. Fixed from MPD 0.24.19 on (not yet in MacPorts; script `mpd-neu.sh` with the guides).
   These switches and the “Buffer” (`audio_buffer_size`: default 4 MB, 16 or 32 MB, against dropouts at high rates and
   with slow disks) are under the folding “Expert settings”.
   MPD cannot open Bluetooth devices itself (OSStatus -10851): they play through “System output”, “Use” makes them the

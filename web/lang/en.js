@@ -722,7 +722,7 @@ langRegister('en', 'English', {
   'mac.durSec': '{s} s',
   'mac.audioBufferNote': 'Memory for music already decoded. At 352.8 kHz the 4 MB last just over a second; a larger buffer bridges dropouts when the disk stalls briefly (USB 2, SMR drives). Costs only memory. MPD restarts briefly when switching.',
   'mac.audioDsdFf': 'DSD through ffmpeg',
-  'mac.audioDsdFfNote': 'On: ffmpeg converts DSD files to PCM instead of MPD\'s own DSD decoder, which produces noise in MPD 0.24.0 on the Mac. DoP then has no effect. MPD restarts briefly when switching.',
+  'mac.audioDsdFfNote': 'On: ffmpeg converts DSD files to PCM instead of MPD\'s own DSD decoder, which produces noise in MPD 0.24.0 on the Mac (fixed in 0.24.19, then not needed). DoP then has no effect. MPD restarts briefly when switching.',
   'mac.audioDsdFfMissing': 'Noise with DSD files? Install MPD with ffmpeg (sudo port upgrade --enforce-variants mpd +mad +ffmpeg), then the “DSD through ffmpeg” switch appears here.',
   'mac.audioScan': 'Find devices',
   'mac.audioScanning': 'Looking for devices, MPD restarts briefly …',

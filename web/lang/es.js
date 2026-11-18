@@ -720,7 +720,7 @@ langRegister('es', 'Español', {
   'mac.durSec': '{s} s',
   'mac.audioBufferNote': 'Memoria para la música ya decodificada. A 352,8 kHz, 4 MB duran poco más de un segundo; un búfer mayor evita cortes cuando el disco se atasca un momento (USB 2, discos SMR). Solo cuesta memoria. MPD se reinicia brevemente al cambiar.',
   'mac.audioDsdFf': 'DSD mediante ffmpeg',
-  'mac.audioDsdFfNote': 'Activado: ffmpeg convierte los archivos DSD a PCM en lugar del decodificador DSD propio de MPD, que produce ruido con MPD 0.24.0 en el Mac. DoP deja de tener efecto. MPD se reinicia brevemente al cambiar.',
+  'mac.audioDsdFfNote': 'Activado: ffmpeg convierte los archivos DSD a PCM en lugar del decodificador DSD propio de MPD, que produce ruido con MPD 0.24.0 en el Mac (corregido en 0.24.19, entonces no hace falta). DoP deja de tener efecto. MPD se reinicia brevemente al cambiar.',
   'mac.audioDsdFfMissing': '¿Ruido con archivos DSD? Instala MPD con ffmpeg (sudo port upgrade --enforce-variants mpd +mad +ffmpeg) y aparecerá aquí el interruptor «DSD mediante ffmpeg».',
   'mac.audioScan': 'Buscar dispositivos',
   'mac.audioScanning': 'Buscando dispositivos, MPD se reinicia un momento …',

@@ -1121,7 +1121,7 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   (andere spielen Rauschen). Systemausgabe, AirPlay und Bluetooth behalten die Lautstärke in MPD.
   „DSD über ffmpeg“ schaltet MPDs eigene DSD-Decoder (`dsf`, `dsdiff`) in `mpd.conf` ab, ffmpeg wandelt DSD dann in
   PCM um. Nötig mit MPD 0.24.0 aus MacPorts, dessen DSD-Decoder auf dem Mac nur Rauschen liefert; braucht ein MPD mit
-  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht.
+  ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht. Ab MPD 0.24.19 (in MacPorts noch nicht, Skript `mpd-neu.sh` in den Anleitungen) ist der Fehler behoben.
   Diese Schalter und der „Puffer“ (`audio_buffer_size`: Standard 4 MB, 16 oder 32 MB, gegen Aussetzer bei hohen Raten
   und langsamen Platten) liegen unter „Experteneinstellungen“ zum Ausklappen.
   Bluetooth-Geräte kann MPD nicht selbst öffnen (OSStatus -10851): Sie spielen über „Systemausgabe“, „Verwenden“ macht
