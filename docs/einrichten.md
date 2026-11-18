@@ -1056,16 +1056,28 @@ ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#ins
   Volumio 4 liest beide Kennungen.
 - **Nicht erprobt unter Volumio 4:** Rotel-Bridge und TIDAL-Wächter.
 
-## Ohne Volumio: nur MPD (Vorschau)
-Xplorio kann statt Volumio auch MPD allein steuern, z. B. auf einem Mac (`brew install mpd`). Dafür in
-`web/config.local.js` `PLAYER: 'mpd'` setzen (oder den Tag-Dienst mit `XPLORIO_PLAYER=mpd` starten; `MPD_HOST` und
-`MPD_PORT` wie gewohnt). Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst
-(`/mpd/state`, `/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im
-Ordner oder in der Datei), der Verlauf zählt ebenfalls mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie
-MPD-Playlisten liefert der Tag-Dienst ebenfalls aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten).
+## Ohne Volumio: nur MPD
+Xplorio kann statt Volumio auch einen MPD allein steuern. Für den Mac gibt es dafür ein fertiges Programm
+([Als Mac-Programm](#als-mac-programm), der empfohlene Weg): es startet alles selbst und bringt eine Einstellungsseite mit.
+Dieser Abschnitt beschreibt den Betriebsmodus darunter, für eigene Systeme, die man von Hand einrichtet, etwa einen
+Linux-Rechner oder Raspberry Pi mit MPD ohne Volumio, oder zum Entwickeln.
 
-Noch nicht dabei: Streamingdienste außer TIDAL (Qobuz, HIGHRESAUDIO, Spotify) sowie ein Start ohne Volumio-Webserver. Diese Teile folgen Schritt für Schritt; bis dahin bleiben
-sie unter MPD leer. Mit Volumio (Voreinstellung) ändert sich nichts.
+**Einrichten von Hand:** MPD, Node.js (18 oder neuer) und Python 3 mit `mutagen` installieren. In `web/config.local.js`
+`window.APP_CONFIG.PLAYER = 'mpd';` setzen. Dann zwei Dienste starten (beide aus dem Xplorio-Ordner, am besten als
+Systemdienst, z. B. systemd):
+- Tag-Dienst: `cd tags && XPLORIO_PLAYER=mpd MPD_HOST=127.0.0.1 MPD_PORT=6600 MPD_CONF=/etc/mpd.conf MUSIC_ROOT=<Musikordner> TAGS_DATA=<Datenordner> node tag-service.js`
+  (Port 8766; `MUSIC_ROOT` ist MPDs `music_directory`, Xplorio braucht dort Schreibrechte für Tags und Cover).
+- Webserver: `HTTP_PORT=4040 node server/xplorio-server.js`, dann `http://<Rechner>:4040/` im Browser öffnen.
+
+Wiedergabe, Warteschlange, Lautstärke, Zufall und Wiederholen laufen dann über den Tag-Dienst (`/mpd/state`,
+`/mpd/queue`, `/mpd/cmd`, Änderungen live über `/mpd/events`), die Cover kommen von MPD selbst (Bild im Ordner oder in
+der Datei), der Verlauf zählt mit. Suche, Künstler-, Album-, Genre- und Ordneransichten sowie MPD-Playlisten liefert der
+Tag-Dienst aus MPD (`/mpd/browse`, `/mpd/search`, in der Form von Volumios Antworten). Eigene Listen (Lieblingstitel,
+„Meine Sender“, Smart Playlists) liegen im Datenordner, TIDAL meldet sich selbst an.
+
+Nur mit dem Mac-Programm: die Einstellungsseite (Musikordner, Audio-Ausgabe, Sicherung, Update, Audioanalyse usw.); von
+Hand eingerichtet stellt man diese Dinge direkt in `mpd.conf` und `config.local.js` ein. Nicht dabei sind
+Streamingdienste außer TIDAL (Qobuz, HIGHRESAUDIO, Spotify). Mit Volumio (Voreinstellung) ändert sich nichts.
 
 ### Als Mac-Programm
 `bash tools/mac/make-app.sh` (im heruntergeladenen Xplorio-Ordner, nach `brew install mpd mpc node`; auf Macs, die Homebrew nicht mehr unterstützt, mit MacPorts: `sudo port install mpd mpc nodejs18`) baut

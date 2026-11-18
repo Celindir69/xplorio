@@ -102,6 +102,27 @@ function fakeMpd(table) {
   return {mpd: mpd, seen: seen};
 }
 
+ta('back: after 3 s to the start of the track, before that the previous one; radio always the previous', function(done){
+  function back(status, want, then) {
+    var f = fakeMpd({status: status});
+    var p = new m.Player({mpd: f.mpd, idle: function(){ return function(){}; }});
+    p.command({action: 'prev'}, function(code){
+      assert.strictEqual(code, 200);
+      assert.deepStrictEqual(f.seen[f.seen.length - 1], want, JSON.stringify(status));
+      then();
+    });
+  }
+  back(['state: play', 'elapsed: 42.5', 'duration: 240.1'], ['seekcur 0'], function(){
+    back(['state: pause', 'elapsed: 10', 'duration: 240'], ['seekcur 0'], function(){
+      back(['state: play', 'elapsed: 2.1', 'duration: 240'], ['previous'], function(){
+        back(['state: play', 'elapsed: 300'], ['previous'], function(){          /* stream: no duration */
+          back(['state: stop'], ['previous'], done);
+        });
+      });
+    });
+  });
+});
+
 ta('commands map to MPD', function(done){
   var f = fakeMpd({status: ['state: play', 'volume: 40']});
   var p = new m.Player({mpd: f.mpd, idle: function(){ return function(){}; }});

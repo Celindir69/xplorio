@@ -6,6 +6,8 @@
 var net = require('net');
 var applemusic = require('./applemusic.js');
 
+var PREV_RESTART = 3;                                    /* seconds: "back" restarts the track after this */
+
 function quote(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
 
 /* ---------- MPD connection ---------- */
@@ -268,7 +270,12 @@ Player.prototype.command = function(body, cb) {
     case 'pause': return run(['pause 1']);
     case 'stop': return run(['stop']);
     case 'next': return run(['next']);
-    case 'prev': case 'previous': return run(['previous']);
+    case 'prev': case 'previous':                          /* like CD players: after 3 s back to the start of the track, else the one before */
+      return this.mpd(['status'], function(err, lists){
+        if (err) return cb(502, {ok: false, error: 'mpd'});
+        var st = fields(lists[0]), el = parseFloat(st.elapsed);
+        run(st.state !== 'stop' && el > PREV_RESTART && parseFloat(st.duration) > 0 ? ['seekcur 0'] : ['previous']);
+      });
     case 'toggle':
       return this.mpd(['status'], function(err, lists){
         if (err) return cb(502, {ok: false, error: 'mpd'});

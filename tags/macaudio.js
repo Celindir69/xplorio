@@ -211,6 +211,37 @@ MacAudio.prototype.change = function(fn, cb) {
   this.o.restart(function(e){ self.busy = false; cb(e); });
 };
 
+/* a device that was gone (USB DAC switched off) is back: MPD would go on "playing" into nothing. MPD looks the device up
+   only when an output is enabled, so the playing output is disabled and enabled again (what switching away and back does).
+   Called every few seconds (tag-service.js); only with the Core Audio helper. cb(err, [names reopened]) */
+MacAudio.prototype.watch = function(cb) {
+  var self = this;
+  cb = cb || function(){};
+  if (this.busy || !this.o.listDevices) return cb(null, []);
+  var conf = blocks(this.conf()).filter(function(b){ return b.type === 'osx' && b.device; });
+  if (!conf.length) return cb(null, []);
+  this.o.listDevices(function(e, json){
+    if (e) return cb(e);
+    var here = parseDevices(json).map(function(d){ return d.name; }), seen = self.seen || {}, back = [];
+    self.seen = {};
+    conf.forEach(function(b){
+      var now = here.indexOf(b.device) >= 0;
+      self.seen[b.device] = now;
+      if (now && seen[b.device] === false) back.push(b.name);
+    });
+    if (!back.length) return cb(null, []);
+    self.o.mpd(['outputs'], function(err, lists){
+      if (err) return cb(err);
+      var cmds = [];
+      parseOutputs(lists[0]).forEach(function(o){
+        if (o.enabled && back.indexOf(o.name) >= 0) cmds.push('disableoutput ' + o.id, 'enableoutput ' + o.id);
+      });
+      if (!cmds.length) return cb(null, []);
+      self.o.mpd(cmds, function(e2){ cb(e2, back); });
+    });
+  });
+};
+
 /* play on this output only */
 MacAudio.prototype.select = function(id, cb) {
   var self = this;

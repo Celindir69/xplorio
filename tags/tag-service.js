@@ -2934,6 +2934,11 @@ var macAudio = new macaudio.MacAudio({
     });
   }
 });
+/* USB DAC switched off and on again: MPD opens it again (macaudio.js watch) */
+setInterval(function(){
+  if (!onMac() || !MAC_MPD_CONF) return;
+  macAudio.watch(function(e, back){ if (back && back.length) console.error('audio: ' + back.join(', ') + ' is back, output opened again'); });
+}, 5000).unref();
 function doMacAudio(body, cb) {
   function answer(e, extra) {
     if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});

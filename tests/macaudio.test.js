@@ -172,3 +172,34 @@ ta('Bluetooth (with uid): no MPD output of its own, choosing it switches the Mac
     });
   });
 });
+
+ta('USB DAC off and on again: the playing output is opened again once; others and a device that stays are left alone', function(done){
+  var conf = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ma-w-')), 'mpd.conf');
+  fs.writeFileSync(conf, 'audio_output {\n  type "osx"\n  name "ROTEL"\n  device "ROTEL USB Audio 2.0"\n}\n' +
+                         'audio_output {\n  type "osx"\n  name "Lautsprecher"\n  device "Lautsprecher"\n}\n');
+  var present = ['ROTEL USB Audio 2.0', 'Lautsprecher'], sent = [];
+  var a = new ma.MacAudio({confFile: conf,
+    listDevices: function(cb){ cb(null, JSON.stringify({devices: present.map(function(nm){ return {name: nm, transport: 'usb', outputs: 2}; })})); },
+    mpd: function(cmds, cb){
+      if (cmds[0] === 'outputs') return cb(null, [['outputid: 0', 'outputname: ROTEL', 'plugin: osx', 'outputenabled: 1',
+                                                   'outputid: 1', 'outputname: Lautsprecher', 'plugin: osx', 'outputenabled: 0']]);
+      sent.push(cmds); cb(null, [[]]);
+    }});
+  a.watch(function(e, back){
+    assert.deepStrictEqual(back, []);                              /* first look: nothing known yet */
+    present = ['Lautsprecher'];
+    a.watch(function(e2, back2){
+      assert.deepStrictEqual(back2, []);                           /* switched off */
+      present = ['ROTEL USB Audio 2.0', 'Lautsprecher'];
+      a.watch(function(e3, back3){
+        assert.deepStrictEqual(back3, ['ROTEL']);
+        assert.deepStrictEqual(sent, [['disableoutput 0', 'enableoutput 0']]);
+        a.watch(function(e4, back4){
+          assert.deepStrictEqual(back4, []);                       /* still there: nothing more */
+          assert.strictEqual(sent.length, 1);
+          done();
+        });
+      });
+    });
+  });
+});
