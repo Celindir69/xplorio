@@ -73,6 +73,7 @@ function mpdWalk(opts, cb, onProgress) {
 
 /* a single MPD command (e.g. "stats") -> cb(err, {key: value}) */
 function mpdCommand(opts, cmd, cb) {
+  if (/[\r\n]/.test(String(cmd))) return setImmediate(function(){ cb(new Error('invalid command'), {}); });   /* one command, one line */
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
   var buf = '', greeted = false, out = {}, finished = false;
   function finish(err) {

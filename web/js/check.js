@@ -1033,7 +1033,7 @@ function checkDupRows(g, kept) {
           return;
         }
         btn.disabled = false;
-        msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+        msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
       }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
     });
     row.appendChild(btn);
@@ -1133,7 +1133,7 @@ function checkDupFillRow(g) {
   var token = function(){ return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem === 'string' ? sysSvcMem : ''); };
   function fail(r, b) {
     b.disabled = false; msg.style.display = '';
-    msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+    msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
   }
   var btn = document.createElement('button'); btn.className = 'ckBtn'; btn.textContent = T('check.dupfill.add', {n: checkNum(count())});
   btn.disabled = !!checkDone[key] || !count();
@@ -1241,7 +1241,7 @@ function checkDupTrackFile(f, prefix) {                  /* prefix: done mark of
         return;
       }
       btn.disabled = false;
-      msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+      msg.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
     }).catch(function(){ btn.disabled = false; msg.style.display = ''; msg.textContent = T('check.dup.error', {error: '?'}); });
   });
   row.appendChild(btn);

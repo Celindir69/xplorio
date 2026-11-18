@@ -25,6 +25,7 @@ function filesNoPwKey() { return typeof player !== 'undefined' && player.kind ==
 function filesError(r) {
   var e = (r && r.error) || '?';
   if (e === 'auth') return T('check.dup.auth');
+  if (e === 'pwneeded') return T('mac.err.pwneeded');
   if (e === 'nopw') return T(filesNoPwKey());
   if (e === 'check running') return T('trash.checkRunning');
   if (e === 'busy') return T('files.busy');

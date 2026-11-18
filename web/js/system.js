@@ -578,6 +578,7 @@ function sysPaintLog() {
   if (sysLog.bottom) box.scrollTop = box.scrollHeight; else box.scrollTop = sysLog.scroll;
   var note = !d ? T('hist.loading')
     : d.error === 'auth' ? T('sys.log.auth')
+    : d.error === 'pwneeded' ? T('mac.err.pwneeded')
     : d.error === 'nojournal' ? T('sys.log.nojournal')
     : d.error === 'missing' ? T('sys.log.missing')
     : !d.ok ? T('sys.svc.error')

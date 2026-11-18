@@ -237,8 +237,9 @@ function albumsAfterScan(n) {
     if (!err && st.updating_db && n < 1440) {          /* still reading (at most 2 hours) */
       albumAfterTimer = setTimeout(function(){ albumsAfterScan(n + 1); }, 5000);
     } else {
-      albumSoonUntil = Date.now() + ALBUMS_AFTER_SCAN_MS + 5000;   /* meanwhile Volumio rebuilds its own album list */
-      albumAfterTimer = setTimeout(function(){ albumChecked = 0; albumsEnsure(null, true); }, ALBUMS_AFTER_SCAN_MS);
+      var wait = onMac() ? 3000 : ALBUMS_AFTER_SCAN_MS;            /* on the Mac there is no Volumio list to wait for */
+      albumSoonUntil = Date.now() + wait + 5000;                   /* meanwhile Volumio rebuilds its own album list */
+      albumAfterTimer = setTimeout(function(){ albumChecked = 0; albumsEnsure(null, true); }, wait);
     }
     if (albumAfterTimer.unref) albumAfterTimer.unref();
   });
@@ -381,6 +382,26 @@ function albumRecognize(dir, uris, cb) {
       cb(ok ? {dir: dir, state: 'written', batch: r.batch, best: brief(c[0])} : {dir: dir, state: 'suggest', candidates: [brief(c[0])]});
     });
   });
+}
+
+/* where a request comes from: on the Mac (which may sit in a café's Wi-Fi) changes from other devices need the password
+   once one could be set; without one only this Mac itself may change settings, import, update and move files.
+   _local is always overwritten here, a client cannot send it */
+var os = require('os');
+function thisMacAddress(a) {
+  a = String(a || '').replace(/^::ffff:/, '');
+  if (a === '127.0.0.1' || a === '::1') return true;
+  var ifs = os.networkInterfaces();
+  return Object.keys(ifs).some(function(k){ return (ifs[k] || []).some(function(x){ return String(x.address).replace(/^::ffff:/, '') === a; }); });
+}
+function fromWhere(body, req) {
+  if (body && typeof body === 'object' && !Array.isArray(body)) body._local = thisMacAddress(req.socket && req.socket.remoteAddress);
+  return body;
+}
+/* '' = allowed, 'auth' = wrong or missing password, 'pwneeded' = Mac without password, request from another device */
+function authFail(body) {
+  if (adminAuth.isSet()) return adminAuth.check(body && body.token) ? '' : 'auth';
+  return onMac() && body && body._local === false ? 'pwneeded' : '';
 }
 
 var BATCH_RE = /^[a-z0-9]{6,16}$/;
@@ -886,7 +907,7 @@ function dupMigrate() {
   if (forget.length) mpdForget(forget, function(){});
 }
 function doDupMove(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   var dirs = Array.isArray(body.dirs) ? body.dirs.map(String) : [];
   if (!dirs.length || dirs.length > 50) return cb(400, {ok: false, error: 'dirs missing'});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
@@ -943,7 +964,7 @@ function dupFile(rel) {
   return p.full;
 }
 function doFileMove(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   var files = Array.isArray(body.files) ? body.files.map(String) : [];
   if (!files.length || files.length > 50) return cb(400, {ok: false, error: 'files missing'});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
@@ -1018,7 +1039,7 @@ function doTrashFiles(query, cb) {
 }
 /* POST /trashrestore {path, token}: back to the old place (never overwrites); MPD reads exactly that folder again */
 function doTrashRestore(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
   var rel = String(body.path || ''), j = trashJournal();
   var r;
@@ -1033,7 +1054,7 @@ function doTrashRestore(body, cb) {
 }
 /* POST /trashdelete {path | drive, token}: delete one entry, or everything in the trash of a drive, for good */
 function doTrashDelete(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
   var r;
   try { r = body.drive ? trash.empty(MUSIC_ROOT, String(body.drive)) : trash.remove(MUSIC_ROOT, String(body.path || '')); }
@@ -1196,7 +1217,7 @@ function copyFile(from, to, cb) {
   rd.pipe(wr);
 }
 function doDupFill(body, cb) {
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
   if (body.undo !== undefined) return dupFillUndo(String(body.undo), cb);
   var dir = String(body.dir || ''), last = readCheck();
@@ -2343,7 +2364,7 @@ function services() {
 function doServices(query, cb) { services().status(function(r){ r.pw = adminAuth.isSet(); cb(r.ok ? 200 : 500, r); }); }
 function doService(body, cb) {
   if (onMac()) {
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+    if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
     return services().act(String(body.unit || ''), String(body.action || ''), SELF_UNIT, cb);
   }
   if (!adminAuth.isSet()) return cb(200, {ok: false, error: 'unset'});
@@ -2353,14 +2374,14 @@ function doService(body, cb) {
 /* POST /power {action: reboot|poweroff, token}: password only if one is set (Volumio itself never asks) */
 function doPower(body, cb) {
   if (onMac()) return cb(400, {ok: false, error: 'not allowed'});   /* the Mac is not switched off from here */
-  if (adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth'});
+  if (authFail(body)) return cb(200, {ok: false, error: authFail(body)});
   svc.power(String(body.action || ''), cb);
 }
 /* POST /logs {source, lines: 50|100|300, token}: last lines of a log (tags/logs.js), without source only the sources;
    password only if one is set */
 var logs = require('./logs.js'), CRASH_LOG = path.join(DATA_DIR, 'crash.log'), logReader = new logs.Logs({files: {crashes: CRASH_LOG}});
 function doLogs(body, cb) {
-  if (body.source && adminAuth.isSet() && !adminAuth.check(body.token)) return cb(200, {ok: false, error: 'auth', sources: logReader.sources()});
+  if (body.source && authFail(body)) return cb(200, {ok: false, error: authFail(body), sources: logReader.sources()});
   logReader.read(String(body.source || ''), body.lines, cb);
 }
 function doServiceLogin(body, cb) {
@@ -2890,10 +2911,11 @@ function doMpd(req, res, route) {
     req.on('end', function(){
       var tbody;
       try { tbody = JSON.parse(td || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      tbody = fromWhere(tbody, req);
       var tt = tidalGet();
       if (!tt) return send(res, 200, {ok: false, available: false, error: 'node'});
       var changes = tbody.action || tbody.quality !== undefined || tbody.searchLimit !== undefined;
-      if (changes && adminAuth.isSet() && !adminAuth.check(tbody.token)) return send(res, 200, {ok: false, error: 'auth'});   /* password like the settings */
+      if (changes && authFail(tbody)) return send(res, 200, {ok: false, error: authFail(tbody)});   /* password like the settings */
       delete tbody.token;
       tt.handle(tbody).then(function(o){ send(res, 200, o); }, function(e){ console.error('TIDAL: ' + e.message); send(res, 200, {ok: false, error: 'login'}); });
     });
@@ -2946,6 +2968,7 @@ function doMpd(req, res, route) {
     req.on('end', function(){
       var body;
       try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+      body = fromWhere(body, req);
       body = body || {};
       var la = body.action, done = function(e){ send(res, e ? 502 : 200, e ? {ok: false, error: 'mpd'} : {ok: true}); };
       if (la === 'seek' && tidal && /^\d{1,6}$/.test(String(body.sec))) {   /* TIDAL track: seeks in its own way */
@@ -2973,7 +2996,7 @@ function doMpd(req, res, route) {
 var macsettings = require('./macsettings.js');
 var macSettings = new macsettings.MacSettings({
   musicRoot: MUSIC_ROOT, configFile: path.join(APP_CONFIG_DIR, 'config.local.js'), keys: keys, essentiaFile: ESSENTIA_FILE,
-  scan: function(cb){ mpdPlayer.mpd(['update'], function(e){ cb(e); }); },
+  scan: function(cb){ mpdPlayer.mpd(['update'], function(e){ if (!e) albumsAfterScan(0); cb(e); }); },
   choose: function(kind, cb){
     var what = kind === 'file' ? 'choose file with prompt "essentia.jsonl"' : 'choose folder with prompt "Musikordner"';
     cp.execFile('osascript', ['-e', 'POSIX path of (' + what + ')'], {timeout: 300000}, function(e, out){
@@ -3060,6 +3083,8 @@ function doMacAudio(body, cb) {
 function doMacPassword(body, cb) {
   var pw = String(body.password || '').slice(0, 200);
   if (pw.length < adminpass.MIN_LEN) return cb(200, {ok: false, error: 'short'});
+  // the first password can only be set on the Mac itself, or anyone on the network could take over
+  if (onMac() && !adminAuth.isSet() && body._local === false) return cb(200, {ok: false, error: 'pwneeded'});
   function set() {
     try { adminAuth.setPassword(pw); } catch (e) { return cb(200, {ok: false, error: 'fs'}); }
     adminAuth.login(pw, Date.now(), function(r){
@@ -3105,12 +3130,14 @@ function doMac(req, res, route) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data) || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     if (body.action === 'password') return doMacPassword(body, function(c, o){ send(res, c, o); });
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if (/^audio/.test(String(body.action))) return doMacAudio(body, function(c, o){ send(res, c, o); });
     if (body.action === 'libraryScan') {                 /* "Update library": new and changed files; full: read everything again */
       return mpdPlayer.mpd([body.full ? 'rescan' : 'update'], function(e){
         if (e) return send(res, 200, {ok: false, error: 'fs'});
+        albumsAfterScan(0);                                /* new albums show up in the album list, deleted ones go */
         var o = macSettings.read(appConfig()); o.pw = adminAuth.isSet(); o.done = 'libraryScan';
         setTimeout(function(){ macLibrary(function(lib){ o.library = lib; send(res, 200, o); }); }, 300);
       });
@@ -3165,9 +3192,10 @@ function doMacRsgain(req, res) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     var r = rgRunner();
     if (!body.action && body.nightly === undefined) return state();
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
     if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
     if (body.action === 'start' && Array.isArray(body.uris)) {   /* only the folders of these files (tag editor: one album) */
@@ -3204,8 +3232,9 @@ function doMacImport(req, res) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     if (body.action !== 'start' && body.action !== 'resume') return send(res, 200, musicImport().status());
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if ((essRun && essRun.child) || (rgRun && rgRun.running())) return send(res, 200, {ok: false, error: 'busy'});
     if (body.action === 'resume') return musicImport().resume(function(e){
       var st = musicImport().status();
@@ -3227,7 +3256,7 @@ process.on('exit', function(){ if (rgRun) rgRun.stop(); });
 
 /* backup of Xplorio's own data (macbackup.js): GET /mac/backup = state; POST {action: 'start'}, {target}, {nightly}.
    Settings folder: XPLORIO_SUPPORT (xplorio-services.sh), else the folder of XPLORIO_RUN */
-var os = require('os'), macbackup = require('./macbackup.js'), macupdate = require('./macupdate.js'), macBak = null, macUpd = null;
+var macbackup = require('./macbackup.js'), macupdate = require('./macupdate.js'), macBak = null, macUpd = null;
 function macSupport() {
   return process.env.XPLORIO_SUPPORT || (process.env.XPLORIO_RUN ? path.dirname(process.env.XPLORIO_RUN) : path.join(os.homedir(), 'Library', 'Application Support', 'Xplorio'));
 }
@@ -3252,6 +3281,7 @@ function macBody(req, res, cb) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     cb(body);
   });
 }
@@ -3262,7 +3292,7 @@ function doMacBackup(req, res) {
   macBody(req, res, function(body){
     var b = macBackup();
     if (!body.action && body.nightly === undefined && body.target === undefined) return state();
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if (body.target !== undefined) { var e = b.setTarget(String(body.target).slice(0, 1000)); return state(e ? {setError: e} : {done: 'target'}); }
     if (body.nightly !== undefined) { b.setNightly(!!body.nightly); return state({done: 'nightly'}); }
     if (body.action === 'start') return b.start(function(e2){ state(e2 ? {startError: e2} : {done: 'start'}); });
@@ -3292,7 +3322,7 @@ function doMacUpdate(req, res) {
   macBody(req, res, function(body){
     if (body.action === 'check') return state(true, {done: 'check'});
     if (body.action !== 'install' && body.branch === undefined) return state(false);
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if (body.branch !== undefined) { var be = macUpdater().setBranch(body.branch); return state(true, be ? {startError: be} : {done: 'branch'}); }
     if ((essRun && essRun.child) || (rgRun && rgRun.running()) || (musicImp && musicImp.running()) || (macBak && macBak.running()))
       return state(false, {startError: 'busy'});
@@ -3311,9 +3341,10 @@ function doMacAnalysis(req, res) {
   req.on('end', function(){
     var body;
     try { body = JSON.parse(data || '{}') || {}; } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     var r = essRunner();
     if (!body.action && body.nightly === undefined) return state();
-    if (adminAuth.isSet() && !adminAuth.check(body.token)) return send(res, 200, {ok: false, error: 'auth'});
+    if (authFail(body)) return send(res, 200, {ok: false, error: authFail(body)});
     if (body.nightly !== undefined) { r.setNightly(!!body.nightly); return state({done: 'nightly'}); }
     if (body.action === 'check') return state({done: 'check'}, true);
     if (body.action === 'stop') { r.stop(); return state({done: 'stop'}); }
@@ -3460,6 +3491,7 @@ function handle(req, res) {
     if (tooBig) return;
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
+    body = fromWhere(body, req);
     var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead, '/coverbest': doCoverBest, '/albumid': doAlbumId, '/albumsearch': doAlbumSearch, '/albumrelease': doAlbumRelease}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }

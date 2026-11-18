@@ -380,7 +380,7 @@ function tagAnalyseSection(good) {
     var token = typeof msToken === 'function' ? msToken() : '';
     tagPost('/mac/analysis', {action: 'start', uris: good.map(function(f){ return f.uri; }), token: token}).then(function(r){
       if (r && r.startError) { btn.disabled = false; note.textContent = T('tag.ana.err.' + (['running', 'busy', 'python'].indexOf(r.startError) >= 0 ? r.startError : 'other')); return; }
-      if (r && r.error === 'auth') { btn.disabled = false; note.textContent = T('mac.err.auth'); return; }
+      if (r && (r.error === 'auth' || r.error === 'pwneeded')) { btn.disabled = false; note.textContent = T('mac.err.' + r.error); return; }
       note.textContent = T('tag.ana.started') + ' ';
       if (typeof openMacSettings === 'function') {
         var a = histEl('a', 'tagRecLink', T('tag.ana.progress'));
@@ -685,7 +685,7 @@ function tagMoveSection(dirs) {
         return;
       }
       b.disabled = false;
-      note.textContent = r && r.error === 'auth' ? T('check.dup.auth') : T('check.dup.error', {error: (r && r.error) || '?'});
+      note.textContent = r && r.error === 'auth' ? T('check.dup.auth') : r && r.error === 'pwneeded' ? T('mac.err.pwneeded') : T('check.dup.error', {error: (r && r.error) || '?'});
     }).catch(function(){ b.disabled = false; note.textContent = T('check.dup.error', {error: '?'}); });
   });
   box.appendChild(b); box.appendChild(note);

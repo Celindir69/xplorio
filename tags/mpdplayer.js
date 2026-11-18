@@ -15,6 +15,8 @@ function quote(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, 
 /* commands (several: command list with list_OK) -> cb(err, [lines per command], binary).
    binary: the bytes of a "binary: n" answer (albumart, readpicture), else null. opts: host, port, timeout */
 function request(opts, cmds, cb) {
+  /* one command per line: a line break in an argument (a name from a request) would smuggle in a second command */
+  if (!cmds.length || cmds.some(function(c){ return /[\r\n]/.test(String(c)); })) return setImmediate(function(){ cb(new Error('invalid command'), [[]], null); });
   var sock = net.createConnection({host: opts.host || 'localhost', port: opts.port || 6600});
   var buf = Buffer.alloc(0), greeted = false, lists = [[]], bin = null, need = 0, done = false;
   function finish(err) {

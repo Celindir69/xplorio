@@ -16,7 +16,8 @@ var msBak = null, msBakMsg = '', msBakBad = false, msBakTimer = null, msBakEdit 
 var msUpd = null, msUpdMsg = '', msUpdBad = false;
 var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
-var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'value', 'fs', 'short', 'locked'];
+var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
+function msErrKey(e) { return 'mac.err.' + (e === 'auth' || e === 'pwneeded' ? e : 'fs'); }
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
@@ -77,7 +78,7 @@ function msAudioSend(body, okText) {
     msAudioBusy = false;
     msAudioBad = !(r && r.ok);
     if (r && r.ok) { msAudio = r; msAudioMsg = okText ? T(okText, {n: r.devices || 0}) : ''; }
-    else if (r && r.error === 'auth') { msAuthLost(); msAudioMsg = T('mac.err.auth'); }
+    else if (r && (r.error === 'auth' || r.error === 'pwneeded')) { if (r.error === 'auth') msAuthLost(); msAudioMsg = T(msErrKey(r.error)); }
     else msAudioMsg = T(MS_AUDIO_ERRORS.indexOf(r && r.error) >= 0 ? 'mac.err.' + r.error : 'mac.err.audio.mpd');
     msRender();
   }).catch(function(){ if (seq === msSeq) { msAudioBusy = false; msAudioBad = true; msAudioMsg = T('mac.err.audio.mpd'); msRender(); } });
@@ -580,7 +581,7 @@ function msAnaSend(body, okText) {
       msAnaMsg = r.startError ? T(MS_ANA_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
       if (r.running) msAnaTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msAnaSend({}); }, 5000);
     } else if (r && r.available === false) msAna = r;
-    else { msAnaBad = true; if (r && r.error === 'auth') msAuthLost(); msAnaMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msAnaBad = true; if (r && r.error === 'auth') msAuthLost(); msAnaMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msAnaBad = true; msAnaMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -640,7 +641,7 @@ function msRgSend(body, okText) {
       msRgMsg = r.startError ? T(MS_RG_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T('mac.rgDone') : msRgMsg;
       if (r.running) msRgTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msRgSend({}); }, 5000);
     } else if (r && r.available === false) msRg = r;
-    else { msRgBad = true; if (r && r.error === 'auth') msAuthLost(); msRgMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msRgBad = true; if (r && r.error === 'auth') msAuthLost(); msRgMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msRgBad = true; msRgMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -687,7 +688,7 @@ function msBakSend(body, okText) {
       msBakMsg = err ? T(MS_BAK_ERRORS[err] || 'mac.err.fs') : okText ? T(okText) : was && !r.running ? T(r.lastError ? 'mac.bakFailed' : 'mac.bakDone') : msBakMsg;
       if (r.running) msBakTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msBakSend({}); }, 3000);
     } else if (r && r.available === false) msBak = r;
-    else { msBakBad = true; if (r && r.error === 'auth') msAuthLost(); msBakMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msBakBad = true; if (r && r.error === 'auth') msAuthLost(); msBakMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msBakBad = true; msBakMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
@@ -740,7 +741,7 @@ function msUpdSend(body, okText) {
       msUpd = r; msUpdBad = !!r.startError;
       msUpdMsg = r.startError ? T(MS_UPD_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
     } else if (r && r.available === false) msUpd = r;
-    else { msUpdBad = true; if (r && r.error === 'auth') msAuthLost(); msUpdMsg = T(r && r.error === 'auth' ? 'mac.err.auth' : 'mac.err.fs'); }
+    else { msUpdBad = true; if (r && r.error === 'auth') msAuthLost(); msUpdMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msUpdBad = true; msUpdMsg = T('mac.err.fs'); if (msData) msRender(); } });
 }
