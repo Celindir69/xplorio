@@ -359,7 +359,12 @@ function tagAnalyseSection(good) {
     tagPost('/mac/analysis', {action: 'start', uris: good.map(function(f){ return f.uri; }), token: token}).then(function(r){
       if (r && r.startError) { btn.disabled = false; note.textContent = T('tag.ana.err.' + (['running', 'busy', 'python'].indexOf(r.startError) >= 0 ? r.startError : 'other')); return; }
       if (r && r.error === 'auth') { btn.disabled = false; note.textContent = T('mac.err.auth'); return; }
-      note.textContent = T('tag.ana.started');
+      note.textContent = T('tag.ana.started') + ' ';
+      if (typeof openMacSettings === 'function') {
+        var a = histEl('a', 'tagRecLink', T('tag.ana.progress'));
+        a.href = '#'; a.addEventListener('click', function(e){ e.preventDefault(); openMacSettings(T('mac.essentia')); });
+        note.appendChild(a);
+      }
     }).catch(function(){ btn.disabled = false; note.textContent = T('tag.serviceDown'); });
   });
   return box;

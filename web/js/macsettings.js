@@ -22,7 +22,9 @@ var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood
 
 function msToken() { return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem !== 'undefined' && sysSvcMem) || ''; }
 
-function openMacSettings() {
+var msFocus = '';                                          /* card title to unfold and scroll to once (e.g. from the tag editor) */
+function openMacSettings(focus) {
+  msFocus = typeof focus === 'string' ? focus : '';
   closeAllOverlays();
   overlayMacSettings.classList.add('on');
   msSeq++; msMsg = ''; msData = null; msEdit = {};
@@ -294,6 +296,10 @@ function msFold(grid) {
     var key = t.textContent;
     if (always.indexOf(key) >= 0) return;
     var isOpen = !!open[key];                             /* all folded at first */
+    if (msFocus && key === msFocus) {
+      isOpen = true; msFocus = '';
+      setTimeout(function(){ card.scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
+    }
     card.classList.add('msFoldable');
     card.classList.toggle('msFolded', !isOpen);
     t.addEventListener('click', function(){
