@@ -17,7 +17,7 @@ function libPath() { return ['/opt/local/lib', '/usr/local/lib', '/opt/homebrew/
 
 /* Pythons on PATH, as full paths; not the one in /usr/bin (on a Mac without the developer tools it opens an
    "install the tools" dialog, and it never has Essentia) */
-var NAMES = ['python3.11', 'python3.12', 'python3.13', 'python3.14', 'python3.10', 'python3'];
+var NAMES = ['python3.11', 'python3.12', 'python3.13', 'python3.14', 'python3.15', 'python3.10', 'python3'];
 function findPythons(pathVar, exists) {
   var dirs = String(pathVar || '').split(':').filter(function(d){ return d && d !== '/usr/bin' && d !== '/bin'; }), out = [];
   NAMES.forEach(function(n){ dirs.forEach(function(d){ var f = d.replace(/\/$/, '') + '/' + n; if (out.indexOf(f) < 0 && exists(f)) out.push(f); }); });
