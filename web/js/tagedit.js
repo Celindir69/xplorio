@@ -436,7 +436,10 @@ function tagRecognizeSection(good) {
   function apply(c) {
     var by = {};
     c.items.forEach(function(it){ by[it.uri] = it.tags; });
-    var first = c.items[0] && c.items[0].tags || {}, va = first.compilation === '1';
+    var first = c.items[0] && c.items[0].tags || {};
+    /* compilation: marked as such, or the tracks have different artists (a DJ mix under the DJ's name); else the first
+       track's artist would go to all of them */
+    var va = first.compilation === '1' || c.items.some(function(it){ return it.tags.artist && it.tags.artist !== first.artist; });
     var discs = c.items.map(function(it){ return it.tags.disc || ''; }), oneDisc = discs.every(function(d){ return d === discs[0]; });
     ['album', 'albumartist', 'date'].concat(oneDisc ? ['disc'] : []).concat(va ? [] : ['artist']).forEach(function(k){
       var cf = tagCommon[k];
@@ -450,7 +453,7 @@ function tagRecognizeSection(good) {
       if (!t || !f.ok) return;
       if (f.trackIn) f.trackIn.value = t.track || '';
       if (f.titleIn) f.titleIn.value = t.title || '';
-      if (f.artistIn) f.artistIn.value = t.artist || '';
+      if (f.artistIn && t.artist) f.artistIn.value = t.artist;   /* none known: the file keeps its own */
     });
     tagStatus.textContent = T('tag.rec.filled');
   }
