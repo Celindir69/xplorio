@@ -230,6 +230,7 @@ langRegister('it', 'Italiano', {
   'remote.mode.remote': 'Riproduzione: solo questo dispositivo',
   'remote.none': 'Nessuna uscita stream configurata in MPD',
   'remote.tap': 'Riproduzione interrotta. Premi play per continuare.',
+  'remote.volume': 'Solo questo dispositivo: regola il volume con i tasti del dispositivo.',
   'scan.updating': 'Lettura della libreria in corso. Nel frattempo il lettore può rispondere più lentamente.',
   'scan.building': "Ricostruzione dell'elenco degli album in corso. Nel frattempo il lettore può rispondere più lentamente.",
   'check.runCovers': 'Controllo copertine incorporate… {done} di {total}',
