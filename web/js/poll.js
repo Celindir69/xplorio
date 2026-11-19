@@ -126,8 +126,26 @@ function radioLogoLearn(st) {
 
 /* web radio: cover for the current track from the tag service (iTunes/Deezer); the station logo until loaded and if not found */
 var radioCovers = {};            /* "artist|title" -> image address, false (no cover) or null (loading) */
+/* no logo in the state (MPD on the Mac knows none for plain stream addresses, nor after a restart of the tag service):
+   the logo the tag service keeps for the station's name */
+var radioLogoByName = {};        /* station name -> image address, false or null as above */
+function radioLogoFallback(st) {
+  var name = radioStationName(st), u;
+  if (!name) return '';
+  if (radioLogoByName[name]) return radioLogoByName[name];
+  if (radioLogoByName[name] === undefined) {
+    radioLogoByName[name] = null;
+    u = TAGS + '/stationlogo?name=' + encodeURIComponent(name);
+    var img = new Image();
+    img.onload = function(){ radioLogoByName[name] = u; poll(); };
+    img.onerror = function(){ radioLogoByName[name] = false; };
+    img.src = u;
+  }
+  return '';
+}
 function radioArt(st, stationArt) {
   if (st.trackType !== 'webradio' || typeof TAGS === 'undefined') return stationArt;
+  if (!stationArt) stationArt = radioLogoFallback(st);
   var t = st.title || '', p = t.indexOf(' - ');
   if (p <= 0) return stationArt;
   var artist = t.slice(0, p).trim(), title = t.slice(p + 3).trim(), k = artist + '|' + title;

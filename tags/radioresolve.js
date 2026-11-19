@@ -58,7 +58,28 @@ function Resolver(opts) {
   this.log = opts.log || function(){};
   this.known = {};                                       /* stream address -> {uri, title, albumart} */
   this.order = [];
+  this.file = opts.file || '';                           /* kept across restarts: MPD plays on, the station stays known */
+  if (this.file) {
+    try {
+      var d = JSON.parse(require('fs').readFileSync(this.file, 'utf8'));
+      if (d && Array.isArray(d.order) && d.known && typeof d.known === 'object') {
+        this.order = d.order.filter(function(k){ return typeof k === 'string' && d.known[k]; }).slice(-MAX_KNOWN);
+        this.order.forEach(function(k){ this.known[k] = d.known[k]; }, this);
+      }
+    } catch (e) { /* none yet or unreadable: start empty */ }
+  }
 }
+/* the station behind an address MPD plays: name and logo for state and queue */
+Resolver.prototype.remember = function(stream, item) {
+  var e = {uri: String(item.uri), title: String(item.title || item.name || ''), albumart: String(item.albumart || '')}, k = this.known[stream];
+  if (k && k.uri === e.uri && k.title === e.title && k.albumart === e.albumart) return;
+  if (!k) { this.order.push(stream); if (this.order.length > MAX_KNOWN) delete this.known[this.order.shift()]; }
+  this.known[stream] = e;
+  if (!this.file) return;
+  var self = this, fs = require('fs');
+  try { fs.writeFileSync(this.file + '.neu', JSON.stringify({order: this.order, known: this.known})); fs.renameSync(this.file + '.neu', this.file); }
+  catch (err) { self.log('radio: stations not saved: ' + err.message); }
+};
 Resolver.prototype.handles = function(item) {
   return !!item && (item.service === 'webradio' || item.type === 'webradio' || !item.service) && isPlaylist(item.uri);
 };
@@ -80,8 +101,7 @@ Resolver.prototype.expand = function(item, cb) {
   var self = this, uri = String(item.uri);
   this.resolve(uri, function(e, stream){
     if (e) { self.log('radio: ' + uri + ': ' + e.message); return cb(null, [uri]); }
-    if (!self.known[stream]) { self.order.push(stream); if (self.order.length > MAX_KNOWN) delete self.known[self.order.shift()]; }
-    self.known[stream] = {uri: uri, title: String(item.title || item.name || ''), albumart: String(item.albumart || '')};
+    self.remember(stream, item);
     cb(null, [stream]);
   });
 };
