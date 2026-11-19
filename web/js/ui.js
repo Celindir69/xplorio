@@ -132,7 +132,25 @@ document.addEventListener('touchend', function(e){
 }, {passive:true});
 
 /* ---------- Playback ---------- */
-function cmd(c) { player.cmd(c); }
+function cmd(c) {
+  if ((c === 'next' || c === 'prev') && curRadio && radioStep(c === 'next' ? 1 : -1)) return;
+  player.cmd(c);
+}
+/* radio: back and forward go through the own station list (the queue holds just the one station) */
+function radioStep(dir) {
+  if (typeof radioPlay !== 'function') return false;
+  var now = curUri, name = typeof radioStationName === 'function' ? radioStationName({uri: curUri, artist: mArtist.textContent, title: ''}) : '';
+  player.browse('radio/favourites').then(function(j){
+    var items = browseItems(j), n = items.length, i = -1, k;
+    if (!n) return player.cmd(dir > 0 ? 'next' : 'prev');
+    items.some(function(it, x){ if (radioUriKey(it.uri) === radioUriKey(now)) { i = x; return true; } return false; });
+    if (i < 0 && name) items.some(function(it, x){ if ((it.title || it.name) === name) { i = x; return true; } return false; });
+    k = i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n;
+    radioPlay(items[k]);
+    showToast(items[k].title || items[k].name || '');
+  }).catch(function(){ player.cmd(dir > 0 ? 'next' : 'prev'); });
+  return true;
+}
 document.getElementById('cPrev').addEventListener('click', function(){ cmd('prev'); });
 document.getElementById('cPlay').addEventListener('click', function(){
   if (queuedForInput) { queuedForInput = false; player.playAt(0); return; }   /* chosen while on another input (core.js) */

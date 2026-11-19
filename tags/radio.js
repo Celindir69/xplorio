@@ -76,17 +76,29 @@ function logoLookup(name, cb, extra) {
     return loadImage(extra, LOGO_MAX, function(img){ if (img) cb(img); else search(); });
   }
   search();
+  /* 1. the name as it is; 2. without spaces ("HR 3" is "hr3" there); 3. the brand of a channel ("80s80s Synthiepop":
+     the logo of 80s80s), better than no logo at all */
   function search() {
-    json(RADIOB + '/json/stations/byname/' + encodeURIComponent(name) + '?limit=20&hidebroken=true&order=votes&reverse=true', function(e, list){
-      if (e || !Array.isArray(list)) return cb(null, true);
-      var want = key(name);
-      var withIcon = list.filter(function(s){ return s && s.favicon && /^https?:\/\//.test(s.favicon); });
-      var hit = withIcon.filter(function(s){ return key(s.name) === want; })[0] || withIcon.filter(function(s){ return similar(s.name, name); })[0];
-      if (!hit) return cb(null);
-      loadImage(hit.favicon, LOGO_MAX, function(img, tmp){ cb(img, tmp); });
-    });
+    var tries = [{q: name}], compact = name.replace(/\s+/g, ''), words = name.trim().split(/\s+/), brand = words[0] || '';
+    if (compact !== name) tries.push({q: compact});
+    if (words.length > 1 && key(brand).length >= 4 && GENERIC.indexOf(key(brand)) < 0) tries.push({q: brand, brand: true});
+    (function next(i, failed) {
+      if (i >= tries.length) return cb(null, failed);
+      var tr = tries[i];
+      json(RADIOB + '/json/stations/byname/' + encodeURIComponent(tr.q) + '?limit=20&hidebroken=true&order=votes&reverse=true', function(e, list){
+        if (e || !Array.isArray(list)) return next(i + 1, true);          /* not reachable: try again another time */
+        var want = key(tr.q);
+        var withIcon = list.filter(function(s){ return s && s.favicon && /^https?:\/\//.test(s.favicon); });
+        var hit = withIcon.filter(function(s){ return key(s.name) === want; })[0] ||
+                  (tr.brand ? withIcon.filter(function(s){ return key(s.name).indexOf(want) === 0; })[0]
+                            : withIcon.filter(function(s){ return similar(s.name, tr.q); })[0]);
+        if (!hit) return next(i + 1, failed);
+        loadImage(hit.favicon, LOGO_MAX, function(img, tmp){ if (img) cb(img, tmp); else next(i + 1, failed); });
+      });
+    })(0, false);
   }
 }
+var GENERIC = ['radio', 'webradio', 'sender', 'stream', 'music', 'musik', 'the', 'das', 'die', 'der', 'best', 'klassik', 'antenne'];
 
 /* station search (radio-browser.info), for the radio tab without Volumio -> cb(err, [{title, uri, albumart, info}]) */
 function search(q, cb) {
@@ -109,4 +121,6 @@ function search(q, cb) {
   });
 }
 
-module.exports = {songLookup: songLookup, logoLookup: logoLookup, mime: mime, search: search};
+/* logo search got better (without spaces, brand): "nothing found" from before is asked again */
+var LOGO_SEARCH_SINCE = Date.UTC(2026, 10, 19);
+module.exports = {songLookup: songLookup, logoLookup: logoLookup, LOGO_SEARCH_SINCE: LOGO_SEARCH_SINCE, mime: mime, search: search};
