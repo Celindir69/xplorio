@@ -136,4 +136,13 @@ t('year range: album year, tracks without year are then dropped, never relaxed',
   assert.ok(m.tracks.length === 6 && m.tracks.every(function(x){ return x.ar === 'D'; }));        /* too few, but not relaxed */
 });
 
+t('main mood first: "dreamy" brings tracks that are mainly dreamy, not mainly relaxed', function(){
+  var m = mm.build(coll, {}, mm.parse({moods: 'dreamy', n: 6}), rnd);
+  assert.strictEqual(m.tracks.length, 6);
+  assert.ok(m.tracks.every(function(x){ return x.ar === 'C'; }));            /* B is relaxed first, dreamy second */
+  var all = mm.build(coll, {}, mm.parse({moods: 'dreamy', n: 12}), rnd);   /* not enough main hits: B fills up */
+  assert.strictEqual(all.tracks.length, 12);
+  assert.ok(all.tracks.some(function(x){ return x.ar === 'B'; }));
+});
+
 console.log(n + ' checks passed');
