@@ -141,7 +141,7 @@ function radioStep(dir) {
   if (typeof radioPlay !== 'function') return false;
   var now = curUri, name = typeof radioStationName === 'function' ? radioStationName({uri: curUri, artist: mArtist.textContent, title: ''}) : '';
   player.browse('radio/favourites').then(function(j){
-    var items = browseItems(j), n = items.length, i = -1, k;
+    var items = typeof radioSort === 'function' ? radioSort(browseItems(j)) : browseItems(j), n = items.length, i = -1, k;
     if (!n) return player.cmd(dir > 0 ? 'next' : 'prev');
     items.some(function(it, x){ if (radioUriKey(it.uri) === radioUriKey(now)) { i = x; return true; } return false; });
     if (i < 0 && name) items.some(function(it, x){ if ((it.title || it.name) === name) { i = x; return true; } return false; });

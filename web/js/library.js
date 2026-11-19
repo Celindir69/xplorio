@@ -165,6 +165,12 @@ function radioLogos(items, container) {
   });
 }
 
+/* own stations alphabetically (Volumio and MPD give them in the order they were added); back/forward follow it too */
+function radioSort(items) {
+  return items.slice().sort(function(a, b){
+    return String(a.title || a.name || '').localeCompare(String(b.title || b.name || ''), undefined, {sensitivity: 'base', numeric: true});
+  });
+}
 /* playing a station (own list or search hit) */
 function radioPlay(it) {
   if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
@@ -194,7 +200,7 @@ function loadMyRadioMpd() {
   var own = {};
   function showMine() {
     player.browse('radio/favourites').then(function(j){
-      var items = browseItems(j);
+      var items = radioSort(browseItems(j));
       own = {}; items.forEach(function(it){ own[it.uri] = true; });
       renderPlList(items, mine, radioPlay, false, items.length ? '' : null, function(it){
         return radioSideBtn(RADIO_X, T('radio.remove'), function(){
@@ -256,6 +262,7 @@ function loadMyRadio() {
       var lists = (j && j.navigation && j.navigation.lists) || [];
       var items = [];
       lists.forEach(function(l){ items = items.concat(l.items || []); });
+      items = radioSort(items);
       renderPlList(items, radioPanel, function(it){
         if (queueForInput([{uri: it.uri, title: it.title || it.name || '', albumart: it.albumart || null, service: it.service || 'webradio', type: 'webradio'}])) return;
         player.replaceAndPlay({
