@@ -5,6 +5,7 @@
    already rated items. Each gem carries a reason (why). Node 8, ES5 only. */
 var plays  = require('./plays.js');
 var albums = require('./albums.js');
+var moodtags = require('./moodtags.js');
 
 var ROW = 12;                    /* tiles per shelf */
 var POOL = 48;                   /* drawn from this many best (dice) */
@@ -23,8 +24,13 @@ function trackVec(ge, r) {
   if (ge) v['g:' + String(ge).toLowerCase()] = 1;
   if (r) {
     var m = r.mood || [], s = r.style || [];
-    m.forEach(function(x){ v['m:' + x] = 1 / Math.sqrt(m.length); });
-    s.forEach(function(x){ v['s:' + x] = 0.8 / Math.sqrt(s.length); });
+    /* strongest first: the dominant mood/style weighs most (moodtags.rankWeight), scaled to length 1 per group */
+    function put(list, pre, f) {
+      var q = 0;
+      list.forEach(function(x, i){ q += Math.pow(moodtags.rankWeight(i), 2); });
+      list.forEach(function(x, i){ v[pre + x] = f * moodtags.rankWeight(i) / Math.sqrt(q); });
+    }
+    put(m, 'm:', 1); put(s, 's:', 0.8);
     if (typeof r.energy === 'number') v['e:' + r.energy] = 0.5;
   }
   return v;

@@ -145,4 +145,16 @@ t('main mood first: "dreamy" brings tracks that are mainly dreamy, not mainly re
   assert.ok(all.tracks.some(function(x){ return x.ar === 'B'; }));
 });
 
+t('main style first: a chosen style that is only second counts less and stays out while main hits suffice', function(){
+  var c = mm.parse({styles: 'synthpop'});
+  var main = mm.fit({mood: ['dark'], energy: 3, style: ['synthpop', 'ambient'], src: 'track'}, c, 0);
+  var second = mm.fit({mood: ['dark'], energy: 3, style: ['ambient', 'synthpop'], src: 'track'}, c, 0);
+  assert.ok(main > second, main + ' > ' + second);
+  assert.strictEqual(mm.fit({mood: ['dark'], energy: 3, style: ['ambient', 'synthpop'], src: 'track'}, c, 0, 'style'), 0);
+  assert.ok(mm.fit({mood: ['dark'], energy: 3, style: ['synthpop'], src: 'track'}, c, 0, 'style') > 0);
+  var both = mm.parse({moods: 'dark', styles: 'synthpop'});              /* true: main mood and main style */
+  assert.strictEqual(mm.fit({mood: ['dark'], energy: 3, style: ['ambient', 'synthpop'], src: 'track'}, both, 0, true), 0);
+  assert.strictEqual(mm.fit({mood: ['dark'], energy: 3, style: ['ambient', 'synthpop'], src: 'track'}, both, 0, 'mood') > 0, true);
+});
+
 console.log(n + ' checks passed');

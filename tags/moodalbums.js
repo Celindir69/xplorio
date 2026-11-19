@@ -1,7 +1,7 @@
 /* Albums by mood, energy and style (Search & Discover): the classified tracks summarized per album.
-   An album belongs to a mood or style if at least half of its classified tracks carry it
-   (for several styles on one button: one of them); its energy is the rounded mean. Node 8, ES5 only. */
-var albums = require('./albums.js');
+   An album belongs to a mood or style if it dominates in at least half of its classified tracks (weighted by
+   position: as the strongest one it counts fully, further back clearly less; several on one button: the best placed); its energy is the rounded mean. Node 8, ES5 only. */
+var albums = require('./albums.js'), moodtags = require('./moodtags.js');
 
 var SHARE = 0.5;                 /* "mostly" */
 var MIN_TRACKS = 2;              /* an album needs at least this many classified tracks */
@@ -22,21 +22,26 @@ function summarize(idx) {
   return by;
 }
 
-/* share of tracks with at least one of the moods or styles */
+/* weighted share of tracks with one of the moods or styles (main mood or style 1, second 0.4, third 0.2 …) */
 function share(perTrack, keys, n) {
   var hit = 0;
-  perTrack.forEach(function(list){ if (list.some(function(k){ return keys.indexOf(k) >= 0; })) hit++; });
+  perTrack.forEach(function(list){ hit += moodtags.rankOf(list, keys); });
   return hit / n;
 }
 
-/* tracks that themselves match q ({moods, styles, emin, emax} as in fit), as {file: true} (dice on the mood/style pages) */
-function tracksMatching(idx, q) {
+/* tracks that themselves match q ({moods, styles, emin, emax} as in fit), as {file: true} (dice on the mood/style pages).
+   main: the chosen mood or style must be the track's strongest one; otherwise anywhere in its list */
+function tracksMatching(idx, q, main) {
   var out = {};
+  function ok(list, keys) {
+    if (!keys || !keys.length) return true;
+    list = list || [];
+    return main ? keys.indexOf(list[0]) >= 0 : list.some(function(k){ return keys.indexOf(k) >= 0; });
+  }
   idx.forEach(function(x){
     if (!x.it.f || !x.r) return;
     var r = x.r, e = r.energy;
-    if (q.moods && q.moods.length && !(r.mood || []).some(function(k){ return q.moods.indexOf(k) >= 0; })) return;
-    if (q.styles && q.styles.length && !(r.style || []).some(function(k){ return q.styles.indexOf(k) >= 0; })) return;
+    if (!ok(r.mood, q.moods) || !ok(r.style, q.styles)) return;
     if ((q.emin || q.emax) && (typeof e !== 'number' || e < (q.emin || 1) || e > (q.emax || 5))) return;
     out[rel(x.it.f)] = true;
   });
@@ -74,8 +79,8 @@ function artistProfile(idx, albumList, key, norm) {
   idx.forEach(function(x){
     if (norm(x.it.ar) !== key) return;
     n++;
-    (x.r.mood || []).forEach(function(m){ moods[m] = (moods[m] || 0) + 1; });
-    (x.r.style || []).forEach(function(s){ styles[s] = (styles[s] || 0) + 1; });
+    (x.r.mood || []).forEach(function(m, i){ moods[m] = (moods[m] || 0) + moodtags.rankWeight(i); });
+    (x.r.style || []).forEach(function(s, i){ styles[s] = (styles[s] || 0) + moodtags.rankWeight(i); });
     if (typeof x.r.energy === 'number') { eSum += x.r.energy; eN++; }
   });
   (albumList || []).forEach(function(a){ if (a.y && norm(a.ar) === key) dec[Math.floor(a.y / 10) * 10] = true; });
@@ -108,8 +113,8 @@ function decadeProfile(idx, albumList, d, albumDir) {
   idx.forEach(function(x){
     if (!inDec[albumDir(String(x.it.f || '').replace(/^mnt\//, ''))]) return;
     n++;
-    (x.r.mood || []).forEach(function(m){ moods[m] = (moods[m] || 0) + 1; });
-    (x.r.style || []).forEach(function(s){ styles[s] = (styles[s] || 0) + 1; });
+    (x.r.mood || []).forEach(function(m, i){ moods[m] = (moods[m] || 0) + moodtags.rankWeight(i); });
+    (x.r.style || []).forEach(function(s, i){ styles[s] = (styles[s] || 0) + moodtags.rankWeight(i); });
   });
   function top(o, k, share) {
     return Object.keys(o).filter(function(x){ return o[x] >= Math.max(1, n * share); })
@@ -131,8 +136,8 @@ function bareTitle(s) { return String(s || '').toLowerCase().replace(/\s*[\(\[][
 function vectorOf(tracks) {
   var n = tracks.length, moods = {}, styles = {}, eSum = 0, eN = 0;
   tracks.forEach(function(r){
-    (r.mood || []).forEach(function(m){ moods[m] = (moods[m] || 0) + 1 / n; });
-    (r.style || []).forEach(function(x){ styles[x] = (styles[x] || 0) + 1 / n; });
+    (r.mood || []).forEach(function(m, i){ moods[m] = (moods[m] || 0) + moodtags.rankWeight(i) / n; });
+    (r.style || []).forEach(function(x, i){ styles[x] = (styles[x] || 0) + moodtags.rankWeight(i) / n; });
     if (typeof r.energy === 'number') { eSum += r.energy; eN++; }
   });
   return {n: n, moods: moods, styles: styles, energy: eN ? eSum / eN : 0};
