@@ -45,7 +45,8 @@ function pbSet(body) {
     if (seq !== pbSeq) return;
     pbPreampBusy = false;
     if (r && r.ok) pbData = r;
-    else pbMsg = r && (r.error === 'auth' || r.error === 'pwneeded') && typeof msErrKey === 'function' ? T(msErrKey(r.error)) : T('pb.error');
+    else if (r && (r.error === 'auth' || r.error === 'pwneeded') && typeof msErrKey === 'function') pbMsg = T(msErrKey(r.error));
+    else pbMsg = T(r && r.error === 'restart' ? 'pb.rgMissingFail' : 'pb.error');
     if (body.replaygain !== undefined && typeof rgRefresh === 'function') rgRefresh();
     pbRender();
   }).catch(function(){ if (seq === pbSeq) { pbPreampBusy = false; pbMsg = T('pb.error'); pbRender(); } });
