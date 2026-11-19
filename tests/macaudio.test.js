@@ -72,18 +72,34 @@ t('buffer: audio_buffer_size written once, replaced, removed for the default; on
   a.setBuffer(1234, function(e){ assert.strictEqual(e && e.message, 'value'); });
 });
 
-t('ReplayGain for radio/streaming: replay_gain_missing_preamp written once, replaced, removed at 0; only offered values', function(){
+t('ReplayGain for radio/streaming: replaygain_missing_preamp written once, replaced, removed at 0; only offered values', function(){
   var t1 = ma.writeMissingPreamp(CONF, -6);
   assert.strictEqual(ma.missingPreamp(t1), -6);
-  assert.ok(/^replay_gain_missing_preamp "-6"$/m.test(t1));
+  assert.ok(/^replaygain_missing_preamp "-6"$/m.test(t1));                 /* MPD's name (replay_gain_… stops MPD from starting) */
+  var wrong = CONF + 'replay_gain_missing_preamp "-6"\n';
+  assert.strictEqual(ma.writeMissingPreamp(wrong, 0).indexOf('missing_preamp'), -1);              /* the wrong name of an earlier version goes */
+  assert.strictEqual((ma.writeMissingPreamp(wrong, -3).match(/missing_preamp/g) || []).length, 1);
   var t2 = ma.writeMissingPreamp(t1, -9);
   assert.strictEqual(ma.missingPreamp(t2), -9);
-  assert.strictEqual((t2.match(/replay_gain_missing_preamp/g) || []).length, 1);
-  assert.strictEqual(ma.writeMissingPreamp(t2, 0).indexOf('replay_gain_missing_preamp'), -1);
+  assert.strictEqual((t2.match(/replaygain_missing_preamp/g) || []).length, 1);
+  assert.strictEqual(ma.writeMissingPreamp(t2, 0).indexOf('replaygain_missing_preamp'), -1);
   assert.strictEqual(ma.missingPreamp(CONF), 0);
   assert.strictEqual(ma.blocks(t2).length, ma.blocks(CONF).length);
   var a = new ma.MacAudio({confFile: '/gibt/es/nicht'});
   a.setMissingPreamp(-5, function(e){ assert.strictEqual(e && e.message, 'value'); });
+});
+
+t('mpd.conf change: MPD does not come back -> the old mpd.conf is written again and MPD restarted with it', function(){
+  var f = require('path').join(require('os').tmpdir(), 'xplorio-macaudio-' + process.pid + '.conf');
+  require('fs').writeFileSync(f, CONF);
+  var starts = 0, got = null;
+  var a = new ma.MacAudio({confFile: f, restart: function(cb){ starts++; cb(starts === 1 ? new Error('mpd') : null); }});
+  a.setMissingPreamp(-6, function(e){ got = e; });
+  assert.strictEqual(got && got.message, 'mpd');
+  assert.strictEqual(starts, 2);
+  assert.strictEqual(require('fs').readFileSync(f, 'utf8'), CONF);
+  assert.strictEqual(a.busy, false);
+  require('fs').unlinkSync(f);
 });
 
 t('volume on the amplifier (mixer none) and DSD as DoP (USB DACs only); the system output keeps its volume', function(){
