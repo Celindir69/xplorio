@@ -574,6 +574,14 @@ function checkSimpleRow(cat, it, kept) {
   }
   if (CHECK_KEEPABLE[cat]) checkGenreButtons(row, cat, key, it, it.files, kept);
   if (cat === 'coverQuality' && it.why === 'small' && !kept) checkCoverBest(row, it, key);   /* "Apply" goes in front of "Keep" */
+  else if (cat === 'coverQuality' && typeof TAGS !== 'undefined') {   /* too big (or kept): the cover itself, tap for large */
+    var cb = document.createElement('div'); cb.className = 'ckCb';
+    var im = document.createElement('img'); im.className = 'ckCbImg'; im.alt = ''; im.loading = 'lazy'; im.style.cursor = 'zoom-in';
+    im.src = TAGS + '/coverbestimage?which=cur&dir=' + encodeURIComponent(it.dir);
+    im.onerror = function(){ cb.style.display = 'none'; };
+    im.addEventListener('click', function(ev){ ev.stopPropagation(); if (typeof imgZoom === 'function') imgZoom(im.src, it.image || ''); });
+    cb.appendChild(im); row.querySelector('.sMeta').appendChild(cb);
+  }
   var bx = row.querySelector('.ckGenreBtns');
   if (fm && bx) bx.insertBefore(fm, bx.firstChild);       /* file manager with the other buttons */
   return row;
@@ -596,6 +604,10 @@ function checkCoverBest(row, it, key) {
   var arrow = document.createElement('span'); arrow.className = 'ckCbArrow'; arrow.textContent = '→';
   var neu = document.createElement('img'); neu.className = 'ckCbImg'; neu.alt = '';
   var txt = document.createElement('span'); txt.className = 'ckCbText'; txt.textContent = T('check.coverq.searching');
+  [cur, neu].forEach(function(im){                       /* tap: large, as in the file manager */
+    im.style.cursor = 'zoom-in';
+    im.addEventListener('click', function(ev){ ev.stopPropagation(); if (typeof imgZoom === 'function') imgZoom(im.src, im === cur ? it.image || '' : ''); });
+  });
   box.appendChild(cur); box.appendChild(arrow); box.appendChild(neu); box.appendChild(txt);
   arrow.style.display = neu.style.display = 'none';
   row.querySelector('.sMeta').appendChild(box);

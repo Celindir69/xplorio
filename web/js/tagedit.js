@@ -860,6 +860,14 @@ function tagCoverSection(good) {
   var thumbs = document.createElement('div');
   thumbs.className = 'tagThumbs';
   var emb = tagThumb(T('tag.cover.embedded')), fol = tagThumb('folder.jpg');
+  [emb, fol].forEach(function(b){                        /* tap: large, as in the file manager */
+    var img = b.querySelector('img');
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', function(ev){
+      if (b.classList.contains('empty') || !img.src || typeof imgZoom !== 'function') return;
+      ev.stopPropagation(); imgZoom(img.src, b.querySelector('.tagThumbCap').textContent);
+    });
+  });
   thumbs.appendChild(emb); thumbs.appendChild(fol);
   wrap.appendChild(thumbs);
 

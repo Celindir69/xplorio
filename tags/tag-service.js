@@ -1349,9 +1349,9 @@ var coverbest = require('./coverbest.js');
 var coverBest = new coverbest.Best({file: path.join(DATA_DIR, 'cover-best.json'),
   search: function(q, cb){ coversearch.search({artist: q.artist, album: q.album, lastfmKey: keys.lastfm().key}, cb); },
   load: coversearch.image, dims: filecheck.imageDims});
-function coverSmall(dir) {
+function coverSmall(dir, any) {                             /* any: also a cover that is too big (only its current image) */
   var last = readCheck();
-  return ((last && last.coverQuality) || []).filter(function(it){ return it.dir === dir && it.why === 'small'; })[0] || null;
+  return ((last && last.coverQuality) || []).filter(function(it){ return it.dir === dir && (any || it.why === 'small'); })[0] || null;
 }
 function doCoverBest(body, cb) {
   if (!Array.isArray(body.dirs) || body.dirs.length > 200) return cb(400, {ok: false, error: 'dirs missing or too many'});
@@ -1367,7 +1367,7 @@ function doCoverBest(body, cb) {
   cb(200, {ok: true, covers: items});
 }
 function doCoverBestImage(query, res) {
-  var d = String(query.dir || ''), it = coverSmall(d);
+  var d = String(query.dir || ''), it = coverSmall(d, query.which === 'cur');
   function none(code) { send(res, code || 404, {ok: false, error: 'unknown'}); }
   if (!it) return none();
   if (query.which === 'cur') {

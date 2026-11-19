@@ -537,6 +537,20 @@ function filesThumb(icon, it) {
   icon.addEventListener('click', function(ev){ ev.stopPropagation(); filesPreview(it); });
   if (filesImgSeen) filesImgSeen.observe(icon); else filesImgWant(icon);
 }
+/* any image large, as in the file manager: tap or Escape closes; caption with the real size in pixels */
+function imgZoom(src, name) {
+  var box = histEl('div', 'fmLightbox'), img = histEl('img', 'fmLightImg'), cap = histEl('div', 'fmLightCap', name || '');
+  img.alt = name || '';
+  function close() { document.removeEventListener('keydown', key); if (box.parentNode) box.parentNode.removeChild(box); }
+  function key(ev) { if (ev.key === 'Escape') close(); }
+  img.onload = function(){ cap.textContent = (name ? name + ' · ' : '') + img.naturalWidth + ' × ' + img.naturalHeight; };
+  img.onerror = close;
+  box.addEventListener('click', function(ev){ ev.stopPropagation(); close(); });
+  document.addEventListener('keydown', key);
+  img.src = src;
+  box.appendChild(img); box.appendChild(cap);
+  document.body.appendChild(box);
+}
 function filesPreview(it) {
   var box = histEl('div', 'fmLightbox');
   var img = histEl('img', 'fmLightImg'), cap = histEl('div', 'fmLightCap', it.name + ' · ' + trashSize(it.bytes));
