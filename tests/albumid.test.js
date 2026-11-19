@@ -165,3 +165,20 @@ ta('Apple Music and Deezer: track counts in the list; more tracks than files: on
     });
   });
 });
+
+ta('Discogs compilation: each track its own artist; a track without one keeps the file\'s, never "Various Artists"', function(done){
+  var r = new a.Recognizer({stepMs: 0, discogsToken: function(){ return 't'; }, getJson: function(u, cb){
+    cb(null, {id: 9, title: 'Hits', year: 1999, artists: [{name: 'Various'}], formats: [{name: 'CD', qty: '1'}], tracklist: [
+      {position: '1', title: 'Eins', duration: '1:40', artists: [{name: 'Nena'}]},
+      {position: '2', title: 'Zwei', duration: '3:20', artists: [{name: 'Falco (2)', join: '&'}, {name: 'Udo', join: ''}]},
+      {position: '3', title: 'Drei', duration: '5:00'},
+      {position: '4', title: 'Vier', duration: '6:40', artists: [{name: 'Alphaville'}]}]});
+  }});
+  var files = [1, 2, 3, 4].map(function(i){ return {uri: 'USB/h/0' + i + '.flac', rel: 'USB/h/0' + i + '.flac', length: 100 * i}; });
+  r.release({source: 'discogs', id: '9'}, files, function(e, c){
+    assert.ifError(e);
+    assert.deepStrictEqual(c.items.map(function(it){ return it.tags.artist; }), ['Nena', 'Falco & Udo', '', 'Alphaville']);
+    assert.deepStrictEqual([c.items[0].tags.albumartist, c.items[0].tags.compilation], ['Various Artists', '1']);
+    done();
+  });
+});

@@ -92,6 +92,8 @@ function suggestion(rel, medium, files, match, h) {
     if (l && files[i] && files[i].length) { diff += Math.abs(l - files[i].length); n++; }
   });
   var nameScore = h ? (h.album ? similar(h.album, rel.title) : 0.5) * 0.6 + (h.artist ? similar(h.artist, albumArtist) : 0.5) * 0.4 : 0;
+  /* a compilation without the track's own artist: none (the file keeps its own), never "Various Artists" */
+  function trackArtist(t) { return credit(t['artist-credit']) || (va ? '' : albumArtist); }
   var titleScore = 0;
   if (h) tracks.forEach(function(t, i){ titleScore += similar(h.titles[i], t.title) / tracks.length; });
   return {
@@ -99,10 +101,10 @@ function suggestion(rel, medium, files, match, h) {
     disc: medium.position || 1, discs: discs, format: medium.format || '', match: match,
     avgDiff: n ? Math.round(diff / n * 10) / 10 : null, nameScore: Math.round(nameScore * 100) / 100,
     titleScore: Math.round(titleScore * 100) / 100,
-    tracks: tracks.map(function(t){ return {n: t._n || t.position, title: t.title || '', artist: credit(t['artist-credit']) || albumArtist,
+    tracks: tracks.map(function(t){ return {n: t._n || t.position, title: t.title || '', artist: trackArtist(t),
                                             length: Math.round((t.length || (t.recording && t.recording.length) || 0) / 1000)}; }),
     items: files.map(function(f, i){
-      var t = tracks[i] || {}, tags = {title: t.title || '', artist: credit(t['artist-credit']) || albumArtist, album: rel.title || '',
+      var t = tracks[i] || {}, tags = {title: t.title || '', artist: trackArtist(t), album: rel.title || '',
                                        albumartist: va ? 'Various Artists' : albumArtist, date: date, track: String(t._n || t.position || i + 1)};
       if (discs > 1) tags.disc = String(t._disc || medium.position || 1);
       if (va) tags.compilation = '1';
