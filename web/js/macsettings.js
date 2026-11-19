@@ -18,7 +18,7 @@ var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer 
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
 function msErrKey(e) { return 'mac.err.' + (e === 'auth' || e === 'pwneeded' ? e : 'fs'); }
-var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd'];
+var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd', 'audio.restart'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
 function msToken() { return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem !== 'undefined' && sysSvcMem) || ''; }

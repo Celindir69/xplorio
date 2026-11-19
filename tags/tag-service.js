@@ -2270,15 +2270,16 @@ var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mp
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
+/* on the Mac: gain for radio, streaming and files without ReplayGain tags (mpd.conf, macaudio.js), in every answer */
+function withPreamp(r) {
+  if (r && r.ok && onMac() && MAC_MPD_CONF) { r.missingPreamp = macaudio.missingPreamp(macAudio.conf()); r.missingPreamps = macaudio.PREAMPS; }
+  return r;
+}
 function doPlaybackGet(query, cb) {
-  playCtl.read(function(r){
-    /* on the Mac: gain for radio, streaming and files without ReplayGain tags (mpd.conf, macaudio.js) */
-    if (r.ok && onMac() && MAC_MPD_CONF) { r.missingPreamp = macaudio.missingPreamp(macAudio.conf()); r.missingPreamps = macaudio.PREAMPS; }
-    cb(r.ok ? 200 : 503, r);
-  });
+  playCtl.read(function(r){ cb(r.ok ? 200 : 503, withPreamp(r)); });
 }
 function doPlaybackSet(body, cb) {
-  if (!body || body.missingPreamp === undefined) return playCtl.set(body, cb);
+  if (!body || body.missingPreamp === undefined) return playCtl.set(body, function(c, r){ cb(c, withPreamp(r)); });
   if (!onMac() || !MAC_MPD_CONF) return cb(400, {ok: false, error: 'conf'});
   var bad = authFail(body);
   if (bad) return cb(200, {ok: false, error: bad});
@@ -2286,7 +2287,7 @@ function doPlaybackSet(body, cb) {
   mpdOne('replay_gain_status', function(e, rg){
     var mode = !e && rg && rg.replay_gain_mode;
     macAudio.setMissingPreamp(parseInt(body.missingPreamp, 10) || 0, function(err){
-      if (err) return cb(200, {ok: false, error: err.message === 'value' ? 'value' : 'mpd'});
+      if (err) return cb(200, {ok: false, error: /^(value|restart|busy)$/.test(err.message) ? err.message : 'mpd'});
       if (!mode) return doPlaybackGet({}, cb);
       mpdOne('replay_gain_mode ' + mode, function(){ doPlaybackGet({}, cb); });
     });
@@ -3068,18 +3069,47 @@ var macAudio = new macaudio.MacAudio({
     if (process.env.XPLORIO_MPD_VERSION) return fs.readFile(process.env.XPLORIO_MPD_VERSION, 'utf8', cb);   /* tests */
     cp.execFile(process.env.MPD_BIN || 'mpd', ['--version'], {timeout: 10000, maxBuffer: 1024 * 1024}, function(e, out){ cb(e, out); });
   },
-  restart: function(cb){
-    var bin = process.env.MPD_BIN || 'mpd';
-    cp.execFile(bin, [MAC_MPD_CONF, '--kill'], {timeout: 15000}, function(){
-      setTimeout(function(){
-        try {                                            /* as xplorio-services.sh: in the foreground, detached (MPD's own fork dies on older macOS) */
-          cp.spawn(bin, [MAC_MPD_CONF, '--no-daemon'], {detached: true, stdio: 'ignore'}).on('error', function(e){ console.error('MPD restart failed: ' + e.message); }).unref();
-        } catch (e) { console.error('MPD restart failed: ' + e.message); }
-        mpdPing(40, cb);
-      }, 1000);
+  restart: function(cb){ mpdRestart(cb); }
+});
+/* restart MPD with a changed mpd.conf. "mpd <conf> --kill" needs pid_file in mpd.conf (older setups from ~/xplorio-mpd
+   have none): if MPD still answers after that, the PID from xplorio-services.sh (run/mpd.pid) is stopped. Only when the
+   old MPD is gone is the new one started (else it cannot get the port and the old one keeps playing unchanged) */
+function mpdDown(tries, cb) {
+  mpdPlayer.mpd(['ping'], function(e){ if (e) return cb(true); if (tries <= 0) return cb(false); setTimeout(function(){ mpdDown(tries - 1, cb); }, 250); });
+}
+function mpdRestart(cb) {
+  var bin = process.env.MPD_BIN || 'mpd', pidFile = process.env.XPLORIO_RUN ? path.join(process.env.XPLORIO_RUN, 'mpd.pid') : '';
+  function killByPid(done) {
+    var pid = 0;
+    try { pid = parseInt(fs.readFileSync(pidFile, 'utf8'), 10) || 0; } catch (e) { /* none */ }
+    if (!pid) return done();
+    cp.execFile('ps', ['-p', String(pid), '-o', 'comm='], {timeout: 5000}, function(e, out){
+      if (!e && /mpd\s*$/.test(String(out).trim())) { try { process.kill(pid, 'SIGTERM'); } catch (e2) { /* gone */ } }
+      done();
     });
   }
-});
+  function start() {
+    try {                                                /* as xplorio-services.sh: in the foreground, detached (MPD's own fork dies on older macOS) */
+      var ch = cp.spawn(bin, [MAC_MPD_CONF, '--no-daemon'], {detached: true, stdio: 'ignore'});
+      ch.on('error', function(e){ console.error('MPD restart failed: ' + e.message); });
+      ch.unref();
+      if (pidFile && ch.pid) { try { fs.writeFileSync(pidFile, String(ch.pid)); } catch (e) { /* stop then falls back to --kill */ } }
+    } catch (e) { console.error('MPD restart failed: ' + e.message); }
+    mpdPing(40, cb);
+  }
+  console.error('MPD: restarting for the changed mpd.conf');
+  cp.execFile(bin, [MAC_MPD_CONF, '--kill'], {timeout: 15000}, function(){
+    mpdDown(12, function(down){
+      if (down) return setTimeout(start, 500);
+      killByPid(function(){
+        mpdDown(32, function(down2){
+          if (!down2) { console.error('MPD restart failed: the running MPD did not stop'); return cb(new Error('restart')); }
+          setTimeout(start, 500);
+        });
+      });
+    });
+  });
+}
 /* USB DAC switched off and on again: MPD opens it again (macaudio.js watch) */
 setInterval(function(){
   if (!onMac() || !MAC_MPD_CONF) return;
@@ -3087,7 +3117,7 @@ setInterval(function(){
 }, 5000).unref();
 function doMacAudio(body, cb) {
   function answer(e, extra) {
-    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
+    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value|restart)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
     macAudio.status(function(e2, st){
       if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
       st.ok = true; st.done = body.action; st.canScan = !!MAC_MPD_CONF; if (extra) st.devices = extra.devices;
