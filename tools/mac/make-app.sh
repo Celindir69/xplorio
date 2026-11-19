@@ -100,6 +100,21 @@ if [ -f "$MC" ] && ! awk '{l=tolower($0)} l~/audio_output/{b=1;f=0;v=0} b&&l~/ty
   printf 'audio_output {\n  type       "fifo"\n  name       "VU"\n  path       "%s"\n  format     "44100:16:2"\n  enabled    "no"\n}\n' "$SUPPORT/mpd/vu.fifo" >>"$MC"
   CONF_CHANGED=1
 fi
+# Listening on the phone (headphones button): MPD's stream output, MP3 (plays everywhere, Safari too). Only if this MPD
+# has the httpd output and the lame encoder (else it would not start); off until someone listens; only for this Mac, the
+# tag service passes it on. Port: 8000, or the next free one in mpd.conf.
+if [ -f "$MC" ] && ! grep -qi '^[[:space:]]*type[[:space:]]*"httpd"' "$MC" && command -v mpd >/dev/null; then
+  V=$(mpd --version 2>/dev/null)
+  hasPlugin() { printf '%s\n' "$V" | tr '[]\t' '   ' | awk -v s="$1" -v p="$2" '$0 ~ "^"s" plugins:" {o=1;next} /^[A-Z][a-z]+ plugins:/{o=0} o { for (i = 1; i <= NF; i++) if ($i == p) f=1 } END{exit !f}'; }
+  if hasPlugin Output httpd && hasPlugin Encoder lame; then
+    SP=8000
+    while grep -q "^[[:space:]]*port[[:space:]]*\"$SP\"" "$MC"; do SP=$((SP + 1)); done
+    printf 'audio_output {\n  type            "httpd"\n  name            "Mobile"\n  encoder         "lame"\n  bitrate         "192"\n  format          "44100:16:2"\n  port            "%s"\n  bind_to_address "127.0.0.1"\n  always_on       "yes"\n  tags            "yes"\n  enabled         "no"\n}\n' "$SP" >>"$MC"
+    CONF_CHANGED=1
+  else
+    echo "Hinweis: Dieses MPD kann keinen MP3-Stream (httpd/lame), Mithören auf dem Handy bleibt aus."
+  fi
+fi
 # mpd.conf changed while MPD runs: stop it, Xplorio starts it again with the new settings
 [ -n "$CONF_CHANGED" ] && command -v mpd >/dev/null && mpd "$MC" --kill >/dev/null 2>&1 || true
 # own settings of the interface; MPD as the player

@@ -69,4 +69,19 @@ t('cushion: holds the first seconds from the first data, then passes everything 
   assert.deepStrictEqual(r.cushion(0).push('x', 1), ['x']);
 });
 
+t('Mac (osx outputs): "remote" switches off the one playing, "lokal" brings that one back (else the system output)', function(){
+  var conf = r.confOutputs('audio_output {\n  type "osx"\n  name "Systemausgabe"\n}\naudio_output {\n  type "osx"\n  name "DAC"\n  device "USB DAC"\n}\n' +
+                           'audio_output {\n  type "fifo"\n  name "VU"\n  path "/tmp/vu"\n}\naudio_output {\n  type "httpd"\n  name "Mobile"\n  port "8000"\n}\n');
+  function outs(sys, dac, mob) { return r.parseOutputs(['outputid: 0', 'outputname: Systemausgabe', 'outputenabled: ' + sys, 'outputid: 1', 'outputname: DAC', 'outputenabled: ' + dac,
+    'outputid: 2', 'outputname: VU', 'outputenabled: 0', 'outputid: 3', 'outputname: Mobile', 'outputenabled: ' + mob]); }
+  var f = r.find(outs(0, 1, 0), conf);
+  assert.strictEqual(r.modeOf(f), 'lokal');
+  assert.deepStrictEqual(r.commands(f, 'remote'), ['disableoutput 1', 'enableoutput 3']);      /* the system output stays off */
+  var g = r.find(outs(0, 0, 1), conf);
+  assert.strictEqual(r.modeOf(g), 'remote');
+  assert.deepStrictEqual(r.commands(g, 'lokal', ['DAC']), ['enableoutput 1', 'disableoutput 3']);
+  assert.deepStrictEqual(r.commands(g, 'lokal', []), ['enableoutput 0', 'disableoutput 3']);   /* nothing known: the system output */
+  assert.deepStrictEqual(r.commands(r.find(outs(0, 1, 1), conf), 'lokal', ['Systemausgabe']), ['disableoutput 3']);   /* one plays already */
+});
+
 console.log(n + ' checks passed');

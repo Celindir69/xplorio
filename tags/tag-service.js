@@ -2676,6 +2676,11 @@ var MPD_CONF = process.env.MPD_CONF || '/etc/mpd.conf';
 var REMOTE_IDLE_MS = 60000;
 var STREAM_CUSHION_MS = 6000;                          /* head start for the browser's buffer (remote.cushion) */
 var remoteListeners = 0, remoteLastListen = Date.now(), remoteChosen = '';   /* last mode set here (POST /remote) */
+var remoteMacOn = [];                                    /* Mac: names of the sound outputs playing before "remote" (back on for "lokal") */
+function remoteCommands(f, mode) {
+  if (mode === 'remote' && f.osx) { var on = f.osx.filter(function(x){ return x.enabled; }).map(function(x){ return x.name; }); if (on.length) remoteMacOn = on; }
+  return remote.commands(f, mode, remoteMacOn);
+}
 function remoteState(cb) {
   var conf = [];
   try { conf = remote.confOutputs(fs.readFileSync(MPD_CONF, 'utf8')); } catch (e) { /* not readable: plugin field only */ }
@@ -2697,7 +2702,7 @@ function doRemoteSet(body, cb) {
   remoteState(function(err, f){
     if (err) return cb(200, {ok: false, error: err.message});
     if (!f) return cb(200, {ok: false, available: false, error: 'no stream output in MPD'});
-    var cmds = remote.commands(f, mode);
+    var cmds = remoteCommands(f, mode);
     if (!cmds) return cb(200, {ok: false, available: true, error: 'no amplifier output'});
     remoteLastListen = Date.now();                       /* time to connect before the safety check counts */
     remote.mpd(MPD_HOST, MPD_PORT, cmds, function(e2){
@@ -2740,7 +2745,7 @@ setInterval(function(){                                  /* safety: nobody liste
     if (err || !f || !remote.idleReset(remote.modeOf(f), remoteChosen)) return;
     console.log('playback on device: nobody listening, back to the amplifier only (was ' + remote.modeOf(f) + ')');
     remoteChosen = 'lokal';
-    var cmds = remote.commands(f, 'lokal');
+    var cmds = remoteCommands(f, 'lokal');
     if (cmds) remote.mpd(MPD_HOST, MPD_PORT, cmds, function(){});
   });
 }, 15000).unref();

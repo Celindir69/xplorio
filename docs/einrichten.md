@@ -964,6 +964,10 @@ dann schaltet Xplorio den Stream nach einer Minute ohne Zuhörer wieder ab. Sola
 „Stream“ und das Format des Streams (z. B. MP3 · 192 kbps) statt der Werte der Datei. Steht der Rotel dabei auf einem
 anderen Eingang (jemand daheim hört etwa Phono), sind Lautstärke und Ein/Aus im Player gesperrt; ein Tipp sagt nur, warum.
 
+**Xplorio4Mac:** `make-app.sh` legt den Stream-Ausgang selbst an (MP3, nur für diesen Mac, aus, bis jemand mithört),
+wenn das installierte MPD den httpd-Ausgang und den Encoder lame kennt; sonst meldet es das beim Bauen. „Nur dieses
+Gerät“ schaltet die gerade gewählte Ausgabe des Macs aus, „Anlage“ schaltet genau diese wieder ein.
+
 **Einrichten unter Volumio 4:** das Plugin „MPD HTTP & Icecast output“ ([mpd-output](https://github.com/foonerd/mpd-output))
 aus dem Plugin-Store installieren und in seinen Einstellungen den HTTP-Stream einschalten, am besten mit Encoder MP3
 (spielt auf allen Geräten, auch in Safari). Xplorio findet den Stream in `/etc/mpd.conf` von selbst; den internen
