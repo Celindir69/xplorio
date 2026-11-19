@@ -10,6 +10,14 @@ const POLL_MS = 100;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// "drain" never comes once the listener has gone: wait for whichever happens first
+function waitDrain(res) {
+  return new Promise((resolve) => {
+    const done = () => { res.removeListener('drain', done); res.removeListener('close', done); res.removeListener('error', done); resolve(); };
+    res.once('drain', done); res.once('close', done); res.once('error', done);
+  });
+}
+
 class TrackProxy {
   constructor({ port = 7780, host = '127.0.0.1', cache, resolve, spawn = require('child_process').spawn, fsp = fs.promises, tmpDir = '/tmp/tidal', ffmpegPath = 'ffmpeg', pollMs = POLL_MS, logger = console }) {
     this.port = port;
@@ -186,7 +194,7 @@ class TrackProxy {
         if (bytesRead > 0) {
           position += bytesRead;
           if (!res.write(Buffer.from(buffer.subarray(0, bytesRead)))) {
-            await new Promise((resolve) => res.once('drain', resolve));
+            await waitDrain(res);   // also ends when MPD hangs up, or the file handle stays open forever
           }
           continue;
         }
