@@ -2345,7 +2345,7 @@ function doWarningsRead(body, cb) {
 
 /* GET /services: state of the player services; POST /service {unit, action}: restart */
 /* actions only with password (adminpass.js): POST /servicelogin {password} -> {token}, the device sends the token along */
-var services = require('./services.js'), svc = new services.Services();
+var servicesMod = require('./services.js'), svc = new servicesMod.Services();   /* not "services": that name is the function below */
 var SELF_UNIT = 'xplorio-tags';                                 /* the plugin's unit of this service */
 var adminpass = require('./adminpass.js'), adminAuth = new adminpass.Auth(DATA_DIR);
 /* on the Mac (Xplorio.app) the program's own services instead (macservices.js); password only if one is set */

@@ -200,6 +200,21 @@ t('web: TIDAL artist addresses of this plugin count as artists', function(){
   assert.ok(streaming.streamIsArtist({uri: 'tidal://artist/123', service: 'tidal', title: 'X'}));
 });
 
+t('proxy: a listener that hangs up while the buffer is full lets go of the file', function(){
+  var TrackProxy = require('../tags/tidal/proxy.js').TrackProxy, EE = require('events');
+  var dir = tmp(), file = path.join(dir, 'x.flac'); fs.writeFileSync(file, Buffer.alloc(300 * 1024));
+  var closedHandle = false, closed = false;
+  var p = new TrackProxy({cache: {partPath: function(){ return file; }, filePath: function(){ return file; }}, resolve: function(){}, logger: {warn: function(){}, info: function(){}, error: function(){}}});
+  var origOpen = p.fsp.open.bind(p.fsp);
+  p.fsp = Object.assign({}, p.fsp, {open: function(f, m){ return origOpen(f, m).then(function(h){ var c = h.close.bind(h); h.close = function(){ closedHandle = true; return c(); }; return h; }); }});
+  var res = new EE(); res.writableEnded = false; res.write = function(){ return false; }; res.end = function(){ res.writableEnded = true; };
+  setTimeout(function(){ closed = true; res.emit('close'); }, 50);           /* MPD skips while the pipe is full: no drain ever */
+  var hung = new Promise(function(_, no){ setTimeout(function(){ no(new Error('stream never ended, file stays open')); }, 2000).unref(); });
+  var keep = setTimeout(function(){}, 3000);
+  return Promise.race([p._streamGrowingFile('x', {done: true}, function(){ return closed; }, res), hung])
+    .then(function(){ clearTimeout(keep); assert.ok(closedHandle, 'file handle closed'); });
+});
+
 (function run(i){
   if (i >= queue.length) { console.log(n + ' tests passed'); return; }
   Promise.resolve().then(queue[i][1]).then(function(){ n++; console.log('ok   ' + queue[i][0]); run(i + 1); },
