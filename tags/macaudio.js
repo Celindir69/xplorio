@@ -132,15 +132,16 @@ function writeBuffer(text, kib) {
   return t.replace(/\n*$/, '\n') + 'audio_buffer_size "' + kib + '"\n';
 }
 
-/* replay_gain_missing_preamp (dB) of mpd.conf: gain for everything without ReplayGain tags (radio, streaming, untagged
+/* replaygain_missing_preamp (dB) of mpd.conf: gain for everything without ReplayGain tags (radio, streaming, untagged
    files) while ReplayGain is on. Tagged files are levelled to about -18 LUFS, streams are usually much louder.
-   0 = MPD's default (unchanged) */
+   0 = MPD's default (unchanged). The wrongly named "replay_gain_missing_preamp" of an earlier version, which MPD
+   refuses to start with, is removed */
 var PREAMPS = [0, -3, -6, -9, -12];
-function missingPreamp(text) { var m = /^[ \t]*replay_gain_missing_preamp[ \t]+"?(-?\d+(?:\.\d+)?)/m.exec(text); return m ? +m[1] : 0; }
+function missingPreamp(text) { var m = /^[ \t]*replaygain_missing_preamp[ \t]+"?(-?\d+(?:\.\d+)?)/m.exec(text); return m ? +m[1] : 0; }
 function writeMissingPreamp(text, db) {
-  var t = text.replace(/^[ \t]*replay_gain_missing_preamp[ \t]+[^\n]*\n?/gm, '');
+  var t = text.replace(/^[ \t]*replay_?gain_missing_preamp[ \t]+[^\n]*\n?/gm, '');
   if (!db) return t;
-  return t.replace(/\n*$/, '\n') + 'replay_gain_missing_preamp "' + db + '"\n';
+  return t.replace(/\n*$/, '\n') + 'replaygain_missing_preamp "' + db + '"\n';
 }
 
 /* mpd --version lists a decoder plugin [ffmpeg] that knows dsf */
@@ -224,7 +225,13 @@ MacAudio.prototype.change = function(fn, cb) {
   try { fs.writeFileSync(this.o.confFile + '.neu', neu); fs.renameSync(this.o.confFile + '.neu', this.o.confFile); }
   catch (e) { return cb(e); }
   this.busy = true;
-  this.o.restart(function(e){ self.busy = false; cb(e); });
+  this.o.restart(function(e){
+    if (!e) { self.busy = false; return cb(null); }
+    /* MPD did not come back (e.g. it refuses the new mpd.conf): the old one back and MPD started with it */
+    try { fs.writeFileSync(self.o.confFile + '.neu', text); fs.renameSync(self.o.confFile + '.neu', self.o.confFile); }
+    catch (e2) { self.busy = false; return cb(e); }
+    self.o.restart(function(){ self.busy = false; cb(e); });
+  });
 };
 
 /* a device that was gone (USB DAC switched off) is back: MPD would go on "playing" into nothing. MPD looks the device up
