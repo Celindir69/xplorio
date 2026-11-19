@@ -547,8 +547,9 @@ function tagRecognizeSection(good) {
 /* "2025 · DE · 2×CD · 16 Titel (passt) · Label · Deluxe" */
 function tagRecSub(c) {
   var fmt = String(c.format || '').replace(/\b(File|Vinyl|Cassette)\b/g, function(k){ return T('tag.rec.fmt.' + k); });
-  var n = c.tracks === null || c.tracks === undefined ? '' :
-          T('tag.rec.nTracks', {n: c.tracks}) + (c.fits ? ' ✓' : '');
+  var cnt = Array.isArray(c.tracks) ? c.tracks.length : c.tracks;   /* recognition: the track list itself; search: a number */
+  var n = cnt === null || cnt === undefined ? '' :
+          T('tag.rec.nTracks', {n: cnt}) + (c.fits ? ' ✓' : '');
   var bits = [c.date ? String(c.date).slice(0, 4) : '', c.country, fmt, n, c.label, c.note];
   if (c.match && c.match !== 'manual' && c.chance !== undefined) bits.unshift(tagAlbumIdWhy(c));
   else if (c.source) bits.unshift(T('tag.rec.src.' + c.source));
