@@ -1,5 +1,5 @@
 /* radioresolve.js: TuneIn Tune.ashx, .pls and .m3u resolved to a stream address for MPD; the station's own address back on the state */
-var assert = require('assert'), http = require('http');
+var assert = require('assert'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 var rr = require('../tags/radioresolve.js');
 var n = 0;
 function t(name, fn) { fn(); n++; console.log('ok   ' + name); }
@@ -51,6 +51,17 @@ srv.listen(0, '127.0.0.1', function(){
         t('an address that answers with audio is played as it is', function(){ assert.deepStrictEqual(f3, [base + '/audio.m3u']); });
         r.expand({uri: base + '/gone.pls'}, function(e4, f4){
           t('not reachable: the address as it is (MPD may still manage)', function(){ assert.deepStrictEqual(f4, [base + '/gone.pls']); });
+          t('plain stream: name and logo kept across a restart of the tag service', function(){
+            var f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rr-')), 'radiostations.json');
+            var a = new rr.Resolver({file: f});
+            a.remember('http://radio.example/live.mp3', {uri: 'http://radio.example/live.mp3', title: 'Radio Beispiel', albumart: 'https://logo/b.png'});
+            var b = new rr.Resolver({file: f}), st = {title: 'Artist - Song', artist: '', uri: '', albumart: ''};
+            assert.ok(b.decorate('http://radio.example/live.mp3', st));
+            assert.strictEqual(st.albumart, 'https://logo/b.png');
+            assert.strictEqual(st.artist, 'Radio Beispiel');
+            fs.writeFileSync(f, 'kaputt');
+            assert.ok(!new rr.Resolver({file: f}).decorate('http://radio.example/live.mp3', {}));   /* unreadable file: start empty */
+          });
           srv.close();
           console.log(n + ' checks ok');
           process.exit(0);

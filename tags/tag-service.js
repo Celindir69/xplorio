@@ -2857,9 +2857,13 @@ function tidalGet() {
 }
 /* radio addresses that are playlists (TuneIn from Volumio's favourites, .pls, .m3u): the stream address to MPD */
 var radioresolve = require('./radioresolve.js');
-var radioResolver = new radioresolve.Resolver({log: function(t){ console.error(t); }});
+var radioResolver = new radioresolve.Resolver({log: function(t){ console.error(t); }, file: path.join(DATA_DIR, 'radiostations.json')});
 mpdPlayer.expand = function(item, cb){
   if (radioResolver.handles(item)) { radioResolver.expand(item, cb); return true; }
+  if (item && (item.service === 'webradio' || item.type === 'webradio') && /^https?:\/\//i.test(String(item.uri || '')) && (item.title || item.name)) {
+    radioResolver.remember(String(item.uri), item);      /* plain stream address: MPD plays it as it is, name and logo from here */
+    return false;
+  }
   var t = tidalGet();
   if (!t || !t.handles(item)) return false;
   t.expand(item).then(function(files){ cb(null, files); }, function(e){ console.error('TIDAL: ' + e.message); cb(e); });
