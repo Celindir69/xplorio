@@ -2270,8 +2270,28 @@ var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mp
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
-function doPlaybackGet(query, cb) { playCtl.read(function(r){ cb(r.ok ? 200 : 503, r); }); }
-function doPlaybackSet(body, cb) { playCtl.set(body, cb); }
+function doPlaybackGet(query, cb) {
+  playCtl.read(function(r){
+    /* on the Mac: gain for radio, streaming and files without ReplayGain tags (mpd.conf, macaudio.js) */
+    if (r.ok && onMac() && MAC_MPD_CONF) { r.missingPreamp = macaudio.missingPreamp(macAudio.conf()); r.missingPreamps = macaudio.PREAMPS; }
+    cb(r.ok ? 200 : 503, r);
+  });
+}
+function doPlaybackSet(body, cb) {
+  if (!body || body.missingPreamp === undefined) return playCtl.set(body, cb);
+  if (!onMac() || !MAC_MPD_CONF) return cb(400, {ok: false, error: 'conf'});
+  var bad = authFail(body);
+  if (bad) return cb(200, {ok: false, error: bad});
+  /* MPD restarts with the new mpd.conf; the ReplayGain mode set at runtime is set again afterwards */
+  mpdOne('replay_gain_status', function(e, rg){
+    var mode = !e && rg && rg.replay_gain_mode;
+    macAudio.setMissingPreamp(parseInt(body.missingPreamp, 10) || 0, function(err){
+      if (err) return cb(200, {ok: false, error: err.message === 'value' ? 'value' : 'mpd'});
+      if (!mode) return doPlaybackGet({}, cb);
+      mpdOne('replay_gain_mode ' + mode, function(){ doPlaybackGet({}, cb); });
+    });
+  });
+}
 /* ReplayGain and MQA tags of the playing file: one Python call per file and change, shared by /replaygain and /mqa and by
    all devices (each asks at every track change). Key: path, stamp: size and modification time (saved tags count as new) */
 var rgTags = new Map(), RG_TAGS_MAX = 200, rgWaiting = {};

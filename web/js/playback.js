@@ -5,7 +5,7 @@
    Classic script, shared global scope; see xplorio.html for load order. */
 var overlayPlayback = document.getElementById('overlayPlayback');
 var pbBody = document.getElementById('pbBody');
-var pbData = null, pbSeq = 0, pbMsg = '', pbOffline = false;
+var pbData = null, pbSeq = 0, pbMsg = '', pbOffline = false, pbPreampBusy = false;
 var pbAmp = null, pbAmpProf = null, pbAmpState = null, pbAmpTimer = null, pbAmpDrag = false;
 var PB_RG = ['off', 'track', 'album', 'auto'];
 
@@ -43,10 +43,12 @@ function pbSet(body) {
   pbMsg = '';
   return tagPostJson('/playback', body).then(function(r){
     if (seq !== pbSeq) return;
-    if (r && r.ok) pbData = r; else pbMsg = T('pb.error');
+    pbPreampBusy = false;
+    if (r && r.ok) pbData = r;
+    else pbMsg = r && (r.error === 'auth' || r.error === 'pwneeded') && typeof msErrKey === 'function' ? T(msErrKey(r.error)) : T('pb.error');
     if (body.replaygain !== undefined && typeof rgRefresh === 'function') rgRefresh();
     pbRender();
-  }).catch(function(){ if (seq === pbSeq) { pbMsg = T('pb.error'); pbRender(); } });
+  }).catch(function(){ if (seq === pbSeq) { pbPreampBusy = false; pbMsg = T('pb.error'); pbRender(); } });
 }
 
 /* again: the selected entry sends again too (amplifier, in case the display does not match the device) */
@@ -102,7 +104,18 @@ function pbRender() {
   var rg = sysCard(T('pb.rg'), 'syWide');
   rg.appendChild(pbChips(PB_RG.map(function(m){ return [m, T('pb.rg.' + m)]; }), d.replaygain, function(m){ pbSet({replaygain: m}); }));
   rg.appendChild(histEl('div', 'syNote', T('pb.rgNote.' + (PB_RG.indexOf(d.replaygain) >= 0 ? d.replaygain : 'off'))));
-  rg.appendChild(histEl('div', 'syNote', T('pb.rgTags')));
+  if (d.missingPreamp === undefined) rg.appendChild(histEl('div', 'syNote', T('pb.rgTags')));
+  else {                                                   /* Mac: gain for radio, streaming and untagged files */
+    rg.appendChild(histEl('div', 'sySub pbSubHead', T('pb.rgMissing')));
+    rg.appendChild(pbChips((d.missingPreamps || [0]).map(function(v){ return [v, v ? T('pb.db', {n: String(v).replace('-', '−')}) : T('pb.rgMissing0')]; }),
+      d.missingPreamp, function(v){
+        if (pbPreampBusy) return;
+        pbPreampBusy = true; pbRender();
+        pbSet({missingPreamp: v, token: typeof msToken === 'function' ? msToken() : ''});   /* MPD restarts: takes a few seconds */
+      }));
+    rg.appendChild(histEl('div', 'syNote', T('pb.rgMissingNote')));
+    if (pbPreampBusy) rg.appendChild(histEl('div', 'syNote', T('pb.rgMissingBusy')));
+  }
   grid.appendChild(rg);
 
   if (ROTEL_ON) grid.appendChild(pbAmpCard());

@@ -72,6 +72,20 @@ t('buffer: audio_buffer_size written once, replaced, removed for the default; on
   a.setBuffer(1234, function(e){ assert.strictEqual(e && e.message, 'value'); });
 });
 
+t('ReplayGain for radio/streaming: replay_gain_missing_preamp written once, replaced, removed at 0; only offered values', function(){
+  var t1 = ma.writeMissingPreamp(CONF, -6);
+  assert.strictEqual(ma.missingPreamp(t1), -6);
+  assert.ok(/^replay_gain_missing_preamp "-6"$/m.test(t1));
+  var t2 = ma.writeMissingPreamp(t1, -9);
+  assert.strictEqual(ma.missingPreamp(t2), -9);
+  assert.strictEqual((t2.match(/replay_gain_missing_preamp/g) || []).length, 1);
+  assert.strictEqual(ma.writeMissingPreamp(t2, 0).indexOf('replay_gain_missing_preamp'), -1);
+  assert.strictEqual(ma.missingPreamp(CONF), 0);
+  assert.strictEqual(ma.blocks(t2).length, ma.blocks(CONF).length);
+  var a = new ma.MacAudio({confFile: '/gibt/es/nicht'});
+  a.setMissingPreamp(-5, function(e){ assert.strictEqual(e && e.message, 'value'); });
+});
+
 t('volume on the amplifier (mixer none) and DSD as DoP (USB DACs only); the system output keeps its volume', function(){
   var d = ma.parseDevices(PROFILER), c = ma.writeConf(CONF, d, {exclusive: true, fixedVolume: true, dop: true}), b = ma.blocks(c);
   var osx = b.filter(function(x){ return x.type === 'osx'; }).map(function(x){ return [x.name, x.mixer, x.dop]; });

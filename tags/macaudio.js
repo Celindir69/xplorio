@@ -132,6 +132,17 @@ function writeBuffer(text, kib) {
   return t.replace(/\n*$/, '\n') + 'audio_buffer_size "' + kib + '"\n';
 }
 
+/* replay_gain_missing_preamp (dB) of mpd.conf: gain for everything without ReplayGain tags (radio, streaming, untagged
+   files) while ReplayGain is on. Tagged files are levelled to about -18 LUFS, streams are usually much louder.
+   0 = MPD's default (unchanged) */
+var PREAMPS = [0, -3, -6, -9, -12];
+function missingPreamp(text) { var m = /^[ \t]*replay_gain_missing_preamp[ \t]+"?(-?\d+(?:\.\d+)?)/m.exec(text); return m ? +m[1] : 0; }
+function writeMissingPreamp(text, db) {
+  var t = text.replace(/^[ \t]*replay_gain_missing_preamp[ \t]+[^\n]*\n?/gm, '');
+  if (!db) return t;
+  return t.replace(/\n*$/, '\n') + 'replay_gain_missing_preamp "' + db + '"\n';
+}
+
 /* mpd --version lists a decoder plugin [ffmpeg] that knows dsf */
 function ffmpegDecodes(versionText) { return /^\s*\[ffmpeg\][^\n]*\bdsf\b/m.test(String(versionText || '')); }
 
@@ -197,6 +208,11 @@ MacAudio.prototype.setDsd = function(on, cb) { this.change(function(t){ return w
 MacAudio.prototype.setBuffer = function(kib, cb) {
   if (BUFFERS.indexOf(kib) < 0) return cb(new Error('value'));
   this.change(function(t){ return writeBuffer(t, kib); }, cb);
+};
+/* gain for streams and untagged files with ReplayGain on (dB, one of PREAMPS): mpd.conf, MPD restarts */
+MacAudio.prototype.setMissingPreamp = function(db, cb) {
+  if (PREAMPS.indexOf(db) < 0) return cb(new Error('value'));
+  this.change(function(t){ return writeMissingPreamp(t, db); }, cb);
 };
 MacAudio.prototype.change = function(fn, cb) {
   var self = this;
@@ -295,4 +311,4 @@ MacAudio.prototype.scan = function(opts, cb) {
   });
 };
 
-module.exports = {MacAudio: MacAudio, writeBuffer: writeBuffer, bufferSize: bufferSize, BUFFERS: BUFFERS, writeDsd: writeDsd, dsdViaFfmpeg: dsdViaFfmpeg, ffmpegDecodes: ffmpegDecodes, decoderBlocks: decoderBlocks, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};
+module.exports = {MacAudio: MacAudio, missingPreamp: missingPreamp, writeMissingPreamp: writeMissingPreamp, PREAMPS: PREAMPS, writeBuffer: writeBuffer, bufferSize: bufferSize, BUFFERS: BUFFERS, writeDsd: writeDsd, dsdViaFfmpeg: dsdViaFfmpeg, ffmpegDecodes: ffmpegDecodes, decoderBlocks: decoderBlocks, viaSystem: viaSystem, parseDevices: parseDevices, blocks: blocks, writeConf: writeConf, parseOutputs: parseOutputs, BEGIN: BEGIN, END: END, SYSTEM: SYSTEM};
