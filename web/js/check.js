@@ -585,6 +585,9 @@ function checkSimpleRow(cat, it, kept) {
 var CB_ASK_MS = 4000;
 var cbRows = [], cbTimer = null, cbObs = null;
 var cbKnown = {};               /* dir -> answer already shown (found / none): a redrawn row shows it at once, without asking again */
+/* writing a cover takes a while; the list is drawn again meanwhile (every 10–15 s while the mood or year search runs).
+   cbBusy: dir -> progress text while writing; cbLive: dir -> the row shown now, which gets progress and result */
+var cbBusy = {}, cbLive = {};
 function checkCoverBest(row, it, key) {
   var box = document.createElement('div'); box.className = 'ckCb';
   var cur = document.createElement('img'); cur.className = 'ckCbImg'; cur.alt = '';
@@ -596,7 +599,19 @@ function checkCoverBest(row, it, key) {
   box.appendChild(cur); box.appendChild(arrow); box.appendChild(neu); box.appendChild(txt);
   arrow.style.display = neu.style.display = 'none';
   row.querySelector('.sMeta').appendChild(box);
-  var e = {row: row, it: it, key: key, seen: !window.IntersectionObserver, done: false, show: show};
+  var e = {row: row, it: it, key: key, seen: !window.IntersectionObserver, done: false, show: show}, applyB = null;
+  cbLive[it.dir] = {
+    text: function(t){ txt.textContent = t; },
+    saved: function(batch, st){
+      row.classList.add('done'); checkMarkDone(key);
+      txt.textContent = T('check.coverq.saved');
+      undoBtn(batch, st, applyB);
+    },
+    failed: function(msg, st){
+      txt.textContent = T('tag.error', {error: msg});
+      if (applyB) applyB.disabled = false; else applyBtn(st);
+    }
+  };
   if (cbKnown[it.dir]) { show(cbKnown[it.dir]); return; }
   cbRows.push(e);
   if (window.IntersectionObserver) {
@@ -625,6 +640,7 @@ function checkCoverBest(row, it, key) {
     var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
     neu.src = src; neu.style.display = ''; if (cur.style.display !== 'none') arrow.style.display = '';
     if (st.state === 'saved') { txt.textContent = T('check.coverq.saved'); undoBtn(st.batch, st.found, null); return; }   /* list redrawn after saving */
+    if (cbBusy[it.dir]) { txt.textContent = cbBusy[it.dir]; return; }     /* still writing: the result comes to this row */
     txt.textContent = T('check.coverq.found', {w: checkNum(st.w), h: checkNum(st.h), src: st.src});
     applyBtn(st);
   }
@@ -642,17 +658,18 @@ function checkCoverBest(row, it, key) {
   }
   function applyBtn(st) {
     var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
-    btn(T('check.conflict.apply'), T('check.coverq.applyHint'), function(b){
-      txt.textContent = T('tag.cover.preparing');
+    applyB = btn(T('check.conflict.apply'), T('check.coverq.applyHint'), function(){
+      var dir = it.dir;
+      function say(t) { cbBusy[dir] = t; if (cbLive[dir]) cbLive[dir].text(t); }
+      say(T('tag.cover.preparing'));
       fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
         .then(tagPrepareImage)
-        .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, function(t){ txt.textContent = t; }); })
+        .then(function(img){ say(T('tag.cover.writing')); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, say); })
         .then(function(batch){
-          cbKnown[it.dir] = {state: 'saved', batch: batch, found: st};   /* stays "saved" when the list is drawn again */
-          row.classList.add('done'); checkMarkDone(key);
-          txt.textContent = T('check.coverq.saved');
-          undoBtn(batch, st, b);
-        }).catch(function(x){ b.disabled = false; txt.textContent = T('tag.error', {error: x.message}); });
+          delete cbBusy[dir];
+          cbKnown[dir] = {state: 'saved', batch: batch, found: st};   /* stays "saved" when the list is drawn again */
+          if (cbLive[dir]) cbLive[dir].saved(batch, st);
+        }).catch(function(x){ delete cbBusy[dir]; if (cbLive[dir]) cbLive[dir].failed(x.message, st); });
     });
   }
 }
