@@ -621,26 +621,37 @@ function checkCoverBest(row, it, key) {
   function show(st) {
     if (st.state === 'wait' || e.done) return;            /* two answers overlapping: only the first one adds "Apply" */
     e.done = true; cbKnown[it.dir] = st;
-    if (st.state !== 'found') { txt.textContent = T('check.coverq.none'); return; }
+    if (st.state !== 'found' && st.state !== 'saved') { txt.textContent = T('check.coverq.none'); return; }
     var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
     neu.src = src; neu.style.display = ''; if (cur.style.display !== 'none') arrow.style.display = '';
+    if (st.state === 'saved') { txt.textContent = T('check.coverq.saved'); undoBtn(st.batch, st.found, null); return; }   /* list redrawn after saving */
     txt.textContent = T('check.coverq.found', {w: checkNum(st.w), h: checkNum(st.h), src: st.src});
+    applyBtn(st);
+  }
+  /* "Undo" for a saved cover; back to "Found" in the list, the next check asks again anyway */
+  function undoBtn(batch, found, instead) {
+    btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
+      tagPost('/undo', {batch: batch}).then(function(r){
+        if (!r || !r.ok) throw new Error((r && r.error) || 'undo');
+        row.classList.remove('done');
+        cbKnown[it.dir] = found;
+        u.textContent = T('check.conflict.undone');
+        showToast(T('check.conflict.undone'));
+      }).catch(function(x){ u.disabled = false; showToast(T('tag.error', {error: x.message})); });
+    }, instead);
+  }
+  function applyBtn(st) {
+    var src = TAGS + '/coverbestimage?which=new&dir=' + encodeURIComponent(it.dir);
     btn(T('check.conflict.apply'), T('check.coverq.applyHint'), function(b){
       txt.textContent = T('tag.cover.preparing');
       fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
         .then(tagPrepareImage)
         .then(function(img){ txt.textContent = T('tag.cover.writing'); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, function(t){ txt.textContent = t; }); })
         .then(function(batch){
+          cbKnown[it.dir] = {state: 'saved', batch: batch, found: st};   /* stays "saved" when the list is drawn again */
           row.classList.add('done'); checkMarkDone(key);
           txt.textContent = T('check.coverq.saved');
-          btn(T('check.conflict.undoApply'), T('check.conflict.undoApplyHint'), function(u){
-            tagPost('/undo', {batch: batch}).then(function(r){
-              if (!r || !r.ok) throw new Error((r && r.error) || 'undo');
-              row.classList.remove('done');
-              u.textContent = T('check.conflict.undone');
-              showToast(T('check.conflict.undone'));
-            }).catch(function(x){ u.disabled = false; showToast(T('tag.error', {error: x.message})); });
-          }, b);
+          undoBtn(batch, st, b);
         }).catch(function(x){ b.disabled = false; txt.textContent = T('tag.error', {error: x.message}); });
     });
   }

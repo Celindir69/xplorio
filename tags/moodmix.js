@@ -49,12 +49,16 @@ function index(coll) {
 }
 
 /* level 0: strict; 1: energy ±1, tempo ±8 BPM, tracks without energy/tempo; 2: also styles ignored. -> score or 0 */
-function fit(r, c, level) {
+/* main: only tracks whose strongest mood is a chosen one. A chosen mood further down the track's list (strongest
+   first) counts less: "Entspannt, Düster" is mainly relaxed, so it comes up rarely in a dark mix */
+var MOOD_POS = [1, 0.4, 0.2];
+function fit(r, c, level, main) {
   var s = 1;
   if (c.moods.length) {
-    var hit = r.mood.filter(function(m){ return c.moods.indexOf(m) >= 0; }).length;
-    if (!hit) return 0;
-    s = hit / Math.min(c.moods.length, 3) + (r.mood.length === hit ? 0.25 : 0);   /* pure hits slightly ahead */
+    var w = 0, hit = 0;
+    r.mood.forEach(function(m, i){ if (c.moods.indexOf(m) >= 0) { hit++; w += MOOD_POS[i] || 0.1; } });
+    if (!hit || (main && c.moods.indexOf(r.mood[0]) < 0)) return 0;
+    s = w / Math.min(c.moods.length, 3) + (r.mood.length === hit ? 0.25 : 0);   /* pure hits slightly ahead */
   }
   var lo = c.emin - (level ? 1 : 0), hi = c.emax + (level ? 1 : 0);
   if (r.energy === null) { if (!level && (c.emin > 1 || c.emax < 5)) return 0; s *= 0.7; }
@@ -91,11 +95,11 @@ function lengthOk(it, c) {
   return !c.maxd || !it.d || it.d <= c.maxd * 60;
 }
 
-function candidates(all, c, level) {
+function candidates(all, c, level, main) {
   var out = [];
   all.forEach(function(x){
     if (c.skip && c.skip(x.it)) return;                  /* e.g. "don't like" */
-    var s = genreOk(x.it, c) && lengthOk(x.it, c) && yearOk(x.it, c) && fit(x.r, c, level);
+    var s = genreOk(x.it, c) && lengthOk(x.it, c) && yearOk(x.it, c) && fit(x.r, c, level, main);
     if (s) out.push({it: x.it, r: x.r, s: s});
   });
   return out;
@@ -132,7 +136,10 @@ function playCounts(plays) {
 function build(coll, pc, c, rnd) {
   rnd = rnd || Math.random;
   var all = index(coll), level = 0, cand;
-  for (;;) {
+  /* first only tracks with a chosen mood as their main mood; enough for the whole mix: it stays with those
+     (else all with the mood, where the weighting still puts main moods first) */
+  cand = c.moods.length ? candidates(all, c, 0, true) : [];
+  if (cand.length < c.n) for (;;) {
     cand = candidates(all, c, level);
     if (cand.length >= Math.min(c.n, MIN_MATCHES) || level === 2) break;   /* slightly fewer exact hits: rather a shorter mix */
     level++;
