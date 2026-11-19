@@ -49,15 +49,15 @@ function index(coll) {
 }
 
 /* level 0: strict; 1: energy ±1, tempo ±8 BPM, tracks without energy/tempo; 2: also styles ignored. -> score or 0 */
-/* main: only tracks whose strongest mood is a chosen one. A chosen mood further down the track's list (strongest
-   first) counts less: "Entspannt, Düster" is mainly relaxed, so it comes up rarely in a dark mix */
-var MOOD_POS = [1, 0.4, 0.2];
+/* main: only tracks whose strongest mood (main 'mood'), strongest style ('style') or both (true) is a chosen one.
+   A chosen mood or style further down the track's list (strongest first) counts less: "Entspannt, Düster" is
+   mainly relaxed, so it comes up rarely in a dark mix */
 function fit(r, c, level, main) {
   var s = 1;
   if (c.moods.length) {
     var w = 0, hit = 0;
-    r.mood.forEach(function(m, i){ if (c.moods.indexOf(m) >= 0) { hit++; w += MOOD_POS[i] || 0.1; } });
-    if (!hit || (main && c.moods.indexOf(r.mood[0]) < 0)) return 0;
+    r.mood.forEach(function(m, i){ if (c.moods.indexOf(m) >= 0) { hit++; w += moodtags.rankWeight(i); } });
+    if (!hit || ((main === true || main === 'mood') && c.moods.indexOf(r.mood[0]) < 0)) return 0;
     s = w / Math.min(c.moods.length, 3) + (r.mood.length === hit ? 0.25 : 0);   /* pure hits slightly ahead */
   }
   var lo = c.emin - (level ? 1 : 0), hi = c.emax + (level ? 1 : 0);
@@ -71,9 +71,11 @@ function fit(r, c, level, main) {
     else if (r.bpm < blo || r.bpm > bhi) s *= 0.5;
   }
   if (c.styles.length && level < 2) {
-    var sh = r.style.filter(function(x){ return c.styles.indexOf(x) >= 0; }).length;
+    var sh = 0, sw = 0;
+    r.style.forEach(function(x, i){ if (c.styles.indexOf(x) >= 0) { sh++; sw += moodtags.rankWeight(i); } });
     if (c.match === 'all' ? sh < c.styles.length : !sh) return 0;
-    s *= 1 + 0.25 * sh;
+    if ((main === true || main === 'style') && c.styles.indexOf(r.style[0]) < 0) return 0;
+    s *= 1 + 0.25 * sw;
   }
   return s * (r.src === 'artist' ? 0.6 : 1);
 }
@@ -136,9 +138,12 @@ function playCounts(plays) {
 function build(coll, pc, c, rnd) {
   rnd = rnd || Math.random;
   var all = index(coll), level = 0, cand;
-  /* first only tracks with a chosen mood as their main mood; enough for the whole mix: it stays with those
-     (else all with the mood, where the weighting still puts main moods first) */
-  cand = c.moods.length ? candidates(all, c, 0, true) : [];
+  /* first only tracks whose main mood and main style are chosen ones; enough for the whole mix: it stays with those.
+     Else only the main mood, then only the main style, then everything that carries them (the weighting still puts
+     main moods and styles first) */
+  var tries = c.moods.length && c.styles.length ? [true, 'mood', 'style'] : c.moods.length ? ['mood'] : c.styles.length ? ['style'] : [];
+  cand = [];
+  for (var t = 0; t < tries.length && cand.length < c.n; t++) cand = candidates(all, c, 0, tries[t]);
   if (cand.length < c.n) for (;;) {
     cand = candidates(all, c, level);
     if (cand.length >= Math.min(c.n, MIN_MATCHES) || level === 2) break;   /* slightly fewer exact hits: rather a shorter mix */

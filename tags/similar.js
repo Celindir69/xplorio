@@ -19,12 +19,15 @@ function bpmGap(a, b) { return Math.min(Math.abs(a - b), Math.abs(a - 2 * b), Ma
 function score(s, r, geS, geR) {
   var m = jaccard(s.mood, r.mood);
   if (s.mood && s.mood.length && !m) return 0;                    /* without a shared mood not similar */
+  if (m) m = 0.7 * m + 0.3 * (s.mood[0] === r.mood[0] ? 1 : 0);   /* the same dominant mood counts extra */
+  var st = jaccard(s.style, r.style);
+  if (st) st = 0.7 * st + 0.3 * (s.style[0] === r.style[0] ? 1 : 0);
   var parts = s.mood && s.mood.length ? [[0.4, m]] : [];
   if (s.energy !== null && s.energy !== undefined) {
     parts.push([0.3, r.energy === null || r.energy === undefined ? 0.4 : Math.max(0, 1 - Math.abs(s.energy - r.energy) / 2.5)]);   /* 3 levels off: no match */
   }
   if (s.bpm && r.bpm) parts.push([0.2, 1 - Math.min(bpmGap(s.bpm, r.bpm) / BPM_SPAN, 1)]);
-  if (s.style && s.style.length) parts.push([0.15, jaccard(s.style, r.style)]);
+  if (s.style && s.style.length) parts.push([0.15, st]);
   if (geS) parts.push([0.05, String(geS).toLowerCase() === String(geR || '').toLowerCase() ? 1 : 0]);
   var w = 0, v = 0;
   parts.forEach(function(p){ w += p[0]; v += p[0] * p[1]; });

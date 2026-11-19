@@ -2153,10 +2153,18 @@ function doRandomMix(body, cb) {
     var pool = discover.mixPool(tl, list, {artist: body.artist, artists: many, dirs: [].concat(body.dirs || []).slice(0, 5000)});
     if (body.match) {                                                   /* mood/style page: only tracks that match themselves */
       var mq = url.parse('?' + String(body.match).slice(0, 1000), true).query, mc = moodmix.parse(mq);
-      var hits = moodalbums.tracksMatching(moodmix.index(moodCollector), {moods: mc.moods, styles: mc.styles,
-        emin: mq.emin ? mc.emin : 0, emax: mq.emax ? mc.emax : 0});
-      var matched = pool.filter(function(t){ return hits[relUri(t[2])]; });
-      if (matched.length) pool = matched;
+      var mIdx = moodmix.index(moodCollector), mQ = {moods: mc.moods, styles: mc.styles, emin: mq.emin ? mc.emin : 0, emax: mq.emax ? mc.emax : 0};
+      /* tracks where the chosen mood/style is the strongest one; too few for the mix: all of them, filled up with
+         tracks that carry it further back in their list */
+      var hits = moodalbums.tracksMatching(mIdx, mQ, true), main = pool.filter(function(t){ return hits[relUri(t[2])]; });
+      if (main.length < n) {
+        var anyHits = moodalbums.tracksMatching(mIdx, mQ), rest = pool.filter(function(t){ return anyHits[relUri(t[2])] && !hits[relUri(t[2])]; });
+        if (rest.length) {
+          var first = discover.mixCapped(main, main.length, rules);
+          return send(discover.sample(first.concat(discover.mixCapped(rest, n - first.length, rules)), n));
+        }
+      }
+      if (main.length) pool = main;
     }
     send(many.length ? discover.mixBalanced(pool, n, list, null, rules.recent) : discover.mixCapped(pool, n, rules));   /* similar artists: evenly */
   });

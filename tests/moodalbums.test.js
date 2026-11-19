@@ -76,7 +76,7 @@ t('album profile: via folder or title, one similar album per artist, more albums
   assert.deepStrictEqual(p.moods, ['relaxed', 'dreamy']);
   assert.deepStrictEqual(p.styles, ['ambient']);
   assert.strictEqual(p.energy, 2); assert.strictEqual(p.year, 1994); assert.strictEqual(p.genre, 'Ambient');
-  assert.deepStrictEqual(p.similar.map(function(x){ return x.al; }), ['Dunst']);          /* Beta only once (Dunst fits better), Gamma doesn't fit, Alpha never */
+  assert.deepStrictEqual(p.similar.map(function(x){ return x.al; }), ['Nebel']);          /* Beta only once (Nebel fits better: dreamy is only secondary in Stille), Gamma doesn't fit, Alpha never */
   assert.deepStrictEqual(p.others.map(function(x){ return x.al; }), ['Laut']);
   var bySearch = ma.albumProfile(ix, al, {artist: 'alpha', album: 'Stille'}, norm);                   /* title without addition, from the streaming service or the search */
   assert.strictEqual(bySearch.source, 'album'); assert.strictEqual(bySearch.dir, 'M/A1');          /* folder for the dice of the similar albums */
@@ -93,6 +93,35 @@ t('dice on mood/style pages: only tracks that match themselves', function(){
     ['USB/A/Ruhig/1.flac', 'USB/A/Ruhig/2.flac', 'USB/B/Laut/3.flac', 'USB/C/Single/1.flac']);
   assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {styles: ['ambient'], emin: 2, emax: 2})).sort(), ['USB/A/Ruhig/1.flac', 'USB/C/Single/1.flac']);
   assert.deepStrictEqual(Object.keys(ma.tracksMatching(idx, {emin: 4, emax: 5})).sort(), ['USB/B/Laut/1.flac', 'USB/B/Laut/2.flac']);   /* without energy not included */
+});
+
+
+t('mood/style album lists: the chosen mood must dominate, not just appear further back', function(){
+  var ix = [tr('D/Hell', 1, ['relaxed', 'dark'], 2, ['ambient', 'synthpop']), tr('D/Hell', 2, ['relaxed', 'dark'], 2, ['ambient']),
+            tr('D/Hell', 3, ['happy', 'dark'], 3, ['ambient']),
+            tr('E/Dunkel', 1, ['dark'], 2, ['synthpop']), tr('E/Dunkel', 2, ['dark', 'relaxed'], 2, ['synthpop', 'ambient']),
+            tr('E/Dunkel', 3, ['relaxed', 'dark'], 2, ['ambient'])];
+  var al = [{dir: 'USB/D/Hell', al: 'Hell', ar: 'Delta'}, {dir: 'USB/E/Dunkel', al: 'Dunkel', ar: 'Epsilon'}];
+  var s2 = ma.summarize(ix);
+  function nm(q) { return ma.list(s2, al, q).map(function(a){ return a.al; }); }
+  assert.deepStrictEqual(nm({moods: ['dark']}), ['Dunkel']);             /* in Hell dark is always only the second mood */
+  assert.deepStrictEqual(nm({moods: ['relaxed']}), ['Hell']);
+  assert.deepStrictEqual(nm({styles: ['synthpop']}), ['Dunkel']);
+});
+
+t('dice on mood/style pages: main variant only takes tracks whose strongest mood/style is chosen', function(){
+  var ix = [tr('F', 1, ['dark'], 2, ['synthpop']), tr('F', 2, ['relaxed', 'dark'], 2, ['ambient', 'synthpop']), tr('F', 3, ['happy'], 3, [])];
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(ix, {moods: ['dark']}, true)), ['USB/F/1.flac']);
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(ix, {moods: ['dark']})), ['USB/F/1.flac', 'USB/F/2.flac']);
+  assert.deepStrictEqual(Object.keys(ma.tracksMatching(ix, {styles: ['synthpop']}, true)), ['USB/F/1.flac']);
+});
+
+t('artist profile: a mood that only shows up second does not make it into the chips', function(){
+  function a(mood) { return {it: {ar: 'X', f: 'x'}, r: {mood: mood, energy: 2, style: []}}; }
+  var ix = [a(['relaxed', 'dark']), a(['relaxed', 'dark']), a(['relaxed']), a(['happy', 'dark']), a(['relaxed'])];
+  var p = ma.artistProfile(ix, [], 'x', function(s){ return String(s).toLowerCase(); });
+  assert.strictEqual(p.moods[0], 'relaxed');
+  assert.ok(p.moods.indexOf('dark') > 0);                                 /* 3 x second = 1.2 of 5: still in, but behind */
 });
 
 console.log(n + ' checks');

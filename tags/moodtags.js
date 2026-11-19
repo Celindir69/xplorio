@@ -255,4 +255,15 @@ Collector.prototype.summary = function() {
   return s;
 };
 
-module.exports = {Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};
+/* Moods and styles of a track are ordered strongest first. Weight by position: the dominant one counts fully,
+   later ones clearly less (used wherever moods or styles are filtered, counted or compared) */
+var RANK = [1, 0.4, 0.2];
+function rankWeight(i) { return i < 0 ? 0 : RANK[i] !== undefined ? RANK[i] : 0.1; }
+/* weight of the best placed of keys in list (0: none of them) */
+function rankOf(list, keys) {
+  list = list || [];
+  for (var i = 0; i < list.length; i++) if (keys.indexOf(list[i]) >= 0) return rankWeight(i);
+  return 0;
+}
+
+module.exports = {rankWeight: rankWeight, rankOf: rankOf, Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};
