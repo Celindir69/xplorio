@@ -1431,6 +1431,9 @@ html.amPlay #volWrap, html.amPlay #btnRotelPower, html.amPlay .remoteIcon { opac
 /* stream plays here, the amplifier plays another input at home: its controls stay locked (controls.js rotelLockPaint) */
 html.rotelLock #volWrap, html.rotelLock #btnRotelPower { opacity:.3; }
 html.rotelLock #vSlider { pointer-events:none; }
+/* only on the devices (remote.js): the player's volume has nothing to set, the device's own buttons do */
+html.remoteVol #volWrap { opacity:.3; }
+html.remoteVol #vSlider { pointer-events:none; }
 
 /* album editor: "Move album" (into Xplorio Trash), below the tracks */
 .tagMoveBox { margin-top:1.6em; padding-top:1em; border-top:1px solid rgba(var(--fg-rgb),.15); }

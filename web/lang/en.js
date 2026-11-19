@@ -232,6 +232,7 @@ langRegister('en', 'English', {
   'remote.mode.remote': 'Playback: this device only',
   'remote.none': 'No stream output set up in MPD',
   'remote.tap': 'Playback interrupted. Press play to continue.',
+  'remote.volume': 'Only this device: set the volume with the device\'s own buttons.',
   'scan.updating': 'Reading the library. The player may respond more slowly until it is done.',
   'scan.building': 'Rebuilding the album list. The player may respond more slowly until it is done.',
   'check.runCovers': 'Checking embedded covers… {done} of {total}',

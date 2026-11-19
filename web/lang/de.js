@@ -230,6 +230,7 @@ langRegister('de', 'Deutsch', {
   'remote.mode.remote': 'Wiedergabe: nur dieses Gerät',
   'remote.none': 'Kein Stream-Ausgang in MPD eingerichtet',
   'remote.tap': 'Wiedergabe unterbrochen. Zum Fortsetzen erneut starten.',
+  'remote.volume': 'Nur dieses Gerät: Lautstärke mit den Tasten des Geräts einstellen.',
   'scan.updating': 'Bibliothek wird eingelesen. Der Player kann so lange langsamer reagieren.',
   'scan.building': 'Albenliste wird neu aufgebaut. Der Player kann so lange langsamer reagieren.',
   'check.runCovers': 'Prüfe eingebettete Cover… {done} von {total}',

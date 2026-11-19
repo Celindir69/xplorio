@@ -231,6 +231,7 @@ langRegister('fr', 'Français', {
   'remote.mode.remote': 'Lecture : cet appareil seulement',
   'remote.none': 'Aucune sortie stream configurée dans MPD',
   'remote.tap': 'Lecture interrompue. Appuyez sur lecture pour continuer.',
+  'remote.volume': 'Seulement cet appareil : réglez le volume avec les boutons de l\'appareil.',
   'scan.updating': 'Lecture de la bibliothèque. Le lecteur peut réagir plus lentement en attendant.',
   'scan.building': 'Reconstruction de la liste des albums. Le lecteur peut réagir plus lentement en attendant.',
   'check.runCovers': 'Vérification des pochettes intégrées… {done} sur {total}',

@@ -230,6 +230,7 @@ langRegister('es', 'Español', {
   'remote.mode.remote': 'Reproducción: solo este dispositivo',
   'remote.none': 'No hay salida de stream configurada en MPD',
   'remote.tap': 'Reproducción interrumpida. Pulsa reproducir para continuar.',
+  'remote.volume': 'Solo este dispositivo: ajusta el volumen con los botones del dispositivo.',
   'scan.updating': 'Leyendo la biblioteca. Mientras tanto, el reproductor puede responder más despacio.',
   'scan.building': 'Reconstruyendo la lista de álbumes. Mientras tanto, el reproductor puede responder más despacio.',
   'check.runCovers': 'Comprobando portadas incrustadas… {done} de {total}',

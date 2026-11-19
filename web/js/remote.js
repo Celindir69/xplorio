@@ -67,8 +67,15 @@ function remoteApply(mode) {
   if (mode === 'lokal' || !remoteListen) remoteStop();
   else if (remoteWant) remoteStart();
   if (typeof rotelInputRepaint === 'function') rotelInputRepaint();   /* other input on the amplifier: matters only with the amplifier */
+  /* only on the devices: the player's volume works on the amplifier output, which is off; the device's own buttons set it */
+  document.documentElement.classList.toggle('remoteVol', mode === 'remote');
   remoteQualityRepaint();
 }
+document.addEventListener('click', function(ev){              /* volume dimmed: a tap only says why */
+  if (remoteMode !== 'remote' || !ev.target || !ev.target.closest || !ev.target.closest('#volWrap')) return;
+  ev.stopPropagation(); ev.preventDefault();
+  showToast(T('remote.volume'));
+}, true);
 
 /* listening here: the quality display shows the stream, not the file ("Stream", MP3 with lame) */
 var REMOTE_FORMATS = {lame: 'MP3', shine: 'MP3', vorbis: 'Ogg Vorbis', opus: 'Opus', flac: 'FLAC', wave: 'WAV'};
