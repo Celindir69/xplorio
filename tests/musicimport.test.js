@@ -40,7 +40,8 @@ t('copy: everything but .DS_Store and ._ files, file times kept; MPD reads exact
       assert.deepStrictEqual(fs.readdirSync(dest).sort(), ['01.flac', 'CD2', 'cover.jpg']);
       assert.strictEqual(fs.statSync(path.join(dest, '01.flac')).mtime.getTime(), 1000000);
       assert.ok(fs.existsSync(x.src));                         /* copied: the source stays */
-      assert.deepStrictEqual(x.log, ['lsinfo "USB/import"', 'update "USB/import"', 'status', 'listallinfo "USB/import/Band - Album"']);
+      assert.deepStrictEqual(x.log, ['lsinfo "USB/import"', 'update "USB/import"', 'status', 'listallinfo "USB/import/Band - Album"',
+                                     'listallinfo "USB/import/Band - Album"']);      /* checked again at the end */
       assert.strictEqual(j.check.tracks, 2); assert.strictEqual(j.check.audioFiles, 2);
       assert.deepStrictEqual(j.check.missing, {artist: 0, album: 0, title: 0, track: 0, genre: 2, date: 1});
       assert.deepStrictEqual(j.check.noCover, ['USB/import/Band - Album/CD2']);
@@ -120,7 +121,7 @@ t('tags still missing: rsgain and the analysis wait; resume() checks again and c
         assert.ok(!j.end);
         waitEnd(imp, function(j2){
           assert.deepStrictEqual([j2.step, j2.waitTags, calls], ['done', false, ['rsgain', 'analysis']]);
-          assert.deepStrictEqual(j2.steps.slice(-5), ['recognize', 'waitTags', 'check', 'rsgain', 'analysis']);
+          assert.deepStrictEqual(j2.steps.slice(-6), ['recognize', 'waitTags', 'rescan', 'check', 'rsgain', 'analysis']);
           imp.resume(function(e2){ assert.strictEqual(e2, 'nothing'); done(); });
         });
       });
@@ -135,6 +136,35 @@ t('refused: missing source, missing target, target inside the source', function(
     imp.start({source: x.src, rel: 'USB', target: path.join(x.dir, 'fehlt')}, function(e2){
       assert.strictEqual(e2, 'target');
       imp.start({source: x.dir, rel: 'USB', target: x.disk}, function(e3){ assert.strictEqual(e3, 'inside'); done(); });
+    });
+  });
+});
+
+t('resume after editing tags: MPD reads them first, and the result shows the tags as they are at the end (genre)', function(done){
+  var x = setup(), updated = false, edited = false;
+  var mpd = function(cmds, cb){
+    if (/^update/.test(cmds[0]) && edited) updated = true;
+    if (/^listallinfo/.test(cmds[0])) {
+      if (!updated) return cb(null, [['file: USB/import/Band - Album/01.flac', 'Track: 1']]);     /* MPD still has the old tags */
+      return cb(null, [['file: USB/import/Band - Album/01.flac', 'Artist: Band', 'Album: Album', 'Title: Eins', 'Track: 1', 'Date: 2024', 'Genre: Rock']]);
+    }
+    x.mpd(cmds, cb);
+  };
+  var analysis = {start: function(cb, run){ cb(null); setTimeout(function(){ run.done({done: 1}); }, 5); }};
+  var imp = new mi.Import({musicRoot: x.music, mpd: mpd, analysis: analysis,
+                           recognize: function(dir, files, cb){ setTimeout(function(){ cb({dir: dir, state: 'none'}); }, 5); }});
+  imp.start({source: x.src, rel: 'USB', target: x.disk, analysis: true}, function(){
+    waitEnd(imp, function(j){
+      assert.strictEqual(j.step, 'waitTags');
+      edited = true;                                                 /* tags written in the tag editor */
+      imp.resume(function(){
+        waitEnd(imp, function(j2){
+          assert.strictEqual(j2.step, 'done');
+          assert.strictEqual(j2.check.missing.genre, 0);
+          assert.deepStrictEqual(j2.check.needTags, []);
+          done();
+        });
+      });
     });
   });
 });

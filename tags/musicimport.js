@@ -162,8 +162,12 @@ Import.prototype.start = function(opts, cb) {
     step('waitTags'); job.waitTags = true; job.end = self.now();
     self.resumeJob = function(){
       job.waitTags = false; job.end = 0;
-      step('check');
-      self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+      /* the tags were just written in the tag editor: MPD reads the folder again first, else the check sees the old ones */
+      step('rescan');
+      self.scan(mpdPath, function(){
+        step('check');
+        self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+      });
     };
     self.log('Import waits for tags: ' + still.length + ' folder(s) in ' + dest);
     if (self.o.onDone) self.o.onDone(job);
@@ -185,7 +189,13 @@ Import.prototype.start = function(opts, cb) {
     self.o.analysis.start(function(e){ if (e) { job.analysisError = e; finish(); } },
       {roots: [path.join(self.o.musicRoot, mpdPath)], own: true, done: function(p){ job.analysed = p && p.done || 0; finish(); }});
   }
+  /* the result shows the tags as they are at the end (MPD has read the folder again after rsgain; tags may have been
+     edited in the meantime) */
   function finish() {
+    if (!job.check) return done();
+    self.check(dest, mpdPath, function(c){ job.check = c; done(); });
+  }
+  function done() {
     step('done'); job.end = self.now();
     self.log('Import done: ' + dest + ' (' + job.total + ' files)');
     if (self.o.onDone) self.o.onDone(job);
