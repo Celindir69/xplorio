@@ -131,18 +131,20 @@ var radioCovers = {};            /* "artist|title" -> image address, false (no c
 var radioLogoByName = {};        /* station name -> image address, false or null as above */
 function radioLogoFallback(st) {
   var name = radioStationName(st), u;
-  if (!name) return '';
+  if (!name || radioLogoByName[name] === false) return radioDummyArt();
   if (radioLogoByName[name]) return radioLogoByName[name];
   if (radioLogoByName[name] === undefined) {
     radioLogoByName[name] = null;
     u = TAGS + '/stationlogo?name=' + encodeURIComponent(name);
     var img = new Image();
     img.onload = function(){ radioLogoByName[name] = u; poll(); };
-    img.onerror = function(){ radioLogoByName[name] = false; };
+    img.onerror = function(){ radioLogoByName[name] = false; poll(); };
     img.src = u;
   }
-  return '';
+  return '';                     /* briefly, until the logo is there or known to be missing */
 }
+/* no logo at all: a radio symbol, never the cover of the station or song before */
+function radioDummyArt() { return typeof ROTEL_ICONS !== 'undefined' ? inputArt({icon: 'tuner'}) : ''; }
 function radioArt(st, stationArt) {
   if (st.trackType !== 'webradio' || typeof TAGS === 'undefined') return stationArt;
   if (!stationArt) stationArt = radioLogoFallback(st);
