@@ -17,13 +17,14 @@ function norm(s) {
 }
 
 /* dir: storage; opts.lookup(name, cb(image or null, temporary?), extra) replaces the Deezer artist search,
-   opts.noneTtl: how long "nothing found" holds, opts.max: at most this many files, opts.maxBytes: at most this much
+   opts.noneTtl: how long "nothing found" holds, opts.noneAfter: older "nothing found" does not count (search got better), opts.max: at most this many files, opts.maxBytes: at most this much
    together (oldest get removed), opts.queueMax: at most this many lookups waiting */
 function Store(dir, opts) {
   this.dir = dir; this.waiting = {}; this.queue = []; this.running = 0; this.writes = 0;
   opts = opts || {};
   if (opts.lookup) this.lookup = opts.lookup;
   this.noneTtl = opts.noneTtl || NONE_TTL;
+  this.noneAfter = opts.noneAfter || 0;
   this.max = opts.max || 0;
   this.maxBytes = opts.maxBytes || 0;
   this.queueMax = opts.queueMax || QUEUE_MAX;
@@ -61,7 +62,7 @@ Store.prototype.get = function(name, cb, extra) {
     var none = null, noneFor = '';
     try { none = fs.statSync(f.none); noneFor = fs.readFileSync(f.none, 'utf8'); } catch (x) { /* never searched yet */ }
     /* "nothing found" holds until the time is up; a new image URL (extra) is still tried */
-    if (none && Date.now() - none.mtime.getTime() < self.noneTtl && (!extra || String(extra) === noneFor)) return cb(null, null);
+    if (none && Date.now() - none.mtime.getTime() < self.noneTtl && none.mtime.getTime() >= self.noneAfter && (!extra || String(extra) === noneFor)) return cb(null, null);
     if (self.waiting[f.img]) return self.waiting[f.img].push(cb);
     if (self.queue.length >= self.queueMax) return cb('busy');
     self.waiting[f.img] = [cb];

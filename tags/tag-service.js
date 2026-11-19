@@ -2221,7 +2221,7 @@ function doArtistImage(query, res) {
    both stored on the player under radio-covers/ and stations/; 404 without image */
 var radio = require('./radio.js');
 var radioCovers = new artistimg.Store(path.join(DATA_DIR, 'radio-covers'), {lookup: radio.songLookup, noneTtl: 7 * 86400000, max: 3000, maxBytes: 300 * 1024 * 1024});
-var stationLogos = new artistimg.Store(path.join(DATA_DIR, 'stations'), {lookup: radio.logoLookup, max: 1000, maxBytes: 100 * 1024 * 1024});
+var stationLogos = new artistimg.Store(path.join(DATA_DIR, 'stations'), {lookup: radio.logoLookup, noneAfter: radio.LOGO_SEARCH_SINCE, max: 1000, maxBytes: 100 * 1024 * 1024});
 
 function sendImage(res, buf) {
   var type = buf && radio.mime(buf);
