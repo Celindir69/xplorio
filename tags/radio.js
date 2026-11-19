@@ -107,15 +107,18 @@ function search(q, cb) {
   json(RADIOB + '/json/stations/search?name=' + encodeURIComponent(q) + '&limit=40&hidebroken=true&order=clickcount&reverse=true', function(e, list){
     if (e || !Array.isArray(list)) return cb(e || new Error('answer'));
     var seen = {};
+    /* the station's own address first: url_resolved is often a forwarding with session keys (streamabc ?sABC=…&skey=…)
+       that may stop working some day; playlists (.pls/.m3u) behind url are resolved for MPD (radioresolve.js) */
+    function addr(s) { return /^https?:\/\//i.test(s.url || '') ? s.url : s.url_resolved; }
     cb(null, list.filter(function(s){
-      var u = s && (s.url_resolved || s.url);
+      var u = s && addr(s);
       if (!u || !/^https?:\/\//i.test(u) || seen[u]) return false;
       seen[u] = true;
       return true;
     }).map(function(s){
       var info = [s.country, s.codec && s.bitrate ? s.codec + ' ' + s.bitrate + ' kbit/s' : s.codec, s.tags && String(s.tags).split(',').slice(0, 2).join(', ')]
         .filter(Boolean).join(' · ');
-      return {title: String(s.name || '').trim() || (s.url_resolved || s.url), uri: s.url_resolved || s.url,
+      return {title: String(s.name || '').trim() || addr(s), uri: addr(s),
               albumart: /^https?:\/\//i.test(s.favicon || '') ? s.favicon : '', info: info};
     }));
   });
