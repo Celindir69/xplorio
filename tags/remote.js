@@ -1,6 +1,8 @@
 /* Playback on this device (headphones button, web/js/remote.js; ?player=remote|both|lokal): MPD's stream output ("httpd" in
    /etc/mpd.conf, from the "MPD HTTP & Icecast output" plugin or added by hand; Xplorio never changes the file) goes to the
-   browser through the tag service; the ALSA output (amplifier) is switched off for "remote". Pure helpers here, the service is in tag-service.js. Node 8, ES5 only. */
+   browser through the tag service; the ALSA output (amplifier) is switched off for "remote". On the Mac (Xplorio4Mac) the
+   sound outputs are "osx" ones, of which only the chosen one plays: "remote" switches off the ones playing, "lokal"
+   switches those back on (their names: lastOn), else the first one (the system output). Pure helpers here, the service is in tag-service.js. Node 8, ES5 only. */
 var net = require('net');
 
 /* audio_output blocks of mpd.conf -> [{type, name, port, enabled, encoder, bitrate, path, format}] */
@@ -36,27 +38,30 @@ function parseOutputs(lines) {
   return out;
 }
 
-/* outputs and mpd.conf -> {stream: {id, port, enabled, name, encoder}, alsa: [{id, enabled}]} or null without a stream output.
-   The stream output comes from mpd.conf: from the "MPD HTTP & Icecast output" plugin (mpdoutput, Volumio 4) or added by hand,
-   which writes its HTTP stream there through Volumio and adds a local-only feed for Icecast that is not meant for listeners */
+/* outputs and mpd.conf -> {stream: {id, port, enabled, name, encoder}, alsa: [{id, enabled}], osx: [{id, enabled, name}]}
+   or null without a stream output.
+   The stream output comes from mpd.conf: from the "MPD HTTP & Icecast output" plugin (mpdoutput, Volumio 4), added by
+   hand or by the Mac setup (make-app.sh), which writes its HTTP stream there through Volumio and adds a local-only feed
+   for Icecast that is not meant for listeners */
 var PLUGIN_FEED = 'mpdoutput-icecast-feed';
 function find(outs, conf) {
   var types = {};
   conf.forEach(function(c){ types[c.name] = c; });
-  var stream = null, alsa = [];
+  var stream = null, alsa = [], osx = [];
   outs.forEach(function(o){
     var type = o.plugin || (types[o.name] && types[o.name].type) || '';
     if (o.name === PLUGIN_FEED) return;                  /* the feed of the "MPD HTTP & Icecast output" plugin for its Icecast relay */
     var c = types[o.name] || {};
     if (type === 'httpd' && !stream) stream = {id: o.id, port: c.port || 8000, enabled: o.enabled, name: o.name, encoder: c.encoder || 'lame', bitrate: c.bitrate || 0};
     if (type === 'alsa') alsa.push({id: o.id, enabled: o.enabled});
+    if (type === 'osx') osx.push({id: o.id, enabled: o.enabled, name: o.name});
   });
-  return stream ? {stream: stream, alsa: alsa} : null;
+  return stream ? {stream: stream, alsa: alsa, osx: osx} : null;
 }
 
 /* current mode from the outputs: 'lokal' | 'remote' | 'both' */
 function modeOf(f) {
-  var a = f.alsa.some(function(x){ return x.enabled; });
+  var a = f.alsa.some(function(x){ return x.enabled; }) || (f.osx || []).some(function(x){ return x.enabled; });
   return !f.stream.enabled ? 'lokal' : a ? 'both' : 'remote';
 }
 
@@ -67,12 +72,20 @@ function idleReset(mode, chosen) {
   return mode === 'remote' || (mode === 'both' && chosen !== 'both');
 }
 
-/* MPD commands for a mode (alsa outputs on/off, stream on/off) */
-function commands(f, mode) {
-  var cmds = [];
+/* MPD commands for a mode (alsa outputs on/off, on the Mac the osx output; stream on/off). lastOn: names of the osx
+   outputs that played before "remote" */
+function commands(f, mode, lastOn) {
+  var cmds = [], osx = f.osx || [];
   var alsaOn = mode !== 'remote', streamOn = mode !== 'lokal';
-  if (!alsaOn && !f.alsa.length) return null;                     /* nothing to switch off: keep it as it is */
+  if (!alsaOn && !f.alsa.length && !osx.length) return null;      /* nothing to switch off: keep it as it is */
   f.alsa.forEach(function(x){ cmds.push((alsaOn ? 'enableoutput ' : 'disableoutput ') + x.id); });
+  if (!f.alsa.length && osx.length) {                              /* Mac: only the chosen output plays */
+    if (!alsaOn) osx.forEach(function(x){ if (x.enabled) cmds.push('disableoutput ' + x.id); });
+    else if (!osx.some(function(x){ return x.enabled; })) {
+      var back = osx.filter(function(x){ return (lastOn || []).indexOf(x.name) >= 0; });
+      (back.length ? back : osx.slice(0, 1)).forEach(function(x){ cmds.push('enableoutput ' + x.id); });
+    }
+  }
   cmds.push((streamOn ? 'enableoutput ' : 'disableoutput ') + f.stream.id);
   return cmds;
 }
