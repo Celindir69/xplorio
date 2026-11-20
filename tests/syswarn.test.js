@@ -140,6 +140,25 @@ function restart() {
 }
 function KEEP() { return 800000 + 25 * 3600000; }
 
+/* full USB drive unplugged: its space warning ends and leaves 24 h later (it stayed "active" forever before) */
+(function(){
+  var disks = [{mount: '/data', kind: 'card', ok: true, size: 8000000, used: 1000000, avail: 7000000},
+               {mount: '/media/Data', kind: 'usb', ok: true, size: 1000000, used: 980000, avail: 20000}];
+  var u = new sw.Warnings({root: root, run: function(f, a, cb){ cb(null, '', ''); }, sys: {diskList: function(cb){ cb(disks); }}});
+  var t0 = 1000000000000;
+  u.space(t0, function(){});
+  assert.ok(u.find('space:/media/Data').active);
+  u.markRead('all', t0 + 1000);
+  disks = disks.slice(0, 1);
+  u.space(t0 + 3 * 86400000, function(){});
+  var it = u.find('space:/media/Data');
+  assert.ok(!it.active); assert.strictEqual(it.end, t0 + 3 * 86400000);
+  assert.ok(u.list().items[0].read, 'stays read');
+  u.st.items = u.st.items.filter(function(x){ return x.active || Math.max(x.last, x.end || 0) >= t0 + 3 * 86400000 + 1000 - 86400000; });
+  assert.strictEqual(u.st.items.length, 1, 'still listed right after');
+  console.log('ok   unplugged full drive: warning over, leaves 24 h later');
+})();
+
 /* Mac: no kernel log, so no "kernel log not readable" note either */
 (function(){
   var mac = new sw.Warnings({platform: 'darwin', run: function(){ throw new Error('no dmesg on the Mac'); }});

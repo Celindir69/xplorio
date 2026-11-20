@@ -92,7 +92,7 @@ Warnings.prototype.find = function(id) {
   for (var i = 0; i < this.st.items.length; i++) if (this.st.items[i].id === id) return this.st.items[i];
   return null;
 };
-Warnings.prototype.settle = function(id) { var it = this.find(id); if (it) it.active = false; };
+Warnings.prototype.settle = function(id, now) { var it = this.find(id); if (it && it.active) { it.active = false; it.end = now || Date.now(); } };
 
 /* kernel log: only lines after the last one seen in this boot */
 Warnings.prototype.kernel = function(now, cb) {
@@ -140,7 +140,7 @@ Warnings.prototype.mounts = function(now) {
   Object.keys(this.st.mounts).forEach(function(m){
     if (!cur[m]) { var it = self.find('gone:' + m); if (!it || !it.active) self.raise('gone:' + m, 'gone', {mount: m}, now); }
   });
-  Object.keys(cur).forEach(function(m){ self.settle('gone:' + m); });
+  Object.keys(cur).forEach(function(m){ self.settle('gone:' + m, now); });
   /* remember what is mounted now; a missing one stays remembered while its warning is open */
   var keep = {};
   Object.keys(cur).forEach(function(m){ keep[m] = 1; });
@@ -159,7 +159,7 @@ Warnings.prototype.memory = function(now) {
   if (this.st.mem.length >= MEM_MINUTES && this.st.mem.every(function(x){ return x > MEM_WARN; })) {
     if (!it || !it.active) this.raise('mem', 'mem', {p: p}, now);
     else it.p = {p: Math.max(it.p.p || 0, p)};
-  } else if (it && it.active && p < MEM_CLEAR) this.settle('mem');
+  } else if (it && it.active && p < MEM_CLEAR) this.settle('mem', now);
 };
 
 /* drive space: USB and network at SPACE_WARN % or more; the internal card at CARD_WARN % or under CARD_MIN_KB free */
@@ -174,8 +174,14 @@ Warnings.prototype.space = function(now, cb) {
       var warn = card ? p >= CARD_WARN || d.avail < CARD_MIN_KB : p >= SPACE_WARN;
       var clear = card ? p < CARD_CLEAR && d.avail >= CARD_OK_KB : p < SPACE_CLEAR;
       if (warn) { if (!it || !it.active) self.raise(id, 'space', {mount: d.mount, kind: d.kind, p: p, avail: d.avail}, now); else { it.p.p = p; it.p.avail = d.avail; } }
-      else if (it && it.active && clear) self.settle(id);
+      else if (it && it.active && clear) self.settle(id, now);
     });
+    /* a full drive that is no longer there (unplugged, unmounted): its space warning is over */
+    if (list && list.length) {
+      var here = {};
+      list.forEach(function(d){ here['space:' + d.mount] = 1; });
+      self.st.items.forEach(function(it){ if (it.kind === 'space' && it.active && !here[it.id]) self.settle(it.id, now); });
+    }
     cb();
   });
 };
@@ -194,7 +200,7 @@ Warnings.prototype.check = function(now, cb) {
   this.kernel(now, function(){
     self.space(now, function(){
       var cut = now - KEEP_MS;                         /* past events and settled states leave after 24 h */
-      self.st.items = self.st.items.filter(function(it){ return it.active || it.last >= cut; });
+      self.st.items = self.st.items.filter(function(it){ return it.active || Math.max(it.last, it.end || 0) >= cut; });   /* end: when a state was over */
       self.save();
       if (cb) cb();
     });
