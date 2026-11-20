@@ -741,7 +741,7 @@ function sysPaintWarn() {
     head.appendChild(all);
   }
   box.appendChild(head);
-  /* current (unread): red with "Read" and the hint; read ones below, small and grey, until they leave after 24 h */
+  /* current (unread): red with "Read" and the hint; read ones below, small and grey, until they leave 24 h after they ended */
   var unread = items.filter(function(it){ return !it.read; }), read = items.filter(function(it){ return it.read; });
   if (unread.length && read.length) box.appendChild(histEl('div', 'syWarnSec', T('warn.current')));
   unread.forEach(function(it){
@@ -760,7 +760,7 @@ function sysPaintWarn() {
   read.forEach(function(it){
     var row = histEl('div', 'syWarnRow read');
     row.appendChild(histEl('div', 'syWarnTitle', sysWarnTitle(it)));
-    row.appendChild(histEl('div', 'syNote', sysWarnWhen(it)));
+    row.appendChild(histEl('div', 'syNote', sysWarnWhen(it) + (it.active ? ' · ' + T('warn.stillActive') : '')));   /* a state (drive full, memory) stays while it lasts */
     box.appendChild(row);
   });
   if (sysWarnList && sysWarnList.source === 'none') box.appendChild(histEl('div', 'syNote', T('warn.noKernel')));
