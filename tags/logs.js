@@ -2,7 +2,9 @@
    log files of the AutoDJ and Smart Playlists plugins. Only the sources in SOURCES, only 50, 100 or 300 lines.
    The volumio user can read the journal only if it is in the systemd-journal group (instructions:
    docs/einrichten.md, "Protokolle"); otherwise the source reports "nojournal". Node 8, ES5 only.
-   opts: run (replacement for execFile), files ({autodj, smartplaylists}: other paths, tests) */
+   opts: run (replacement for execFile), files ({autodj, smartplaylists}: other paths, tests),
+   mac ({web, mpd, mpdstart, 'tag-service'}: log files of Xplorio4Mac; there is no journal on the Mac, so these files
+   replace the journal sources and "volumio" becomes "web", the Xplorio web server) */
 var fs = require('fs'), cp = require('child_process');
 
 var JOURNALCTL = '/bin/journalctl', TIMEOUT = 8000, LINES = [50, 100, 300], MAX_LINE = 2000, TAIL_BYTES = 256 * 1024;
@@ -15,8 +17,12 @@ var SOURCES = [
   {id: 'crashes',        file: ''}                     /* tag service crashes (crash.log in its data folder, see appendCrash) */
 ];
 
-function sourceOf(id) {
-  for (var i = 0; i < SOURCES.length; i++) if (SOURCES[i].id === id) return SOURCES[i];
+/* Xplorio4Mac (xplorio-services.sh): web server, MPD and tag service write to ~/Library/Logs/Xplorio, MPD's own log is its log_file */
+var MAC_SOURCES = ['web', 'mpd', 'mpdstart', 'tag-service', 'crashes'];
+
+function sourceOf(id, list) {
+  list = list || SOURCES;
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
   return null;
 }
 function lineCount(n) { n = parseInt(n, 10); return LINES.indexOf(n) >= 0 ? n : LINES[0]; }
@@ -59,6 +65,8 @@ function Logs(opts) {
   opts = opts || {};
   this.run = opts.run || defaultRun;
   this.files = opts.files || {};
+  var mac = opts.mac;
+  this.list = mac ? MAC_SOURCES.map(function(id){ return {id: id, file: mac[id] || ''}; }) : SOURCES;
 }
 
 Logs.prototype.path = function(s) { return this.files[s.id] || s.file; };
@@ -66,12 +74,12 @@ Logs.prototype.path = function(s) { return this.files[s.id] || s.file; };
 /* which sources exist? plugin logs only if the file is there */
 Logs.prototype.sources = function() {
   var self = this;
-  return SOURCES.filter(function(s){ return s.unit || fs.existsSync(self.path(s)); }).map(function(s){ return s.id; });
+  return this.list.filter(function(s){ return s.unit || fs.existsSync(self.path(s)); }).map(function(s){ return s.id; });
 };
 
 /* cb(code, {ok, source, lines, sources}) */
 Logs.prototype.read = function(id, n, cb) {
-  var s = sourceOf(id), list = this.sources();
+  var s = sourceOf(id, this.list), list = this.sources();
   if (!id) return cb(200, {ok: true, source: '', lines: [], sources: list});   /* only the list of sources */
   if (!s) return cb(400, {ok: false, error: 'not allowed'});
   n = lineCount(n);
@@ -109,4 +117,4 @@ function appendCrash(file, err, now) {
   } catch (e) { return false; }
 }
 
-module.exports = {appendCrash: appendCrash, Logs: Logs, SOURCES: SOURCES, LINES: LINES, sourceOf: sourceOf, lineCount: lineCount, cleanJournal: cleanJournal, tailFile: tailFile};
+module.exports = {appendCrash: appendCrash, Logs: Logs, SOURCES: SOURCES, MAC_SOURCES: MAC_SOURCES, LINES: LINES, sourceOf: sourceOf, lineCount: lineCount, cleanJournal: cleanJournal, tailFile: tailFile};

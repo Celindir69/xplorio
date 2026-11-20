@@ -71,4 +71,18 @@ t('crash log: time and stack, only the end is kept', function(){
   assert.ok(l.sources().indexOf('crashes') >= 0);
   l.read('crashes', 50, function(c, o){ assert.ok(o.ok); assert.strictEqual(o.lines.length, 50); });
 });
+t('Mac: log files instead of the journal, web server instead of Volumio', function(){
+  var web = path.join(dir, 'web.log'), tags = path.join(dir, 'tags.log'), own = path.join(dir, 'mpd-own.log');
+  fs.writeFileSync(web, '2026-11-20 10:00:00 Xplorio server on port 8080\n');
+  fs.writeFileSync(tags, 'a\nb\n');
+  fs.writeFileSync(own, 'Nov 20 10:00 : player: played "x.flac"\n');
+  var l = new lg.Logs({files: {crashes: path.join(dir, 'kein-crash.log')}, mac: {web: web, mpd: own, mpdstart: path.join(dir, 'fehlt.log'), 'tag-service': tags},
+    run: function(){ throw new Error('no journal on the Mac'); }});
+  assert.deepStrictEqual(l.sources(), ['web', 'mpd', 'tag-service']);
+  l.read('web', 50, function(c, o){ assert.ok(o.ok); assert.deepStrictEqual(o.lines, ['2026-11-20 10:00:00 Xplorio server on port 8080']); });
+  l.read('mpd', 50, function(c, o){ assert.ok(o.ok); assert.strictEqual(o.lines.length, 1); });
+  l.read('tag-service', 50, function(c, o){ assert.deepStrictEqual(o.lines, ['a', 'b']); });
+  l.read('volumio', 50, function(c, o){ assert.strictEqual(c, 400); });
+  l.read('autodj', 50, function(c, o){ assert.strictEqual(c, 400); });
+});
 console.log(n + ' checks');
