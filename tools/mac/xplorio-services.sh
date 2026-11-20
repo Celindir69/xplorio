@@ -21,7 +21,17 @@ TAGS_PORT=${TAGS_PORT:-8766}
 MPD_PORT=${MPD_PORT:-6600}
 mkdir -p "$LOG" "$RUN"
 
-up() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }   # something answers on this port
+up() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+# date and time in front of each line that does not start with one ("2026-11-20 …", "Nov 20 07:12 …")
+stampLines() {
+  local l
+  while IFS= read -r l; do
+    case "$l" in
+      [0-9][0-9][0-9][0-9]-*|[A-Z][a-z][a-z]\ [\ 0-9][0-9]\ *) printf '%s\n' "$l" ;;
+      *) printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$l" ;;
+    esac
+  done
+}   # something answers on this port
 waitUp() { local i=0; while [ $i -lt "$2" ]; do up "$1" && return 0; sleep 0.5; i=$((i + 1)); done; return 1; }
 
 stopAll() {
@@ -71,7 +81,9 @@ if ! up "$MPD_PORT"; then
   fi
   # in the foreground, sent to the background here: MPD's own way (fork) dies silently on older macOS (MacPorts' MPD 0.24).
   # The file before the options: that MPD takes no file after --no-daemon ("too many arguments")
-  nohup "$MPD" "$MPD_CONF" --no-daemon >>"$LOG/mpd.log" 2>&1 </dev/null &
+  # Lines without MPD's own time (start messages, errors) get the local time in front; MPD ignores a broken pipe
+  # (SIGPIPE), and the stamping loop ignores the hang-up when the window closes
+  nohup "$MPD" "$MPD_CONF" --no-daemon > >(trap '' HUP; stampLines >>"$LOG/mpd.log") 2>&1 </dev/null &
   echo $! >"$RUN/mpd.pid"
   if ! waitUp "$MPD_PORT" 20; then
     echo "MPD startet nicht. Den Grund zeigt die Datei $LOG/mpd.log"
