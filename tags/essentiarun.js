@@ -119,6 +119,8 @@ Runner.prototype.start = function(cb, run) {
         if (!l.trim()) return;
         self.tail.push(l); if (self.tail.length > TAIL) self.tail.shift();
         parseLine(l, self.progress);
+        /* crashes and errors also in tags.log, so they can be looked up later (macOS reports "Python quit unexpectedly") */
+        if (/^\s*(Error: |Worker process crashed)/.test(l)) self.log('Analysis: ' + l.trim());
       });
     }
     if (ch.stdout) ch.stdout.on('data', onData);

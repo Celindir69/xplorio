@@ -134,6 +134,19 @@ t('at night: only when switched on, at 3 o\'clock, once a day', function(done){
   }, 20);
 });
 
+t('crashes and errors of the analysis also go to tags.log, progress lines do not', function(done){
+  var logged = [], m = make({log: function(x){ logged.push(x); }});
+  m.r.start(function(){
+    var ch = m.spawned[0].ch;
+    ch.stdout.emit('data', '  3/10  (2.0 s per file, about 0 min left, 0 errors, 0 skipped)\n  Worker process crashed, continuing \u2026\n');
+    ch.stderr.emit('data', '  Error: USB/A/01.flac: analysis crashed (file damaged or too large?)\n');
+    var mine = logged.filter(function(x){ return /^Analysis: /.test(x); });
+    assert.deepStrictEqual(mine, ['Analysis: Worker process crashed, continuing \u2026', 'Analysis: Error: USB/A/01.flac: analysis crashed (file damaged or too large?)']);
+    ch.emit('close', 0);
+    done();
+  });
+});
+
 (function run(i){
   if (i >= queue.length) { console.log(n + ' tests passed'); return; }
   queue[i][1](function(){ n++; console.log('ok   ' + queue[i][0]); run(i + 1); });
