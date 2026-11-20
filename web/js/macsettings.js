@@ -18,7 +18,7 @@ var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer 
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
 var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
 function msErrKey(e) { return 'mac.err.' + (e === 'auth' || e === 'pwneeded' ? e : 'fs'); }
-var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd', 'audio.restart'];
+var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd', 'audio.restart', 'audio.access', 'audio.automation', 'audio.airplay'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
 
 function msToken() { return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem !== 'undefined' && sysSvcMem) || ''; }
@@ -72,12 +72,12 @@ function msAudioLoad() {
 function msAudioSend(body, okText) {
   var seq = msSeq;
   body.token = msToken();
-  msAudioBusy = true; msAudioMsg = body.action === 'audioScan' ? T('mac.audioScanning') : ''; msRender();
+  msAudioBusy = true; msAudioMsg = body.action === 'audioScan' ? T('mac.audioScanning') : body.action === 'airplayScan' || /^air:/.test(String(body.id || '')) ? T('mac.audioAirBusy') : ''; msRender();
   tagPostJson('/mac/settings', body).then(function(r){
     if (seq !== msSeq) return;
     msAudioBusy = false;
     msAudioBad = !(r && r.ok);
-    if (r && r.ok) { msAudio = r; msAudioMsg = okText ? T(okText, {n: r.devices || 0}) : ''; }
+    if (r && r.ok) { msAudio = r; msAudioMsg = okText ? T(okText, {n: (r.devices !== undefined ? r.devices : r.speakers) || 0}) : ''; }
     else if (r && (r.error === 'auth' || r.error === 'pwneeded')) { if (r.error === 'auth') msAuthLost(); msAudioMsg = T(msErrKey(r.error)); }
     else msAudioMsg = T(MS_AUDIO_ERRORS.indexOf(r && r.error) >= 0 ? 'mac.err.' + r.error : 'mac.err.audio.mpd');
     msRender();
@@ -101,7 +101,7 @@ function msAudioCard() {
       var row = histEl('div', 'msItem');
       var tx = histEl('div', 'msItemText');
       tx.appendChild(histEl('div', 'msItemName', o.system ? T('mac.audioSystem') : o.name));
-      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.via ? T('mac.audioVia')
+      tx.appendChild(histEl('div', 'msItemSub', o.system ? T('mac.audioSystemSub') : o.airplay ? T('mac.audioAirVia') : o.via ? T('mac.audioVia')
         : [o.hog ? T('mac.audioExclusiveOn') : '', o.fixed ? T('mac.audioFixedOn') : '', o.dop ? 'DoP' : ''].filter(Boolean).join(' · ')));
       row.appendChild(tx);
       if (o.enabled) row.appendChild(histEl('div', 'mxChip mxSmall on', T('mac.audioActive')));
@@ -109,6 +109,11 @@ function msAudioCard() {
       c.appendChild(row);
     });
     if (!a.outputs.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.audioNone')));
+    if (a.canAirplay) {                                  /* AirPlay: System Preferences opens on the Mac for a moment */
+      var arow = histEl('div', 'pbRow msAddRow');
+      arow.appendChild(msButton(T('mac.audioAirScan'), function(){ if (!msAudioBusy) msAudioSend({action: 'airplayScan'}, 'mac.audioAirFound'); }));
+      c.appendChild(arow);
+    }
     if (a.canScan) {
       /* every change writes all three into mpd.conf (MPD restarts) */
       var scan = function(change){

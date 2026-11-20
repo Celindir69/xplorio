@@ -13,7 +13,9 @@
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), confFile (mpd.conf), devices(cb(err, json)) (audiodevices, else system_profiler SPAudioDataType -json),
          restart(cb) (MPD stops and starts again), listDevices(cb(err, json)) and setDefault(uid, cb(err)) (audiodevices only:
-         the Mac's sound output for devices played through "Systemausgabe") */
+         the Mac's sound output for devices played through "Systemausgabe"),
+         airplay (macairplay.js AirPlay: list/select through System Preferences) and airFile (the last list, kept across restarts):
+         AirPlay speakers play through "Systemausgabe" too; listed only after "Find AirPlay speakers" (opens System Preferences) */
 var fs = require('fs');
 
 var BEGIN = '# ---- Xplorio: audio outputs (settings page; replaced on every device scan) ----';
@@ -160,7 +162,37 @@ function parseOutputs(lines) {
   return out;
 }
 
-function MacAudio(opts) { this.o = opts; this.busy = false; }
+function MacAudio(opts) {
+  this.o = opts; this.busy = false;
+  this.air = {speakers: [], current: ''};
+  if (opts.airFile) try {
+    var a = JSON.parse(fs.readFileSync(opts.airFile, 'utf8'));
+    if (a && Array.isArray(a.speakers)) this.air = {speakers: a.speakers.filter(function(x){ return x && typeof x.name === 'string' && x.name; }), current: String(a.current || '')};
+  } catch (e) { /* none yet */ }
+}
+MacAudio.prototype.airSave = function() {
+  if (!this.o.airFile) return;
+  try { fs.writeFileSync(this.o.airFile, JSON.stringify(this.air)); } catch (e) { /* only a cache */ }
+};
+/* a fresh list from System Preferences; the one marked there is the Mac's output now */
+MacAudio.prototype.airTake = function(list, chosen) {
+  var cur = chosen || (list.filter(function(x){ return x.current; })[0] || {}).name || '';
+  this.air = {speakers: list.map(function(x){ return {name: x.name, raw: x.raw || x.name}; }), current: cur};
+  this.airSave();
+};
+/* look for AirPlay speakers (System Preferences opens for a moment). cb(err, {speakers: n}) */
+MacAudio.prototype.airScan = function(cb) {
+  var self = this;
+  if (!this.o.airplay) return cb(new Error('nodevices'));
+  if (this.busy) return cb(new Error('busy'));
+  this.busy = true;
+  this.o.airplay.list(function(e, list){
+    self.busy = false;
+    if (e) return cb(e);
+    self.airTake(list);
+    cb(null, {speakers: list.length});
+  });
+};
 
 MacAudio.prototype.conf = function() { try { return fs.readFileSync(this.o.confFile, 'utf8'); } catch (e) { return ''; } };
 
@@ -185,12 +217,20 @@ MacAudio.prototype.status = function(cb) {
       });
     }
     var sys = outs.filter(function(o){ return o.system; })[0];
-    if (!sys || !self.o.listDevices) return done(outs);
+    var air = sys && self.o.airplay ? self.air.speakers : [];
+    function airOuts(macOnAirPlay) {                     /* AirPlay: through the system output, the one chosen last */
+      return air.map(function(x){
+        return {id: 'air:' + x.name, name: x.name, enabled: sys.enabled && macOnAirPlay && x.name === self.air.current, system: false, hog: false, via: true, airplay: true};
+      });
+    }
+    if (!sys) return done(outs);
+    if (!self.o.listDevices) return done(outs.concat(airOuts(true)));
     self.o.listDevices(function(e, json){                 /* Bluetooth: through the system output */
-      var via = e ? [] : parseDevices(json).filter(viaSystem);
+      var devs = e ? [] : parseDevices(json), via = devs.filter(viaSystem);
+      var onAir = e ? true : devs.some(function(d){ return d.kind === 'airplay' && d.def; });   /* Core Audio's "AirPlay" device is the Mac's output */
       done(outs.concat(via.map(function(d){
         return {id: 'via:' + d.uid, name: d.name.trim(), enabled: sys.enabled && d.def, system: false, hog: false, via: true};
-      })));
+      })).concat(airOuts(onAir)));
     });
   });
 };
@@ -272,6 +312,15 @@ MacAudio.prototype.select = function(id, cb) {
     if (err) return cb(err);
     var o = st.outputs.filter(function(x){ return x.id === id; })[0];
     if (!o) return cb(new Error('output'));
+    if (o.airplay) {                                     /* choose it in System Preferences, then play on the system output */
+      var sp = st.outputs.filter(function(x){ return x.system; })[0];
+      var sk = self.air.speakers.filter(function(x){ return x.name === o.name; })[0];
+      return self.o.airplay.select(sk.raw || sk.name, function(e, list){
+        if (e) return cb(e);
+        self.airTake(list, o.name);
+        self.select(sp.id, cb);
+      });
+    }
     if (o.via) {                                         /* make it the Mac's output, then play on the system output */
       var sys = st.outputs.filter(function(x){ return x.system; })[0];
       return self.o.setDefault(String(id).slice(4), function(e){
@@ -280,7 +329,7 @@ MacAudio.prototype.select = function(id, cb) {
       });
     }
     var cmds = ['enableoutput ' + id];
-    st.outputs.forEach(function(x){ if (x.id !== id && x.enabled && !x.via) cmds.push('disableoutput ' + x.id); });
+    st.outputs.forEach(function(x){ if (x.id !== id && x.enabled && !x.via) cmds.push('disableoutput ' + x.id); });   /* via/air: not MPD outputs */
     self.o.mpd(cmds, function(e){ cb(e); });
   });
 };

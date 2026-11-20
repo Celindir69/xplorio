@@ -874,6 +874,11 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   “Software volume control” off (`mixer_type "none"`): MPD plays at 100 % and leaves the samples untouched
   (bit-perfect); the amplifier or DAC sets the volume. “DSD as DoP” (`dop`) sends DSD files unchanged to USB DACs, only for DACs with DoP (others play noise).
   The system output, AirPlay and Bluetooth keep MPD's volume.
+  **AirPlay speakers** (macOS 11 and 12): “Find AirPlay speakers” reads the list under System Preferences → Sound →
+  Output (System Preferences opens and closes for a moment); the speakers then appear in the list, “Use” chooses one
+  there and plays through the system output, also from a phone or tablet. One speaker plays at a time. Needed once:
+  allow Xplorio under Security → Privacy → **Accessibility** on the Mac and answer “Xplorio wants to control System
+  Events” with OK. From Ventura on the pane looks different and this does not work.
   “DSD through ffmpeg” switches off MPD's own DSD decoders (`dsf`, `dsdiff`) in `mpd.conf`; ffmpeg then converts DSD
   to PCM. Needed with MPD 0.24.0 from MacPorts, whose DSD decoder only produces noise on the Mac; needs an MPD with
   ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), otherwise the switch does not appear. Fixed from MPD 0.24.19 on (not yet in MacPorts; script `mpd-neu.sh` with the guides).

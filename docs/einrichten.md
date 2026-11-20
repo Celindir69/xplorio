@@ -1171,6 +1171,12 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   „Software-Lautstärkeregler“ aus (`mixer_type "none"`): MPD spielt mit 100 % und lässt die Samples unverändert
   (bitgenau); die Lautstärke regelt dann der Verstärker oder DAC. „DSD als DoP“ (`dop`) schickt DSD-Dateien unverändert an USB-DACs, nur für DACs mit DoP
   (andere spielen Rauschen). Systemausgabe, AirPlay und Bluetooth behalten die Lautstärke in MPD.
+  **AirPlay-Lautsprecher** (macOS 11 und 12): „AirPlay-Lautsprecher suchen“ liest die Liste unter Systemeinstellungen →
+  Ton → Ausgabe (die Systemeinstellungen gehen dafür kurz auf und wieder zu); danach stehen die Lautsprecher in der
+  Liste, „Verwenden“ wählt ihn dort aus und spielt über die Systemausgabe, auch vom Handy oder Tablet. Es spielt immer
+  ein Lautsprecher. Einmalig nötig: auf dem Mac unter Sicherheit → Datenschutz → **Bedienungshilfen** Xplorio erlauben
+  und die Frage „Xplorio möchte System Events steuern“ mit OK beantworten. Ab Ventura sieht die Seite anders aus, dann
+  geht es nicht.
   „DSD über ffmpeg“ schaltet MPDs eigene DSD-Decoder (`dsf`, `dsdiff`) in `mpd.conf` ab, ffmpeg wandelt DSD dann in
   PCM um. Nötig mit MPD 0.24.0 aus MacPorts, dessen DSD-Decoder auf dem Mac nur Rauschen liefert; braucht ein MPD mit
   ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht. Ab MPD 0.24.19 (in MacPorts noch nicht, Skript `mpd-neu.sh` in den Anleitungen) ist der Fehler behoben.

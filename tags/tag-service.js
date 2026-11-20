@@ -3105,7 +3105,10 @@ var macAudio = new macaudio.MacAudio({
     if (process.env.XPLORIO_MPD_VERSION) return fs.readFile(process.env.XPLORIO_MPD_VERSION, 'utf8', cb);   /* tests */
     cp.execFile(process.env.MPD_BIN || 'mpd', ['--version'], {timeout: 10000, maxBuffer: 1024 * 1024}, function(e, out){ cb(e, out); });
   },
-  restart: function(cb){ mpdRestart(cb); }
+  restart: function(cb){ mpdRestart(cb); },
+  /* AirPlay speakers through System Preferences (macairplay.js, UI scripting; Big Sur and Monterey) */
+  airplay: process.platform === 'darwin' ? new (require('./macairplay.js').AirPlay)() : null,
+  airFile: path.join(DATA_DIR, 'airplay.json')
 });
 /* restart MPD with a changed mpd.conf. "mpd <conf> --kill" needs pid_file in mpd.conf (older setups from ~/xplorio-mpd
    have none): if MPD still answers after that, the PID from xplorio-services.sh (run/mpd.pid) is stopped. Only when the
@@ -3153,14 +3156,16 @@ setInterval(function(){
 }, 5000).unref();
 function doMacAudio(body, cb) {
   function answer(e, extra) {
-    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value|restart)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
+    if (e) return cb(200, {ok: false, error: /^(busy|nodevices|output|conf|value|restart|access|automation|airplay)$/.test(e.message) ? 'audio.' + e.message : 'audio.mpd'});
     macAudio.status(function(e2, st){
       if (e2) return cb(200, {ok: false, error: 'audio.mpd'});
-      st.ok = true; st.done = body.action; st.canScan = !!MAC_MPD_CONF; if (extra) st.devices = extra.devices;
+      st.ok = true; st.done = body.action; st.canScan = !!MAC_MPD_CONF; st.canAirplay = !!macAudio.o.airplay;
+      if (extra) { st.devices = extra.devices; if (extra.speakers !== undefined) st.speakers = extra.speakers; }
       cb(200, st);
     });
   }
-  if (body.action === 'audioSelect') return macAudio.select(/^via:/.test(String(body.id)) ? String(body.id) : +body.id, answer);
+  if (body.action === 'audioSelect') return macAudio.select(/^(via|air):/.test(String(body.id)) ? String(body.id) : +body.id, answer);
+  if (body.action === 'airplayScan') return macAudio.airScan(answer);
   if (body.action === 'audioScan') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.scan({exclusive: !!body.exclusive, fixedVolume: !!body.fixedVolume, dop: !!body.dop}, answer);
