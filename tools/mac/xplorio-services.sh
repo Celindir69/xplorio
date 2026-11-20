@@ -82,8 +82,10 @@ if ! up "$MPD_PORT"; then
   # in the foreground, sent to the background here: MPD's own way (fork) dies silently on older macOS (MacPorts' MPD 0.24).
   # The file before the options: that MPD takes no file after --no-daemon ("too many arguments")
   # Lines without MPD's own time (start messages, errors) get the local time in front; MPD ignores a broken pipe
-  # (SIGPIPE), and the stamping loop ignores the hang-up when the window closes
-  nohup "$MPD" "$MPD_CONF" --no-daemon > >(trap '' HUP; stampLines >>"$LOG/mpd.log") 2>&1 </dev/null &
+  # (SIGPIPE), and the stamping loop ignores the hang-up when the window closes. The loop must not keep this script's
+  # output open (exec: its own output goes to the file), else Xplorio.app waits for the end of it and hangs at
+  # "Xplorio startet …"
+  nohup "$MPD" "$MPD_CONF" --no-daemon > >(exec >>"$LOG/mpd.log" 2>&1; trap '' HUP; stampLines) 2>&1 </dev/null &
   echo $! >"$RUN/mpd.pid"
   if ! waitUp "$MPD_PORT" 20; then
     echo "MPD startet nicht. Den Grund zeigt die Datei $LOG/mpd.log"
