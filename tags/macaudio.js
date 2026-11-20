@@ -235,6 +235,23 @@ MacAudio.prototype.status = function(cb) {
   });
 };
 
+/* does the sound go to a device output (USB DAC into the amplifier) or through the system output (Bluetooth, AirPlay,
+   Mac speakers)? The amplifier's volume only makes sense for the first; else the volume slider sets MPD's volume.
+   No sound output on (only the stream to the phone): counts as the amplifier, as before. cb(err, amp) */
+MacAudio.prototype.ampOutput = function(cb) {
+  var conf = blocks(this.conf());
+  this.o.mpd(['outputs'], function(err, lists){
+    if (err) return cb(err);
+    var on = parseOutputs(lists[0]).filter(function(o){
+      var b = conf.filter(function(x){ return x.name === o.name; })[0];
+      return o.enabled && (b ? b.type === 'osx' : o.plugin === 'osx');
+    })[0];
+    if (!on) return cb(null, true);
+    var b = conf.filter(function(x){ return x.name === on.name; })[0];
+    cb(null, !!(b && b.device));
+  });
+};
+
 /* does MPD have the ffmpeg decoder (with DSD)? asked once */
 MacAudio.prototype.ffmpegOk = function(cb) {
   var self = this;

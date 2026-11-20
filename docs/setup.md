@@ -879,6 +879,8 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   there and plays through the system output, also from a phone or tablet. One speaker plays at a time. Needed once:
   allow Xplorio under Security → Privacy → **Accessibility** on the Mac and answer “Xplorio wants to control System
   Events” with OK. From Ventura on the pane looks different and this does not work.
+  With the Rotel control the volume slider sets the amplifier only while a device output (e.g. the USB DAC into the
+  amplifier) plays; through the system output (AirPlay, Bluetooth, Mac speakers) it sets MPD's volume.
   “DSD through ffmpeg” switches off MPD's own DSD decoders (`dsf`, `dsdiff`) in `mpd.conf`; ffmpeg then converts DSD
   to PCM. Needed with MPD 0.24.0 from MacPorts, whose DSD decoder only produces noise on the Mac; needs an MPD with
   ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), otherwise the switch does not appear. Fixed from MPD 0.24.19 on (not yet in MacPorts; script `mpd-neu.sh` with the guides).

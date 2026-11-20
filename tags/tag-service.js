@@ -3216,6 +3216,10 @@ function macLibrary(cb) {
 function doMac(req, res, route) {
   if (!playerIsMpd()) return send(res, 404, {ok: false, error: 'player is volumio'});
   if (req.method === 'GET' && route === '/mac/audio') return doMacAudio({action: 'status'}, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/mac/volume') {   /* the volume slider: amplifier or MPD (macaudio.js ampOutput) */
+    if (!onMac() || !MAC_MPD_CONF) return send(res, 200, {ok: true, amp: true});
+    return macAudio.ampOutput(function(e, amp){ send(res, 200, {ok: !e, amp: e ? true : amp}); });
+  }
   if (route === '/mac/analysis') return doMacAnalysis(req, res);
   if (route === '/mac/rsgain') return doMacRsgain(req, res);
   if (route === '/mac/import') return doMacImport(req, res);

@@ -44,6 +44,10 @@ var vVal     = document.getElementById('vVal');
 var vMute    = document.getElementById('vMute');
 var volDrag  = false;
 var rotelMute= false;
+/* Mac (PLAYER 'mpd') with the amplifier: while the sound goes through the system output (AirPlay, Bluetooth, Mac speakers)
+   instead of a device output into the amplifier, the slider sets MPD's volume (GET /mac/volume, every few seconds) */
+var VOL_PLAYER = false, ROTEL_MAX = +vSlider.max || 100;
+function volPlayer() { return !ROTEL_ON || VOL_PLAYER; }
 
 var SVG_VOL  = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
 var SVG_MUTE = '<svg viewBox="0 0 24 24"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
@@ -200,6 +204,10 @@ function showRotel(s) {
   if (rotelPowerHold && (Date.now() > rotelPowerHold.until || real === rotelPowerHold.want)) rotelPowerHold = null;
   rotelOn = rotelPowerHold ? rotelPowerHold.want : real;
   paintRotelPower();
+  rotelSource = s.source || null;
+  rotelProfLoad();
+  rotelInputRepaint();
+  if (VOL_PLAYER) return;                                /* the slider belongs to MPD now */
   volWrap.className = rotelOn ? '' : 'off';
   if (!!s.mute !== rotelMute || !vMute.firstChild) {
     rotelMute = !!s.mute;
@@ -209,14 +217,11 @@ function showRotel(s) {
     vSlider.value = s.volume;
     paintSlider();
   }
-  rotelSource = s.source || null;
-  rotelProfLoad();
-  rotelInputRepaint();
 }
 
 /* without Rotel: volume from Volumio (getState/pushState); hidden if Volumio has no volume control */
 function showVolumio(st) {
-  if (ROTEL_ON) return;
+  if (!volPlayer()) return;
   var none = st.disableVolumeControl || typeof st.volume !== 'number';
   volWrap.style.display = none ? 'none' : '';
   if (none) return;
@@ -256,22 +261,38 @@ function rotel(path) {
 
 vSlider.addEventListener('input', function(){ volDrag = true; paintSlider(); });
 vSlider.addEventListener('change', function(){
-  if (!ROTEL_ON) { volumioVol(+vSlider.value); volDrag = false; return; }
+  if (volPlayer()) { volumioVol(+vSlider.value); volDrag = false; return; }
   rotel('/vol?v=' + vSlider.value).then(function(){ volDrag = false; });
 });
 
 document.getElementById('vDown').addEventListener('click', function(){
-  if (!ROTEL_ON) return volumioVol(+vSlider.value - 1);
+  if (volPlayer()) return volumioVol(+vSlider.value - 1);
   vSlider.value = Math.max(0, +vSlider.value - 1); paintSlider();
   rotel('/cmd?c=vol_dwn');
 });
 document.getElementById('vUp').addEventListener('click', function(){
-  if (!ROTEL_ON) return volumioVol(+vSlider.value + 1);
+  if (volPlayer()) return volumioVol(+vSlider.value + 1);
   vSlider.value = Math.min(+vSlider.max, +vSlider.value + 1); paintSlider();
   rotel('/cmd?c=vol_up');
 });
 vMute.addEventListener('click', function(){
-  if (!ROTEL_ON) { player.mute(!rotelMute); return; }
+  if (volPlayer()) { player.mute(!rotelMute); return; }
   rotel('/cmd?c=' + (rotelMute ? 'mute_off' : 'mute_on'));
 });
 
+/* Mac with the amplifier: amplifier or MPD volume, after the chosen sound output (macaudio.js ampOutput) */
+function volTargetCheck() {
+  if (!ROTEL_ON || typeof PLAYER_KIND === 'undefined' || PLAYER_KIND !== 'mpd' || typeof TAGS === 'undefined' || document.hidden) return;
+  tagGetJson('/mac/volume').then(function(r){
+    var p = !!(r && r.ok && r.amp === false);
+    if (p === VOL_PLAYER) return;
+    VOL_PLAYER = p;
+    vSlider.max = p ? 100 : ROTEL_MAX;
+    volWrap.className = '';
+    if (p) player.state().then(showVolumio).catch(function(){});   /* MPD's volume right away */
+    else { volWrap.style.display = ''; rotel('/state'); }
+  }).catch(function(){});
+}
+setInterval(volTargetCheck, 5000);
+setTimeout(volTargetCheck, 1500);
+document.addEventListener('visibilitychange', volTargetCheck);

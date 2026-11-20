@@ -71,6 +71,21 @@ function fakeMpd() {
   return m;
 }
 
+ta('volume slider: amplifier for a device output, MPD for the system output (AirPlay, Bluetooth); nothing on: amplifier', function(done){
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplorio-vol-')), conf = path.join(dir, 'mpd.conf');
+  fs.writeFileSync(conf, CONF + 'audio_output {\n  type "osx"\n  name "' + ma.SYSTEM + '"\n}\naudio_output {\n  type "osx"\n  name "RME"\n  device "RME"\n}\n');
+  var mpd = fakeMpd(), a = new ma.MacAudio({mpd: mpd, confFile: conf});
+  a.ampOutput(function(e, amp){
+    assert.ifError(e); assert.strictEqual(amp, true);                         /* RME on */
+    mpd.outs()[1].enabled = false; mpd.outs()[0].enabled = true;
+    a.ampOutput(function(e2, amp2){
+      assert.strictEqual(amp2, false);                                       /* system output */
+      mpd.outs()[0].enabled = false;
+      a.ampOutput(function(e3, amp3){ assert.strictEqual(amp3, true); done(); });
+    });
+  });
+});
+
 ta('settings: AirPlay speakers after the search, choosing one plays on the system output; the list stays after a restart', function(done){
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplorio-air-')), conf = path.join(dir, 'mpd.conf'), airFile = path.join(dir, 'airplay.json');
   fs.writeFileSync(conf, CONF + 'audio_output {\n  type "osx"\n  name "' + ma.SYSTEM + '"\n}\naudio_output {\n  type "osx"\n  name "RME"\n  device "RME"\n}\n');

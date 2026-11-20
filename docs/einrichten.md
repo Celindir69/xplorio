@@ -1177,6 +1177,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   ein Lautsprecher. Einmalig nötig: auf dem Mac unter Sicherheit → Datenschutz → **Bedienungshilfen** Xplorio erlauben
   und die Frage „Xplorio möchte System Events steuern“ mit OK beantworten. Ab Ventura sieht die Seite anders aus, dann
   geht es nicht.
+  Mit Rotel-Steuerung regelt der Lautstärkeregler den Verstärker nur, solange ein Geräte-Ausgang (z. B. der USB-DAC am
+  Verstärker) spielt; über die Systemausgabe (AirPlay, Bluetooth, Mac-Lautsprecher) regelt er die Lautstärke von MPD.
   „DSD über ffmpeg“ schaltet MPDs eigene DSD-Decoder (`dsf`, `dsdiff`) in `mpd.conf` ab, ffmpeg wandelt DSD dann in
   PCM um. Nötig mit MPD 0.24.0 aus MacPorts, dessen DSD-Decoder auf dem Mac nur Rauschen liefert; braucht ein MPD mit
   ffmpeg (`sudo port upgrade --enforce-variants mpd +mad +ffmpeg`), sonst erscheint der Schalter nicht. Ab MPD 0.24.19 (in MacPorts noch nicht, Skript `mpd-neu.sh` in den Anleitungen) ist der Fehler behoben.
