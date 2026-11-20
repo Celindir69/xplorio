@@ -2425,7 +2425,21 @@ function doPower(body, cb) {
 }
 /* POST /logs {source, lines: 50|100|300, token}: last lines of a log (tags/logs.js), without source only the sources;
    password only if one is set */
-var logs = require('./logs.js'), CRASH_LOG = path.join(DATA_DIR, 'crash.log'), logReader = new logs.Logs({files: {crashes: CRASH_LOG}});
+var logs = require('./logs.js'), CRASH_LOG = path.join(DATA_DIR, 'crash.log'), logReader = new logs.Logs({files: {crashes: CRASH_LOG}, mac: macLogFiles()});
+/* Xplorio4Mac (XPLORIO_RUN from xplorio-services.sh): no journal, the log files in ~/Library/Logs/Xplorio instead, and MPD's
+   own log (log_file in its mpd.conf); mpd.log there only holds what MPD prints while starting */
+function macLogFiles() {
+  if (!process.env.XPLORIO_RUN) return null;
+  var dir = process.env.XPLORIO_LOG || path.join(process.env.HOME || require('os').homedir(), 'Library', 'Logs', 'Xplorio');
+  var conf = process.env.MPD_CONF || '', own = '';
+  if (conf) {
+    try {
+      var m = /^\s*log_file\s+"([^"]+)"/m.exec(fs.readFileSync(conf, 'utf8'));
+      if (m && m[1] !== 'syslog') own = m[1].replace(/^~(?=\/)/, process.env.HOME || '');
+    } catch (e) { /* no mpd.conf: only the start output */ }
+  }
+  return {web: path.join(dir, 'web.log'), mpd: own || path.join(dir, 'mpd.log'), mpdstart: own ? path.join(dir, 'mpd.log') : '', 'tag-service': path.join(dir, 'tags.log')};
+}
 function doLogs(body, cb) {
   if (body.source && authFail(body)) return cb(200, {ok: false, error: authFail(body), sources: logReader.sources()});
   logReader.read(String(body.source || ''), body.lines, cb);
