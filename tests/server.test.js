@@ -108,6 +108,21 @@ volumio.listen(0, function(){
         next();
       }); }, 50);
     });
+    steps.push(function(next){
+      var mac = require('../server/xplorio-server.js').create({noVolumio: true, www: www});
+      mac.listen(0, function(){
+        http.get({port: mac.address().port, path: '/api/v1/getState'}, function(r1){
+          r1.resume();
+          http.get({port: mac.address().port, path: '/xplorio.html'}, function(r2){
+            r2.resume();
+            t('Xplorio4Mac (no Volumio): the interface as usual, everything else 404 instead of asking Volumio', function(){
+              assert.strictEqual(r1.statusCode, 404); assert.strictEqual(r2.statusCode, 200);
+            });
+            mac.close(); next();
+          });
+        });
+      });
+    });
     (function run() {
       var s = steps.shift();
       if (s) return s(run);

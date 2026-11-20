@@ -14,6 +14,7 @@ var DEFAULTS = {
   port:        parseInt(process.env.HTTP_PORT || '4040', 10),
   volumioHost: process.env.VOLUMIO_HOST || '127.0.0.1',
   volumioPort: parseInt(process.env.VOLUMIO_PORT || '3000', 10),
+  noVolumio:   process.env.XPLORIO_PLAYER === 'mpd',         /* Xplorio4Mac: MPD as the player, no Volumio behind it */
   www:         process.env.XPLORIO_WWW || path.join(__dirname, '..')
 };
 
@@ -84,6 +85,7 @@ function create(opts) {
 
   /* pass through to Volumio, unchanged (method, headers, body; also Range for music files) */
   function proxy(req, res) {
+    if (o.noVolumio) { res.writeHead(404, {'Content-Type': 'text/plain'}); return res.end('not found'); }
     var up = http.request({host: o.volumioHost, port: o.volumioPort, method: req.method, path: req.url, headers: req.headers}, function(r){
       res.writeHead(r.statusCode, r.headers);
       r.pipe(res);
@@ -96,6 +98,7 @@ function create(opts) {
 
   /* WebSocket (socket.io): forward the upgrade request as it is, then connect both sides */
   function tunnel(req, sock, head) {
+    if (o.noVolumio) return sock.destroy();
     sock.pause();                                               /* hold what the browser sends until Volumio is connected */
     var up = net.connect(o.volumioPort, o.volumioHost, function(){
       var lines = [req.method + ' ' + req.url + ' HTTP/' + req.httpVersion];
@@ -123,6 +126,9 @@ module.exports = {create: create, DEFAULTS: DEFAULTS};
 
 if (require.main === module) {
   create().listen(DEFAULTS.port, function(){
-    console.log('xplorio-server on port ' + DEFAULTS.port + ', interface from ' + DEFAULTS.www + ', Volumio on ' + DEFAULTS.volumioHost + ':' + DEFAULTS.volumioPort);
+    var d = new Date(), two = function(n){ return (n < 10 ? '0' : '') + n; };
+    var at = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds());
+    console.log(at + ' xplorio-server on port ' + DEFAULTS.port + ', interface from ' + DEFAULTS.www +
+                (DEFAULTS.noVolumio ? ' (player: MPD, no Volumio)' : ', Volumio on ' + DEFAULTS.volumioHost + ':' + DEFAULTS.volumioPort));
   });
 }

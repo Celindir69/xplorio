@@ -86,7 +86,7 @@ if ! up "$TAGS_PORT"; then
   echo $! >"$RUN/tags.pid"
 fi
 if ! up "$WEB_PORT"; then
-  HTTP_PORT="$WEB_PORT" nohup "$NODE" server/xplorio-server.js >>"$LOG/web.log" 2>&1 </dev/null &
+  XPLORIO_PLAYER=mpd HTTP_PORT="$WEB_PORT" nohup "$NODE" server/xplorio-server.js >>"$LOG/web.log" 2>&1 </dev/null &
   echo $! >"$RUN/web.pid"
 fi
 if ! waitUp "$WEB_PORT" 30 || ! waitUp "$TAGS_PORT" 30; then
