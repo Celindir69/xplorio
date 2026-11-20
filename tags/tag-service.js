@@ -1,6 +1,23 @@
 /* Tag service: reads and writes tags of audio files (m4a, flac, mp3, dsf).
    HTTP, port 8766. Runs on Node 8 (ES5 syntax only). The actual work is done by tags.py (Python 2.7/3 + mutagen). */
 var http  = require('http');
+/* On the Mac (Xplorio.app, xplorio-services.sh) the output goes straight to ~/Library/Logs/Xplorio/tags.log: every line gets
+   the local time in front. On Volumio the system log (journald) has its own times. */
+if (process.env.XPLORIO_RUN) (function(){
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds());
+  }
+  ['log', 'error', 'warn'].forEach(function(k){
+    var orig = console[k].bind(console);
+    console[k] = function(){
+      var a = Array.prototype.slice.call(arguments);
+      if (typeof a[0] === 'string') a[0] = stamp() + ' ' + a[0]; else a.unshift(stamp());
+      orig.apply(null, a);
+    };
+  });
+})();
 var fs    = require('fs');
 var path  = require('path');
 var cp    = require('child_process');
