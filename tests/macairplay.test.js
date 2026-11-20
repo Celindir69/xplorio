@@ -45,6 +45,16 @@ ta('choose a speaker: clicked by its exact name; unknown name -> output', functi
   });
 });
 
+t('settings page: every audio action reaches doMacAudio (the service routes only actions starting with "audio")', function(){
+  var ui = fs.readFileSync(path.join(__dirname, '..', 'web', 'js', 'macsettings.js'), 'utf8');
+  var svc = fs.readFileSync(path.join(__dirname, '..', 'tags', 'tag-service.js'), 'utf8');
+  assert.ok(/if \(\/\^audio\/\.test\(String\(body\.action\)\)\) return doMacAudio/.test(svc));
+  var sent = (ui.match(/msAudioSend\(\{action: '[^']+'/g) || []).concat(ui.match(/var b = \{action: '[^']+'/g) || []);
+  assert.ok(sent.length >= 2);
+  sent.forEach(function(x){ assert.ok(/action: 'audio/.test(x), x); });
+  assert.ok(/body\.action === 'audioAirplayScan'\) return macAudio\.airScan/.test(svc));
+});
+
 var CONF = 'music_directory "/m"\nport "6600"\n';
 function fakeMpd() {
   var outs = [{id: 0, name: ma.SYSTEM, plugin: 'osx', enabled: false}, {id: 1, name: 'RME', plugin: 'osx', enabled: true}];
@@ -94,7 +104,17 @@ ta('settings: AirPlay speakers after the search, choosing one plays on the syste
             b.status(function(e6, s6){
               assert.ok(!s6.outputs.some(function(o){ return o.airplay && o.enabled; }));
               st.fail = 'execution error: osascript is not allowed assistive access. (-25211)';
-              b.airScan(function(e7){ assert.strictEqual(e7.message, 'access'); done(); });
+              b.airScan(function(e7){
+                assert.strictEqual(e7.message, 'access');
+                /* device scan while a speaker plays: Core Audio's "AirPlay" device gets no MPD output of its own */
+                DEV.devices[1]['default'] = true;
+                var o = opts(); o.devices = function(cb){ cb(null, JSON.stringify(DEV)); }; o.restart = function(cb){ cb(); };
+                new ma.MacAudio(o).scan(false, function(e8){
+                  assert.ifError(e8);
+                  assert.deepStrictEqual(ma.blocks(fs.readFileSync(conf, 'utf8')).map(function(x){ return x.name; }), [ma.SYSTEM, 'RME']);
+                  done();
+                });
+              });
             });
           });
         });

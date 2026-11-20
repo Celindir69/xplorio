@@ -346,6 +346,9 @@ MacAudio.prototype.scan = function(opts, cb) {
     self.o.devices(function(err, json){
       if (err) return done(err);
       var devices = parseDevices(json), text = self.conf();
+      /* the Core Audio "AirPlay" device (there only while a speaker is the Mac's output) gets no output of its own when
+         the speakers are chosen through System Preferences: they play through the system output */
+      if (self.o.airplay) devices = devices.filter(function(d){ return !(d.kind === 'airplay' && d.uid); });
       if (!text) return done(new Error('conf'));
       var neu = writeConf(text, devices, opts);
       if (neu !== text) {

@@ -3165,7 +3165,7 @@ function doMacAudio(body, cb) {
     });
   }
   if (body.action === 'audioSelect') return macAudio.select(/^(via|air):/.test(String(body.id)) ? String(body.id) : +body.id, answer);
-  if (body.action === 'airplayScan') return macAudio.airScan(answer);
+  if (body.action === 'audioAirplayScan') return macAudio.airScan(answer);
   if (body.action === 'audioScan') {
     if (!MAC_MPD_CONF) return cb(200, {ok: false, error: 'audio.conf'});
     return macAudio.scan({exclusive: !!body.exclusive, fixedVolume: !!body.fixedVolume, dop: !!body.dop}, answer);

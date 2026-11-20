@@ -72,7 +72,7 @@ function msAudioLoad() {
 function msAudioSend(body, okText) {
   var seq = msSeq;
   body.token = msToken();
-  msAudioBusy = true; msAudioMsg = body.action === 'audioScan' ? T('mac.audioScanning') : body.action === 'airplayScan' || /^air:/.test(String(body.id || '')) ? T('mac.audioAirBusy') : ''; msRender();
+  msAudioBusy = true; msAudioMsg = body.action === 'audioScan' ? T('mac.audioScanning') : body.action === 'audioAirplayScan' || /^air:/.test(String(body.id || '')) ? T('mac.audioAirBusy') : ''; msRender();
   tagPostJson('/mac/settings', body).then(function(r){
     if (seq !== msSeq) return;
     msAudioBusy = false;
@@ -111,7 +111,7 @@ function msAudioCard() {
     if (!a.outputs.length) c.appendChild(histEl('div', 'syNote syWarn', T('mac.audioNone')));
     if (a.canAirplay) {                                  /* AirPlay: System Preferences opens on the Mac for a moment */
       var arow = histEl('div', 'pbRow msAddRow');
-      arow.appendChild(msButton(T('mac.audioAirScan'), function(){ if (!msAudioBusy) msAudioSend({action: 'airplayScan'}, 'mac.audioAirFound'); }));
+      arow.appendChild(msButton(T('mac.audioAirScan'), function(){ if (!msAudioBusy) msAudioSend({action: 'audioAirplayScan'}, 'mac.audioAirFound'); }));
       c.appendChild(arow);
     }
     if (a.canScan) {
