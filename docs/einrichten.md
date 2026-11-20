@@ -1175,7 +1175,8 @@ Einstellungen bleiben. Das Programm wird auf dem Mac selbst übersetzt (swiftc a
   Ton → Ausgabe (die Systemeinstellungen gehen dafür kurz auf und wieder zu); danach stehen die Lautsprecher in der
   Liste, „Verwenden“ wählt ihn dort aus und spielt über die Systemausgabe, auch vom Handy oder Tablet. Es spielt immer
   ein Lautsprecher. Einmalig nötig: auf dem Mac unter Sicherheit → Datenschutz → **Bedienungshilfen** Xplorio erlauben
-  und die Frage „Xplorio möchte System Events steuern“ mit OK beantworten. Ab Ventura sieht die Seite anders aus, dann
+  und die Frage „Xplorio möchte System Events steuern“ mit OK beantworten (bleibt bei Updates erhalten: die Xplorio-Dateien
+  liegen in `~/Library/Application Support/Xplorio/app`, Xplorio.app selbst wird nur neu gebaut, wenn sich das Programm ändert). Ab Ventura sieht die Seite anders aus, dann
   geht es nicht.
   Mit Rotel-Steuerung regelt der Lautstärkeregler den Verstärker nur, solange ein Geräte-Ausgang (z. B. der USB-DAC am
   Verstärker) spielt; über die Systemausgabe (AirPlay, Bluetooth, Mac-Lautsprecher) regelt er die Lautstärke von MPD.

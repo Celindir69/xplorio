@@ -57,6 +57,25 @@ t('new setup: music folder as USB, MPD settings, program with the interface and 
   assert.strictEqual(fs.realpathSync(path.join(app, 'Resources', 'xplorio.conf')), fs.realpathSync(path.join(e.XPLORIO_SUPPORT, 'xplorio.conf')));
 });
 
+t('update: the files outside the program are replaced, Xplorio.app stays exactly the same (macOS keeps its permissions)', function(){
+  var d = tmp(), music = path.join(d, 'Musik');
+  fs.mkdirSync(music);
+  var e = make(d, {XPLORIO_MUSIC: music});
+  var app = path.join(e.XPLORIO_APPS, 'Xplorio.app', 'Contents'), files = path.join(e.XPLORIO_SUPPORT, 'app', 'xplorio');
+  assert.ok(fs.lstatSync(path.join(app, 'Resources', 'xplorio')).isSymbolicLink());
+  assert.strictEqual(fs.realpathSync(path.join(app, 'Resources', 'xplorio')), fs.realpathSync(files));
+  /* xplorio-services.sh reads ../xplorio.conf next to its files: also through the link */
+  assert.strictEqual(fs.realpathSync(path.join(files, '..', 'xplorio.conf')), fs.realpathSync(path.join(e.XPLORIO_SUPPORT, 'xplorio.conf')));
+  var before = {plist: fs.statSync(path.join(app, 'Info.plist')), bin: fs.statSync(path.join(app, 'MacOS', 'Xplorio'))};
+  fs.writeFileSync(path.join(files, 'tags', 'alt.txt'), 'old file');
+  make(d, {XPLORIO_MUSIC: music});
+  assert.strictEqual(fs.statSync(path.join(app, 'Info.plist')).ino, before.plist.ino);
+  assert.strictEqual(fs.statSync(path.join(app, 'MacOS', 'Xplorio')).mtimeMs, before.bin.mtimeMs);
+  assert.ok(!fs.existsSync(path.join(files, 'tags', 'alt.txt')));               /* files are fresh */
+  assert.ok(fs.existsSync(path.join(app, 'Resources', 'xplorio', 'tags', 'macairplay.js')));
+  assert.ok(!/CFBundleVersion<\/key><string>[^1]/.test(fs.readFileSync(path.join(app, 'Info.plist'), 'utf8')));   /* no version: stays the same */
+});
+
 t('folder that already has INTERNAL/USB/NAS is used as it is', function(){
   var d = tmp(), music = path.join(d, 'Musik');
   fs.mkdirSync(path.join(music, 'INTERNAL'), {recursive: true});

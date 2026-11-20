@@ -878,7 +878,8 @@ from the new folder; the settings stay. The program is compiled on the Mac itsel
   Output (System Preferences opens and closes for a moment); the speakers then appear in the list, “Use” chooses one
   there and plays through the system output, also from a phone or tablet. One speaker plays at a time. Needed once:
   allow Xplorio under Security → Privacy → **Accessibility** on the Mac and answer “Xplorio wants to control System
-  Events” with OK. From Ventura on the pane looks different and this does not work.
+  Events” with OK (kept across updates: the Xplorio files live in `~/Library/Application Support/Xplorio/app`, Xplorio.app
+  itself is only rebuilt when the program changes). From Ventura on the pane looks different and this does not work.
   With the Rotel control the volume slider sets the amplifier only while a device output (e.g. the USB DAC into the
   amplifier) plays; through the system output (AirPlay, Bluetooth, Mac speakers) it sets MPD's volume.
   “DSD through ffmpeg” switches off MPD's own DSD decoders (`dsf`, `dsdiff`) in `mpd.conf`; ffmpeg then converts DSD

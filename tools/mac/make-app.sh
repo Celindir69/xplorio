@@ -123,11 +123,16 @@ CL="$SUPPORT/config.local.js"
 grep -q "PLAYER" "$CL" || echo "window.APP_CONFIG.PLAYER = 'mpd';" >>"$CL"
 
 # ---------- the program ----------
-echo "Baue Xplorio.app …"
-TMP=$(mktemp -d)
-B="$TMP/Xplorio.app/Contents"
-R="$B/Resources/xplorio"
-mkdir -p "$B/MacOS" "$R/mac"
+# The Xplorio files (interface, services) live outside the program in "$SUPPORT/app/xplorio"; the program only links to
+# them. An update then replaces the files and leaves Xplorio.app itself untouched: macOS keeps permissions such as
+# "Accessibility" (AirPlay speakers) only for a program that stays exactly the same. The program is built again only
+# when it really changes (its source, Info.plist, icon: STAMP).
+echo "Kopiere die Xplorio-Dateien …"
+FILES="$SUPPORT/app"
+mkdir -p "$FILES"
+NEWF=$(mktemp -d "$FILES/.neu.XXXXXX")
+R="$NEWF/xplorio"
+mkdir -p "$R/mac"
 cp "$SRC/xplorio.html" "$R/"
 cp -R "$SRC/web" "$SRC/server" "$SRC/tags" "$SRC/rotel" "$R/"
 rm -f "$R/web/config.local.js"
@@ -137,10 +142,19 @@ cp "$SRC/tools/mac/xplorio-update.sh" "$R/mac/"      # update from the settings 
 mkdir -p "$R/essentia"
 cp "$SRC/tools/essentia/analyse.py" "$R/essentia/"   # audio analysis (settings page; needs Python with Essentia)
 chmod +x "$R/mac/xplorio-services.sh"
-ln -s "$SUPPORT/xplorio.conf" "$B/Resources/xplorio.conf"
+if [ -z "$XPLORIO_NO_SWIFT" ]; then
+  swiftc -O -o "$R/mac/audiodevices" "$SRC/tools/mac/audiodevices.swift" || echo "Hinweis: Geräteliste nicht übersetzt, Xplorio nimmt die Namen aus system_profiler."
+fi
+rm -rf "$FILES/xplorio.alt"
+[ -e "$FILES/xplorio" ] && mv "$FILES/xplorio" "$FILES/xplorio.alt"
+mv "$R" "$FILES/xplorio"
+rm -rf "$FILES/xplorio.alt" "$NEWF"
+ln -sfn ../xplorio.conf "$FILES/xplorio.conf"         # xplorio-services.sh reads ../xplorio.conf next to the files
+
+# the version is not in Info.plist on purpose (every new version would be a "different" program for macOS)
 VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/plugin/package.json" | head -1)
-cat >"$B/Info.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
+echo "${VERSION:-}" >"$FILES/version"
+PLIST='<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -150,8 +164,8 @@ cat >"$B/Info.plist" <<EOF
   <key>CFBundleExecutable</key><string>Xplorio</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>${VERSION:-1.0}</string>
-  <key>CFBundleVersion</key><string>${VERSION:-1.0}</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1.0</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSHighResolutionCapable</key><true/>
@@ -161,31 +175,43 @@ cat >"$B/Info.plist" <<EOF
     <key>NSAllowsArbitraryLoadsInWebContent</key><true/>
   </dict>
 </dict>
-</plist>
-EOF
-if [ -z "$XPLORIO_NO_SWIFT" ]; then
-  swiftc -O -o "$B/MacOS/Xplorio" "$SRC/tools/mac/Xplorio.swift" || fail "Übersetzen fehlgeschlagen (Meldungen oben)"
-  swiftc -O -o "$R/mac/audiodevices" "$SRC/tools/mac/audiodevices.swift" || echo "Hinweis: Geräteliste nicht übersetzt, Xplorio nimmt die Namen aus system_profiler."
+</plist>'
+STAMP="bundle-2 $( { cat "$SRC/tools/mac/Xplorio.swift" "$SRC/web/icons/icon-512.png"; printf '%s\n%s\n%s\n%s\n' "$PLIST" "$FILES" "$SUPPORT" "${XPLORIO_NO_SWIFT:+noswift}"; } | cksum | tr ' ' '-')"
+OLD="$APPS/Xplorio.app/Contents"
+if [ -L "$OLD/Resources/xplorio" ] && [ -x "$OLD/MacOS/Xplorio" ] && [ "$(cat "$OLD/Resources/stamp" 2>/dev/null)" = "$STAMP" ]; then
+  echo "Xplorio.app bleibt unverändert (Berechtigungen bleiben erhalten)."
 else
-  printf '#!/bin/bash\nexec /bin/bash "$(dirname "$0")/../Resources/xplorio/mac/xplorio-services.sh" start\n' >"$B/MacOS/Xplorio"
-  chmod +x "$B/MacOS/Xplorio"
+  echo "Baue Xplorio.app …"
+  TMP=$(mktemp -d)
+  B="$TMP/Xplorio.app/Contents"
+  mkdir -p "$B/MacOS" "$B/Resources"
+  ln -s "$FILES/xplorio" "$B/Resources/xplorio"
+  ln -s "$SUPPORT/xplorio.conf" "$B/Resources/xplorio.conf"
+  printf '%s\n' "$PLIST" >"$B/Info.plist"
+  echo "$STAMP" >"$B/Resources/stamp"
+  if [ -z "$XPLORIO_NO_SWIFT" ]; then
+    swiftc -O -o "$B/MacOS/Xplorio" "$SRC/tools/mac/Xplorio.swift" || fail "Übersetzen fehlgeschlagen (Meldungen oben)"
+  else
+    printf '#!/bin/bash\nexec /bin/bash "$(dirname "$0")/../Resources/xplorio/mac/xplorio-services.sh" start\n' >"$B/MacOS/Xplorio"
+    chmod +x "$B/MacOS/Xplorio"
+  fi
+  # icon from the app icon (web/icons/icon-512.png)
+  if command -v sips >/dev/null && command -v iconutil >/dev/null; then
+    IS="$TMP/AppIcon.iconset"
+    mkdir -p "$IS"
+    for s in 16 32 128 256 512; do
+      sips -z $s $s "$SRC/web/icons/icon-512.png" --out "$IS/icon_${s}x${s}.png" >/dev/null 2>&1 || true
+      d=$((s * 2)); [ $d -le 512 ] && sips -z $d $d "$SRC/web/icons/icon-512.png" --out "$IS/icon_${s}x${s}@2x.png" >/dev/null 2>&1 || true
+    done
+    cp "$SRC/web/icons/icon-512.png" "$IS/icon_512x512.png"
+    iconutil -c icns "$IS" -o "$B/Resources/AppIcon.icns" 2>/dev/null || echo "(Icon konnte nicht erstellt werden, Xplorio läuft trotzdem)"
+  fi
+  command -v codesign >/dev/null && codesign --force --deep --sign - "$TMP/Xplorio.app" >/dev/null 2>&1 || true
+  rm -rf "$APPS/Xplorio.app"
+  mv "$TMP/Xplorio.app" "$APPS/"
+  rm -rf "$TMP"
+  echo "Hinweis: Xplorio.app ist neu gebaut. Für AirPlay-Lautsprecher Xplorio einmal neu erlauben (Bedienungshilfen)."
 fi
-# icon from the app icon (web/icons/icon-512.png)
-if command -v sips >/dev/null && command -v iconutil >/dev/null; then
-  IS="$TMP/AppIcon.iconset"
-  mkdir -p "$IS"
-  for s in 16 32 128 256 512; do
-    sips -z $s $s "$SRC/web/icons/icon-512.png" --out "$IS/icon_${s}x${s}.png" >/dev/null 2>&1 || true
-    d=$((s * 2)); [ $d -le 512 ] && sips -z $d $d "$SRC/web/icons/icon-512.png" --out "$IS/icon_${s}x${s}@2x.png" >/dev/null 2>&1 || true
-  done
-  cp "$SRC/web/icons/icon-512.png" "$IS/icon_512x512.png"
-  iconutil -c icns "$IS" -o "$B/Resources/AppIcon.icns" 2>/dev/null || echo "(Icon konnte nicht erstellt werden, Xplorio läuft trotzdem)"
-fi
-command -v codesign >/dev/null && codesign --force --deep --sign - "$TMP/Xplorio.app" >/dev/null 2>&1 || true
-
-rm -rf "$APPS/Xplorio.app"
-mv "$TMP/Xplorio.app" "$APPS/"
-rm -rf "$TMP"
 command -v xattr >/dev/null && xattr -dr com.apple.quarantine "$APPS/Xplorio.app" 2>/dev/null || true
 
 # a new library: start MPD once and read the music in, so the first start shows it
