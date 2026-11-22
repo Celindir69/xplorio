@@ -778,8 +778,7 @@ function doCheckGet(query, cb) {
 function yearFix(last) {
   if (!last) return [];
   var out = [], at = {};
-  function tagDate(d) { return String(d || '').length === 7 ? d.slice(0, 4) : d || ''; }   /* "1977-05": the year goes into the tag */
-  function mbOf(d) { var r = releaseDates.by[d]; return tagDate(r && r.d); }
+  function mbOf(d) { var r = releaseDates.by[d]; return (r && r.d) || ''; }
   (last.yearMixed || []).forEach(function(it){
     var mb = mbOf(it.dir);
     at[it.dir] = out.length;
@@ -788,7 +787,7 @@ function yearFix(last) {
   });
   (last.releaseDate || []).forEach(function(it){
     if (at.hasOwnProperty(it.dir)) return;
-    var mb = mbOf(it.dir) || tagDate(it.mb);
+    var mb = mbOf(it.dir) || it.mb;
     out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: [{name: it.tag, count: it.count}], mb: mb,
               suggest: mb, src: 'mb', files: it.files});
   });

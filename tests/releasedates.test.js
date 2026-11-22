@@ -43,6 +43,22 @@ t('MusicBrainz: only a year or year-month is enough for the check; edition addit
   assert.deepStrictEqual(d.map(function(x){ return [x.name, x.mb]; }), [['Moor', '1979-04']]);   /* same year: consistent; none: suggested */
 });
 
+t('year and month (tag "1977-05" or MusicBrainz): kept, counts as a birthday this month, not today or this week', function(){
+  function s(file, date) { return {file: file, artist: 'A', albumartist: '', album: 'Moor', title: file, date: date, genre: ''}; }
+  assert.strictEqual(albums.fromSongs([s('P/M/1.flac', '1979-11'), s('P/M/2.flac', '1979-11')])[0].rd, '1979-11');
+  assert.strictEqual(albums.fromSongs([s('P/M/1.flac', '1979-11'), s('P/M/2.flac', '1979-11-03')])[0].rd, '1979-11-03');   /* full one first */
+  var c = new rd.Collector({file: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rd-')), 'r.jsonl'), list: function(){ return []; }});
+  c.by['P/M'] = {dir: 'P/M', d: '1979-11', t: 'Moor', at: 1, v: 2};
+  assert.strictEqual(c.dateOf({dir: 'P/M'}), '1979-11');
+  c.by['P/M'].d = '1979-11-03';
+  assert.strictEqual(c.dateOf({dir: 'P/M', rd: '1979-11'}), '1979-11-03');   /* the day from MusicBrainz wins over the tag's month */
+  var b = rd.birthdays([{dir: 'P/M', al: 'Moor', ar: 'A', d: '1979-11'}, {dir: 'P/O', al: 'Ost', ar: 'A', d: '1980-12'}],
+    function(a){ return a.d; }, '2026-11-22');
+  assert.deepStrictEqual([b.today.length, b.week.length, b.month.map(function(x){ return [x.al, x.years]; })], [0, 0, [['Moor', 47]]]);
+  var d = rd.diffs([{dir: 'P/M', al: 'Moor', ar: 'A', y: 1979, rd: '1979-11'}], [], function(){ return '1979-11-03'; }, albums.albumDir);
+  assert.deepStrictEqual(d.map(function(x){ return [x.tag, x.mb]; }), [['1979-11', '1979-11-03']]);   /* MusicBrainz knows the day */
+});
+
 t('library check: Date tag against MusicBrainz (year, full date, missing)', function(){
   var L = [{dir: 'A/1', al: 'Eins', ar: 'A', y: 1981}, {dir: 'A/2', al: 'Zwei', ar: 'A', y: 1994}, {dir: 'A/3', al: 'Drei', ar: 'A', y: 1990, rd: '1990-02-03'},
            {dir: 'A/4', al: 'Vier', ar: 'A'}, {dir: 'A/5', al: 'Fünf', ar: 'A', y: 2000}, {dir: 'A/6', al: 'Sechs', ar: 'A', y: 2001, rd: '2001-05-05'}];
