@@ -366,6 +366,16 @@ var server = http.createServer(function(req, res){
   res.end(JSON.stringify(out));
 });
 
-if (require.main === module) { server.listen(HTTP_PORT); connect(); }
+if (require.main === module) {
+  server.listen(HTTP_PORT); connect();
+  /* run by the tag service (Mac, XPLORIO_ROTEL_PARENT): end with it. Otherwise a bridge left behind (tag service killed,
+     update) keeps the port and every new one fails with EADDRINUSE */
+  var parent = parseInt(process.env.XPLORIO_ROTEL_PARENT, 10);
+  if (parent > 1) setInterval(function(){
+    var alive = true;
+    try { process.kill(parent, 0); } catch (e) { alive = e.code === 'EPERM'; }
+    if (!alive || process.ppid === 1) process.exit(0);
+  }, 5000).unref();
+}
 module.exports = {MODELS: MODELS, volCmd: volCmd, volSetCmd: volSetCmd, queryFor: queryFor, server: server, check: check, hostOk: hostOk, makeProfile: makeProfile, allowedCmds: allowedCmds, queries: queries,
   parseMsg: parseMsg, state: state};
