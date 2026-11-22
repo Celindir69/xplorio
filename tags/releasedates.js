@@ -14,6 +14,7 @@ var DAY = 86400;
 
 function full(d) { return /^\d{4}-\d\d-\d\d$/.test(d || '') ? d : ''; }
 /* a date MusicBrainz may give: year, year-month or full ('1975', '1975-03', '1975-03-14') */
+function month(d) { return /^\d{4}-\d\d$/.test(d || '') ? d : ''; }
 function dateLike(d) { return /^\d{4}(-\d\d){0,2}$/.test(d || '') ? d : ''; }
 /* records from before VERSION (only full dates, edition additions counted) are looked up once more */
 var VERSION = 2;
@@ -64,7 +65,10 @@ function Collector(opts) {
 }
 
 /* date of an album: Date tag, else looked up; '' unknown */
-Collector.prototype.dateOf = function(a) { return full(a.rd) || full(this.by[a.dir] && this.by[a.dir].d) || ''; };   /* birthdays: full dates only */
+Collector.prototype.dateOf = function(a) {   /* full date, else year-month (counts for the month only); '' unknown */
+  var mb = this.by[a.dir] && this.by[a.dir].d;
+  return full(a.rd) || full(mb) || month(a.rd) || month(mb) || '';
+};
 
 /* next album without date that has not been looked up yet (or unsuccessfully more than RETRY_DAYS ago) */
 Collector.prototype.next = function(now) {
@@ -77,7 +81,7 @@ Collector.prototype.next = function(now) {
   var list = this.list() || [];
   for (var i = 0; i < list.length; i++) {
     var a = list[i], r = this.by[a.dir];
-    if (full(a.rd) || !a.al || !a.ar || a.ar === 'Verschiedene') continue;
+    if (full(a.rd) || !a.al || !a.ar || a.ar === 'Verschiedene') continue;   /* year-month only: MusicBrainz may know the day */
     if (!r || (!r.d && (r.v !== VERSION || now - r.at > RETRY_DAYS * DAY))) return a;
   }
   return null;
@@ -124,10 +128,17 @@ function birthdays(list, dateOf, day, limit) {
   var leap = (Y % 4 === 0 && Y % 100 !== 0) || Y % 400 === 0;
   var out = {today: [], week: [], month: []};
   list.forEach(function(a){
-    var d = dateOf(a), x = /^(\d{4})-(\d\d)-(\d\d)$/.exec(d);
+    var d = dateOf(a), x = /^(\d{4})-(\d\d)(?:-(\d\d))?$/.exec(d);
     if (!x) return;
     var years = Y - +x[1], mm = +x[2], dd = +x[3];
     if (years <= 0) return;
+    if (!x[3]) {                                         /* only year and month known: this month, not today or this week */
+      if (mm !== M) return;
+      var om = {dir: a.dir, al: a.al, ar: a.ar, date: d, years: years, mark: years % 25 === 0 ? 'jubilee' : years % 10 === 0 ? 'round' : ''};
+      if (a.y) om.y = a.y;
+      out.month.push(om);
+      return;
+    }
     if (mm === 2 && dd === 29 && !leap) dd = 28;
     var t = Date.UTC(Y, mm - 1, dd);
     var o = {dir: a.dir, al: a.al, ar: a.ar, date: d, years: years, mark: years % 25 === 0 ? 'jubilee' : years % 10 === 0 ? 'round' : ''};
@@ -153,7 +164,7 @@ function diffs(albumList, songs, mbOf, albumDir) {
   songs.forEach(function(s){ var d = albumDir(s.file); (byDir[d] || (byDir[d] = [])).push(s); });
   var out = [];
   albumList.forEach(function(a){
-    var mb = mbOf(a.dir), tag = full(a.rd) || (a.y ? String(a.y) : '');
+    var mb = mbOf(a.dir), tag = dateLike(a.rd) || (a.y ? String(a.y) : '');
     if (!mb || (tag && tag.slice(0, 4) === mb.slice(0, 4) && (tag.length === 4 || mb.length < 10 || tag === mb))) return;   /* MusicBrainz knows only year (and month): the year counts */
     var list = byDir[a.dir] || [];
     out.push({dir: a.dir, name: a.al, artist: a.ar, count: list.length, tag: tag, mb: mb,

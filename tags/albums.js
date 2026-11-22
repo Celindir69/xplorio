@@ -21,7 +21,7 @@ function albumDir(file) {
 }
 
 /* songs as from libcheck.mpdWalk -> [{dir, al, ar, ge, y, m}]; ge: most common genre in the folder, y: most common year (Date tag),
-   m: latest change of a file (Last-Modified from MPD, Unix seconds), rd: full Date tag (YYYY-MM-DD); missing if no track in the folder has one */
+   m: latest change of a file (Last-Modified from MPD, Unix seconds), rd: Date tag with month (YYYY-MM-DD, else YYYY-MM); missing if no track in the folder has one */
 function fromSongs(songs) {
   var dirs = {}, order = [];
   songs.forEach(function(s){
@@ -34,7 +34,7 @@ function fromSongs(songs) {
     if (s.genre) g.genres[s.genre] = (g.genres[s.genre] || 0) + 1;
     var y = yearOf(s.date);
     if (y) g.years[y] = (g.years[y] || 0) + 1;
-    var fd = /^(\d{4}-\d\d-\d\d)/.exec(String(s.date || ''));
+    var fd = /^(\d{4}-\d\d(?:-\d\d)?)/.exec(String(s.date || ''));
     if (fd) g.dates[fd[1]] = (g.dates[fd[1]] || 0) + 1;
     var m = Date.parse(s['last-modified'] || '');
     if (m > 0 && m / 1000 > g.m) g.m = Math.floor(m / 1000);
@@ -50,8 +50,8 @@ function fromSongs(songs) {
     var y = Object.keys(g.years).sort(function(a, b){ return g.years[b] - g.years[a] || a - b; })[0];
     if (y) o.y = +y;
     if (g.m) o.m = g.m;
-    var rd = Object.keys(g.dates).sort(function(a, b){ return g.dates[b] - g.dates[a] || (a < b ? -1 : 1); })[0];
-    if (rd && +rd.slice(0, 4) === o.y) o.rd = rd;                /* full date only if it matches the album's year */
+    var rd = Object.keys(g.dates).sort(function(a, b){ return b.length - a.length || g.dates[b] - g.dates[a] || (a < b ? -1 : 1); })[0];   /* full ones first */
+    if (rd && +rd.slice(0, 4) === o.y) o.rd = rd;                /* date only if it matches the album's year */
     o.fi = fileInfo(g.songs, g.n, g.sec);
     return o;
   });
