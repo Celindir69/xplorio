@@ -38,7 +38,7 @@
 		"RELEASEDATES": "Erscheinungstage",
 		"RELEASEDATES_DOC": "Fehlende Erscheinungsdaten von Alben bei MusicBrainz nachschlagen (Album-Geburtstage).",
 		"MOODTAGS": "Stimmungs-Tags",
-		"MOODTAGS_DOC": "Last.fm-Tags je Titel sammeln, nur solange nichts spielt (braucht den Last.fm-Zugang).",
+		"MOODTAGS_DOC": "Stimmungs-Tags je Titel sammeln, nur solange nichts spielt (von Last.fm, wenn ein Key eingetragen ist, sonst von MusicBrainz).",
 		"COLOR_MOOD": "Farbstimmung",
 		"COLOR_MOOD_DOC": "Farbstimmung aus dem Cover (nur Cover vom Player selbst).",
 		"M4A_PROBE": "m4a-Codec lesen",

@@ -271,7 +271,7 @@ var MOOD_NAMES = {};            /* English id -> name in the UI language (lowerc
 ['aggressive', 'atmospheric', 'calm', 'dark', 'dreamy', 'emotional', 'epic', 'happy', 'intense', 'melancholic',
  'reflective', 'relaxed', 'romantic', 'sad', 'sensual', 'uplifting'].forEach(function(id){ MOOD_NAMES[id] = T('mood.' + id); });
 /* keys are the (German) state ids of the tag service */
-var MOOD_STATES = {'läuft': T('check.mood.state.running'), wartet: T('check.mood.state.waiting'), fertig: T('check.mood.state.done'),
+var MOOD_STATES = {wartet: T('check.mood.state.waiting'), fertig: T('check.mood.state.done'),
   leer: T('check.mood.state.empty'), fehler: T('check.mood.state.error'), aus: T('check.mood.state.off')};
 
 function checkMoodSection() {
@@ -280,15 +280,16 @@ function checkMoodSection() {
   var st = m.status, sum = m.summary, key = 'moodtags';
   var row = document.createElement('div'); row.className = 'ckCat ckMoodCat' + (checkOpen[key] ? ' open' : '');
   row.innerHTML = '<div class="ckName"></div><div class="ckNum"></div>' + CHECK_CHEVRON;
-  row.querySelector('.ckName').textContent = m.audio && m.audio.tracks ? T('check.mood.titleAudio') : T('check.mood.title');
+  var src = st.src || 'Last.fm';                          /* where the tags come from now: Last.fm with a working key, else MusicBrainz */
+  row.querySelector('.ckName').textContent = m.audio && m.audio.tracks ? T('check.mood.titleAudio', {src: src}) : T('check.mood.title', {src: src});
   row.querySelector('.ckNum').textContent = !m.enabled ? T('check.mood.off') : st.total ? Math.floor(st.done * 100 / st.total) + ' %' : '–';
   var box = document.createElement('div'); box.className = 'ckList ckMood';
   row.addEventListener('click', function(){ checkOpen[key] = !checkOpen[key]; row.classList.toggle('open', checkOpen[key]); });
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; box.appendChild(e); return e; }
-  el('div', 'ckCatHint', T('check.mood.hint'));
+  el('div', 'ckCatHint', T('check.mood.hint', {src: src}));
   var line = !m.enabled ? T('check.mood.disabled')
-    : T('check.mood.progress', {done: checkNum(st.done), total: checkNum(st.total)}) + ' ' + (MOOD_STATES[st.state] || '');
+    : T('check.mood.progress', {done: checkNum(st.done), total: checkNum(st.total)}) + ' ' + (st.state === 'läuft' ? T('check.mood.state.running', {src: src}) : MOOD_STATES[st.state] || '');
   if (st.error) line += ' ' + st.error;
   el('div', 'ckMoodLine', line);
   if (st.total) { var bar = el('div', 'ckMoodBar'); var fill = document.createElement('div'); fill.style.width = (st.done * 100 / st.total) + '%'; bar.appendChild(fill); }

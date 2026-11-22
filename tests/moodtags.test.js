@@ -103,7 +103,7 @@ fake.listen(0, function(){
         assert.deepStrictEqual(m, ['artist.gettoptags Anna', 'artist.gettoptags Bert',
           'track.gettoptags Anna / Eins', 'track.gettoptags Anna / Zwei', 'track.gettoptags Bert / Drei']);
         calls.forEach(function(p){ assert.strictEqual(p.autocorrect, '1'); });
-        assert.deepStrictEqual(c.status(), {state: 'fertig', error: null, total: 3, done: 3, fetched: 5});
+        assert.deepStrictEqual(c.status(), {state: 'fertig', error: null, total: 3, done: 3, fetched: 5, src: 'Last.fm'});
       });
       t('result per track: track tags, else artist tags', function(){
         var r = c.moodOf('Anna', 'Eins');

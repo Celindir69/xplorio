@@ -269,7 +269,8 @@ Collector.prototype.moodOf = function(ar, ti, al) {
 Collector.prototype.status = function() {
   var lib = this.loadLib(), done = 0, self = this;
   lib.forEach(function(it){ if (self.tracks[it.k]) done++; });
-  return {state: this.state, error: this.error, total: lib.length, done: done, fetched: this.fetched};
+  var cfg = this.getCfg() || {}, lf = !!cfg.key && !lastfm.rejected(cfg.key);
+  return {state: this.state, error: this.error, total: lib.length, done: done, fetched: this.fetched, src: lf ? 'Last.fm' : 'MusicBrainz'};
 };
 
 /* distribution across the library (for display); recomputed at most once per minute */

@@ -965,7 +965,6 @@ function msAdjCard() {
     on.appendChild(histEl('div', 'msSetLabel', T('mac.adj')));
     on.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.enabled, function(v){ msAdjSend({enabled: v}); }));
     c.appendChild(on);
-    if (!a.ready) c.appendChild(histEl('div', 'syNote syWarn', T('mac.adjNoKey')));
     var ex = msInput(a.excludes, T('mac.adjExcludePh')), mx = msInput(String(a.maxMinutes), '20', 'number');
     mx.min = '0'; mx.max = '600'; mx.style.maxWidth = '6em';
     var r1 = histEl('div', 'msSetRow'); r1.appendChild(histEl('div', 'msSetLabel', T('mac.adjExclude'))); r1.appendChild(ex); c.appendChild(r1);

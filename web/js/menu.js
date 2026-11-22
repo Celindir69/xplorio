@@ -74,7 +74,7 @@ var MENU_THIRD = [
   ['mutagen', 'about.3.mutagen'],
   ['Volumio, socket.io', 'about.3.volumio'],
   ['Essentia', 'about.3.essentia'],
-  ['Last.fm, MusicBrainz, Cover Art Archive, Deezer, iTunes, LRCLIB, radio-browser.info', 'about.3.services']
+  ['MusicBrainz, ListenBrainz, Cover Art Archive, Deezer, Wikipedia, iTunes, LRCLIB, radio-browser.info, Last.fm', 'about.3.services']
 ];
 var menuVersion = null;          /* loaded once: {branch, commit, date} or {} */
 function menuAbout() {

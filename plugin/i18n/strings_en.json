@@ -38,7 +38,7 @@
 		"RELEASEDATES": "Release dates",
 		"RELEASEDATES_DOC": "Look up missing album release dates on MusicBrainz (album birthdays).",
 		"MOODTAGS": "Mood tags",
-		"MOODTAGS_DOC": "Collect Last.fm tags per track, only while nothing is playing (needs the Last.fm access).",
+		"MOODTAGS_DOC": "Collect mood tags per track, only while nothing is playing (from Last.fm when a key is set, otherwise from MusicBrainz).",
 		"COLOR_MOOD": "Color mood",
 		"COLOR_MOOD_DOC": "Color mood from the cover (only covers from the player itself).",
 		"M4A_PROBE": "Read m4a codec",

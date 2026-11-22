@@ -1,6 +1,6 @@
 /* Endless playback without Volumio (PLAYER 'mpd'): the idea of the AutoDJ plugin (Celindir69/autodj-plugin,
    volumio-autodj-local.sh) in the tag service. When only a few tracks are left after the one playing, a track by an
-   artist similar to one of the last ones in the queue (Last.fm artist.getsimilar) is taken from the own library and
+   artist similar to one of the last ones in the queue (artist.getsimilar: Last.fm, or Deezer/ListenBrainz without a key) is taken from the own library and
    added at the end. Repeat on: paused (the ∞ state of the repeat button is "AutoDJ on, repeat off").
    Repeat guards as in the plugin: the last few artists are not picked again right away, the last added tracks for
    longer. If every candidate is guarded, the one guarded longest ago is taken, so the queue never runs dry.
