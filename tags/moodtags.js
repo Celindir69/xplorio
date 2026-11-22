@@ -8,7 +8,7 @@ var path   = require('path');
 var plays  = require('./plays.js');
 var jsonl  = require('./jsonl.js');
 var lastfm = require('./lastfm.js');
-var coversearch = require('./coversearch.js');
+var mbgate = require('./mbgate.js');            /* all MusicBrainz requests in one queue (one per second, pause on 503) */
 
 var MAPPING = require('./mood/lastfm_mapping.json');
 var RULES   = require('./mood/classification_rules.json');
@@ -28,10 +28,8 @@ function mbQuote(s) { return '"' + String(s || '').replace(/["\\]/g, ' ') + '"';
 function mbTags(kind, it, artist, cb) {
   var q = kind === 'track' ? 'recording:' + mbQuote(it.ti) + ' AND artist:' + mbQuote(it.ar) : 'artist:' + mbQuote(artist);
   var u = MB + '/ws/2/' + (kind === 'track' ? 'recording' : 'artist') + '?fmt=json&limit=5&query=' + encodeURIComponent(q);
-  coversearch.fetchUrl(u, 512 * 1024, function(e, r){
-    if (e) return cb({code: /HTTP 503|HTTP 429/.test(e.message) ? 29 : 0, message: e.message});
-    var j;
-    try { j = JSON.parse(r.body.toString('utf8')); } catch (x) { return cb({code: 0, message: 'no JSON response'}); }
+  mbgate.getJson(u, function(e, j){
+    if (e) return cb({code: 0, message: e.message});
     var list = (kind === 'track' ? j.recordings : j.artists) || [];
     var want = mbNorm(kind === 'track' ? it.ti : artist);
     var hit = list.filter(function(x){ return x && (x.score === undefined || x.score >= 80) && mbNorm(x.title || x.name) === want; })[0];
@@ -240,7 +238,7 @@ Collector.prototype.step = function() {
     else { self.artists[rec.k] = rec; self.save('artists.jsonl', rec); }
     self.fetched++;
     self.summaryCache = null;
-    self.schedule(src === 'MusicBrainz' ? (self.mbBusy() ? self.t.mbBusy : self.t.mb) : self.t.step);
+    self.schedule(src === 'MusicBrainz' ? (self.mbBusy() || mbgate.shared.congested() ? self.t.mbBusy : self.t.mb) : self.t.step);
   }
   if (!cfg.key) return mbTags(job.kind, it, mainArtist(it.ar), function(e, g){ got(e, g, 'MusicBrainz'); });
   var method = job.kind === 'track' ? 'track.gettoptags' : 'artist.gettoptags';

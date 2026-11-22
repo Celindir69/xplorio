@@ -92,7 +92,8 @@ function checkLoad() {
     var mt = checkMood && checkMood.enabled && checkMood.status;
     if (res.running) checkTimer = setTimeout(checkLoad, 2000);
     else if (mt && mt.state === 'läuft') checkTimer = setTimeout(checkLoad, 10000);
-    else if ((checkShown && checkShown.res && checkShown.res.yearFix || []).some(function(it){ return it.missing && !it.suggest; })) {
+    else if ((checkShown && checkShown.res && checkShown.res.yearFix || []).some(function(it){ return it.missing && !it.suggest; }) ||
+             (res.yearStatus && res.yearStatus.done < res.yearStatus.todo)) {
       checkTimer = setTimeout(checkLoad, 15000);               /* albums without a year: MusicBrainz suggestions appear by themselves */
     }
   }).catch(function(){
@@ -354,6 +355,7 @@ function checkFill(box, cat, list) {
   }
   if (cat.key === 'duplicates' && list.length) checkDupTrash(box);
   if (cat.key === 'artistFix') checkArtistStatus(box);
+  if (cat.key === 'year') checkYearStatus(box);
   var moreRow = document.createElement('div'); moreRow.className = 'ckMore';
   moreRow.addEventListener('click', function(){ more(); });
   box.appendChild(moreRow);
@@ -870,6 +872,16 @@ function checkArtistStatus(box) {
   if (!st || !st.names || st.done >= st.names) return;
   var line = document.createElement('div'); line.className = 'ckCatHint';
   line.textContent = T('check.artistFix.progress', {done: checkNum(st.done), total: checkNum(st.names)});
+  box.appendChild(line);
+}
+
+/* progress of the MusicBrainz date lookup, below the year hint: "120 of 800 albums looked up, 85 found" */
+function checkYearStatus(box) {
+  var st = checkShown && checkShown.res && checkShown.res.yearStatus;
+  if (!st || !st.todo) return;
+  var line = document.createElement('div'); line.className = 'ckCatHint';
+  line.textContent = T(st.done >= st.todo ? 'check.year.progressDone' : 'check.year.progress', {done: checkNum(st.done), total: checkNum(st.todo), found: checkNum(st.found)}) +
+    (st.busy ? ' ' + T('check.year.busy') : '');
   box.appendChild(line);
 }
 

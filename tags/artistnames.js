@@ -8,6 +8,7 @@
    MusicBrainz). Node 8, ES5 only. */
 var fs = require('fs');
 var coversearch = require('./coversearch.js');
+var mbgate = require('./mbgate.js');            /* all MusicBrainz requests in one queue (one per second, pause on 503) */
 
 var STEP_MS = 1500, BUSY_MS = 3500;          /* MusicBrainz allows one request per second, shared with releasedates.js */
 var RETRY_DAYS = 90;
@@ -56,6 +57,7 @@ function Collector(opts) {
   this.busy = opts.busy || function(){ return false; };
   this.stepMs = opts.stepMs || STEP_MS; this.busyMs = opts.busyMs || BUSY_MS;
   this.getJson = opts.getJson || function(u, cb){
+    if (u.indexOf(MB) === 0) return mbgate.getJson(u, cb);
     coversearch.fetchUrl(u, 256 * 1024, function(e, r){
       if (e) return cb(e);
       try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(x); }
@@ -116,7 +118,7 @@ Collector.prototype.schedule = function(ms) {
   clearTimeout(this.timer);
   if (this.running) this.timer = setTimeout(function(){ self.step(); }, ms);
 };
-Collector.prototype.pause = function() { return this.busy() ? this.busyMs : this.stepMs; };
+Collector.prototype.pause = function() { return this.busy() || mbgate.shared.congested() ? this.busyMs : this.stepMs; };
 
 Collector.prototype.step = function(done) {
   var self = this, now = Math.floor(Date.now() / 1000);

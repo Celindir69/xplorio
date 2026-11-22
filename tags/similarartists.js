@@ -4,12 +4,12 @@
    (working) Last.fm key. Node 8, ES5 only. */
 var coversearch = require('./coversearch.js');
 var artistimg   = require('./artistimg.js');
+var mbgate      = require('./mbgate.js');
 
 var DEEZER = process.env.DEEZER_URL       || 'https://api.deezer.com';
 var MB     = process.env.MB_URL           || 'https://musicbrainz.org';
 var LB     = process.env.LISTENBRAINZ_URL || 'https://api.listenbrainz.org';
 var TTL = 24 * 3600000, NONE_TTL = 3600000, MAX = 500;
-var MB_GAP = 1100;                   /* MusicBrainz allows one request per second */
 
 function json(u, cb) {
   coversearch.fetchUrl(u, 1024 * 1024, function(e, r){
@@ -41,21 +41,16 @@ function deezer(name, limit, cb) {
   });
 }
 
-/* MusicBrainz: ID of the artist with exactly that name (best score); one request per second */
-var mbLast = 0;
+/* MusicBrainz: ID of the artist with exactly that name (best score); through the shared queue, before the background lookups */
 function mbid(name, cb) {
-  var wait = Math.max(0, mbLast + MB_GAP - Date.now());
-  mbLast = Date.now() + wait;
-  setTimeout(function(){
-    json(MB + '/ws/2/artist?fmt=json&limit=5&query=' + encodeURIComponent('artist:"' + name.replace(/"/g, '') + '"'), function(e, j){
-      if (e || !j) return cb(e || new Error('musicbrainz'));
-      var want = artistimg.norm(name);
-      var hit = (j.artists || []).filter(function(a){
-        return a && (artistimg.norm(a.name) === want || (a.aliases || []).some(function(x){ return x && artistimg.norm(x.name) === want; }));
-      })[0];
-      cb(null, hit ? hit.id : '');
-    });
-  }, wait);
+  mbgate.getJson(MB + '/ws/2/artist?fmt=json&limit=5&query=' + encodeURIComponent('artist:"' + name.replace(/"/g, '') + '"'), function(e, j){
+    if (e || !j) return cb(e || new Error('musicbrainz'));
+    var want = artistimg.norm(name);
+    var hit = (j.artists || []).filter(function(a){
+      return a && (artistimg.norm(a.name) === want || (a.aliases || []).some(function(x){ return x && artistimg.norm(x.name) === want; }));
+    })[0];
+    cb(null, hit ? hit.id : '');
+  }, {front: true});
 }
 
 /* LB Radio: {artist mbid: [recordings with similar_artist_name]}, or a flat list of recordings */

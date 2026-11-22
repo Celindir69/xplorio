@@ -761,7 +761,9 @@ function doCheckGet(query, cb) {
   var same = last && query && query.have && String(last.at) === String(query.have);
   var ok = genreOkLoad(), st = artistNames.status();
   var stamp = [last ? last.at : 0, releaseDates.fetched, st.fetched, genreOkRev].join(':');
-  var o = {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, artistStatus: st, fixStamp: stamp};
+  var ys = releaseDates.progress();
+  ys.busy = mbgate.shared.congested();                 /* MusicBrainz answered 503 within the last minute */
+  var o = {ok: true, running: checkRun, error: checkError, result: same ? 'same' : last, artistStatus: st, yearStatus: ys, fixStamp: stamp};
   if (same && query.fix && String(query.fix) === stamp) o.fix = 'same';
   else {
     o.genreOk = ok;
@@ -1898,6 +1900,7 @@ function doDiscover(query, cb) {
    birthdays: {today, week, month: [{dir, al, ar, y, date, years, mark}]}, dates: {albums, dated, fetched, running}}.
    The album of the day stays the same all day, even if it has been played meanwhile (welcome.json) */
 var WELCOME_FILE = path.join(DATA_DIR, 'welcome.json');
+var mbgate = require('./mbgate.js');                   /* shared MusicBrainz queue (one request per second, pause on 503) */
 var releasedates = require('./releasedates.js');          /* release dates (Date tag, otherwise MusicBrainz) for the birthdays */
 var releaseDates = new releasedates.Collector({file: path.join(DATA_DIR, 'releasedates.jsonl'), list: function(){ return albumIdx && albumIdx.list; },
   extra: releaseExtra});

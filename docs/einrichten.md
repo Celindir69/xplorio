@@ -132,6 +132,10 @@ freie Quellen:
 - Stimmungs-Tags: MusicBrainz (Tags und Genres der Aufnahme, sonst des Künstlers),
 - Cover-Suche: iTunes und Cover Art Archive,
 - Scrobbeln: [ListenBrainz](#listenbrainz).
+
+Alle Anfragen an MusicBrainz (Erscheinungsdaten, Schreibweisen, Stimmungs-Tags, ähnliche Künstler) laufen über eine gemeinsame
+Warteschlange mit höchstens einer Anfrage je Sekunde. Meldet MusicBrainz „überlastet“ (503), pausiert sie (5 s, dann länger)
+und versucht dieselbe Anfrage erneut; die Bibliotheksprüfung zeigt unter „Jahr“, wie weit die Suche ist.
 `tags.py` läuft mit Python 2.7 und 3 und bringt mutagen selbst mit; gibt es kein `python`, nimmt der Dienst `python3`.
 
 Hinweise: Erlaubt sind nur Dateien unter `/mnt/INTERNAL`, `/mnt/USB`, `/mnt/NAS`. Alte Werte für „Rückgängig“ stehen in
