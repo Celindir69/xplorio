@@ -139,6 +139,8 @@ langRegister('es', 'Español', {
   'check.dupt.why.same': 'misma duración',
   'check.dupt.why.length': 'otra duración, quizá duplicada',
   'check.dupt.why.number': 'mismo número, quizá duplicada',
+  'check.dupt.why.tagnum': 'mismo número de pista en las etiquetas pero no en los nombres de archivo: más bien una etiqueta errónea',
+  'check.dupt.track': 'N.º {n}',
   'check.dupt.best': 'mejor archivo',
   'check.dupt.keepHint': 'Duplicada a propósito: no volver a proponer este grupo',
   'check.dup.trash': 'Los álbumes movidos están en la papelera: allí puedes restaurarlos o borrarlos definitivamente.',

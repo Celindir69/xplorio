@@ -139,6 +139,8 @@ langRegister('de', 'Deutsch', {
   'check.dupt.why.same': 'gleiche Länge',
   'check.dupt.why.length': 'andere Länge, vielleicht doppelt',
   'check.dupt.why.number': 'gleiche Nummer, vielleicht doppelt',
+  'check.dupt.why.tagnum': 'gleiche Track-Nummer im Tag, aber andere im Dateinamen: eher Tag falsch',
+  'check.dupt.track': 'Nr. {n}',
   'check.dupt.best': 'beste Datei',
   'check.dupt.keepHint': 'Bewusst doppelt: diese Gruppe nicht mehr vorschlagen',
   'check.dup.trash': 'Verschobene Alben liegen im Papierkorb: dort zurücklegen oder endgültig löschen.',

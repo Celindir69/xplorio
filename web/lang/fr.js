@@ -140,6 +140,8 @@ langRegister('fr', 'Français', {
   'check.dupt.why.same': 'même durée',
   'check.dupt.why.length': 'autre durée, peut-être en double',
   'check.dupt.why.number': 'même numéro, peut-être en double',
+  'check.dupt.why.tagnum': 'même numéro de piste dans les tags mais pas dans les noms de fichier : plutôt un tag erroné',
+  'check.dupt.track': 'N° {n}',
   'check.dupt.best': 'meilleur fichier',
   'check.dupt.keepHint': 'En double exprès : ne plus proposer ce groupe',
   'check.dup.trash': 'Les albums déplacés sont dans la corbeille : les y remettre en place ou les supprimer définitivement.',

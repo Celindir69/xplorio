@@ -141,6 +141,8 @@ langRegister('en', 'English', {
   'check.dupt.why.same': 'same length',
   'check.dupt.why.length': 'other length, maybe a duplicate',
   'check.dupt.why.number': 'same number, maybe a duplicate',
+  'check.dupt.why.tagnum': 'same track number in the tags but not in the file names: rather a wrong tag',
+  'check.dupt.track': 'No. {n}',
   'check.dupt.best': 'best file',
   'check.dupt.keepHint': 'Duplicated on purpose: do not suggest this group again',
   'check.dup.trash': 'Moved albums are in the trash: put them back or delete them for good there.',
