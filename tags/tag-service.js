@@ -1338,7 +1338,7 @@ function appConfig() {
 function doCoverSearch(query, cb) {
   var album = String(query.album || '').trim();
   if (!album) return cb(400, {ok: false, error: 'album missing'});
-  coversearch.search({artist: query.artist, album: album, lastfmKey: keys.lastfm().key}, function(list){
+  coversearch.search({artist: query.artist, album: album, lastfmKey: lfmKeys().key}, function(list){
     cb(200, {ok: true, results: list.map(function(r){
       var id = String(++coverHitSeq);
       coverHits[id] = r.url; coverHitIds.push(id);
@@ -1364,7 +1364,7 @@ function doCoverImage(query, res) {
    GET /coverbestimage?dir=…&which=new|cur: the image found, or the folder's current one. Only folders of the last check */
 var coverbest = require('./coverbest.js');
 var coverBest = new coverbest.Best({file: path.join(DATA_DIR, 'cover-best.json'),
-  search: function(q, cb){ coversearch.search({artist: q.artist, album: q.album, lastfmKey: keys.lastfm().key}, cb); },
+  search: function(q, cb){ coversearch.search({artist: q.artist, album: q.album, lastfmKey: lfmKeys().key}, cb); },
   load: coversearch.image, dims: filecheck.imageDims});
 function coverSmall(dir, any) {                             /* any: also a cover that is too big (only its current image) */
   var last = readCheck();
@@ -1416,8 +1416,16 @@ var lastfm = require('./lastfm.js');
 var VOLUMIO_URL = process.env.VOLUMIO_URL || 'http://localhost:3000';
 var playStore = new plays.Store(path.join(DATA_DIR, 'plays.jsonl'));
 var keys = new appdata.Keys(DATA_DIR);                   /* Last.fm key and secret (keys.json) */
-var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, function(){ return keys.lastfm(); });
-var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); }, function(e){ lfm.nowPlaying(e); });
+/* the Last.fm key as far as it works: one Last.fm rejects (invalid, suspended, no Pro subscription) counts as missing
+   for a while, so everything uses the free alternatives (Deezer, ListenBrainz, Wikipedia, MusicBrainz) instead */
+function lfmKeys() {
+  var c = keys.lastfm();
+  return c.key && lastfm.rejected(c.key) ? {key: '', secret: '', rejected: true} : c;
+}
+var lfm = new lastfm.Sync(path.join(DATA_DIR, 'lastfm.json'), playStore, lfmKeys);
+var listenbrainz = require('./listenbrainz.js');       /* scrobbling without Last.fm: the user's ListenBrainz token */
+var lbz = new listenbrainz.Sync(path.join(DATA_DIR, 'listenbrainz.json'), function(){ return keys.listenbrainz(); });
+var tracker = new plays.Tracker(function(e){ playStore.add([e]); lfm.played(e); lbz.played(e); }, function(e){ lfm.nowPlaying(e); lbz.nowPlaying(e); });
 var recording = false;
 
 /* who plays: Volumio (default) or MPD alone (APP_CONFIG.PLAYER = 'mpd' or XPLORIO_PLAYER=mpd, e.g. on a Mac; mpdplayer.js) */
@@ -1588,7 +1596,8 @@ var moodCollector = new moodtags.Collector({
   dir: path.join(DATA_DIR, 'moodtags'), libFile: TRACKS_FILE, audio: audioStore,
   libRaw: function(){ return libTracksLoad() ? libTracks : null; },     /* same track list as random and genres */
   libStamp: function(){ try { return +fs.statSync(TRACKS_FILE).mtime; } catch (e) { return 0; } },   /* changed? without reading it */
-  getCfg: function(){ return {key: keys.lastfm().key}; },
+  getCfg: function(){ return {key: lfmKeys().key}; },       /* without a (working) key: MusicBrainz */
+  mbBusy: function(){ return (releaseDates.running && !!releaseDates.next(Math.floor(Date.now() / 1000))); },
   playing: function(cb){ playerState(function(e, st){ cb(!!(e || (st && st.status === 'play'))); }); }   /* when in doubt: playing */
 });
 
@@ -1902,7 +1911,7 @@ var artistNames = new artistnames.Collector({file: path.join(DATA_DIR, 'artistna
     (tl || []).forEach(function(t){ add(t[0]); });
     return out;
   },
-  lastfmKey: function(){ return keys.lastfm().key || ''; },
+  lastfmKey: function(){ return lfmKeys().key || ''; },
   busy: function(){ return releaseDates.running && !!releaseDates.next(Math.floor(Date.now() / 1000)); }});
 var welcomeDay = null;
 function doWelcome(query, cb) {
@@ -2029,9 +2038,8 @@ function togetherSave(all) {
   try { mkdirs(DATA_DIR); fs.writeFileSync(TOGETHER_FILE + '.neu', JSON.stringify(out)); fs.renameSync(TOGETHER_FILE + '.neu', TOGETHER_FILE); }
   catch (e) { console.error('together.json: ' + e.message); }
 }
-/* Last.fm: similar artists of the anchors as {ak: {ak: true}}; doLastfmApi caches the responses for 6 h */
+/* similar artists of the anchors as {ak: {ak: true}} (Last.fm, otherwise Deezer/ListenBrainz); doLastfmApi caches them */
 function togetherSimilar(g, cb) {
-  if (!keys.lastfm().key) return cb({});
   var list = together.anchors(g), map = {}, left = list.length, done = false;
   function fin() { if (!done) { done = true; cb(map); } }
   if (!left) return fin();
@@ -2221,6 +2229,8 @@ function doLastfm(body, cb) {
     return cb(200, {ok: true, status: lfm.status()});
   }
   if (a === 'send') { lfm.flush(); return cb(200, {ok: true, status: lfm.status()}); }
+  if (a === 'lbSend') { lbz.flush(); return cb(200, {ok: true, listenbrainz: lbz.status()}); }
+  if (a === 'lbCheck') return lbz.check(function(){ lbz.flush(); cb(200, {ok: true, listenbrainz: lbz.status()}); });
   cb(400, {ok: false, error: 'unknown action'});
 }
 
@@ -2677,20 +2687,28 @@ var LFM_METHODS = ['artist.getinfo', 'album.getinfo', 'track.getinfo', 'artist.g
 var LFM_PARAMS  = ['artist', 'album', 'track', 'lang', 'limit', 'autocorrect'];
 var LFM_TTL = 6 * 3600000, LFM_MAX = 300;
 var lfmCache = {}, lfmCacheKeys = [];
+var similarartists = require('./similarartists.js');
+/* artist.getsimilar without a (working) key: Deezer or ListenBrainz, answered in Last.fm's format */
+function similarFree(query, cb) {
+  similarartists.find(query.artist, query.limit || 20, function(e, names){
+    if (e) return cb(200, {});
+    cb(200, {similarartists: {artist: names.map(function(n){ return {name: n}; }), '@attr': {source: 'free'}}});
+  });
+}
 function doLastfmApi(query, cb) {
   var method = String(query.method || '').toLowerCase();
   if (LFM_METHODS.indexOf(method) < 0) return cb(400, {ok: false, error: 'method not allowed'});
-  var key = keys.lastfm().key;
-  if (!key) return cb(503, {ok: false, error: 'LASTFM_KEY missing'});
+  var key = lfmKeys().key;
+  if (!key) return method === 'artist.getsimilar' ? similarFree(query, cb) : cb(503, {ok: false, error: 'LASTFM_KEY missing'});
   var qs = 'method=' + method;
   LFM_PARAMS.forEach(function(p){ if (query[p]) qs += '&' + p + '=' + encodeURIComponent(String(query[p]).slice(0, 300)); });
   var hit = lfmCache[qs];
   if (hit && Date.now() - hit.at < LFM_TTL) return cb(200, hit.data);
-  var base = process.env.LASTFM_URL || 'https://ws.audioscrobbler.com';
-  coversearch.fetchUrl(base + '/2.0/?' + qs + '&api_key=' + encodeURIComponent(key) + '&format=json', 2 * 1024 * 1024, function(e, r){
-    var data = null;
-    if (!e) { try { data = JSON.parse(r.body.toString('utf8')); } catch (x) { /* not JSON */ } }
-    if (!data) return cb(200, {});                       /* like "nothing found"; do not cache */
+  var params = {};
+  LFM_PARAMS.forEach(function(p){ if (query[p]) params[p] = String(query[p]).slice(0, 300); });
+  lastfm.call({key: key}, method, params, false, false, function(e, data){    /* reads Last.fm's error also with HTTP 403 */
+    if (e && e.code && lastfm.rejected(key)) return method === 'artist.getsimilar' ? similarFree(query, cb) : cb(503, {ok: false, error: 'Last.fm key rejected'});
+    if (e) return cb(200, e.code ? {error: e.code, message: e.message} : {});   /* like "nothing found"; do not cache */
     if (!lfmCache[qs]) { lfmCacheKeys.push(qs); if (lfmCacheKeys.length > LFM_MAX) delete lfmCache[lfmCacheKeys.shift()]; }
     lfmCache[qs] = {at: Date.now(), data: data};
     cb(200, data);
@@ -2887,10 +2905,10 @@ var smartLists = new smartlists.Smart({mpd: function(cmds, cb){ mpdPlayer.mpd(cm
                                        log: function(t){ console.error(t); }});
 setInterval(function(){ if (playerIsMpd()) smartLists.tick(); }, 2 * 60 * 1000).unref();   /* cheap: one stats, one stat */
 setTimeout(function(){ if (playerIsMpd()) smartLists.tick(); }, 60 * 1000).unref();
-var autodjlib = require('./autodj.js');                 /* endless playback without Volumio: similar artists (Last.fm), own library */
+var autodjlib = require('./autodj.js');                 /* endless playback without Volumio: similar artists (Last.fm, Deezer, ListenBrainz), own library */
 var autoDj = new autodjlib.AutoDJ({
   mpd: function(cmds, cb){ mpdPlayer.mpd(cmds, cb); }, file: path.join(DATA_DIR, 'autodj.json'),
-  ready: function(){ return !!keys.lastfm().key; },
+  ready: function(){ return true; },                   /* similar artists come from Deezer/ListenBrainz without a key */
   similar: function(artist, cb){
     doLastfmApi({method: 'artist.getsimilar', artist: artist, limit: '20', autocorrect: '1'}, function(code, d){
       var a = d && d.similarartists && d.similarartists.artist;
@@ -3072,7 +3090,9 @@ var macSettings = new macsettings.MacSettings({
       cb(e, e ? '' : String(out).trim().replace(/\/$/, '') || '');
     });
   },
-  essentiaStatus: function(){ return audioStore.status(); }
+  essentiaStatus: function(){ return audioStore.status(); },
+  lastfmRejected: function(){ return !!lfmKeys().rejected; },
+  listenbrainzChanged: function(set){ if (set) lbz.check(function(){ lbz.flush(); }); else lbz.clear(); }
 });
 /* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MAC_MPD_CONF from xplorio-services.sh
    (only there; MPD_CONF above falls back to Volumio's /etc/mpd.conf, which Xplorio never writes) */
@@ -3573,7 +3593,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
   if (req.method === 'GET' && route === '/vustatus') return doVuStatus(function(c, o){ send(res, c, o); });
-  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!keys.lastfm().key});
+  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!lfmKeys().key, similar: true});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/image')   return doImage(url.parse(req.url, true).query, res);
@@ -3614,7 +3634,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/random')  return doRandom(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/plays')   return doPlays(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/plays/resolve') return doResolve(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
-  if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status()});
+  if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status(), listenbrainz: lbz.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
   if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings', '/coverbest', '/albumid', '/albumsearch', '/albumrelease'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
@@ -3643,7 +3663,7 @@ if (require.main === module) {
      ("tag service not reachable", fine again a moment later). Keep idle connections open longer than the browsers do. */
   server.keepAliveTimeout = 65000;
   server.listen(HTTP_PORT, function(){ console.log('tag-service on port ' + HTTP_PORT + ', music under ' + MUSIC_ROOT); });
-  if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); }
+  if (process.env.HISTORY !== '0' && appConfig().HISTORY !== false) { recording = true; watchPlayer(); lfm.flush(); lbz.check(function(){ lbz.flush(); }); }
   setTimeout(function(){ albumsEnsure(); }, 90000);       /* prepare the album list for the random album */
   setTimeout(pruneLog, 30000);                            /* clean up old undo data */
   setTimeout(dupMigrate, 20000);                          /* duplicates folder of earlier versions: new name, .mpdignore */

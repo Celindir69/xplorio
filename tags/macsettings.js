@@ -197,7 +197,8 @@ MacSettings.prototype.read = function(cfg) {
   var es = this.essentia();
   if (this.o.essentiaStatus) { try { es.tracks = this.o.essentiaStatus().tracks || 0; } catch (e) { es.tracks = 0; } }
   return {ok: true, mac: process.platform === 'darwin', musicRoot: this.o.musicRoot, music: this.music(), essentia: es,
-          lastfm: {key: !!k.key, secret: !!k.secret}, discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg)};
+          lastfm: {key: !!k.key, secret: !!k.secret, rejected: !!(this.o.lastfmRejected && this.o.lastfmRejected())},
+          listenbrainz: !!(this.o.keys.listenbrainz && this.o.keys.listenbrainz()), discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg)};
 };
 
 /* POST body {action, …} -> cb(code, answer). cfg: current APP_CONFIG */
@@ -224,6 +225,16 @@ MacSettings.prototype.command = function(body, cfg, cb) {
       if (body.clear) { delete k.LASTFM_KEY; delete k.LASTFM_SECRET; }
       else { k.LASTFM_KEY = key; if (secret) k.LASTFM_SECRET = secret; }
       this.o.keys.write(k);
+      return done({ok: true});
+    }
+    if (a === 'listenbrainz') {                             /* user token for scrobbling to ListenBrainz */
+      var lt = String(body.token_lb || '').trim();
+      if (!body.clear && !/^[A-Za-z0-9-]{20,100}$/.test(lt)) return done({error: 'listenbrainz'});
+      var cur3 = this.o.keys.read(), k3 = {};
+      Object.keys(cur3).forEach(function(n){ k3[n] = cur3[n]; });
+      if (body.clear) delete k3.LISTENBRAINZ_TOKEN; else k3.LISTENBRAINZ_TOKEN = lt;
+      this.o.keys.write(k3);
+      if (this.o.listenbrainzChanged) this.o.listenbrainzChanged(!body.clear);
       return done({ok: true});
     }
     if (a === 'discogs') {                                  /* personal access token for the album search */

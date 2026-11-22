@@ -33,11 +33,18 @@ t('Last.fm credentials: from keys.json, written with mode 0600, environment firs
 var seen = [];
 var fake = http.createServer(function(q, r){
   seen.push(q.url);
+  if (/^\/search\/artist/.test(q.url)) { r.writeHead(200, {'Content-Type': 'application/json'}); return r.end(JSON.stringify({data: [{id: 3, name: 'Massive Attack', nb_fan: 5}]})); }
+  if (/^\/artist\/3\/related/.test(q.url)) { r.writeHead(200, {'Content-Type': 'application/json'}); return r.end(JSON.stringify({data: [{name: 'Portishead'}, {name: 'Tricky'}]})); }
+  if (/method=artist\.getsimilar/.test(q.url)) {                        /* Last.fm without Pro: key refused with HTTP 403 */
+    r.writeHead(403, {'Content-Type': 'application/json'});
+    return r.end(JSON.stringify({error: 26, message: 'Suspended API key - Access for your account has been suspended'}));
+  }
   r.writeHead(200, {'Content-Type': 'application/json'});
   r.end(JSON.stringify({artist: {bio: {content: 'Text'}}}));
 });
 fake.listen(0, function(){
   process.env.LASTFM_URL = 'http://127.0.0.1:' + fake.address().port;
+  process.env.DEEZER_URL = 'http://127.0.0.1:' + fake.address().port;
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lfmapi-'));
   fs.mkdirSync(path.join(dir, 'data'));
   fs.writeFileSync(path.join(dir, 'config.js'), 'window.APP_CONFIG = {};');
@@ -61,12 +68,24 @@ fake.listen(0, function(){
               assert.strictEqual(c1, 200); assert.strictEqual(a.artist.bio.content, 'Text');
               assert.deepStrictEqual(b, a);
               assert.strictEqual(seen.length, 1);
-              assert.ok(/method=artist\.getinfo&artist=Massive%20Attack&lang=de&api_key=KEY&format=json$/.test(seen[0]), seen[0]);
+              assert.ok(/method=artist\.getinfo&api_key=KEY&artist=Massive%20Attack&lang=de&format=json$/.test(seen[0]), seen[0]);
             });
             t('service: other Last.fm methods are rejected', function(){ assert.strictEqual(c3, 400); assert.strictEqual(e.ok, false); });
-            svc.close(); fake.close();
-            console.log(n + ' checks passed');
-            process.exit(0);
+            get('/lastfmapi?method=artist.getsimilar&artist=Massive%20Attack&limit=10', function(c4, sim){
+              get('/health', function(c5, h2){
+                get('/lastfmapi?method=artist.getinfo&artist=Air', function(c6, info){
+                  t('service: key refused (no Last.fm Pro): similar artists from Deezer in Last.fm\'s format, the key counts as missing', function(){
+                    assert.strictEqual(c4, 200);
+                    assert.deepStrictEqual(sim.similarartists.artist.map(function(a){ return a.name; }), ['Portishead', 'Tricky']);
+                    assert.strictEqual(h2.lastfm, false); assert.strictEqual(h2.similar, true);
+                    assert.strictEqual(c6, 503);                                        /* texts: the UI takes Wikipedia */
+                  });
+                  svc.close(); fake.close();
+                  console.log(n + ' checks passed');
+                  process.exit(0);
+                });
+              });
+            });
           });
         });
       });

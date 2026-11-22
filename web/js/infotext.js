@@ -1,6 +1,6 @@
 /* Fallback for Volumio's artist and album texts (metavolumio) when they return nothing: Volumio 4 only provides them
-   with a paid subscription. First Last.fm (needs the Last.fm key in the plugin settings, in the chosen language, else English), then for artists
-   Wikipedia (chosen language, else English, no key). Classic script, ES5; in tests with its own fetch. */
+   with a paid subscription. First Last.fm (only with a working Last.fm key, which needs Last.fm Pro since December 2026; in the
+   chosen language, else English), then Wikipedia (artist, album or song article; chosen language, else English, no key). Classic script, ES5; in tests with its own fetch. */
 
 /* clean Last.fm text: remove the "Read more on Last.fm" link and HTML, license note stays as source at the bottom */
 function infoClean(s) {
@@ -88,6 +88,32 @@ function infoWikipediaTrack(fetchFn, artist, title, lang) {
     }).catch(function(){ return ''; });
 }
 
+/* Wikipedia article on an album: search for "album artist"; only an article whose name is the album name (suffix in
+   parentheses ignored, e.g. "Mezzanine (Album)"), that describes itself as an album and names the artist */
+var INFO_ALBUM_RE = /\b(album|studioalbum|livealbum|kompilation|compilation|ep|soundtrack|debütalbum|debut)/i;
+function infoWikipediaAlbum(fetchFn, artist, album, lang) {
+  var base = 'https://' + lang + '.wikipedia.org/';
+  var want = infoNorm(infoSongName(album).replace(/\s*[\(\[][^\)\]]*(deluxe|expanded|anniversary|reissue|special|collector|jubil)[^\)\]]*[\)\]]/gi, '')), who = infoNorm(String(artist).split(/\s+(?:feat\.?|ft\.|&|und|and|with|x)\s+|\s*[,;\/]\s*/i)[0]);
+  if (!want || !who) return Promise.resolve('');
+  return Promise.resolve().then(function(){ return fetchFn(base + 'w/rest.php/v1/search/page?limit=5&q=' + encodeURIComponent(album + ' ' + artist + ' album')); })
+    .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      var pages = (j && j.pages) || [];
+      var hits = pages.filter(function(p){ return infoNorm(String(p.title || '').replace(/\s*\([^)]*\)\s*$/, '')) === want; });
+      return hits.reduce(function(chain, p){
+        return chain.then(function(found){
+          if (found) return found;
+          return fetchFn(base + 'api/rest_v1/page/summary/' + encodeURIComponent(String(p.key || p.title).replace(/ /g, '_')))
+            .then(function(r){ return r.ok ? r.json() : null; }).then(function(s){
+              if (!s || s.type !== 'standard' || !s.extract) return '';
+              var lead = s.description || s.extract.slice(0, 200);
+              if (!INFO_ALBUM_RE.test(lead) || /\b(lied|song|single)\b/i.test(s.description || '')) return '';
+              return infoNorm(lead + ' ' + s.extract.slice(0, 400)).indexOf(who) >= 0 ? s.extract : '';
+            });
+        });
+      }, Promise.resolve(''));
+    }).catch(function(){ return ''; });
+}
+
 /* -> {kind:'story', value, src} or null; order as for artists: both sources in the language, then English */
 function infoTrack(fetchFn, key, artist, title, lang) {
   lang = String(lang || 'en').toLowerCase();
@@ -122,6 +148,7 @@ function infoFallback(fetchFn, key, mode, artist, album, lang) {
   (lang === 'en' ? [''] : [lang, '']).forEach(function(l){
     if (key) tries.push(tr('Last.fm', function(){ return infoLastfm(fetchFn, key, mode, artist, album, l); }));
     if (mode === 'storyArtist') tries.push(tr('Wikipedia', function(){ return infoWikipedia(fetchFn, artist, l || 'en'); }));
+    else tries.push(tr('Wikipedia', function(){ return infoWikipediaAlbum(fetchFn, artist, album, l || 'en'); }));
   });
   return first(tries).then(function(hit){
     if (!hit) return null;

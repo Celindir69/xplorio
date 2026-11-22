@@ -27,8 +27,10 @@ t('album: Last.fm English if there is no German text', function(){
   var urls = [];
   return it.infoFallback(function(u){ urls.push(u); return res(/lang=de/.test(u) ? {album: {}} : {album: {wiki: {summary: LONG}}}); },
     'KEY', 'storyAlbum', 'Massive Attack', 'Mezzanine', 'de').then(function(r){
-      assert.strictEqual(urls.length, 2);
-      assert.ok(/album=Mezzanine/.test(urls[1]) && !/lang=/.test(urls[1]));
+      var lf = urls.filter(function(u){ return /audioscrobbler/.test(u); });
+      assert.strictEqual(lf.length, 2);
+      assert.ok(/album=Mezzanine/.test(lf[1]) && !/lang=/.test(lf[1]));
+      assert.strictEqual(r.src, 'Last.fm');
       assert.ok(r.value.indexOf(LONG) === 0);
     });
 });
@@ -75,9 +77,26 @@ t('language fr: first Last.fm and Wikipedia in French, then both in English', fu
 
 t('album without key and network error: nothing', function(){
   return Promise.all([
-    it.infoFallback(function(){ throw new Error('never'); }, '', 'storyAlbum', 'A', 'B'),
+    it.infoFallback(function(){ throw new Error('offline'); }, '', 'storyAlbum', 'A', 'B'),
     it.infoFallback(function(){ return Promise.reject(new Error('offline')); }, 'KEY', 'storyArtist', 'A')
   ]).then(function(r){ assert.deepStrictEqual(r, [null, null]); });
+});
+
+t('album without Last.fm key: the Wikipedia article on the album (not the song of the same name, not another artist)', function(){
+  var ALBUM = 'Mezzanine ist das dritte Studioalbum der britischen Band Massive Attack aus dem Jahr 1998.';
+  var urls = [];
+  function fetchFn(u){
+    urls.push(u);
+    if (/rest\.php\/v1\/search/.test(u)) return res({pages: [{title: 'Mezzanine (Architektur)', key: 'Mezzanine_(Architektur)'}, {title: 'Mezzanine (Album)', key: 'Mezzanine_(Album)'}]});
+    if (/Architektur/.test(u)) return res({type: 'standard', description: 'Zwischengeschoss', extract: 'Ein Mezzanine ist ein Zwischengeschoss.'});
+    return res({type: 'standard', description: 'Album von Massive Attack', extract: ALBUM});
+  }
+  return it.infoFallback(fetchFn, '', 'storyAlbum', 'Massive Attack', 'Mezzanine [Expanded]', 'de').then(function(r){
+    assert.strictEqual(r.src, 'Wikipedia');
+    assert.ok(r.value.indexOf(ALBUM) === 0);
+    assert.ok(/^https:\/\/de\.wikipedia\.org\//.test(urls[0]));
+    return it.infoFallback(fetchFn, '', 'storyAlbum', 'Portishead', 'Mezzanine', 'de');
+  }).then(function(r){ assert.strictEqual(r, null); });                  /* the article names another band */
 });
 
 /* ---------- single tracks ---------- */

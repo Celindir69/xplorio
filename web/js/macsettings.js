@@ -16,7 +16,7 @@ var msBak = null, msBakMsg = '', msBakBad = false, msBakTimer = null, msBakEdit 
 var msUpd = null, msUpdMsg = '', msUpdBad = false;
 var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
-var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
+var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'listenbrainz', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
 function msErrKey(e) { return 'mac.err.' + (e === 'auth' || e === 'pwneeded' ? e : 'fs'); }
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd', 'audio.restart'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
@@ -269,6 +269,7 @@ function msDraw() {
   grid.appendChild(msEssentiaCard(d));
   if (msRg && msRg.available) grid.appendChild(msRgCard());
   grid.appendChild(msLastfmCard(d));
+  grid.appendChild(msListenbrainzCard(d));
   grid.appendChild(msDiscogsCard(d));
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
@@ -832,12 +833,38 @@ function msDiscogsCard(d) {
   return c;
 }
 
+/* ---------- ListenBrainz: free scrobbling with the user's token ---------- */
+function msListenbrainzCard(d) {
+  var c = sysCard('ListenBrainz', 'syWide');
+  var kv = histEl('div', 'syKv');
+  kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
+  kv.appendChild(histEl('span', 'syV', T(d.listenbrainz ? 'mac.dcSet' : 'mac.lfNone')));
+  c.appendChild(kv);
+  c.appendChild(histEl('div', 'syNote', T('mac.lbNote')));
+  var tok = msInput('', T(d.listenbrainz ? 'mac.dcKeep' : 'mac.lbPh'), 'password'), r = histEl('div', 'pbRow msAddRow');
+  r.appendChild(tok); c.appendChild(r);
+  var row = histEl('div', 'pbRow msAddRow');
+  row.appendChild(msButton(T('mac.save'), function(){
+    var t = tok.value.trim();
+    if (!t) { msMsg = T('mac.err.listenbrainz'); msMsgBad = true; return msRender(); }
+    msSend({action: 'listenbrainz', token_lb: t}, T('mac.lbSaved'));
+  }, 'on'));
+  if (d.listenbrainz) row.appendChild(msButton(T('mac.lfClear'), function(){
+    if (confirm(T('mac.lbClearAsk'))) msSend({action: 'listenbrainz', clear: true}, T('mac.lbCleared'));
+  }));
+  c.appendChild(row);
+  var link = histEl('a', 'sHint listLink pbLink', T('mac.lbGet'));
+  link.href = 'https://listenbrainz.org/settings/'; link.target = '_blank'; link.rel = 'noopener';
+  c.appendChild(link);
+  return c;
+}
+
 /* ---------- Last.fm ---------- */
 function msLastfmCard(d) {
   var c = sysCard(T('mac.lastfm'), 'syWide'), lf = d.lastfm || {};
   var kv = histEl('div', 'syKv');
   kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
-  kv.appendChild(histEl('span', 'syV', lf.key ? T(lf.secret ? 'mac.lfBoth' : 'mac.lfKey') : T('mac.lfNone')));
+  kv.appendChild(histEl('span', 'syV', lf.rejected ? T('mac.lfRejected') : lf.key ? T(lf.secret ? 'mac.lfBoth' : 'mac.lfKey') : T('mac.lfNone')));
   c.appendChild(kv);
   c.appendChild(histEl('div', 'syNote', T('mac.lfNote')));
   var key = msInput('', T(lf.key ? 'mac.lfKeyKeep' : 'mac.lfKeyPh')), secret = msInput('', T(lf.secret ? 'mac.lfSecretKeep' : 'mac.lfSecretPh'), 'password');

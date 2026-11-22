@@ -1,12 +1,14 @@
 /* Mood tags: collect Last.fm tags per track (track.getTopTags, falling back to artist.getTopTags) and convert them
    via mood/lastfm_mapping.json and mood/classification_rules.json into mood (MOOD), energy 1-5 (ENERGY) and style (STYLE).
    The raw tags stay on the player (moodtags/*.jsonl); the music files are not changed.
-   Queries run only while nothing is playing. Node 8, ES5 only. */
+   Without a (working) Last.fm key the tags come from MusicBrainz instead (the community tags and genres of the recording,
+   else of the artist; free, one request per second). Queries run only while nothing is playing. Node 8, ES5 only. */
 var fs     = require('fs');
 var path   = require('path');
 var plays  = require('./plays.js');
 var jsonl  = require('./jsonl.js');
 var lastfm = require('./lastfm.js');
+var coversearch = require('./coversearch.js');
 
 var MAPPING = require('./mood/lastfm_mapping.json');
 var RULES   = require('./mood/classification_rules.json');
@@ -16,6 +18,33 @@ var IDLE_MS     = 5000;           /* how often to check whether music is playing
 var WAIT_MS     = 30000;          /* pause while music is playing or there is nothing to do */
 var BACKOFF_MS  = 60000;          /* after network or rate-limit error */
 var ARTIST_FACTOR = 0.6;          /* artist tags count less than track tags */
+var MB = process.env.MB_URL || 'https://musicbrainz.org';
+var MB_STEP_MS = 1500, MB_BUSY_MS = 4000;   /* MusicBrainz: one request per second, shared with the release dates */
+
+/* MusicBrainz search: tags and genres of the best hit with that title (and artist), counts scaled to 0-100 like
+   Last.fm's. cb(err {code, message}, [[tag, count]]) */
+function mbNorm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9\u00c0-\u024f]+/g, ''); }
+function mbQuote(s) { return '"' + String(s || '').replace(/["\\]/g, ' ') + '"'; }
+function mbTags(kind, it, artist, cb) {
+  var q = kind === 'track' ? 'recording:' + mbQuote(it.ti) + ' AND artist:' + mbQuote(it.ar) : 'artist:' + mbQuote(artist);
+  var u = MB + '/ws/2/' + (kind === 'track' ? 'recording' : 'artist') + '?fmt=json&limit=5&query=' + encodeURIComponent(q);
+  coversearch.fetchUrl(u, 512 * 1024, function(e, r){
+    if (e) return cb({code: /HTTP 503|HTTP 429/.test(e.message) ? 29 : 0, message: e.message});
+    var j;
+    try { j = JSON.parse(r.body.toString('utf8')); } catch (x) { return cb({code: 0, message: 'no JSON response'}); }
+    var list = (kind === 'track' ? j.recordings : j.artists) || [];
+    var want = mbNorm(kind === 'track' ? it.ti : artist);
+    var hit = list.filter(function(x){ return x && (x.score === undefined || x.score >= 80) && mbNorm(x.title || x.name) === want; })[0];
+    var tags = {};
+    if (hit) (hit.tags || []).concat(hit.genres || []).forEach(function(t){
+      if (t && t.name && (t.count || 0) > 0) tags[t.name] = Math.max(tags[t.name] || 0, t.count);
+    });
+    var names = Object.keys(tags), max = 0;
+    names.forEach(function(n){ if (tags[n] > max) max = tags[n]; });
+    cb(null, names.sort(function(a, b){ return tags[b] - tags[a]; })
+      .map(function(n){ return [n, Math.round(tags[n] / max * 100)]; }));
+  });
+}
 
 /* ---------- convert ---------- */
 
@@ -105,6 +134,8 @@ function readJsonl(file, into) {
 function Collector(opts) {
   this.t = {step: opts.stepMs || STEP_MS, idle: opts.idleMs || IDLE_MS, wait: opts.waitMs || WAIT_MS, backoff: opts.backoffMs || BACKOFF_MS};
   this.dir = opts.dir; this.libFile = opts.libFile; this.getCfg = opts.getCfg; this.playing = opts.playing;
+  this.mbBusy = opts.mbBusy || function(){ return false; };   /* MusicBrainz is used by others right now: slower */
+  this.t.mb = opts.mbStepMs || MB_STEP_MS; this.t.mbBusy = opts.mbBusyMs || MB_BUSY_MS;
   this.audio = opts.audio || null; this.libRaw = opts.libRaw || null; this.libStamp = opts.libStamp || null;
   this.tracks = {}; this.artists = {}; this.lib = null; this.libAt = 0;
   this.pos = 0; this.timer = null; this.running = false; this.state = 'aus'; this.error = null;
@@ -181,7 +212,7 @@ Collector.prototype.next = function() {
 
 Collector.prototype.step = function() {
   var self = this, cfg = this.getCfg() || {};
-  if (!cfg.key) { this.state = 'fehler'; this.error = 'LASTFM_KEY missing (keys.json in the data folder)'; return this.schedule(this.t.wait); }
+  if (cfg.key && lastfm.rejected(cfg.key)) cfg = {key: ''};   /* refused by Last.fm (e.g. no Pro): MusicBrainz */
   if (this.doneLib && this.libStamp && this.libStamp() === this.doneLib) return this.schedule(this.t.wait);   /* all done, list unchanged: no player query either */
   if (Date.now() - this.lastIdleCheck > this.t.idle) {
     this.lastIdleCheck = Date.now();
@@ -197,25 +228,32 @@ Collector.prototype.step = function() {
   if (!job) { this.doneLib = this.libAt; this.state = this.lib && this.lib.length ? 'fertig' : 'leer'; return this.schedule(this.t.wait); }
   this.state = 'läuft';
   var it = job.it;
-  var method = job.kind === 'track' ? 'track.gettoptags' : 'artist.gettoptags';
-  var params = job.kind === 'track' ? {artist: it.ar, track: it.ti, autocorrect: 1} : {artist: mainArtist(it.ar), autocorrect: 1};
-  lastfm.call({key: cfg.key}, method, params, false, false, function(e, j){
-    if (e && e.code !== 6) {                             /* 6: not found = no tags */
-      self.error = 'Last.fm: ' + e.message;
-      if (e.code === 10 || e.code === 26) { self.state = 'fehler'; return self.schedule(10 * self.t.wait); }   /* key invalid */
+  function got(e, g, src) {
+    if (e) {
+      self.error = src + ': ' + e.message;
       return self.schedule(self.t.backoff);
     }
     self.error = null;
-    var tags = (!e && j && j.toptags && j.toptags.tag) || [];
-    if (!Array.isArray(tags)) tags = [tags];
-    var g = tags.slice(0, RULES.input.max_lastfm_tags).filter(function(t){ return t && t.name; })
-      .map(function(t){ return [String(t.name), parseInt(t.count, 10) || 0]; });
     var rec = {k: job.kind === 'track' ? it.k : artistKey(it.ar), g: g, at: Math.floor(Date.now() / 1000)};
+    if (src === 'MusicBrainz') rec.s = 'mb';
     if (job.kind === 'track') { self.tracks[rec.k] = rec; self.save('tracks.jsonl', rec); }
     else { self.artists[rec.k] = rec; self.save('artists.jsonl', rec); }
     self.fetched++;
     self.summaryCache = null;
-    self.schedule(self.t.step);
+    self.schedule(src === 'MusicBrainz' ? (self.mbBusy() ? self.t.mbBusy : self.t.mb) : self.t.step);
+  }
+  if (!cfg.key) return mbTags(job.kind, it, mainArtist(it.ar), function(e, g){ got(e, g, 'MusicBrainz'); });
+  var method = job.kind === 'track' ? 'track.gettoptags' : 'artist.gettoptags';
+  var params = job.kind === 'track' ? {artist: it.ar, track: it.ti, autocorrect: 1} : {artist: mainArtist(it.ar), autocorrect: 1};
+  lastfm.call({key: cfg.key}, method, params, false, false, function(e, j){
+    if (e && e.code !== 6) {                             /* 6: not found = no tags */
+      if (lastfm.keyError(cfg.key, e.code, e.message)) return self.schedule(self.t.step);   /* key refused: MusicBrainz from now on */
+      return got(e, null, 'Last.fm');
+    }
+    var tags = (!e && j && j.toptags && j.toptags.tag) || [];
+    if (!Array.isArray(tags)) tags = [tags];
+    got(null, tags.slice(0, RULES.input.max_lastfm_tags).filter(function(t){ return t && t.name; })
+      .map(function(t){ return [String(t.name), parseInt(t.count, 10) || 0]; }), 'Last.fm');
   });
 };
 
@@ -266,4 +304,4 @@ function rankOf(list, keys) {
   return 0;
 }
 
-module.exports = {rankWeight: rankWeight, rankOf: rankOf, Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};
+module.exports = {mbTags: mbTags, rankWeight: rankWeight, rankOf: rankOf, Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};

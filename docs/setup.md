@@ -127,6 +127,14 @@ Enter the API key and "Shared secret" from https://www.last.fm/api/accounts on t
 
 The key is enough for similar artists, information texts, cover search, and mood tags; the secret is only needed for scrobbling.
 
+**Without Last.fm:** Since 1 December 2026 a Last.fm API key only works with a Last.fm Pro subscription, so the credentials are optional. Without a key, or when Last.fm refuses it (tried again after 6 hours), Xplorio uses free sources:
+
+- similar artists (info page, "More", AutoDJ, mixes of the day): Deezer, otherwise ListenBrainz,
+- artist, album and track texts: Wikipedia,
+- mood tags: MusicBrainz (tags and genres of the recording, otherwise of the artist),
+- cover search: iTunes and Cover Art Archive,
+- scrobbling: [ListenBrainz](#listenbrainz).
+
 `tags.py` runs with Python 2.7 and 3 and includes mutagen itself; if there is no `python` command, the service uses `python3`.
 
 Notes: Only files under `/mnt/INTERNAL`, `/mnt/USB`, and `/mnt/NAS` are allowed. Previous values for "Undo" are stored in `/data/xplorio/data/changes.jsonl`. If the music files are mirrored from another computer, the next synchronization will overwrite the changes made on the player. After changes MPD re-reads the affected folders, collected 15 seconds after the last change and never while MPD is still updating; with more than three folders, one scan of their common parent folder. While “Check library” is open, changes are only collected and read in once when it is closed (at the latest 10 minutes after the last change). This only works if MPD does not watch the files itself: with `auto_update "yes"` in `/etc/mpd.conf`, MPD scans every changed file immediately, and Volumio then rebuilds its album list each time (about a minute of load per album, up to a hang when editing many albums in a row). Recommendation: `auto_update "no"` (also in the template under `/volumio/app/plugins/music_service/mpd/`, if present) and `sudo systemctl restart mpd`; read in new music as usual with "Update library" (in the Volumio menu "Update", not "Rescan", or with the button at the top of “Check library”, which also covers changes still being collected, or with "Update library" in the gear menu). The service is accessible on the local network without authentication.
@@ -457,9 +465,15 @@ Each play is stored as one line in `/data/xplorio/data/plays.jsonl`. To disable 
 
 The session key is stored in `/data/xplorio/data/lastfm.json` and remains on the player. If another Last.fm plugin in Volumio is also scrobbling, disable one of them, otherwise every track will be submitted to Last.fm twice.
 
+### ListenBrainz
+
+Scrobble for free without Last.fm: sign in at https://listenbrainz.org (MusicBrainz account), copy the token from https://listenbrainz.org/settings/ and enter it in the plugin settings under "ListenBrainz" on Volumio, or under Settings › ListenBrainz on the Mac (`LISTENBRAINZ_TOKEN` in `/data/xplorio/data/keys.json`). After that, new plays go to ListenBrainz (including "now playing"); without an internet connection they wait in a queue (`listenbrainz.json`), and older plays are still accepted. Statistics shows the connected user and how many plays are waiting.
+
+ListenBrainz imports your existing Last.fm history itself: on listenbrainz.org under "Connect services" › Last.fm. Last.fm and ListenBrainz can be active at the same time.
+
 ### Mood Tags
 
-With `LASTFM_KEY`, the Tag Service retrieves the Last.fm tags for every track in the library (`track.getTopTags`, falling back to the artist's tags if no useful track tags are available) and maps them to mood, energy (1–5), and style according to `tags/mood/lastfm_mapping.json` and `tags/mood/classification_rules.json`.
+With `LASTFM_KEY`, the Tag Service retrieves the Last.fm tags for every track in the library (`track.getTopTags`, falling back to the artist's tags if no useful track tags are available); without a (working) key the tags and genres of the recording at MusicBrainz, otherwise those of the artist (one request every 1.5 s, slower while release dates are looked up). It maps them to mood, energy (1–5), and style according to `tags/mood/lastfm_mapping.json` and `tags/mood/classification_rules.json`.
 
 Queries are only made while nothing is playing (stopped or paused; checked every 5 seconds), at around 4 requests per second. The music files remain unchanged; the raw tags are stored in `/data/xplorio/data/moodtags/`, and the associated track list is stored in `/data/xplorio/data/library-tracks.json` (generated together with the album list).
 
@@ -553,7 +567,7 @@ python3 analyse.py --upload http://<player>:8766
 
 ### Artist and Album Information
 
-The information page queries Volumio first. If nothing is returned (Volumio 4 only provides the information with a subscription, or Volumio does not respond within 6 seconds), the app retrieves the information itself: album information from Last.fm (in the interface language, otherwise English; requires `LASTFM_KEY`), and artist information from Last.fm and Wikipedia, first both in the interface language, then both in English (Wikipedia: only articles that appear to be music-related).
+The information page queries Volumio first. If nothing is returned (Volumio 4 only provides the information with a subscription, or Volumio does not respond within 6 seconds), the app retrieves the information itself: album information from Last.fm (only with a working `LASTFM_KEY`) and Wikipedia (the article on the album that names the artist), and artist information from Last.fm and Wikipedia, first both in the interface language, then both in English (Wikipedia: only articles that appear to be music-related).
 If the app is set to a different language than Volumio via `LANGUAGE` or `?lang=`, it retrieves the texts itself first and asks Volumio only if that returns nothing (Volumio returns its texts in its own language).
 
 The source is shown below the text. There is no fallback for contributors.

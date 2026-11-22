@@ -11,11 +11,21 @@ var TAGS = {                                            /* "Last.fm": track tags
   'artist|Anna':      [{name: 'ambient', count: 100}],
   'artist|Bert':      [{name: 'happy', count: 100}, {name: 'electronic', count: 80}]
 };
-var calls = [];
+var MBTAGS = {                                          /* "MusicBrainz": community tags and genres */
+  'recording|Vier|Carl': {title: 'Vier', score: 100, tags: [{name: 'sad', count: 3}], genres: [{name: 'rock', count: 1}]},
+  'artist|Dora':         {name: 'Dora', score: 100, tags: [{name: 'happy', count: 2}]}
+};
+var calls = [], mbCalls = [];
 var fake = http.createServer(function(req, res){
   var p = url.parse(req.url, true).query;
-  calls.push(p);
   function json(o) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify(o)); }
+  if (/^\/ws\/2\//.test(req.url)) {
+    mbCalls.push(p.query);
+    var m = /^recording:"([^"]*)" AND artist:"([^"]*)"$/.exec(p.query), a = /^artist:"([^"]*)"$/.exec(p.query);
+    if (m) return json({recordings: MBTAGS['recording|' + m[1] + '|' + m[2]] ? [MBTAGS['recording|' + m[1] + '|' + m[2]]] : []});
+    return json({artists: a && MBTAGS['artist|' + a[1]] ? [MBTAGS['artist|' + a[1]]] : []});
+  }
+  calls.push(p);
   if (p.api_key !== 'KEY') return json({error: 10, message: 'Invalid API key'});
   var k = p.method === 'track.gettoptags' ? 'track|' + p.artist + '|' + p.track : 'artist|' + p.artist;
   if (!TAGS[k]) return json({error: 6, message: 'Track not found'});
@@ -24,6 +34,7 @@ var fake = http.createServer(function(req, res){
 
 fake.listen(0, function(){
   process.env.LASTFM_URL = 'http://127.0.0.1:' + fake.address().port;
+  process.env.MB_URL = 'http://127.0.0.1:' + fake.address().port;
   var mt = require('../tags/moodtags.js'), classify = mt.classify;
 
   t('alias and case: Melancholy -> melancholic, energy from the specific tag', function(){
@@ -113,7 +124,7 @@ fake.listen(0, function(){
       c.stop();
       var before = calls.length;
       var c2 = new mt.Collector({dir: path.join(dir, 'mt'), libFile: libFile, getCfg: function(){ return {key: key}; },
-        playing: function(cb){ cb(false); }, stepMs: 5, idleMs: 1, waitMs: 20});
+        playing: function(cb){ cb(false); }, stepMs: 5, idleMs: 1, waitMs: 20, mbStepMs: 5});
       t('after restart: stored tags are read', function(){
         assert.strictEqual(c2.status().done, 3);
         assert.strictEqual(c2.moodOf('Anna', 'Zwei').src, 'artist');
@@ -123,20 +134,28 @@ fake.listen(0, function(){
       fs.writeFileSync(libFile, JSON.stringify([['Anna', 'Eins'], ['Carl', 'Vier']]));
       fs.utimesSync(libFile, new Date(), new Date(Date.now() + 5000));
       c2.start();
-      waitFor(function(){ return c2.status().state === 'fehler'; }, function(){
-        t('invalid key: stopped with message', function(){
-          assert.ok(/Invalid API key/.test(c2.status().error));
+      waitFor(function(){ return c2.status().state === 'fertig'; }, function(){
+        t('key refused by Last.fm (e.g. no Pro): one request, then MusicBrainz', function(){
           assert.strictEqual(calls.length, before + 1);
+          assert.deepStrictEqual(mbCalls, ['recording:"Vier" AND artist:"Carl"']);
+          var r = c2.moodOf('Carl', 'Vier');
+          assert.strictEqual(r.src, 'track'); assert.deepStrictEqual(r.mood, ['sad']);
+          var last = fs.readFileSync(path.join(dir, 'mt', 'tracks.jsonl'), 'utf8').trim().split('\n').pop();
+          assert.deepStrictEqual(JSON.parse(last).g, [['sad', 100], ['rock', 33]]);    /* counts scaled like Last.fm's */
+          assert.strictEqual(JSON.parse(last).s, 'mb');
         });
         c2.stop();
         key = '';
+        fs.writeFileSync(libFile, JSON.stringify([['Anna', 'Eins'], ['Dora', 'Fünf']]));
+        fs.utimesSync(libFile, new Date(), new Date(Date.now() + 9000));
         var c3 = new mt.Collector({dir: path.join(dir, 'mt'), libFile: libFile, getCfg: function(){ return {key: key}; },
-          playing: function(cb){ cb(false); }, waitMs: 20});
-        c3.running = true; c3.step();
-        t('no LASTFM_KEY: hint instead of request', function(){
-          assert.strictEqual(c3.status().state, 'fehler');
-          assert.ok(/LASTFM_KEY/.test(c3.status().error));
-          assert.strictEqual(calls.length, before + 1);
+          playing: function(cb){ cb(false); }, stepMs: 5, idleMs: 1, waitMs: 20, mbStepMs: 5});
+        c3.start();
+        waitFor(function(){ return c3.status().state === 'fertig'; }, function(){
+        t('no Last.fm key: MusicBrainz, the artist when the recording has no tags', function(){
+          assert.strictEqual(calls.length, before + 1);                   /* no request to Last.fm */
+          assert.deepStrictEqual(mbCalls.slice(1), ['recording:"Fünf" AND artist:"Dora"', 'artist:"Dora"']);
+          assert.strictEqual(c3.moodOf('Dora', 'Fünf').src, 'artist');
         });
         c3.stop();
         /* shared list (libRaw) with stamp: once everything is collected neither the list nor the player is asked again */
@@ -165,6 +184,7 @@ fake.listen(0, function(){
               routeTest(dir, function(){
           fake.close();
           console.log(n + ' checks passed');
+        });
         });
             });
           }, 80);

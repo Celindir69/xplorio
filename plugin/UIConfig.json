@@ -358,6 +358,42 @@
 			]
 		},
 		{
+			"id": "section_listenbrainz",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_LISTENBRAINZ",
+			"description": "TRANSLATE.XPLORIO.SECTION_LISTENBRAINZ_DOC",
+			"icon": "fa-headphones",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"listenbrainzToken",
+					"listenbrainzClear"
+				]
+			},
+			"content": [
+				{
+					"id": "listenbrainzToken",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.LB_TOKEN",
+					"doc": "TRANSLATE.XPLORIO.LB_TOKEN_DOC",
+					"value": ""
+				},
+				{
+					"id": "listenbrainzClear",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.LB_CLEAR",
+					"doc": "TRANSLATE.XPLORIO.LB_CLEAR_DOC",
+					"value": false
+				}
+			]
+		},
+		{
 			"id": "section_system",
 			"element": "section",
 			"label": "TRANSLATE.XPLORIO.SECTION_SYSTEM",

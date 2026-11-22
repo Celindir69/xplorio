@@ -71,7 +71,7 @@
 		"ROTEL_NO_HOST": "Please enter the amplifier address for the Rotel bridge.",
 		"AMP_PLUGIN_ON": "The SerialAmpControl plugin is on: it controls the amplifier, Xplorio takes the volume from Volumio and switches on/off through it. The Rotel bridge stays off meanwhile.",
 		"SECTION_LASTFM": "Last.fm",
-		"SECTION_LASTFM_DOC": "For similar artists, lyrics, cover search, mood tags and scrobbling.",
+		"SECTION_LASTFM_DOC": "Optional, since December 2026 only with Last.fm Pro. Without a key, similar artists, texts and moods come from free sources (Deezer, ListenBrainz, Wikipedia, MusicBrainz); scrobble for free with ListenBrainz (below).",
 		"LASTFM_KEY": "Last.fm API key",
 		"LASTFM_KEY_DOC": "From https://www.last.fm/api/accounts. Stays on the player and is not shown again; leave empty to keep the saved one.",
 		"LASTFM_SECRET": "Last.fm shared secret",
@@ -110,6 +110,14 @@
 		"PASSWORD_OLD": "Current password",
 		"PASSWORD_OLD_DOC": "Needed to change it.",
 		"PASSWORD_WRONG": "The current password is wrong, nothing changed.",
-		"PASSWORD_LOCKED": "Too many wrong attempts, please wait {wait} s."
+		"PASSWORD_LOCKED": "Too many wrong attempts, please wait {wait} s.",
+		"SECTION_LISTENBRAINZ": "ListenBrainz",
+		"SECTION_LISTENBRAINZ_DOC": "Scrobble for free, without a Last.fm key. Your token is at https://listenbrainz.org/settings/.",
+		"LB_TOKEN": "ListenBrainz token",
+		"LB_TOKEN_DOC": "Stays on the player and is not shown again; leave empty to keep the saved one.",
+		"LB_CLEAR": "Delete ListenBrainz token",
+		"LB_CLEAR_DOC": "Removes the token from the player when saving.",
+		"LB_BAD": "The ListenBrainz token is invalid (letters, digits and hyphens).",
+		"LB_STORED": "ListenBrainz token saved."
 	}
 }

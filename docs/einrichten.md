@@ -123,6 +123,15 @@ das Volumio im Netzwerk freigeben kann. Vor einer Neuinstallation von Volumio ge
 API-Key und „Shared secret“ von https://www.last.fm/api/accounts auf der Einstellungsseite unter „Last.fm“ eintragen. Das
 Plugin legt sie in `/data/xplorio/data/keys.json` ab; nur der Tag-Dienst liest sie, die App fragt Last.fm über den Dienst.
 Der Key reicht für ähnliche Künstler, Texte, Cover-Suche und Stimmungs-Tags; das Secret braucht nur das Scrobbeln.
+
+**Ohne Last.fm:** Seit dem 1. Dezember 2026 funktioniert ein Last.fm-API-Key nur noch mit einem Last.fm-Pro-Abo. Der Zugang
+ist deshalb optional. Ohne Key, oder wenn Last.fm ihn ablehnt (dann wird es nach 6 Stunden erneut versucht), nimmt Xplorio
+freie Quellen:
+- ähnliche Künstler (Info-Seite, „Mehr“, AutoDJ, Mixe des Tages): Deezer, sonst ListenBrainz,
+- Künstler-, Album- und Titeltexte: Wikipedia,
+- Stimmungs-Tags: MusicBrainz (Tags und Genres der Aufnahme, sonst des Künstlers),
+- Cover-Suche: iTunes und Cover Art Archive,
+- Scrobbeln: [ListenBrainz](#listenbrainz).
 `tags.py` läuft mit Python 2.7 und 3 und bringt mutagen selbst mit; gibt es kein `python`, nimmt der Dienst `python3`.
 
 Hinweise: Erlaubt sind nur Dateien unter `/mnt/INTERNAL`, `/mnt/USB`, `/mnt/NAS`. Alte Werte für „Rückgängig“ stehen in
@@ -688,9 +697,21 @@ Einstellungsseite unter „Funktionen“ (Verlauf).
 Der Sitzungsschlüssel liegt in `/data/xplorio/data/lastfm.json` und bleibt auf dem Player. Falls ein anderes
 Last.fm-Plugin in Volumio scrobbelt, eines davon abschalten, sonst kommt jeder Titel doppelt bei Last.fm an.
 
+### ListenBrainz
+Kostenlos scrobbeln ohne Last.fm: bei https://listenbrainz.org anmelden (MusicBrainz-Konto), den Token unter
+https://listenbrainz.org/settings/ kopieren und auf Volumio in den Plugin-Einstellungen unter „ListenBrainz“, am Mac unter
+Einstellungen › ListenBrainz eintragen (`LISTENBRAINZ_TOKEN` in `/data/xplorio/data/keys.json`). Danach:
+- neue Wiedergaben gehen zu ListenBrainz („läuft gerade“ inklusive); ohne Internet warten sie in einer Warteschlange
+  (`listenbrainz.json`), auch ältere werden noch angenommen,
+- unter Statistik steht, als wer Xplorio verbunden ist und wie viele Wiedergaben warten.
+
+Den bisherigen Last.fm-Verlauf übernimmt ListenBrainz selbst: auf listenbrainz.org unter „Connect services“ › Last.fm.
+Last.fm und ListenBrainz können gleichzeitig aktiv sein.
+
 ### Stimmungs-Tags
 Mit `LASTFM_KEY` holt der Tag-Dienst für jeden Titel der Bibliothek die Last.fm-Tags (`track.getTopTags`, ohne
-brauchbare Titel-Tags ersatzweise die Tags des Künstlers) und rechnet sie nach `tags/mood/lastfm_mapping.json` und
+brauchbare Titel-Tags ersatzweise die Tags des Künstlers); ohne (funktionierenden) Key die Tags und Genres der Aufnahme
+bei MusicBrainz, sonst die des Künstlers (eine Anfrage alle 1,5 s, langsamer, solange die Erscheinungsdaten gesucht werden). Er rechnet sie nach `tags/mood/lastfm_mapping.json` und
 `tags/mood/classification_rules.json` in Stimmung, Energie (1–5) und Stil um. Abgefragt wird nur, solange nichts spielt
 (Stopp oder Pause; geprüft alle 5 s), mit etwa 4 Anfragen je Sekunde. Die Musikdateien bleiben unverändert; die Rohtags
 liegen in `/data/xplorio/data/moodtags/`, die Titelliste dazu in `/data/xplorio/data/library-tracks.json` (entsteht
@@ -794,8 +815,8 @@ python3 analyse.py --upload http://<player>:8766
 
 ### Künstler- und Albumtexte
 Die Info-Seite fragt zuerst Volumio. Kommt dort nichts (Volumio 4 gibt die Texte nur mit Abo heraus, oder Volumio antwortet
-nicht binnen 6 s), holt die App den Text selbst: Album bei Last.fm (in der Sprache der Oberfläche, sonst englisch; braucht `LASTFM_KEY`),
-Künstler bei Last.fm und Wikipedia, erst beide in der Sprache der Oberfläche, dann beide englisch (bei Wikipedia nur Artikel, die nach Musik aussehen). Die Quelle
+nicht binnen 6 s), holt die App den Text selbst: Album bei Last.fm (nur mit funktionierendem `LASTFM_KEY`) und Wikipedia (der Artikel zum Album,
+der den Künstler nennt), Künstler bei Last.fm und Wikipedia, erst beide in der Sprache der Oberfläche, dann beide englisch (bei Wikipedia nur Artikel, die nach Musik aussehen). Die Quelle
 steht unter dem Text. Für die Mitwirkenden gibt es keinen Ersatz.
 
 Mitwirkende, die Volumio mit einer MusicBrainz-Kennung liefert, lassen sich antippen (ohne eigene Markierung). Das klappt darunter ihren Text
