@@ -24,6 +24,25 @@ t('MusicBrainz: title and artist matching, date complete, not later than the alb
   assert.strictEqual(rd.pickDate({}, 'X', 'Y', 0), '');
 });
 
+t('MusicBrainz: only a year or year-month is enough for the check; edition additions count as the same album, Live not', function(){
+  var j = {'release-groups': [
+    {score: 100, title: 'Nebelbank (Live)', 'first-release-date': '1980', 'artist-credit': [{name: 'Polar Echo'}]},
+    {score: 100, title: 'Nebelbank', 'first-release-date': '1977', 'artist-credit': [{name: 'Polar Echo'}]}]};
+  assert.strictEqual(rd.pickDate(j, 'Nebelbank (Remastered 2011)', 'Polar Echo', 0), '1977');
+  assert.strictEqual(rd.pickDate(j, 'Nebelbank [Deluxe Edition]', 'Polar Echo', 0), '1977');
+  assert.strictEqual(rd.pickDate(j, 'Nebelbank (Live)', 'Polar Echo', 0), '1980');
+  assert.strictEqual(rd.stripEdition('Nebelbank (Live at Wembley, Deluxe Edition)'), 'Nebelbank (Live at Wembley, Deluxe Edition)');
+  assert.strictEqual(rd.stripEdition('Nebelbank (40th Anniversary) [Bonus Tracks]'), 'Nebelbank');
+  var c = new rd.Collector({file: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rd-')), 'r.jsonl'), list: function(){ return [{dir: 'P/N', al: 'Nebelbank', ar: 'Polar Echo'}]; }});
+  c.by['P/N'] = {dir: 'P/N', d: '1977', t: 'Nebelbank', at: 1};
+  assert.strictEqual(c.dateOf({dir: 'P/N'}), '');                   /* birthdays: full dates only */
+  c.by['P/N'] = {dir: 'P/N', d: '', t: '', at: Math.floor(Date.now() / 1000)};
+  assert.strictEqual(c.next(Math.floor(Date.now() / 1000)).dir, 'P/N');   /* not found with the old rules: once more */
+  var d = rd.diffs([{dir: 'P/N', al: 'Nebelbank', ar: 'Polar Echo', y: 1977, rd: '1977-05-02'}, {dir: 'P/M', al: 'Moor', ar: 'Polar Echo'}], [],
+    function(x){ return {'P/N': '1977', 'P/M': '1979-04'}[x] || ''; }, albums.albumDir);
+  assert.deepStrictEqual(d.map(function(x){ return [x.name, x.mb]; }), [['Moor', '1979-04']]);   /* same year: consistent; none: suggested */
+});
+
 t('library check: Date tag against MusicBrainz (year, full date, missing)', function(){
   var L = [{dir: 'A/1', al: 'Eins', ar: 'A', y: 1981}, {dir: 'A/2', al: 'Zwei', ar: 'A', y: 1994}, {dir: 'A/3', al: 'Drei', ar: 'A', y: 1990, rd: '1990-02-03'},
            {dir: 'A/4', al: 'Vier', ar: 'A'}, {dir: 'A/5', al: 'Fünf', ar: 'A', y: 2000}, {dir: 'A/6', al: 'Sechs', ar: 'A', y: 2001, rd: '2001-05-05'}];

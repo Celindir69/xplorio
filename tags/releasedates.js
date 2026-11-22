@@ -1,4 +1,4 @@
-/* Release dates of the albums for the birthdays: full Date tag from the files (albums.json: rd), else looked up once at
+/* Release dates of the albums for the birthdays and the library check: full Date tag from the files (albums.json: rd), else looked up once at
    MusicBrainz (release group, first release), at most one request per STEP_MS.
    Stored in releasedates.jsonl ({dir, d: 'YYYY-MM-DD' or '' = not found, at}); items not found are retried after
    RETRY_DAYS. Node 8, ES5 only. */
@@ -13,6 +13,17 @@ var MB = process.env.MB_URL || 'https://musicbrainz.org';
 var DAY = 86400;
 
 function full(d) { return /^\d{4}-\d\d-\d\d$/.test(d || '') ? d : ''; }
+/* a date MusicBrainz may give: year, year-month or full ('1975', '1975-03', '1975-03-14') */
+function dateLike(d) { return /^\d{4}(-\d\d){0,2}$/.test(d || '') ? d : ''; }
+/* records from before VERSION (only full dates, edition additions counted) are looked up once more */
+var VERSION = 2;
+/* edition additions that name the same album: "(Remastered 2011)", "[Deluxe Edition]", "(40th Anniversary)" … ; not
+   "(Live)", "(Demo)" and the like, which are different albums */
+var EDITION_RE = /\b(remaster(ed)?|deluxe|expanded|anniversary|edition|bonus|re-?issue|special|collector'?s?|legacy|jubil[aä]ums)/i;
+var OTHER_RE = /\b(live|demo|acoustic|unplugged|remix(es)?|instrumental|sessions?)\b/i;
+function stripEdition(s) {
+  return String(s || '').replace(/\s*[\(\[]([^\)\]]*)[\)\]]/g, function(m, inner){ return EDITION_RE.test(inner) && !OTHER_RE.test(inner) ? '' : m; }).trim();
+}
 /* title comparison: like coversearch.key, but bracketed additions count ("(Live)" is a different album) */
 function tkey(s) {
   s = String(s || '');
@@ -21,15 +32,16 @@ function tkey(s) {
 }
 function quote(s) { return '"' + String(s || '').replace(/["\\]/g, '\\$&') + '"'; }
 
-/* best hit of a MusicBrainz response: title and artist match, date complete, not later than the own year
-   -> {d: 'YYYY-MM-DD', t: title at MusicBrainz} or null */
+/* best hit of a MusicBrainz response: title (edition additions aside) and artist match, a date (full ones first; the
+   library check needs only the year), not later than the own year -> {d: 'YYYY[-MM[-DD]]', t: title at MusicBrainz} or null */
 function pickHit(j, al, ar, y) {
-  var hit = ((j && j['release-groups']) || []).filter(function(g){
+  var hits = ((j && j['release-groups']) || []).filter(function(g){
     var credit = (g['artist-credit'] || []).map(function(c){ return c.name || (c.artist && c.artist.name) || ''; }).join(' ');
-    var d = full(g['first-release-date']);
-    return (g.score || 0) >= MIN_SCORE && d && tkey(g.title) === tkey(al) &&
+    var d = dateLike(g['first-release-date']);
+    return (g.score || 0) >= MIN_SCORE && d && tkey(stripEdition(g.title)) === tkey(stripEdition(al)) &&
            coversearch.key(credit).indexOf(coversearch.key(ar)) >= 0 && !(y && +d.slice(0, 4) > y + 1);
-  })[0];
+  });
+  var hit = hits.filter(function(g){ return full(g['first-release-date']); })[0] || hits[0];
   return hit ? {d: hit['first-release-date'], t: hit.title || ''} : null;
 }
 function pickDate(j, al, ar, y) { var h = pickHit(j, al, ar, y); return h ? h.d : ''; }
@@ -52,7 +64,7 @@ function Collector(opts) {
 }
 
 /* date of an album: Date tag, else looked up; '' unknown */
-Collector.prototype.dateOf = function(a) { return full(a.rd) || (this.by[a.dir] && this.by[a.dir].d) || ''; };
+Collector.prototype.dateOf = function(a) { return full(a.rd) || full(this.by[a.dir] && this.by[a.dir].d) || ''; };   /* birthdays: full dates only */
 
 /* next album without date that has not been looked up yet (or unsuccessfully more than RETRY_DAYS ago) */
 Collector.prototype.next = function(now) {
@@ -60,13 +72,13 @@ Collector.prototype.next = function(now) {
   for (var k = 0; k < ex.length; k++) {
     var e = ex[k], q = this.by[e.dir];
     if (!e.al || !e.ar || e.ar === 'Verschiedene') continue;
-    if (!q || q.t === undefined || (!q.d && now - q.at > RETRY_DAYS * DAY)) return e;   /* records before titles: once more */
+    if (!q || q.t === undefined || (!q.d && (q.v !== VERSION || now - q.at > RETRY_DAYS * DAY))) return e;   /* older records: once more */
   }
   var list = this.list() || [];
   for (var i = 0; i < list.length; i++) {
     var a = list[i], r = this.by[a.dir];
     if (full(a.rd) || !a.al || !a.ar || a.ar === 'Verschiedene') continue;
-    if (!r || (!r.d && now - r.at > RETRY_DAYS * DAY)) return a;
+    if (!r || (!r.d && (r.v !== VERSION || now - r.at > RETRY_DAYS * DAY))) return a;
   }
   return null;
 };
@@ -89,11 +101,11 @@ Collector.prototype.step = function(done) {
   var self = this, now = Math.floor(Date.now() / 1000), a = this.next(now);
   if (!(this.list() || []).length) { this.schedule(60000); return done && done(); }   /* album list not read yet */
   if (!a) { this.schedule(3600000); return done && done(); }           /* all done: check hourly for new albums */
-  var al = libcheck.bareAlbum(a.al) || a.al;                       /* "Album (Disc 2)": search for "Album" */
+  var al = stripEdition(libcheck.bareAlbum(a.al) || a.al) || a.al;   /* "Album (Disc 2)", "Album (Remastered)": search for "Album" */
   var q = 'releasegroup:' + quote(al) + ' AND artist:' + quote(a.ar);
   this.getJson(MB + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
     if (e) { self.schedule(60000); return done && done(e); }           /* network or MusicBrainz gone: continue later */
-    var h = pickHit(j, al, a.ar, a.y), rec = {dir: a.dir, d: h ? h.d : '', t: h ? h.t : '', at: now};
+    var h = pickHit(j, al, a.ar, a.y), rec = {dir: a.dir, d: h ? h.d : '', t: h ? h.t : '', at: now, v: VERSION};
     self.by[a.dir] = rec; self.fetched++; self.rev++;
     try { fs.appendFileSync(self.file, JSON.stringify(rec) + '\n'); } catch (x) { /* next time */ }
     self.schedule(self.stepMs);
@@ -142,7 +154,7 @@ function diffs(albumList, songs, mbOf, albumDir) {
   var out = [];
   albumList.forEach(function(a){
     var mb = mbOf(a.dir), tag = full(a.rd) || (a.y ? String(a.y) : '');
-    if (!mb || (tag && tag.slice(0, 4) === mb.slice(0, 4) && (tag.length === 4 || tag === mb))) return;
+    if (!mb || (tag && tag.slice(0, 4) === mb.slice(0, 4) && (tag.length === 4 || mb.length < 10 || tag === mb))) return;   /* MusicBrainz knows only year (and month): the year counts */
     var list = byDir[a.dir] || [];
     out.push({dir: a.dir, name: a.al, artist: a.ar, count: list.length, tag: tag, mb: mb,
               files: list.map(function(s){ return {uri: s.file, title: s.title || s.file.replace(/^.*\//, '')}; })});
@@ -150,4 +162,4 @@ function diffs(albumList, songs, mbOf, albumDir) {
   return out.sort(function(a, b){ return a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name); });
 }
 
-module.exports = {Collector: Collector, birthdays: birthdays, pickDate: pickDate, pickHit: pickHit, diffs: diffs};
+module.exports = {Collector: Collector, birthdays: birthdays, pickDate: pickDate, pickHit: pickHit, diffs: diffs, stripEdition: stripEdition};

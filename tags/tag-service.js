@@ -778,7 +778,8 @@ function doCheckGet(query, cb) {
 function yearFix(last) {
   if (!last) return [];
   var out = [], at = {};
-  function mbOf(d) { var r = releaseDates.by[d]; return (r && r.d) || ''; }
+  function tagDate(d) { return String(d || '').length === 7 ? d.slice(0, 4) : d || ''; }   /* "1977-05": the year goes into the tag */
+  function mbOf(d) { var r = releaseDates.by[d]; return tagDate(r && r.d); }
   (last.yearMixed || []).forEach(function(it){
     var mb = mbOf(it.dir);
     at[it.dir] = out.length;
@@ -787,7 +788,7 @@ function yearFix(last) {
   });
   (last.releaseDate || []).forEach(function(it){
     if (at.hasOwnProperty(it.dir)) return;
-    var mb = mbOf(it.dir) || it.mb;
+    var mb = mbOf(it.dir) || tagDate(it.mb);
     out.push({dir: it.dir, name: it.name, artist: it.artist, count: it.count, years: [{name: it.tag, count: it.count}], mb: mb,
               suggest: mb, src: 'mb', files: it.files});
   });
@@ -3473,24 +3474,36 @@ process.on('exit', function(){ if (essRun) essRun.stop(); });   /* Ctrl-C for th
    APP_CONFIG.ROTEL is on and ROTEL_HOST is set, and starts it again when its settings change (it reads them at the start).
    xplorio-services.sh stop ends it together with the tag service. */
 var ROTEL_SCRIPT = path.join(__dirname, '..', 'rotel', 'rotel-bridge.js');
-var rotelChild = null, rotelKey = '', rotelTimer = null, rotelSince = null;
+var rotelChild = null, rotelKey = '', rotelTimer = null, rotelSince = null, rotelGen = 0, rotelStarting = false;
 function rotelWanted() { var c = appConfig(); return process.env.XPLORIO_ROTEL === 'manage' && c.ROTEL === true && !!c.ROTEL_HOST; }
 function rotelSync() {
   if (process.env.XPLORIO_ROTEL !== 'manage') return;
   var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
   var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
-  if (key === rotelKey && (!want || rotelChild)) return;
+  if (key === rotelKey && (!want || rotelChild || rotelStarting)) return;
   rotelKey = key;
+  var gen = ++rotelGen;                                  /* a newer call wins over a start still on its way */
   clearTimeout(rotelTimer);
   var old = rotelChild;
   rotelChild = null; rotelSince = null;
   if (old) { try { old.kill('SIGTERM'); } catch (e) { /* gone */ } }
+  rotelStarting = false;
   if (!want) return;
-  rotelTimer = setTimeout(function(){                      /* the old one frees the port first */
+  rotelStarting = true;
+  rotelTimer = setTimeout(function(){ rotelFreePort(c.ROTEL_PORT || 8765, rotelStart); }, old ? 800 : 0);   /* the old one frees the port first */
+  function rotelStart(busy) {
+    if (gen !== rotelGen) return;
+    rotelStarting = false;
+    if (busy) {                                          /* another program has the port: say so once a minute, not every 10 s */
+      console.error('Rotel bridge: port ' + (c.ROTEL_PORT || 8765) + ' is used by another program (' + busy + '), trying again in 60 s');
+      rotelKey = ''; rotelTimer = setTimeout(rotelSync, 60000);
+      return;
+    }
     var env = {};
     Object.keys(process.env).forEach(function(k){ env[k] = process.env[k]; });
     env.APP_CONFIG_DIR = APP_CONFIG_DIR; env.HTTP_PORT = String(c.ROTEL_PORT || 8765);
     delete env.ROTEL_HOST; delete env.ROTEL_PORT; delete env.ROTEL_MODEL;
+    env.XPLORIO_ROTEL_PARENT = String(process.pid);     /* ends with the tag service (rotel-bridge.js) */
     var ch = rotelChild = cp.spawn(process.execPath, [ROTEL_SCRIPT], {env: env, stdio: ['ignore', 'inherit', 'inherit']});
     rotelSince = Date.now();
     console.error('Rotel bridge started (' + c.ROTEL_HOST + ')');
@@ -3500,7 +3513,27 @@ function rotelSync() {
       console.error('Rotel bridge ended (' + code + '), starting again in 10 s');
       rotelTimer = setTimeout(rotelSync, 10000);
     });
-  }, old ? 800 : 0);
+  }
+}
+/* a Rotel bridge left over from before (tag service killed, update) still listening on the port: stopped, it is ours.
+   cb(busy): busy = name of another program that has the port, else '' */
+function rotelFreePort(port, cb) {
+  cp.execFile('lsof', ['-nP', '-t', '-iTCP:' + port, '-sTCP:LISTEN'], {timeout: 5000}, function(e, out){
+    var pids = String(out || '').split('\n').map(function(x){ return parseInt(x, 10); }).filter(function(x){ return x > 1 && x !== process.pid; });
+    if (!pids.length) return cb('');
+    var other = '', left = pids.length, killed = false;
+    pids.forEach(function(pid){
+      cp.execFile('ps', ['-p', String(pid), '-o', 'command='], {timeout: 5000}, function(e2, cmd){
+        cmd = String(cmd || '').trim();
+        if (/rotel-bridge\.js/.test(cmd)) {
+          try { process.kill(pid, 'SIGTERM'); killed = true; console.error('Rotel bridge: stopped a leftover bridge (PID ' + pid + ')'); } catch (e3) { /* gone */ }
+        } else if (cmd) other = cmd.split(/\s+/)[0].split('/').pop();
+        if (--left) return;
+        if (other) return cb(other);
+        setTimeout(function(){ cb(''); }, killed ? 800 : 0);
+      });
+    });
+  });
 }
 process.on('exit', function(){ if (rotelChild) { try { rotelChild.kill('SIGTERM'); } catch (e) { /* gone */ } } });
 if (process.env.XPLORIO_ROTEL === 'manage') { setTimeout(rotelSync, 1000); setInterval(rotelSync, 30000).unref(); }
