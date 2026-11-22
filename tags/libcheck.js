@@ -262,9 +262,13 @@ function trackDups(list) {
     var k = path.dirname(s.file) + '|' + disc + '|' + (+tm[1]);
     (byNum[k] = byNum[k] || []).push(s);
   });
+  /* file names with other numbers ("09 …" and "01 …"): rather a wrong number tag than a duplicate */
+  function nameNum(s) { var m = /^(?:\d{1,2}[-.])?(\d{1,3})(?!\d)/.exec(path.basename(s.file)); return m ? +m[1] : 0; }
   Object.keys(byNum).forEach(function(k){
-    var g = byNum[k];
-    add('n|' + k, g.map(function(s){ return s.title || base(s.file); }).join(' / '), g, false, 'number');
+    var g = byNum[k], nums = {}, all = true;
+    g.forEach(function(s){ var n = nameNum(s); if (!n) all = false; nums[n] = 1; });
+    var tag = all && Object.keys(nums).length === g.length;
+    add('n|' + k, g.map(function(s){ return s.title || base(s.file); }).join(' / '), g, false, tag ? 'tagnum' : 'number');
   });
   return out;
 }
@@ -542,7 +546,7 @@ function analyze(songs, hasCover, audioOf, extra, done) {
       count: list.length, files: filesOf(list), groups: groups.map(function(g){
         return {key: g.key, title: g.title, sure: g.sure, why: g.why, files: g.files.map(function(s, i){
           var q = quality(s);
-          return {uri: s.file, name: path.basename(s.file), format: q.format, seconds: Math.round(secs(s)), best: i === 0};
+          return {uri: s.file, name: path.basename(s.file), format: q.format, seconds: Math.round(secs(s)), track: (/^\s*(\d+)/.exec(s.track || '') || [0, ''])[1], best: i === 0};
         })};
       })});
   }, genresAndNames);

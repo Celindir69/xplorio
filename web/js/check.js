@@ -1251,7 +1251,7 @@ function checkDupTrackFile(f, prefix) {                  /* prefix: done mark of
   var row = document.createElement('div'); row.className = 'sRow ckDupRow ckDupFile' + (checkDone[key] ? ' done' : '');
   var meta = document.createElement('div'); meta.className = 'sMeta';
   var ti = document.createElement('div'); ti.className = 'sTitle';
-  ti.textContent = [f.format, f.seconds ? fmtTime(f.seconds) : ''].filter(Boolean).join(' · ') + (f.best ? ' · ' + T('check.dupt.best') : '');
+  ti.textContent = [f.track ? T('check.dupt.track', {n: f.track}) : '', f.format, f.seconds ? fmtTime(f.seconds) : ''].filter(Boolean).join(' · ') + (f.best ? ' · ' + T('check.dupt.best') : '');
   var su = document.createElement('div'); su.className = 'sSub'; su.textContent = f.name;
   su.title = '/mnt/' + f.uri;
   var msg = document.createElement('div'); msg.className = 'ckDupMsg'; msg.style.display = 'none';

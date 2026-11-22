@@ -139,6 +139,8 @@ langRegister('it', 'Italiano', {
   'check.dupt.why.same': 'stessa durata',
   'check.dupt.why.length': 'durata diversa, forse doppio',
   'check.dupt.why.number': 'stesso numero, forse doppio',
+  'check.dupt.why.tagnum': 'stesso numero di traccia nei tag ma non nei nomi dei file: piuttosto un tag errato',
+  'check.dupt.track': 'N. {n}',
   'check.dupt.best': 'file migliore',
   'check.dupt.keepHint': 'Doppio di proposito: non proporre più questo gruppo',
   'check.dup.trash': 'Gli album spostati sono nel cestino: lì puoi ripristinarli o eliminarli definitivamente.',

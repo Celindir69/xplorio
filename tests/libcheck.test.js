@@ -167,6 +167,10 @@ t('duplicate tracks: same title, same or different length; remaster additions do
 t('duplicate tracks: same number with different titles is a hint; "Song 2" alone is no copy; compilations by artist', function(){
   assert.deepStrictEqual(dups([D('U/a/07.flac', {title: 'X1', track: '7'}), D('U/a/07b.flac', {title: 'X2', track: '7'})]),
     [['number', false, ['U/a/07.flac', 'U/a/07b.flac']]]);
+  assert.deepStrictEqual(dups([D('U/r/09 What If We Give It Away.m4a', {title: 'What If We Give It Away', track: '1'}), D('U/r/01 Begin The Begin.m4a', {title: 'Begin The Begin', track: '1'})]),
+    [['tagnum', false, ['U/r/01 Begin The Begin.m4a', 'U/r/09 What If We Give It Away.m4a']]]);   /* file names 09 and 01: the tag is wrong */
+  var a = lc.analyze([D('U/r/09 A.m4a', {title: 'A', track: '1/12'}), D('U/r/01 B.m4a', {title: 'B', track: '1/12'})], function(){ return true; }).dupTracks;
+  assert.deepStrictEqual(a[0].groups[0].files.map(function(f){ return f.track; }), ['1', '1']);
   assert.deepStrictEqual(dups([D('U/a/01 Song.flac', {title: 'Beetlebum', track: '1'}), D('U/a/02 Song 2.flac', {title: 'Song 2', track: '2'})]), []);
   assert.deepStrictEqual(dups([D('U/c/01.flac', {artist: 'Bing Crosby', title: 'Silent Night', track: '1'}), D('U/c/02.flac', {artist: 'Enya', title: 'Silent Night', track: '2'})]), []);
 });
