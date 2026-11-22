@@ -88,19 +88,20 @@ Collector.prototype.status = function() {
   list.forEach(function(a){ if (self.dateOf(a)) n++; });
   return {albums: list.length, dated: n, fetched: this.fetched, running: this.running};
 };
-/* lookup progress for the library check: albums to look up (with the extras of the check), of them looked up with the
-   current rules, of them found; errors: failed requests since the start (MusicBrainz busy or unreachable) */
+/* lookup progress for the library check: the albums of the check (extra, looked up first) and the rest of the library,
+   each {todo, done, found}: to look up, looked up with the current rules, found; errors: failed requests since the start */
 Collector.prototype.progress = function() {
-  var self = this, seen = {}, todo = 0, done = 0, found = 0, now = Math.floor(Date.now() / 1000);
-  function count(a, need) {
+  var self = this, seen = {}, now = Math.floor(Date.now() / 1000);
+  var check = {todo: 0, done: 0, found: 0}, rest = {todo: 0, done: 0, found: 0};
+  function count(a, need, into) {
     if (!a || !a.dir || seen[a.dir] || !need) return;
-    seen[a.dir] = 1; todo++;
+    seen[a.dir] = 1; into.todo++;
     var r = self.by[a.dir];
-    if (r && (r.d || (r.v === VERSION && now - r.at <= RETRY_DAYS * DAY))) { done++; if (r.d) found++; }
+    if (r && (r.d || (r.v === VERSION && now - r.at <= RETRY_DAYS * DAY))) { into.done++; if (r.d) into.found++; }
   }
-  (this.extra() || []).forEach(function(e){ count(e, e.al && e.ar && e.ar !== 'Verschiedene'); });
-  (this.list() || []).forEach(function(a){ count(a, !full(a.rd) && a.al && a.ar && a.ar !== 'Verschiedene'); });
-  return {todo: todo, done: done, found: found, errors: this.errors, running: this.running};
+  (this.extra() || []).forEach(function(e){ count(e, e.al && e.ar && e.ar !== 'Verschiedene', check); });
+  (this.list() || []).forEach(function(a){ count(a, !full(a.rd) && a.al && a.ar && a.ar !== 'Verschiedene', rest); });
+  return {check: check, rest: rest, errors: this.errors, running: this.running};
 };
 
 Collector.prototype.start = function() { if (!this.running) { this.running = true; this.schedule(this.stepMs); } };

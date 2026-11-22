@@ -93,7 +93,7 @@ function checkLoad() {
     if (res.running) checkTimer = setTimeout(checkLoad, 2000);
     else if (mt && mt.state === 'läuft') checkTimer = setTimeout(checkLoad, 10000);
     else if ((checkShown && checkShown.res && checkShown.res.yearFix || []).some(function(it){ return it.missing && !it.suggest; }) ||
-             (res.yearStatus && res.yearStatus.done < res.yearStatus.todo)) {
+             (res.yearStatus && res.yearStatus.check && res.yearStatus.check.done + res.yearStatus.rest.done < res.yearStatus.check.todo + res.yearStatus.rest.todo)) {
       checkTimer = setTimeout(checkLoad, 15000);               /* albums without a year: MusicBrainz suggestions appear by themselves */
     }
   }).catch(function(){
@@ -878,10 +878,14 @@ function checkArtistStatus(box) {
 /* progress of the MusicBrainz date lookup, below the year hint: "120 of 800 albums looked up, 85 found" */
 function checkYearStatus(box) {
   var st = checkShown && checkShown.res && checkShown.res.yearStatus;
-  if (!st || !st.todo) return;
+  if (!st || !st.check || !(st.check.todo + st.rest.todo)) return;
+  function part(key, p) { return T(key, {done: checkNum(p.done), total: checkNum(p.todo), found: checkNum(p.found)}); }
+  var parts = [];
+  if (st.check.todo) parts.push(part(st.check.done >= st.check.todo ? 'check.year.checkDone' : 'check.year.checkRun', st.check));
+  if (st.rest.todo) parts.push(part(st.rest.done >= st.rest.todo ? 'check.year.restDone' : st.check.done < st.check.todo ? 'check.year.restLater' : 'check.year.restRun', st.rest));
+  if (st.busy && (st.check.done < st.check.todo || st.rest.done < st.rest.todo)) parts.push(T('check.year.busy'));
   var line = document.createElement('div'); line.className = 'ckCatHint';
-  line.textContent = T(st.done >= st.todo ? 'check.year.progressDone' : 'check.year.progress', {done: checkNum(st.done), total: checkNum(st.todo), found: checkNum(st.found)}) +
-    (st.busy ? ' ' + T('check.year.busy') : '');
+  line.textContent = 'MusicBrainz: ' + parts.join(' ');
   box.appendChild(line);
 }
 
