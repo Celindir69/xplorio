@@ -38,7 +38,7 @@
 		"RELEASEDATES": "Erscheinungstage",
 		"RELEASEDATES_DOC": "Fehlende Erscheinungsdaten von Alben bei MusicBrainz nachschlagen (Album-Geburtstage).",
 		"MOODTAGS": "Stimmungs-Tags",
-		"MOODTAGS_DOC": "Last.fm-Tags je Titel sammeln, nur solange nichts spielt (braucht den Last.fm-Zugang).",
+		"MOODTAGS_DOC": "Stimmungs-Tags je Titel sammeln, nur solange nichts spielt (von Last.fm, wenn ein Key eingetragen ist, sonst von MusicBrainz).",
 		"COLOR_MOOD": "Farbstimmung",
 		"COLOR_MOOD_DOC": "Farbstimmung aus dem Cover (nur Cover vom Player selbst).",
 		"M4A_PROBE": "m4a-Codec lesen",
@@ -71,7 +71,7 @@
 		"ROTEL_NO_HOST": "Für die Rotel-Bridge bitte die Adresse des Verstärkers eintragen.",
 		"AMP_PLUGIN_ON": "Das Plugin SerialAmpControl ist eingeschaltet: Es steuert den Verstärker, Xplorio nimmt die Lautstärke von Volumio und schaltet darüber ein und aus. Die Rotel-Bridge bleibt so lange aus.",
 		"SECTION_LASTFM": "Last.fm",
-		"SECTION_LASTFM_DOC": "Für ähnliche Künstler, Texte, Cover-Suche, Stimmungs-Tags und Scrobbeln.",
+		"SECTION_LASTFM_DOC": "Optional, seit Dezember 2026 nur mit Last.fm Pro. Ohne Key kommen ähnliche Künstler, Texte und Stimmungen aus freien Quellen (Deezer, ListenBrainz, Wikipedia, MusicBrainz); kostenlos scrobbeln geht mit ListenBrainz (unten).",
 		"LASTFM_KEY": "Last.fm API-Key",
 		"LASTFM_KEY_DOC": "Von https://www.last.fm/api/accounts. Bleibt auf dem Player und wird nicht wieder angezeigt; leer lassen behält den gespeicherten.",
 		"LASTFM_SECRET": "Last.fm Shared Secret",
@@ -110,6 +110,14 @@
 		"PASSWORD_OLD": "Bisheriges Passwort",
 		"PASSWORD_OLD_DOC": "Zum Ändern nötig.",
 		"PASSWORD_WRONG": "Das bisherige Passwort stimmt nicht, nichts geändert.",
-		"PASSWORD_LOCKED": "Zu viele falsche Versuche, bitte {wait} s warten."
+		"PASSWORD_LOCKED": "Zu viele falsche Versuche, bitte {wait} s warten.",
+		"SECTION_LISTENBRAINZ": "ListenBrainz",
+		"SECTION_LISTENBRAINZ_DOC": "Kostenlos scrobbeln, ohne Last.fm-Key. Den Token findest du unter https://listenbrainz.org/settings/.",
+		"LB_TOKEN": "ListenBrainz-Token",
+		"LB_TOKEN_DOC": "Bleibt auf dem Player und wird nicht wieder angezeigt; leer lassen behält den gespeicherten.",
+		"LB_CLEAR": "ListenBrainz-Token löschen",
+		"LB_CLEAR_DOC": "Entfernt den Token beim Speichern vom Player.",
+		"LB_BAD": "Der ListenBrainz-Token ist ungültig (Buchstaben, Ziffern und Bindestriche).",
+		"LB_STORED": "ListenBrainz-Token gespeichert."
 	}
 }

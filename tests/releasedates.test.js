@@ -89,6 +89,7 @@ pending++;
       assert.strictEqual(c2.next(Math.floor(Date.now() / 1000)), null);
       assert.strictEqual(c2.next(Math.floor(Date.now() / 1000) + 91 * 86400).dir, 'L/N');   /* not found: retried later */
       assert.deepStrictEqual(c2.status(), {albums: 4, dated: 2, fetched: 0, running: false});
+      assert.deepStrictEqual(c.progress(), {check: {todo: 0, done: 0, found: 0}, rest: {todo: 2, done: 2, found: 1}, errors: 0, running: false});   /* with a full Date tag or compilation: not to do */
     });
     t('birthdays: today, this week (Mon–Sun), this month; jubilees and round ones first', function(){
       var L = [

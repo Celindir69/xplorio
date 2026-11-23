@@ -241,8 +241,9 @@ var searchCat   = 'artists';
 var searchQuery = '';
 
 /* The UI's Last.fm requests go through the tag service (GET /lastfmapi): the key stays on the player.
-   Without the tag service (or without a key there) no Last.fm requests.
-   -> Promise {key, fetch}; empty key = no Last.fm requests */
+   Without the tag service no Last.fm requests; without a (working) key there only artist.getsimilar, which the service
+   answers from Deezer/ListenBrainz (service: true).
+   -> Promise {key, fetch, service}; empty key = no Last.fm requests */
 var LFM_API = 'https://ws.audioscrobbler.com/2.0/';
 var lastfmReady = null;
 function lastfmAccess() {
@@ -250,8 +251,8 @@ function lastfmAccess() {
   var direct = {key: '', fetch: fetch.bind(window)};
   if (typeof TAGS === 'undefined') return Promise.resolve(direct);
   lastfmReady = withTimeout(fetch(TAGS + '/health'), 4000).then(function(r){ return r.json(); }).then(function(h){
-    if (!h || !h.lastfm) return direct;
-    return {key: 'tags', fetch: function(u){
+    if (!h || (!h.lastfm && !h.similar)) return direct;
+    return {key: h.lastfm ? 'tags' : '', service: true, fetch: function(u){
       if (u.indexOf(LFM_API) !== 0) return fetch(u);
       return fetch(TAGS + '/lastfmapi?' + u.slice(LFM_API.length + 1).replace(/(^|&)(api_key|format)=[^&]*/g, ''));
     }};
@@ -387,7 +388,7 @@ function askDiscography(artist) {
 function loadSimilarArtists(artist) {
   if (similarCache[artist]) return Promise.resolve(similarCache[artist]);
   return lastfmAccess().then(function(lf){
-    if (!lf.key) return null;                    /* no similar artists without a key */
+    if (!lf.key && !lf.service) return null;     /* no similar artists without the tag service */
     return lf.fetch(LFM_API + '?method=artist.getsimilar&artist=' + encodeURIComponent(artist) +
                     '&api_key=' + encodeURIComponent(lf.key) + '&format=json&limit=15').then(function(r){ return r.json(); });
   })

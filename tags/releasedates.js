@@ -5,6 +5,7 @@
 var fs = require('fs');
 var coversearch = require('./coversearch.js');
 var libcheck = require('./libcheck.js');
+var mbgate = require('./mbgate.js');            /* all MusicBrainz requests in one queue (one per second, pause on 503) */
 
 var STEP_MS = 1500;              /* MusicBrainz allows one request per second */
 var RETRY_DAYS = 90;
@@ -52,13 +53,8 @@ function pickDate(j, al, ar, y) { var h = pickHit(j, al, ar, y); return h ? h.d 
    getJson(url, cb) for testing, stepMs */
 function Collector(opts) {
   this.file = opts.file; this.list = opts.list; this.extra = opts.extra || function(){ return []; }; this.stepMs = opts.stepMs || STEP_MS;
-  this.getJson = opts.getJson || function(u, cb){
-    coversearch.fetchUrl(u, 256 * 1024, function(e, r){
-      if (e) return cb(e);
-      try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(x); }
-    });
-  };
-  this.by = {}; this.timer = null; this.running = false; this.fetched = 0; this.rev = 0;
+  this.getJson = opts.getJson || mbgate.getJson;
+  this.by = {}; this.timer = null; this.running = false; this.fetched = 0; this.rev = 0; this.errors = 0;
   var self = this, txt = '';
   try { txt = fs.readFileSync(this.file, 'utf8'); } catch (e) { /* still empty */ }
   txt.split('\n').forEach(function(l){ try { var o = l && JSON.parse(l); if (o && o.dir) self.by[o.dir] = o; } catch (x) { /* skip */ } });
@@ -92,6 +88,21 @@ Collector.prototype.status = function() {
   list.forEach(function(a){ if (self.dateOf(a)) n++; });
   return {albums: list.length, dated: n, fetched: this.fetched, running: this.running};
 };
+/* lookup progress for the library check: the albums of the check (extra, looked up first) and the rest of the library,
+   each {todo, done, found}: to look up, looked up with the current rules, found; errors: failed requests since the start */
+Collector.prototype.progress = function() {
+  var self = this, seen = {}, now = Math.floor(Date.now() / 1000);
+  var check = {todo: 0, done: 0, found: 0}, rest = {todo: 0, done: 0, found: 0};
+  function count(a, need, into) {
+    if (!a || !a.dir || seen[a.dir] || !need) return;
+    seen[a.dir] = 1; into.todo++;
+    var r = self.by[a.dir];
+    if (r && (r.d || (r.v === VERSION && now - r.at <= RETRY_DAYS * DAY))) { into.done++; if (r.d) into.found++; }
+  }
+  (this.extra() || []).forEach(function(e){ count(e, e.al && e.ar && e.ar !== 'Verschiedene', check); });
+  (this.list() || []).forEach(function(a){ count(a, !full(a.rd) && a.al && a.ar && a.ar !== 'Verschiedene', rest); });
+  return {check: check, rest: rest, errors: this.errors, running: this.running};
+};
 
 Collector.prototype.start = function() { if (!this.running) { this.running = true; this.schedule(this.stepMs); } };
 Collector.prototype.stop = function() { this.running = false; clearTimeout(this.timer); };
@@ -108,11 +119,11 @@ Collector.prototype.step = function(done) {
   var al = stripEdition(libcheck.bareAlbum(a.al) || a.al) || a.al;   /* "Album (Disc 2)", "Album (Remastered)": search for "Album" */
   var q = 'releasegroup:' + quote(al) + ' AND artist:' + quote(a.ar);
   this.getJson(MB + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
-    if (e) { self.schedule(60000); return done && done(e); }           /* network or MusicBrainz gone: continue later */
+    if (e) { self.errors++; self.schedule(60000); return done && done(e); }   /* network or MusicBrainz gone (503 already retried): later */
     var h = pickHit(j, al, a.ar, a.y), rec = {dir: a.dir, d: h ? h.d : '', t: h ? h.t : '', at: now, v: VERSION};
     self.by[a.dir] = rec; self.fetched++; self.rev++;
     try { fs.appendFileSync(self.file, JSON.stringify(rec) + '\n'); } catch (x) { /* next time */ }
-    self.schedule(self.stepMs);
+    self.schedule(mbgate.shared.congested() ? 4 * self.stepMs : self.stepMs);   /* MusicBrainz busy: slower for a while */
     if (done) done();
   });
 };

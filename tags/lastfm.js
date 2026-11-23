@@ -17,6 +17,19 @@ var RETRY = 10 * 60 * 1000;           /* resend the queue */
 var PAGE_PAUSE = 300;                 /* ms between pages when importing (Last.fm allows ~5 requests/s) */
 var MAX_AGE = 14 * 86400;             /* Last.fm no longer accepts older scrobbles */
 
+/* a key Last.fm rejects (10 invalid, 26 suspended, or a message about the Pro subscription required since December 2026)
+   counts as missing for REJECT_MS: the tag service then uses the free alternatives and asks Last.fm again later */
+var REJECT_MS = 6 * 3600 * 1000;
+var rejectedKey = {key: '', at: 0};
+function keyError(key, code, message) {
+  code = +code;
+  if (code !== 10 && code !== 26 && !/\bpro\b|subscri/i.test(String(message || ''))) return false;
+  rejectedKey = {key: key, at: Date.now()};
+  return true;
+}
+function rejected(key) { return !!key && rejectedKey.key === key && Date.now() - rejectedKey.at < REJECT_MS; }
+function resetRejected() { rejectedKey = {key: '', at: 0}; }
+
 function sign(params, secret) {
   var s = Object.keys(params).filter(function(k){ return k !== 'format' && k !== 'callback'; }).sort()
     .map(function(k){ return k + params[k]; }).join('');
@@ -46,7 +59,7 @@ function call(cfg, method, params, signed, post, cb) {
     res.on('end', function(){
       var j;
       try { j = JSON.parse(Buffer.concat(parts).toString('utf8')); } catch (e) { return finish({code: 0, message: 'HTTP ' + res.statusCode}); }
-      if (j && j.error) return finish({code: j.error, message: j.message || ('error ' + j.error)});
+      if (j && j.error) { keyError(cfg.key, j.error, j.message); return finish({code: j.error, message: j.message || ('error ' + j.error)}); }
       if (res.statusCode !== 200) return finish({code: 0, message: 'HTTP ' + res.statusCode});
       finish(null, j);
     });
@@ -95,8 +108,8 @@ Sync.prototype.cfg = function() { var c = this.getCfg() || {}; return {key: c.ke
 Sync.prototype.connected = function() { return !!this.state.sk; };
 
 Sync.prototype.status = function() {
-  var c = this.cfg();
-  return {configured: !!(c.key && c.secret), hasKey: !!c.key, user: this.state.user || null, connected: this.connected(),
+  var c = this.cfg(), raw = this.getCfg() || {};
+  return {configured: !!(c.key && c.secret), hasKey: !!c.key, rejected: !!raw.rejected, user: this.state.user || null, connected: this.connected(),
           waiting: !!this.token, queue: this.state.queue.length, sendError: this.sendError,
           importedTo: this.state.importedTo || null, lastImport: this.state.lastImport || null, importing: this.importRun, importError: this.importError};
 };
@@ -209,4 +222,4 @@ Sync.prototype.importAll = function() {
   })(1);
 };
 
-module.exports = {Sync: Sync, sign: sign, call: call, recentPage: recentPage};
+module.exports = {Sync: Sync, sign: sign, call: call, recentPage: recentPage, keyError: keyError, rejected: rejected, resetRejected: resetRejected};

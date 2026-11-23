@@ -16,7 +16,7 @@ var msBak = null, msBakMsg = '', msBakBad = false, msBakTimer = null, msBakEdit 
 var msUpd = null, msUpdMsg = '', msUpdBad = false;
 var msImp = null, msImpForm = null, msImpMsg = '', msImpBad = false, msImpTimer = null;
 var msData = null, msSeq = 0, msMsg = '', msMsgBad = false, msSlot = 'USB', msEdit = {}, msChooseCb = null;
-var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
+var MS_ERRORS = ['slot', 'path', 'inside', 'exists', 'notlink', 'lastfm', 'listenbrainz', 'discogs', 'auth', 'pwneeded', 'value', 'fs', 'short', 'locked'];
 function msErrKey(e) { return 'mac.err.' + (e === 'auth' || e === 'pwneeded' ? e : 'fs'); }
 var MS_AUDIO_ERRORS = ['audio.busy', 'audio.nodevices', 'audio.output', 'audio.conf', 'audio.mpd', 'audio.restart'];
 var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood', 'm4aProbe', 'm4aLossless'];
@@ -269,6 +269,7 @@ function msDraw() {
   grid.appendChild(msEssentiaCard(d));
   if (msRg && msRg.available) grid.appendChild(msRgCard());
   grid.appendChild(msLastfmCard(d));
+  grid.appendChild(msListenbrainzCard(d));
   grid.appendChild(msDiscogsCard(d));
   grid.appendChild(msTidalCard());
   grid.appendChild(msAdjCard());
@@ -569,7 +570,7 @@ function msEssentiaCard(d) {
 
 /* analysis on this Mac (POST /mac/analysis, tags/essentiarun.js): {} = state, {action: start|stop|check}, {nightly}.
    While it runs the state is asked every 5 s */
-var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart', busy: 'mac.anaBusyRg'};
+var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart', busy: 'mac.anaBusyRg', clean: 'mac.anaErrClean'};
 function msAnaSend(body, okText) {
   var seq = msSeq;
   if (Object.keys(body).length) body.token = msToken();
@@ -579,11 +580,20 @@ function msAnaSend(body, okText) {
     if (r && r.ok) {
       msAna = r; msAnaBad = !!r.startError;
       msAnaMsg = r.startError ? T(MS_ANA_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
+      if (!r.startError && r.clean) msAnaCleaned(r.clean, r.done === 'cleanCheck');
       if (r.running) msAnaTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msAnaSend({}); }, 5000);
     } else if (r && r.available === false) msAna = r;
     else { msAnaBad = true; if (r && r.error === 'auth') msAuthLost(); msAnaMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msAnaBad = true; msAnaMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+/* "Clean up analysis": the counts first, then ask, then remove (backup essentia.jsonl.bak) */
+function msAnaCleaned(c, check) {
+  var d = c.drop || {}, n = {n: c.total, r: c.removed, k: c.keep, dup: (d.dup || 0) + (d.broken || 0), missing: d.missing || 0, outside: d.outside || 0, off: c.offline || 0};
+  if (!check) { msAnaMsg = T('mac.anaCleaned', n); return; }
+  if (!c.removed) { msAnaMsg = T('mac.anaCleanNone', n); return; }
+  msAnaMsg = '';
+  setTimeout(function(){ if (confirm(T('mac.anaCleanAsk', n))) msAnaSend({action: 'clean'}); }, 0);
 }
 function msAnaPart(c) {
   var a = msAna;
@@ -618,7 +628,13 @@ function msAnaPart(c) {
     if (a.running && a.tail && a.tail.length) c.appendChild(histEl('div', 'msItemSub', a.tail[a.tail.length - 1]));
     var row = histEl('div', 'pbRow msAddRow');
     if (a.running) row.appendChild(msButton(T('mac.anaStop'), function(){ msAnaSend({action: 'stop'}, 'mac.anaStopping'); }));
-    else row.appendChild(msButton(T('mac.anaStart'), function(){ msAnaSend({action: 'start'}, 'mac.anaStarted'); }, 'on'));
+    else {
+      row.appendChild(msButton(T('mac.anaStart'), function(){ msAnaSend({action: 'start'}, 'mac.anaStarted'); }, 'on'));
+      row.appendChild(msButton(T('mac.anaClean'), function(){
+        msAnaMsg = T('mac.anaCleanChecking'); msAnaBad = false; msRender();
+        msAnaSend({action: 'cleanCheck'});
+      }));
+    }
     c.appendChild(row);
     var nr = histEl('div', 'msSetRow');
     nr.appendChild(histEl('div', 'msSetLabel', T('mac.anaNightly')));
@@ -832,12 +848,38 @@ function msDiscogsCard(d) {
   return c;
 }
 
+/* ---------- ListenBrainz: free scrobbling with the user's token ---------- */
+function msListenbrainzCard(d) {
+  var c = sysCard('ListenBrainz', 'syWide');
+  var kv = histEl('div', 'syKv');
+  kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
+  kv.appendChild(histEl('span', 'syV', T(d.listenbrainz ? 'mac.dcSet' : 'mac.lfNone')));
+  c.appendChild(kv);
+  c.appendChild(histEl('div', 'syNote', T('mac.lbNote')));
+  var tok = msInput('', T(d.listenbrainz ? 'mac.dcKeep' : 'mac.lbPh'), 'password'), r = histEl('div', 'pbRow msAddRow');
+  r.appendChild(tok); c.appendChild(r);
+  var row = histEl('div', 'pbRow msAddRow');
+  row.appendChild(msButton(T('mac.save'), function(){
+    var t = tok.value.trim();
+    if (!t) { msMsg = T('mac.err.listenbrainz'); msMsgBad = true; return msRender(); }
+    msSend({action: 'listenbrainz', token_lb: t}, T('mac.lbSaved'));
+  }, 'on'));
+  if (d.listenbrainz) row.appendChild(msButton(T('mac.lfClear'), function(){
+    if (confirm(T('mac.lbClearAsk'))) msSend({action: 'listenbrainz', clear: true}, T('mac.lbCleared'));
+  }));
+  c.appendChild(row);
+  var link = histEl('a', 'sHint listLink pbLink', T('mac.lbGet'));
+  link.href = 'https://listenbrainz.org/settings/'; link.target = '_blank'; link.rel = 'noopener';
+  c.appendChild(link);
+  return c;
+}
+
 /* ---------- Last.fm ---------- */
 function msLastfmCard(d) {
   var c = sysCard(T('mac.lastfm'), 'syWide'), lf = d.lastfm || {};
   var kv = histEl('div', 'syKv');
   kv.appendChild(histEl('span', 'syK', T('mac.lfState')));
-  kv.appendChild(histEl('span', 'syV', lf.key ? T(lf.secret ? 'mac.lfBoth' : 'mac.lfKey') : T('mac.lfNone')));
+  kv.appendChild(histEl('span', 'syV', lf.rejected ? T('mac.lfRejected') : lf.key ? T(lf.secret ? 'mac.lfBoth' : 'mac.lfKey') : T('mac.lfNone')));
   c.appendChild(kv);
   c.appendChild(histEl('div', 'syNote', T('mac.lfNote')));
   var key = msInput('', T(lf.key ? 'mac.lfKeyKeep' : 'mac.lfKeyPh')), secret = msInput('', T(lf.secret ? 'mac.lfSecretKeep' : 'mac.lfSecretPh'), 'password');
@@ -938,7 +980,6 @@ function msAdjCard() {
     on.appendChild(histEl('div', 'msSetLabel', T('mac.adj')));
     on.appendChild(pbChips([[true, T('pb.on')], [false, T('pb.off')]], !!a.enabled, function(v){ msAdjSend({enabled: v}); }));
     c.appendChild(on);
-    if (!a.ready) c.appendChild(histEl('div', 'syNote syWarn', T('mac.adjNoKey')));
     var ex = msInput(a.excludes, T('mac.adjExcludePh')), mx = msInput(String(a.maxMinutes), '20', 'number');
     mx.min = '0'; mx.max = '600'; mx.style.maxWidth = '6em';
     var r1 = histEl('div', 'msSetRow'); r1.appendChild(histEl('div', 'msSetLabel', T('mac.adjExclude'))); r1.appendChild(ex); c.appendChild(r1);

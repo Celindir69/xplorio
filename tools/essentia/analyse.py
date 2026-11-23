@@ -27,10 +27,12 @@ import getpass
 import json
 import multiprocessing as mp
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -379,21 +381,53 @@ def load_done(out):
     return done
 
 
-def compact(out, done, seen_roots, present, prune=False, keep_missing=False):
+def track_key(o):
+    """artist + title like the tag service compares them (plays.js norm)"""
+    def norm(s):
+        s = unicodedata.normalize('NFKD', str(s or ''))
+        s = ''.join(c for c in s if not unicodedata.combining(c)).lower()
+        s = re.sub(r'^the\s+', '', s).replace('&', 'and')
+        return re.sub(r'[^a-z0-9]+', '', s)
+    return norm(o.get('ar')) + '|' + norm(o.get('ti')) if o.get('ar') and o.get('ti') else ''
+
+
+BASES = ('/', '/Volumes', '/mnt', '/media')
+
+
+def drive_there(p):
+    """the nearest existing folder above p is more than the place where drives hang (/Volumes, /mnt …)"""
+    d = os.path.dirname(p)
+    while d and d != os.path.dirname(d) and d not in BASES:
+        if os.path.isdir(d):
+            return True
+        d = os.path.dirname(d)
+    return False
+
+
+def compact(out, done, seen_roots, present, prune=False, keep_missing=False, clean=False):
     """remove duplicate lines and drop entries for deleted files under the scanned folders;
     prune: also drop everything outside these folders (old paths, other drives), with a backup <out>.bak;
+    clean: outside these folders drop only entries of files that are gone (drive connected) and old paths whose track
+    is analysed inside as well (like "Clean up analysis" in Xplorio on the Mac), with a backup <out>.bak;
     keep_missing: keep entries of files no longer in the scanned folders (import folder emptied after copying)"""
     seen_roots = [r for r in seen_roots if os.path.isdir(r)]   # share disconnected in the meantime: keep its entries
     keep, dropped = [], 0
+    inside_keys = set()
+    if clean:
+        inside_keys = set(track_key(o) for p, o in done.items()
+                          if any(p.startswith(r + os.sep) for r in seen_roots) and (p in present or keep_missing)) - {''}
     for p, o in done.items():
         inside = any(p.startswith(r + os.sep) for r in seen_roots)
         if (inside and p not in present and not keep_missing) or (prune and not inside):
             dropped += prune and not inside
             continue
+        if clean and not inside and ((not os.path.exists(p) and drive_there(p)) or track_key(o) in inside_keys):
+            dropped += 1
+            continue
         keep.append(o)
     if dropped:
         shutil.copy2(out, out + '.bak')
-        print('--prune: %d entries outside the given folders removed (backup: %s.bak)' % (dropped, out))
+        print('--%s: %d entries outside the given folders removed (backup: %s.bak)' % ('prune' if prune else 'clean', dropped, out))
     with open(out + '.neu', 'w', encoding='utf-8') as f:
         for o in keep:
             f.write(json.dumps(o, ensure_ascii=False) + '\n')
@@ -496,6 +530,8 @@ def main():
     ap.add_argument('--retry-errors', action='store_true', help='retry files that had errors')
     ap.add_argument('--prune', action='store_true', help='remove entries outside the given music folders '
                     '(old paths, other drives); backup in <out>.bak')
+    ap.add_argument('--clean', action='store_true', help='remove old entries outside the given music folders: files '
+                    'that are gone (drive connected) and old paths of tracks analysed inside as well; backup in <out>.bak')
     ap.add_argument('--keep-missing', action='store_true', help='keep the results of files no longer in the given '
                     'folders, e.g. an import folder emptied after copying the music to the player')
     ap.add_argument('--profile', action='store_true', help='print the time per analysis step (for speeding up)')
@@ -517,6 +553,8 @@ def main():
         ap.error('give music folders (or only --upload)')
     if a.prune and a.keep_missing:
         ap.error('--prune and --keep-missing do not go together')
+    if a.prune and a.clean:
+        ap.error('--prune already removes everything outside the folders; --clean is not needed with it')
     a.player_wait = max(1, a.player_wait)
     if a.player and '//' not in a.player:
         a.player = 'http://' + a.player
@@ -699,7 +737,7 @@ def main():
         for q in [q for q in done if q not in present and (os.path.basename(q), done[q].get('sz')) in here]:
             if not os.path.exists(q):
                 del done[q]
-        kept, ok = compact(a.out, done, roots, present, a.prune, a.keep_missing)
+        kept, ok = compact(a.out, done, roots, present, a.prune, a.keep_missing, a.clean)
         print('Done: %d entries in %s, %d of them analysed.' % (kept, a.out, ok))
 
     if a.upload:

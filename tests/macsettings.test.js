@@ -96,15 +96,30 @@ t('interface settings: written through the link, own lines stay, values the page
   assert.deepStrictEqual([c.ROTEL, c.ROTEL_HOST, c.ROTEL_MODEL], [true, '192.168.1.50', 'RA-1592']);
 });
 
+ta('commands: ListenBrainz token saved, checked for its form, deleted', function(done){
+  var s = setup(), d = s.dir;
+  s.command({action: 'listenbrainz', token_lb: 'kurz'}, {}, function(c, r){
+    assert.strictEqual(r.error, 'listenbrainz');
+    s.command({action: 'listenbrainz', token_lb: ' 0a1b2c3d-4e5f-6789-abcd-ef0123456789 '}, {}, function(c2, r2){
+      assert.strictEqual(r2.listenbrainz, true);
+      assert.strictEqual(JSON.parse(fs.readFileSync(path.join(d, 'data', 'keys.json'), 'utf8')).LISTENBRAINZ_TOKEN, '0a1b2c3d-4e5f-6789-abcd-ef0123456789');
+      s.command({action: 'listenbrainz', clear: true}, {}, function(c3, r3){
+        assert.strictEqual(r3.listenbrainz, false);
+        done();
+      });
+    });
+  });
+});
+
 ta('commands: Last.fm, folders with a rescan, unknown', function(done){
   var s = setup(), d = s.dir;
   s.command({action: 'lastfm', key: 'abc def'}, {}, function(c, r){
     assert.strictEqual(r.error, 'lastfm');
     s.command({action: 'lastfm', key: 'abc123', secret: 'xyz'}, {}, function(c2, r2){
-      assert.deepStrictEqual(r2.lastfm, {key: true, secret: true});
+      assert.deepStrictEqual(r2.lastfm, {key: true, secret: true, rejected: false});
       assert.strictEqual(JSON.parse(fs.readFileSync(path.join(d, 'data', 'keys.json'), 'utf8')).LASTFM_KEY, 'abc123');
       s.command({action: 'lastfm', clear: true}, {}, function(c3, r3){
-        assert.deepStrictEqual(r3.lastfm, {key: false, secret: false});
+        assert.deepStrictEqual(r3.lastfm, {key: false, secret: false, rejected: false});
         s.command({action: 'musicAdd', slot: 'NAS', path: path.join(d, 'C')}, {}, function(c4, r4){
           assert.strictEqual(r4.music[0].rel, 'NAS');
           assert.strictEqual(s.scans.length, 1);

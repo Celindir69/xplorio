@@ -179,11 +179,15 @@ if (!it.data || it.data.kind === 'story') {
   if (it.title === curAlbum || it.track) {
     img.src = lastArt || tinyart(curArtist, curAlbum);
     img.className = 'infoImg album';             /* hidden in landscape: the cover is visible there anyway */
-  } else {
-    img.src = tinyart(it.title);
+  } else {                                     /* artist photo from the tag service (Deezer), else Volumio's */
+    var vol = tinyart(it.title);
+    img.src = typeof TAGS !== 'undefined' && TAGS ? TAGS + '/artistimage?name=' + encodeURIComponent(it.title) : vol;
     img.className = 'infoImg artist';
+    img.onerror = function(){ if (!this.dataset.vol) { this.dataset.vol = '1'; this.src = vol; } else this.style.display = 'none'; };
   }
-  img.onerror = function(){ this.style.display='none'; };
+  if (!img.onerror) img.onerror = function(){ this.style.display='none'; };
+  if (typeof zoomable === 'function') zoomable(img, it.title, img.className === 'infoImg album' && typeof coverOriginals === 'function' && typeof curUri !== 'undefined' && curUri
+    ? function(){ return coverOriginals(curUri); } : null);
   infoContent.appendChild(img);
 
   var p = document.createElement('div');

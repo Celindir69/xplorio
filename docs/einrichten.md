@@ -123,6 +123,19 @@ das Volumio im Netzwerk freigeben kann. Vor einer Neuinstallation von Volumio ge
 API-Key und „Shared secret“ von https://www.last.fm/api/accounts auf der Einstellungsseite unter „Last.fm“ eintragen. Das
 Plugin legt sie in `/data/xplorio/data/keys.json` ab; nur der Tag-Dienst liest sie, die App fragt Last.fm über den Dienst.
 Der Key reicht für ähnliche Künstler, Texte, Cover-Suche und Stimmungs-Tags; das Secret braucht nur das Scrobbeln.
+
+**Ohne Last.fm:** Seit dem 1. Dezember 2026 funktioniert ein Last.fm-API-Key nur noch mit einem Last.fm-Pro-Abo. Der Zugang
+ist deshalb optional. Ohne Key, oder wenn Last.fm ihn ablehnt (dann wird es nach 6 Stunden erneut versucht), nimmt Xplorio
+freie Quellen:
+- ähnliche Künstler (Info-Seite, „Mehr“, AutoDJ, Mixe des Tages): Deezer, sonst ListenBrainz,
+- Künstler-, Album- und Titeltexte: Wikipedia,
+- Stimmungs-Tags: MusicBrainz (Tags und Genres der Aufnahme, sonst des Künstlers),
+- Cover-Suche: iTunes und Cover Art Archive,
+- Scrobbeln: [ListenBrainz](#listenbrainz).
+
+Alle Anfragen an MusicBrainz (Erscheinungsdaten, Schreibweisen, Stimmungs-Tags, ähnliche Künstler) laufen über eine gemeinsame
+Warteschlange mit höchstens einer Anfrage je Sekunde. Meldet MusicBrainz „überlastet“ (503), pausiert sie (5 s, dann länger)
+und versucht dieselbe Anfrage erneut; die Bibliotheksprüfung zeigt unter „Jahr“, wie weit die Suche ist.
 `tags.py` läuft mit Python 2.7 und 3 und bringt mutagen selbst mit; gibt es kein `python`, nimmt der Dienst `python3`.
 
 Hinweise: Erlaubt sind nur Dateien unter `/mnt/INTERNAL`, `/mnt/USB`, `/mnt/NAS`. Alte Werte für „Rückgängig“ stehen in
@@ -598,10 +611,10 @@ fehlt die Reihe.
 oder drei Künstlern der eigenen Sammlung, die musikalisch zusammenpassen. Ausgangspunkt ist ein Künstler, den man oft
 hört oder mit Herz markiert hat; dazu kommen Künstler mit ähnlichem Klang (Genre, Stimmung, Stil und Energie aus den
 Stimmungs-Tags, verglichen mit den übrigen Künstlern der Sammlung). Dasselbe Obergenre allein genügt nicht: Die Künstler
-müssen einen Stil gemeinsam haben (etwa „Trip Hop“, nicht nur „Electronic“), oder Last.fm nennt sie als ähnlich. Die Ähnlichkeit
+müssen einen Stil gemeinsam haben (etwa „Trip Hop“, nicht nur „Electronic“), oder sie gelten als ähnlich (Last.fm mit Key, sonst Deezer bzw. ListenBrainz). Die Ähnlichkeit
 wird in Teilen bewertet: Stile 45 %, Stimmungen 25 %, Tempo und Energie 20 %, Genre 10 %. Mittleres Tempo (halbes oder
-doppeltes zählt als gleich) darf höchstens rund 15 % auseinanderliegen, die mittlere Energie höchstens eine Stufe. Nennt Last.fm einen davon als ähnlichen Künstler,
-zählt das mit (nur mit Last.fm-Key), seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
+doppeltes zählt als gleich) darf höchstens rund 15 % auseinanderliegen, die mittlere Energie höchstens eine Stufe. Gilt einer davon als ähnlicher Künstler,
+zählt das mit, seltener Gehörte bekommen einen kleinen Vorsprung. Jede Kachel zeigt die Fotos der
 Künstler und was sie verbindet. Ein Tipp öffnet die Vorschau: etwa 25 Titel, rund 40 % Lieblingstitel (oft gehört,
 Favorit oder Album mit 4–5 Sternen) und der Rest selten oder nie gehört (nie Gehörtes ist mit „neu“ markiert); die Künstler wechseln sich ab,
 Energie und Tempo gehen sanft ineinander über. „Mix abspielen“ ersetzt die Warteschlange, der Würfel zieht einen neuen
@@ -612,7 +625,7 @@ Paarungen nicht für sechs Kacheln, füllt er mit Paarungen der letzten Tage auf
 
 **Entdecken auf der Künstlerseite:** Die Künstlerseite hat drei Reiter: „Alben & Titel“, „Entdecken“ und „Hintergrund“
 (der zuletzt gewählte bleibt beim Zurück offen). „Hintergrund“ zeigt den Künstlertext wie die Info-Seite im Player. Im Reiter „Entdecken“ führen Knöpfe weiter: ähnliche Künstler aus der
-Sammlung (Last.fm), die Stimmungen und Stile, die mindestens ein Fünftel seiner eingeordneten Titel tragen, seine mittlere
+Sammlung (Last.fm mit Key, sonst Deezer bzw. ListenBrainz), die Stimmungen und Stile, die mindestens ein Fünftel seiner eingeordneten Titel tragen, seine mittlere
 Energie und die Jahrzehnte seiner Alben. Jeder Knopf öffnet wie beim Entdecken den Künstler bzw. die passenden Alben; der
 bisherige Weg zählt dabei nicht als Filter. Der Würfel vor den ähnlichen Künstlern startet einen Zufallsmix aus dem
 Künstler selbst und den ähnlichen Künstlern, jeder etwa gleich oft, egal wie viel von ihm in der Sammlung liegt.
@@ -638,7 +651,7 @@ Suche, Genre, Jahr, Jahrzehnt) steht ein solches Album nur einmal, unter dem Nam
 es nur in einer anderen Version gibt (Bonustitel), bleiben im Mix.
 
 Bei Künstlern und Alben vom Streamingdienst heißt der Reiter „Lokal entdecken“ und sucht in der eigenen Sammlung: ähnliche
-Künstler über Last.fm, beim Album das gleichnamige Album in der Sammlung oder, falls es dort fehlt, das Profil des Künstlers.
+Künstler (Last.fm mit Key, sonst Deezer bzw. ListenBrainz), beim Album das gleichnamige Album in der Sammlung oder, falls es dort fehlt, das Profil des Künstlers.
 
 **Mehr wie dieser Titel:** Ein Tipp auf den Titel in der Wiedergabe (eigene Datei) öffnet bis zu 25 Titel der Sammlung
 mit ähnlicher Stimmung und Energie und, mit Audio-Analyse, ähnlichem Tempo (halbes oder doppeltes Tempo zählt als gleich);
@@ -688,13 +701,25 @@ Einstellungsseite unter „Funktionen“ (Verlauf).
 Der Sitzungsschlüssel liegt in `/data/xplorio/data/lastfm.json` und bleibt auf dem Player. Falls ein anderes
 Last.fm-Plugin in Volumio scrobbelt, eines davon abschalten, sonst kommt jeder Titel doppelt bei Last.fm an.
 
+### ListenBrainz
+Kostenlos scrobbeln ohne Last.fm: bei https://listenbrainz.org anmelden (MusicBrainz-Konto), den Token unter
+https://listenbrainz.org/settings/ kopieren und auf Volumio in den Plugin-Einstellungen unter „ListenBrainz“, am Mac unter
+Einstellungen › ListenBrainz eintragen (`LISTENBRAINZ_TOKEN` in `/data/xplorio/data/keys.json`). Danach:
+- neue Wiedergaben gehen zu ListenBrainz („läuft gerade“ inklusive); ohne Internet warten sie in einer Warteschlange
+  (`listenbrainz.json`), auch ältere werden noch angenommen,
+- unter Statistik steht, als wer Xplorio verbunden ist und wie viele Wiedergaben warten.
+
+Den bisherigen Last.fm-Verlauf übernimmt ListenBrainz selbst: auf listenbrainz.org unter „Connect services“ › Last.fm.
+Last.fm und ListenBrainz können gleichzeitig aktiv sein.
+
 ### Stimmungs-Tags
 Mit `LASTFM_KEY` holt der Tag-Dienst für jeden Titel der Bibliothek die Last.fm-Tags (`track.getTopTags`, ohne
-brauchbare Titel-Tags ersatzweise die Tags des Künstlers) und rechnet sie nach `tags/mood/lastfm_mapping.json` und
+brauchbare Titel-Tags ersatzweise die Tags des Künstlers); ohne (funktionierenden) Key die Tags und Genres der Aufnahme
+bei MusicBrainz, sonst die des Künstlers; Alben eines Künstlers fragt er dabei als Ganzes ab (zwei Anfragen statt einer je Titel) (eine Anfrage alle 1,5 s, langsamer, solange die Erscheinungsdaten gesucht werden). Er rechnet sie nach `tags/mood/lastfm_mapping.json` und
 `tags/mood/classification_rules.json` in Stimmung, Energie (1–5) und Stil um. Abgefragt wird nur, solange nichts spielt
 (Stopp oder Pause; geprüft alle 5 s), mit etwa 4 Anfragen je Sekunde. Die Musikdateien bleiben unverändert; die Rohtags
 liegen in `/data/xplorio/data/moodtags/`, die Titelliste dazu in `/data/xplorio/data/library-tracks.json` (entsteht
-zusammen mit der Albenliste). Fortschritt und Verteilung zeigt „Bibliothek prüfen“ unter „Stimmungs-Tags (Last.fm)“.
+zusammen mit der Albenliste). Fortschritt und Verteilung zeigt „Bibliothek prüfen“ unter „Stimmungs-Tags“ (in Klammern die gerade genutzte Quelle: Last.fm oder MusicBrainz).
 Ausschalten auf der Einstellungsseite unter „Funktionen“ (Stimmungs-Tags).
 
 **Mood Mix:** Playlisten-Taste, Reiter „Mood Mix“ (erscheint, sobald der Tag-Dienst läuft). Dort lassen sich
@@ -756,6 +781,12 @@ python3 analyse.py --upload http://<player>:8766
   stehen, damit ein gerade nicht verbundenes Laufwerk seine Ergebnisse behält. Der Player lädt sie trotzdem in den
   Speicher. `--prune` entfernt beim Lauf alles außerhalb der angegebenen Ordner; vorher legt es `essentia.jsonl.bak` an.
   Dafür alle Musikordner angeben, sonst fallen die Ergebnisse der fehlenden weg.
+- In Xplorio auf dem Mac geht das ohne Befehl: Einstellungen, Abschnitt „Auf diesem Mac analysieren“, Knopf „Analyse bereinigen“. Es zählt zuerst und
+  fragt dann; entfernt werden ältere Zeilen derselben Datei, Dateien, die es nicht mehr gibt (nur auf angeschlossenen
+  Laufwerken), und alte Pfade außerhalb der Musikordner, deren Titel dort ebenfalls analysiert ist. Vorher entsteht
+  `essentia.jsonl.bak`. Andere Einträge außerhalb der Musikordner bleiben. Für Volumio (Analyse auf Mac oder PC mit
+  `--upload` bzw. `--player`) macht `--clean` dasselbe beim nächsten Lauf, etwa
+  `python3 analyse.py --clean --player http://<IP des Players> <Musikordner>`; die bereinigte Datei ersetzt danach die auf dem Player.
 - Neue Musik vorab auf dem Mac analysieren: in einem Import-Ordner ablegen, mit
   `python3 analyse.py --keep-missing --upload http://<player>:8766 ~/Music/<Import-Ordner>` analysieren und danach auf
   den Player kopieren (z. B. `rsync -av ~/Music/<Import-Ordner>/ volumio@<player>:/mnt/USB/<Ordner>/`). Ohne
@@ -794,8 +825,8 @@ python3 analyse.py --upload http://<player>:8766
 
 ### Künstler- und Albumtexte
 Die Info-Seite fragt zuerst Volumio. Kommt dort nichts (Volumio 4 gibt die Texte nur mit Abo heraus, oder Volumio antwortet
-nicht binnen 6 s), holt die App den Text selbst: Album bei Last.fm (in der Sprache der Oberfläche, sonst englisch; braucht `LASTFM_KEY`),
-Künstler bei Last.fm und Wikipedia, erst beide in der Sprache der Oberfläche, dann beide englisch (bei Wikipedia nur Artikel, die nach Musik aussehen). Die Quelle
+nicht binnen 6 s), holt die App den Text selbst: Album bei Last.fm (nur mit funktionierendem `LASTFM_KEY`) und Wikipedia (der Artikel zum Album,
+der den Künstler nennt), Künstler bei Last.fm und Wikipedia, erst beide in der Sprache der Oberfläche, dann beide englisch (bei Wikipedia nur Artikel, die nach Musik aussehen). Die Quelle
 steht unter dem Text. Für die Mitwirkenden gibt es keinen Ersatz.
 
 Mitwirkende, die Volumio mit einer MusicBrainz-Kennung liefert, lassen sich antippen (ohne eigene Markierung). Das klappt darunter ihren Text
@@ -915,8 +946,8 @@ Prüft alle 10 Minuten, ob TIDAL antwortet, und startet Volumio sonst neu (höch
 Mit dem Plugin [autodj-plugin](https://github.com/Celindir69/autodj-plugin) (ab Version 1.1) bekommt der
 Wiederholen-Knopf einen vierten Zustand: aus → alle → einer → ∞. Bei ∞ ist Wiederholen aus und AutoDJ an; es hängt
 ähnliche Titel an, sobald die Warteschlange zur Neige geht. Der nächste Tipp schaltet AutoDJ wieder aus. Auch in
-Volumio umgeschaltet zeigt der Knopf den Zustand (spätestens nach 30 s). Ohne Plugin oder ohne Last.fm-Key in den
-Plugin-Einstellungen bleibt es bei drei Zuständen. AutoDJ ist bewusst ein eigenes Plugin und nicht in Xplorio
+Volumio umgeschaltet zeigt der Knopf den Zustand (spätestens nach 30 s). Ohne Plugin bleibt es bei drei Zuständen
+(ab Version 1.3 braucht AutoDJ keinen Last.fm-Key mehr, ähnliche Künstler kommen dann von Deezer). AutoDJ ist bewusst ein eigenes Plugin und nicht in Xplorio
 eingebaut; Xplorio spricht es nur über dessen REST-Schnittstelle an. Fehlt es, weist die Einstellungsseite von Xplorio
 unter „Funktionen“ darauf hin. Die Anzeige der AutoDJ-Automatik auf der Seite „Wiedergabe“ braucht eine
 AutoDJ-Version, die sie über die Schnittstelle meldet.
@@ -1081,8 +1112,8 @@ Der Plugin-Store für Volumio 4 nimmt nur Plugins für Debian bookworm an. Auf V
 ebenfalls; installiert und aktualisiert wird es dort mit [`xplorio-deploy`](#installieren). Unterschiede:
 
 - **Python:** Volumio 2 hat Python 2.7, Volumio 4 Python 3; `tags.py` läuft mit beiden, mutagen bringt der Tag-Dienst mit.
-- **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Last.fm und Wikipedia
-  (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)). Mit Last.fm-Key gibt es auch Albumtexte.
+- **Infotexte:** Volumio 4 liefert Künstler- und Albumtexte nur mit Abo; die App holt sie dann bei Wikipedia, mit
+  Last.fm-Key auch bei Last.fm (siehe [Künstler- und Albumtexte](#künstler--und-albumtexte)).
 - **ReplayGain bei m4a (ALAC, AAC):** libav 11 von Volumio 2 liest ReplayGain in m4a nur unter der Kennung
   `org.hydrogenaudio.replaygain`, nicht unter der üblichen `com.apple.iTunes`. MPD spielt solche Dateien dann ohne
   ReplayGain. `sudo bash tools/libav-m4a-replaygain.sh apply` ändert in der Bibliothek diese eine Kennung auf

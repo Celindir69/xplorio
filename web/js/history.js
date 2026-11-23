@@ -314,6 +314,7 @@ function histStats(seq) {
       if (s.first) histBody.appendChild(browseNote(T('hist.since', {day: histDayLower(s.first)})));
     }
     histBody.appendChild(histLastfm(rs[1] && rs[1].lastfm, seq));
+    if (rs[1] && rs[1].listenbrainz) histBody.appendChild(histListenbrainz(rs[1].listenbrainz, seq));
   }).catch(function(){ histFail(seq); });
 }
 
@@ -434,6 +435,10 @@ function histLastfm(st, seq) {
   var info = histEl('div', 'ckInfo'), btns = histEl('div', 'hBtns');
   box.appendChild(info); box.appendChild(btns);
   if (!st) { info.textContent = T('hist.offlineDot'); return box; }
+  if (st.rejected) {                                      /* key refused (e.g. without Last.fm Pro): free sources step in */
+    info.textContent = T('hist.lastfm.rejected') + (st.queue ? ' ' + T('hist.lastfm.queue', {n: st.queue, error: ''}) : '');
+    return box;
+  }
   if (!st.configured) {
     info.textContent = st.hasKey
       ? T('hist.lastfm.noSecret')
@@ -472,6 +477,39 @@ function histLastfm(st, seq) {
   }));
   btns.appendChild(histLastfmBtn(T('hist.lastfm.disconnect'), function(){ histLastfmAction('disconnect').then(function(){ histShow('stats'); }); }));
   if (st.importing) histTimer = setTimeout(function(){ if (seq === histSeq && overlayHistory.classList.contains('on')) histShow('stats'); }, 3000);
+  return box;
+}
+
+/* ---------- ListenBrainz (free scrobbling, token in the settings) ---------- */
+var histLbChecked = false;                                /* an unchecked token is checked once */
+function histListenbrainz(st, seq) {
+  var box = histEl('div', 'hLastfm');
+  box.appendChild(browseHeading('LISTENBRAINZ'));
+  var info = histEl('div', 'ckInfo'), btns = histEl('div', 'hBtns');
+  box.appendChild(info); box.appendChild(btns);
+  if (!st.configured) { info.textContent = T('hist.lb.none'); return box; }
+  if (st.valid === false) {                          /* refused: ask ListenBrainz again (a stale refusal must not stick) */
+    info.textContent = T('hist.lb.invalid') + (st.queue ? ' ' + T('hist.lb.waiting', {n: st.queue}) : '');
+    btns.appendChild(histLastfmBtn(T('hist.lb.recheck'), function(){
+      info.textContent = T('hist.lb.checking');
+      histLastfmAction('lbCheck').then(function(){ setTimeout(function(){ histShow('stats'); }, 1500); });
+    }));
+    return box;
+  }
+  if (st.valid === null) {
+    info.textContent = T('hist.lb.checking');
+    if (!histLbChecked) {
+      histLbChecked = true;
+      histLastfmAction('lbCheck').then(function(r){ if (seq === histSeq && r && r.ok && r.listenbrainz.valid !== null) histShow('stats'); });
+    }
+    return box;
+  }
+  var lines = [T('hist.lb.connected', {user: st.user})];
+  if (st.queue) lines.push(T('hist.lastfm.queue', {n: st.queue, error: st.sendError ? ' (' + st.sendError + ')' : ''}));
+  info.textContent = lines.join(' ');
+  if (st.queue) btns.appendChild(histLastfmBtn(T('hist.lastfm.sendNow'), function(){
+    histLastfmAction('lbSend').then(function(){ setTimeout(function(){ histShow('stats'); }, 1500); });
+  }));
   return box;
 }
 

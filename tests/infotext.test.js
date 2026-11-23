@@ -27,8 +27,10 @@ t('album: Last.fm English if there is no German text', function(){
   var urls = [];
   return it.infoFallback(function(u){ urls.push(u); return res(/lang=de/.test(u) ? {album: {}} : {album: {wiki: {summary: LONG}}}); },
     'KEY', 'storyAlbum', 'Massive Attack', 'Mezzanine', 'de').then(function(r){
-      assert.strictEqual(urls.length, 2);
-      assert.ok(/album=Mezzanine/.test(urls[1]) && !/lang=/.test(urls[1]));
+      var lf = urls.filter(function(u){ return /audioscrobbler/.test(u); });
+      assert.strictEqual(lf.length, 2);
+      assert.ok(/album=Mezzanine/.test(lf[1]) && !/lang=/.test(lf[1]));
+      assert.strictEqual(r.src, 'Last.fm');
       assert.ok(r.value.indexOf(LONG) === 0);
     });
 });
@@ -41,7 +43,7 @@ t('artist without Last.fm key: Wikipedia, skip disambiguation and unrelated arti
     return res({type: 'standard', description: 'French music duo', extract: 'Air is a French music duo from Versailles, formed in 1995.'});
   }, '', 'storyArtist', 'Air', undefined, 'de').then(function(r){
     assert.strictEqual(r.src, 'Wikipedia');
-    assert.ok(/en\.wikipedia\.org\/api\/rest_v1\/page\/summary\/Air$/.test(urls[1]));
+    assert.ok(urls.some(function(u){ return /en\.wikipedia\.org\/api\/rest_v1\/page\/summary\/Air$/.test(u); }));
     return it.infoFallback(function(){ return res({type: 'standard', description: 'Gas', extract: 'Luft ist das Gasgemisch der Erdatmosphäre.'}); }, '', 'storyArtist', 'Luft');
   }).then(function(r){ assert.strictEqual(r, null); });
 });
@@ -51,12 +53,12 @@ t('language en: only one request per source, without lang and only en.wikipedia'
   return it.infoFallback(function(u){ urls.push(u); return res({}); }, 'KEY', 'storyArtist', 'Nobody', undefined, 'en')
     .then(function(r){
       assert.strictEqual(r, null);
-      assert.strictEqual(urls.length, 2);
+      assert.strictEqual(urls.length, 3);                                   /* Last.fm, the article, the search */
       assert.ok(/audioscrobbler/.test(urls[0]) && !/lang=/.test(urls[0]));
-      assert.ok(/^https:\/\/en\.wikipedia\.org\//.test(urls[1]));
+      assert.ok(urls.slice(1).every(function(u){ return /^https:\/\/en\.wikipedia\.org\//.test(u); }));
       urls = [];
       return it.infoFallback(function(u){ urls.push(u); return res({}); }, 'KEY', 'storyArtist', 'Nobody');   /* without lang = en */
-    }).then(function(){ assert.strictEqual(urls.length, 2); });
+    }).then(function(){ assert.strictEqual(urls.length, 3); });
 });
 
 t('language fr: first Last.fm and Wikipedia in French, then both in English', function(){
@@ -66,18 +68,58 @@ t('language fr: first Last.fm and Wikipedia in French, then both in English', fu
     if (/en\.wikipedia/.test(u)) return res({type: 'standard', description: 'French music duo', extract: 'Air is a French music duo from Versailles, formed in 1995.'});
     return res({});
   }, 'KEY', 'storyArtist', 'Air', undefined, 'fr').then(function(r){
-    assert.strictEqual(urls.length, 4);
-    assert.ok(/audioscrobbler.*lang=fr/.test(urls[0]) && /^https:\/\/fr\.wikipedia\.org\//.test(urls[1]));
-    assert.ok(/audioscrobbler/.test(urls[2]) && !/lang=/.test(urls[2]) && /^https:\/\/en\.wikipedia\.org\//.test(urls[3]));
+    var lf = urls.filter(function(u){ return /audioscrobbler/.test(u); }), wp = urls.filter(function(u){ return /wikipedia/.test(u); });
+    assert.ok(/lang=fr/.test(lf[0]) && !/lang=/.test(lf[1]) && lf.length === 2);
+    assert.ok(/^https:\/\/fr\.wikipedia\.org\//.test(wp[0]) && /^https:\/\/en\.wikipedia\.org\//.test(wp[wp.length - 1]));
+    assert.ok(urls.indexOf(lf[1]) > urls.indexOf(wp[0]));                  /* French first, then English */
     assert.strictEqual(r.src, 'Wikipedia');
   });
 });
 
 t('album without key and network error: nothing', function(){
   return Promise.all([
-    it.infoFallback(function(){ throw new Error('never'); }, '', 'storyAlbum', 'A', 'B'),
+    it.infoFallback(function(){ throw new Error('offline'); }, '', 'storyAlbum', 'A', 'B'),
     it.infoFallback(function(){ return Promise.reject(new Error('offline')); }, 'KEY', 'storyArtist', 'A')
   ]).then(function(r){ assert.deepStrictEqual(r, [null, null]); });
+});
+
+t('artist: the whole article up to the discography instead of the first paragraph; "Air (Band)" found by the search', function(){
+  var LEAD = 'Air ist ein französisches Musikduo aus Versailles, gegründet 1995.';
+  var urls = [];
+  function fetchFn(u){
+    urls.push(u);
+    if (/summary\/Air$/.test(u)) return res({type: 'disambiguation', extract: 'Air steht für …'});
+    if (/rest\.php\/v1\/search/.test(u)) return res({pages: [{title: 'Air', key: 'Air'}, {title: 'Air (Band)', key: 'Air_(Band)', description: 'französisches Musikduo'}]});
+    if (/summary\/Air_\(Band\)$/.test(u)) return res({type: 'standard', description: 'französisches Musikduo', extract: LEAD, titles: {canonical: 'Air_(Band)'}});
+    if (/w\/api\.php/.test(u)) {
+      assert.ok(/titles=Air_\(Band\)/.test(u), u);
+      return res({query: {pages: [{extract: LEAD + '\n\n== Geschichte ==\nNicolas Godin und Jean-Benoît Dunckel …\n\n== Stil ==\n\n=== Einflüsse ===\nSynthesizer der 1970er.\n\n== Diskografie ==\nMoon Safari (1998)\n\n== Einzelnachweise ==\n1. …'}]}});
+    }
+    return res({}, false);
+  }
+  return it.infoFallback(fetchFn, '', 'storyArtist', 'Air', undefined, 'de').then(function(r){
+    assert.strictEqual(r.src, 'Wikipedia');
+    assert.ok(r.value.indexOf(LEAD + '\n\nGeschichte\n\nNicolas Godin') === 0, r.value);
+    assert.ok(/Stil\n\nEinflüsse\n\nSynthesizer/.test(r.value) === false && /Einflüsse\n\nSynthesizer/.test(r.value));   /* empty heading dropped */
+    assert.ok(!/Moon Safari|Einzelnachweise/.test(r.value));
+  });
+});
+
+t('album without Last.fm key: the Wikipedia article on the album (not the song of the same name, not another artist)', function(){
+  var ALBUM = 'Mezzanine ist das dritte Studioalbum der britischen Band Massive Attack aus dem Jahr 1998.';
+  var urls = [];
+  function fetchFn(u){
+    urls.push(u);
+    if (/rest\.php\/v1\/search/.test(u)) return res({pages: [{title: 'Mezzanine (Architektur)', key: 'Mezzanine_(Architektur)'}, {title: 'Mezzanine (Album)', key: 'Mezzanine_(Album)'}]});
+    if (/Architektur/.test(u)) return res({type: 'standard', description: 'Zwischengeschoss', extract: 'Ein Mezzanine ist ein Zwischengeschoss.'});
+    return res({type: 'standard', description: 'Album von Massive Attack', extract: ALBUM});
+  }
+  return it.infoFallback(fetchFn, '', 'storyAlbum', 'Massive Attack', 'Mezzanine [Expanded]', 'de').then(function(r){
+    assert.strictEqual(r.src, 'Wikipedia');
+    assert.ok(r.value.indexOf(ALBUM) === 0);
+    assert.ok(/^https:\/\/de\.wikipedia\.org\//.test(urls[0]));
+    return it.infoFallback(fetchFn, '', 'storyAlbum', 'Portishead', 'Mezzanine', 'de');
+  }).then(function(r){ assert.strictEqual(r, null); });                  /* the article names another band */
 });
 
 /* ---------- single tracks ---------- */

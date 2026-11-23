@@ -1,12 +1,17 @@
 /* Mood tags: collect Last.fm tags per track (track.getTopTags, falling back to artist.getTopTags) and convert them
    via mood/lastfm_mapping.json and mood/classification_rules.json into mood (MOOD), energy 1-5 (ENERGY) and style (STYLE).
    The raw tags stay on the player (moodtags/*.jsonl); the music files are not changed.
-   Queries run only while nothing is playing. Node 8, ES5 only. */
+   Without a (working) Last.fm key the tags come from MusicBrainz instead (the community tags and genres of the recording,
+   else of the artist; free, one request per second; albums of one artist as a whole: one search and one request for all
+   tracks). Queries run only while nothing is playing. Node 8, ES5 only. */
 var fs     = require('fs');
 var path   = require('path');
 var plays  = require('./plays.js');
 var jsonl  = require('./jsonl.js');
 var lastfm = require('./lastfm.js');
+var mbgate = require('./mbgate.js');            /* all MusicBrainz requests in one queue (one per second, pause on 503) */
+var libcheck = require('./libcheck.js');
+var releasedates = require('./releasedates.js');
 
 var MAPPING = require('./mood/lastfm_mapping.json');
 var RULES   = require('./mood/classification_rules.json');
@@ -16,6 +21,68 @@ var IDLE_MS     = 5000;           /* how often to check whether music is playing
 var WAIT_MS     = 30000;          /* pause while music is playing or there is nothing to do */
 var BACKOFF_MS  = 60000;          /* after network or rate-limit error */
 var ARTIST_FACTOR = 0.6;          /* artist tags count less than track tags */
+var MB = process.env.MB_URL || 'https://musicbrainz.org';
+var MB_STEP_MS = 1500, MB_BUSY_MS = 4000;   /* MusicBrainz: one request per second, shared with the release dates */
+
+/* MusicBrainz search: tags and genres of the best hit with that title (and artist), counts scaled to 0-100 like
+   Last.fm's. cb(err {code, message}, [[tag, count]]) */
+function mbNorm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9\u00c0-\u024f]+/g, ''); }
+function mbQuote(s) { return '"' + String(s || '').replace(/["\\]/g, ' ') + '"'; }
+function mbTags(kind, it, artist, cb) {
+  var q = kind === 'track' ? 'recording:' + mbQuote(it.ti) + ' AND artist:' + mbQuote(it.ar) : 'artist:' + mbQuote(artist);
+  var u = MB + '/ws/2/' + (kind === 'track' ? 'recording' : 'artist') + '?fmt=json&limit=5&query=' + encodeURIComponent(q);
+  mbgate.getJson(u, function(e, j){
+    if (e) return cb({code: 0, message: e.message});
+    var list = (kind === 'track' ? j.recordings : j.artists) || [];
+    var want = mbNorm(kind === 'track' ? it.ti : artist);
+    var hit = list.filter(function(x){ return x && (x.score === undefined || x.score >= 80) && mbNorm(x.title || x.name) === want; })[0];
+    var tags = {};
+    if (hit) (hit.tags || []).concat(hit.genres || []).forEach(function(t){
+      if (t && t.name && (t.count || 0) > 0) tags[t.name] = Math.max(tags[t.name] || 0, t.count);
+    });
+    var names = Object.keys(tags), max = 0;
+    names.forEach(function(n){ if (tags[n] > max) max = tags[n]; });
+    cb(null, names.sort(function(a, b){ return tags[b] - tags[a]; })
+      .map(function(n){ return [n, Math.round(tags[n] / max * 100)]; }));
+  });
+}
+
+/* MusicBrainz per album: one search for the release, one request for the tags of all its recordings, instead of one
+   search per track. it: a track of the album (al, ar), n: tracks of the album in the library.
+   cb(err {code, message}, {title key: [[tag, count]]} or null when the album is not found) */
+function mbAlbumTitle(s) { return mbNorm(releasedates.stripEdition(String(s || '').replace(/\s*[\(\[](feat|ft|with)\.?\s[^\)\]]*[\)\]]/i, ''))); }
+function mbAlbum(it, n, cb) {
+  var al = releasedates.stripEdition(libcheck.bareAlbum(it.al) || it.al) || it.al, ar = mainArtist(it.ar);
+  var q = 'release:' + mbQuote(al) + ' AND artist:' + mbQuote(ar);
+  mbgate.getJson(MB + '/ws/2/release?fmt=json&limit=10&query=' + encodeURIComponent(q), function(e, j){
+    if (e) return cb({code: 0, message: e.message});
+    var want = mbNorm(al), wantAr = mbNorm(ar);
+    var hits = ((j && j.releases) || []).filter(function(x){
+      var credit = mbNorm((x['artist-credit'] || []).map(function(c){ return c.name || (c.artist && c.artist.name) || ''; }).join(' '));
+      return x && x.id && (x.score === undefined || x.score >= 90) && mbNorm(releasedates.stripEdition(x.title)) === want && credit.indexOf(wantAr) >= 0;
+    });
+    /* the edition whose track count fits the album best */
+    hits.sort(function(a, b){ return Math.abs((a['track-count'] || 0) - n) - Math.abs((b['track-count'] || 0) - n); });
+    if (!hits.length) return cb(null, null);
+    mbgate.getJson(MB + '/ws/2/recording?fmt=json&limit=100&inc=tags+genres&release=' + encodeURIComponent(hits[0].id), function(e2, j2){
+      if (e2) return cb({code: 0, message: e2.message});
+      var out = {};
+      ((j2 && j2.recordings) || []).forEach(function(x){
+        if (!x || !x.title) return;
+        var tags = {};
+        (x.tags || []).concat(x.genres || []).forEach(function(t){
+          if (t && t.name && (t.count || 0) > 0) tags[t.name] = Math.max(tags[t.name] || 0, t.count);
+        });
+        var names = Object.keys(tags), max = 0;
+        names.forEach(function(nm){ if (tags[nm] > max) max = tags[nm]; });
+        var k = mbAlbumTitle(x.title);
+        if (!out[k] || names.length > out[k].length) out[k] = names.sort(function(a, b){ return tags[b] - tags[a]; })
+          .map(function(nm){ return [nm, Math.round(tags[nm] / max * 100)]; });
+      });
+      cb(null, out);
+    }, {});
+  });
+}
 
 /* ---------- convert ---------- */
 
@@ -105,13 +172,28 @@ function readJsonl(file, into) {
 function Collector(opts) {
   this.t = {step: opts.stepMs || STEP_MS, idle: opts.idleMs || IDLE_MS, wait: opts.waitMs || WAIT_MS, backoff: opts.backoffMs || BACKOFF_MS};
   this.dir = opts.dir; this.libFile = opts.libFile; this.getCfg = opts.getCfg; this.playing = opts.playing;
+  this.mbBusy = opts.mbBusy || function(){ return false; };   /* MusicBrainz is used by others right now: slower */
+  this.t.mb = opts.mbStepMs || MB_STEP_MS; this.t.mbBusy = opts.mbBusyMs || MB_BUSY_MS;
   this.audio = opts.audio || null; this.libRaw = opts.libRaw || null; this.libStamp = opts.libStamp || null;
   this.tracks = {}; this.artists = {}; this.lib = null; this.libAt = 0;
   this.pos = 0; this.timer = null; this.running = false; this.state = 'aus'; this.error = null;
   this.lastIdleCheck = 0; this.idle = false; this.fetched = 0; this.summaryCache = null; this.doneLib = 0;
+  this.albums = {};                                    /* albums asked at MusicBrainz as a whole: {k: folder, at, n} */
   readJsonl(path.join(this.dir, 'tracks.jsonl'), this.tracks);
   readJsonl(path.join(this.dir, 'artists.jsonl'), this.artists);
+  readJsonl(path.join(this.dir, 'albums.jsonl'), this.albums);
 }
+
+/* tracks of the library by album folder (built once per list) */
+function albumDirOf(it) { return it.f && it.al ? it.f.replace(/\/[^\/]*$/, '') : ''; }
+Collector.prototype.albumTracks = function(dir) {
+  if (!this._albIdx || this._albIdxOf !== this.lib) {
+    var idx = {};
+    (this.lib || []).forEach(function(x){ var d = albumDirOf(x); if (d) (idx[d] || (idx[d] = [])).push(x); });
+    this._albIdx = idx; this._albIdxOf = this.lib;
+  }
+  return this._albIdx[dir] || [];
+};
 
 Collector.prototype.loadLib = function() {
   var raw = null, m = 0;
@@ -140,7 +222,7 @@ Collector.prototype.loadLib = function() {
 };
 
 /* the track list leaves memory (unused for a while); loadLib builds it again when needed */
-Collector.prototype.release = function() { this.lib = null; this._mixIdx = null; this.summaryCache = null; };
+Collector.prototype.release = function() { this.lib = null; this._mixIdx = null; this._albIdx = null; this._albIdxOf = null; this.summaryCache = null; };
 
 Collector.prototype.save = function(file, o) {
   try { fs.mkdirSync(this.dir); } catch (e) { /* already exists */ }
@@ -181,7 +263,7 @@ Collector.prototype.next = function() {
 
 Collector.prototype.step = function() {
   var self = this, cfg = this.getCfg() || {};
-  if (!cfg.key) { this.state = 'fehler'; this.error = 'LASTFM_KEY missing (keys.json in the data folder)'; return this.schedule(this.t.wait); }
+  if (cfg.key && lastfm.rejected(cfg.key)) cfg = {key: ''};   /* refused by Last.fm (e.g. no Pro): MusicBrainz */
   if (this.doneLib && this.libStamp && this.libStamp() === this.doneLib) return this.schedule(this.t.wait);   /* all done, list unchanged: no player query either */
   if (Date.now() - this.lastIdleCheck > this.t.idle) {
     this.lastIdleCheck = Date.now();
@@ -197,25 +279,53 @@ Collector.prototype.step = function() {
   if (!job) { this.doneLib = this.libAt; this.state = this.lib && this.lib.length ? 'fertig' : 'leer'; return this.schedule(this.t.wait); }
   this.state = 'läuft';
   var it = job.it;
-  var method = job.kind === 'track' ? 'track.gettoptags' : 'artist.gettoptags';
-  var params = job.kind === 'track' ? {artist: it.ar, track: it.ti, autocorrect: 1} : {artist: mainArtist(it.ar), autocorrect: 1};
-  lastfm.call({key: cfg.key}, method, params, false, false, function(e, j){
-    if (e && e.code !== 6) {                             /* 6: not found = no tags */
-      self.error = 'Last.fm: ' + e.message;
-      if (e.code === 10 || e.code === 26) { self.state = 'fehler'; return self.schedule(10 * self.t.wait); }   /* key invalid */
+  function got(e, g, src) {
+    if (e) {
+      self.error = src + ': ' + e.message;
       return self.schedule(self.t.backoff);
     }
     self.error = null;
-    var tags = (!e && j && j.toptags && j.toptags.tag) || [];
-    if (!Array.isArray(tags)) tags = [tags];
-    var g = tags.slice(0, RULES.input.max_lastfm_tags).filter(function(t){ return t && t.name; })
-      .map(function(t){ return [String(t.name), parseInt(t.count, 10) || 0]; });
     var rec = {k: job.kind === 'track' ? it.k : artistKey(it.ar), g: g, at: Math.floor(Date.now() / 1000)};
+    if (src === 'MusicBrainz') rec.s = 'mb';
     if (job.kind === 'track') { self.tracks[rec.k] = rec; self.save('tracks.jsonl', rec); }
     else { self.artists[rec.k] = rec; self.save('artists.jsonl', rec); }
     self.fetched++;
     self.summaryCache = null;
-    self.schedule(self.t.step);
+    self.schedule(src === 'MusicBrainz' ? (self.mbBusy() || mbgate.shared.congested() ? self.t.mbBusy : self.t.mb) : self.t.step);
+  }
+  if (!cfg.key && job.kind === 'track') {
+    var dir = albumDirOf(it), group = dir && !this.albums[dir] ? this.albumTracks(dir) : [];
+    var artists = {};
+    group.forEach(function(x){ artists[artistKey(x.ar)] = 1; });
+    if (group.length >= 3 && Object.keys(artists).length <= 2) {   /* an album of one artist: all its tracks at once */
+      return mbAlbum(it, group.length, function(e, byTitle){
+        if (e) return got(e, null, 'MusicBrainz');
+        var now = Math.floor(Date.now() / 1000), hit = 0;
+        group.forEach(function(x){
+          var g = byTitle && byTitle[mbAlbumTitle(x.ti)];
+          if (!g || self.tracks[x.k]) return;                /* not on the release: searched on its own later */
+          var rec = {k: x.k, g: g, at: now, s: 'mb'};
+          self.tracks[x.k] = rec; self.save('tracks.jsonl', rec); hit++;
+        });
+        var a = {k: dir, at: now, n: hit};
+        self.albums[dir] = a; self.save('albums.jsonl', a);
+        self.error = null; self.fetched += hit; self.summaryCache = null;
+        self.schedule(self.mbBusy() || mbgate.shared.congested() ? self.t.mbBusy : self.t.mb);
+      });
+    }
+  }
+  if (!cfg.key) return mbTags(job.kind, it, mainArtist(it.ar), function(e, g){ got(e, g, 'MusicBrainz'); });
+  var method = job.kind === 'track' ? 'track.gettoptags' : 'artist.gettoptags';
+  var params = job.kind === 'track' ? {artist: it.ar, track: it.ti, autocorrect: 1} : {artist: mainArtist(it.ar), autocorrect: 1};
+  lastfm.call({key: cfg.key}, method, params, false, false, function(e, j){
+    if (e && e.code !== 6) {                             /* 6: not found = no tags */
+      if (lastfm.keyError(cfg.key, e.code, e.message)) return self.schedule(self.t.step);   /* key refused: MusicBrainz from now on */
+      return got(e, null, 'Last.fm');
+    }
+    var tags = (!e && j && j.toptags && j.toptags.tag) || [];
+    if (!Array.isArray(tags)) tags = [tags];
+    got(null, tags.slice(0, RULES.input.max_lastfm_tags).filter(function(t){ return t && t.name; })
+      .map(function(t){ return [String(t.name), parseInt(t.count, 10) || 0]; }), 'Last.fm');
   });
 };
 
@@ -233,7 +343,8 @@ Collector.prototype.moodOf = function(ar, ti, al) {
 Collector.prototype.status = function() {
   var lib = this.loadLib(), done = 0, self = this;
   lib.forEach(function(it){ if (self.tracks[it.k]) done++; });
-  return {state: this.state, error: this.error, total: lib.length, done: done, fetched: this.fetched};
+  var cfg = this.getCfg() || {}, lf = !!cfg.key && !lastfm.rejected(cfg.key);
+  return {state: this.state, error: this.error, total: lib.length, done: done, fetched: this.fetched, src: lf ? 'Last.fm' : 'MusicBrainz'};
 };
 
 /* distribution across the library (for display); recomputed at most once per minute */
@@ -266,4 +377,4 @@ function rankOf(list, keys) {
   return 0;
 }
 
-module.exports = {rankWeight: rankWeight, rankOf: rankOf, Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};
+module.exports = {mbTags: mbTags, mbAlbum: mbAlbum, rankWeight: rankWeight, rankOf: rankOf, Collector: Collector, classify: classify, canon: canon, mainArtist: mainArtist, trackKey: trackKey, artistKey: artistKey};
