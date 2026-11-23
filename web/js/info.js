@@ -186,7 +186,8 @@ if (!it.data || it.data.kind === 'story') {
     img.onerror = function(){ if (!this.dataset.vol) { this.dataset.vol = '1'; this.src = vol; } else this.style.display = 'none'; };
   }
   if (!img.onerror) img.onerror = function(){ this.style.display='none'; };
-  if (typeof zoomable === 'function') zoomable(img, it.title);
+  if (typeof zoomable === 'function') zoomable(img, it.title, img.className === 'infoImg album' && typeof coverOriginals === 'function' && typeof curUri !== 'undefined' && curUri
+    ? function(){ return coverOriginals(curUri); } : null);
   infoContent.appendChild(img);
 
   var p = document.createElement('div');

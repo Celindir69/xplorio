@@ -259,14 +259,29 @@ function browseTabs(e, defs) {
   return panes;
 }
 
-/* artist photo or cover: a tap shows it large (imgZoom, files.js; like in the tag editor) */
-function zoomable(img, name) {
+/* artist photo or cover: a tap shows it large (imgZoom, files.js; like in the tag editor). originals(): addresses of the
+   original image to try first (Volumio's /albumart is a scaled copy), the shown image is the fallback */
+function zoomable(img, name, originals) {
   img.style.cursor = 'zoom-in';
   img.addEventListener('click', function(ev){
     if (!img.src || !img.naturalWidth || typeof imgZoom !== 'function') return;
-    ev.stopPropagation(); imgZoom(img.src, name || '');
+    ev.stopPropagation();
+    var list = (originals ? originals() : []).concat([img.src]);
+    (function next(){
+      var u = list.shift();
+      if (!list.length) return imgZoom(u, name || '');
+      var probe = new Image();
+      probe.onload = function(){ if (probe.naturalWidth >= img.naturalWidth) imgZoom(u, name || ''); else next(); };
+      probe.onerror = next;
+      probe.src = u;
+    })();
   });
   return img;
+}
+/* original cover of a local track: embedded, else folder.jpg (tag service, as in the tag editor) */
+function coverOriginals(uri) {
+  if (!uri || typeof TAGS === 'undefined' || !TAGS || streamOf(uri)) return [];
+  return ['embedded', 'folder'].map(function(src){ return TAGS + '/image?src=' + src + '&uri=' + encodeURIComponent(uri); });
 }
 
 /* "Background" tab: artist or album text as on the info page (Volumio, otherwise Last.fm/Wikipedia),
@@ -442,7 +457,7 @@ function browseAlbum(e, seq) {
     var img = document.createElement('img');
     img.className = 'bCover';
     if (art) img.src = artUrl(art);
-    zoomable(img, e.album);
+    zoomable(img, e.album, function(){ return coverOriginals(tracks[0].uri); });
     var meta = document.createElement('div');
     meta.className = 'sMeta';
     /* artist (small) – album (large) – genre (small); artist and genre open their page */
