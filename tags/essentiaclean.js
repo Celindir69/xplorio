@@ -60,13 +60,13 @@ function scan(o, cb) {
   }
   function decide() {
     var res = {total: lines.length + broken, keep: 0, drop: {dup: 0, missing: 0, outside: 0, broken: broken}, offline: 0, lines: []};
-    var insideKeys = {}, state = [];
+    var insideKeys = {}, state = [], off = {};
     lines.forEach(function(x, n){
       if (lastOf[x.p] !== n) return state.push('dup');
       var d = path.dirname(x.p), set = dirs[d];
       var exists = !!(set && set[path.basename(x.p)]);
       if (!exists && reachable(d)) return state.push('missing');
-      if (!exists) res.offline++;
+      if (!exists) off[n] = 1;                         /* drive not there: kept, unless it is an old path (below) */
       var inn = under(x.p, inside);
       if (inn && x.k) insideKeys[x.k] = 1;
       state.push(inn ? 'keep' : 'out');
@@ -74,7 +74,7 @@ function scan(o, cb) {
     lines.forEach(function(x, n){
       var s = state[n];
       if (s === 'out') s = x.k && insideKeys[x.k] ? 'outside' : 'keep';
-      if (s === 'keep') { res.keep++; res.lines.push(x.l); }
+      if (s === 'keep') { res.keep++; res.lines.push(x.l); if (off[n]) res.offline++; }
       else res.drop[s]++;
     });
     res.removed = res.drop.dup + res.drop.missing + res.drop.outside + res.drop.broken;
