@@ -540,6 +540,10 @@ python3 analyse.py --upload http://<player>:8766
   connected right now keeps its results. The player still loads them into memory. `--prune` removes everything outside
   the given folders during the run, after making a backup `essentia.jsonl.bak`. Give all music folders then, otherwise
   the results of the missing ones are dropped.
+- In Xplorio on the Mac no command is needed: Settings, section "Analyse on this Mac", button "Clean up analysis". It counts first and then
+  asks; it removes older lines of the same file, files that no longer exist (only on connected drives) and old paths
+  outside the music folders whose track is analysed there as well. A backup `essentia.jsonl.bak` is made first. Other
+  entries outside the music folders stay.
 - To analyse new music on the Mac before copying it: put it in an import folder, analyse it with
   `python3 analyse.py --keep-missing --upload http://<player>:8766 ~/Music/<import folder>` and then copy it to the
   player (e.g. `rsync -av ~/Music/<import folder>/ volumio@<player>:/mnt/USB/<folder>/`). Without `--keep-missing` the

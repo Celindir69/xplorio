@@ -3279,6 +3279,7 @@ function doMac(req, res, route) {
    POST /mac/analysis {action: start|stop|check} or {nightly: bool}; changes need the password if one is set.
    Writes into essentia.jsonl, or into the file it links to (so the link stays a link). */
 var essentiarun = require('./essentiarun.js'), essRun = null;
+var essentiaclean = require('./essentiaclean.js');
 function essScript() {
   var a = [path.join(__dirname, '..', 'essentia', 'analyse.py'), path.join(__dirname, '..', 'tools', 'essentia', 'analyse.py')];
   return fs.existsSync(a[0]) ? a[0] : a[1];
@@ -3485,6 +3486,19 @@ function doMacAnalysis(req, res) {
       return r.start(function(e){ state(e ? {startError: e} : {done: 'start', roots: roots.length}); }, {roots: roots, done: function(){}});
     }
     if (body.action === 'start') return r.start(function(e){ state(e ? {startError: e} : {done: 'start'}); });
+    if (body.action === 'cleanCheck' || body.action === 'clean') {   /* "Clean up analysis": count first, then remove */
+      if (r.child || (rgRun && rgRun.running()) || (musicImp && musicImp.running())) return state({startError: 'running'});
+      var inside = [path.resolve(MUSIC_ROOT)], bases = [path.resolve(MUSIC_ROOT)];
+      macSettings.music().forEach(function(m){
+        inside.push(m.target); bases.push(path.resolve(MUSIC_ROOT, m.slot));
+        try { inside.push(fs.realpathSync(m.target)); } catch (e) { /* drive not there */ }
+      });
+      return essentiaclean.clean({file: essOut(), inside: inside, bases: bases, dry: body.action === 'cleanCheck'}, function(e, c){
+        if (e) return state({startError: 'clean'});
+        if (c.cleaned) audioStore.reload(true);
+        state({done: body.action, clean: c});
+      });
+    }
     send(res, 400, {ok: false, error: 'unknown action'});
   });
 }

@@ -570,7 +570,7 @@ function msEssentiaCard(d) {
 
 /* analysis on this Mac (POST /mac/analysis, tags/essentiarun.js): {} = state, {action: start|stop|check}, {nightly}.
    While it runs the state is asked every 5 s */
-var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart', busy: 'mac.anaBusyRg'};
+var MS_ANA_ERRORS = {python: 'mac.anaErrPython', script: 'mac.anaErrScript', roots: 'mac.anaErrRoots', running: 'mac.anaRunning', start: 'mac.anaErrStart', busy: 'mac.anaBusyRg', clean: 'mac.anaErrClean'};
 function msAnaSend(body, okText) {
   var seq = msSeq;
   if (Object.keys(body).length) body.token = msToken();
@@ -580,11 +580,20 @@ function msAnaSend(body, okText) {
     if (r && r.ok) {
       msAna = r; msAnaBad = !!r.startError;
       msAnaMsg = r.startError ? T(MS_ANA_ERRORS[r.startError] || 'mac.err.fs') : okText ? T(okText) : '';
+      if (!r.startError && r.clean) msAnaCleaned(r.clean, r.done === 'cleanCheck');
       if (r.running) msAnaTimer = setTimeout(function(){ if (seq === msSeq && overlayMacSettings.classList.contains('on')) msAnaSend({}); }, 5000);
     } else if (r && r.available === false) msAna = r;
     else { msAnaBad = true; if (r && r.error === 'auth') msAuthLost(); msAnaMsg = T(msErrKey(r && r.error)); }
     if (msData) msRender();
   }).catch(function(){ if (seq === msSeq) { msAnaBad = true; msAnaMsg = T('mac.err.fs'); if (msData) msRender(); } });
+}
+/* "Clean up analysis": the counts first, then ask, then remove (backup essentia.jsonl.bak) */
+function msAnaCleaned(c, check) {
+  var d = c.drop || {}, n = {n: c.total, r: c.removed, k: c.keep, dup: (d.dup || 0) + (d.broken || 0), missing: d.missing || 0, outside: d.outside || 0, off: c.offline || 0};
+  if (!check) { msAnaMsg = T('mac.anaCleaned', n); return; }
+  if (!c.removed) { msAnaMsg = T('mac.anaCleanNone', n); return; }
+  msAnaMsg = '';
+  setTimeout(function(){ if (confirm(T('mac.anaCleanAsk', n))) msAnaSend({action: 'clean'}); }, 0);
 }
 function msAnaPart(c) {
   var a = msAna;
@@ -619,7 +628,13 @@ function msAnaPart(c) {
     if (a.running && a.tail && a.tail.length) c.appendChild(histEl('div', 'msItemSub', a.tail[a.tail.length - 1]));
     var row = histEl('div', 'pbRow msAddRow');
     if (a.running) row.appendChild(msButton(T('mac.anaStop'), function(){ msAnaSend({action: 'stop'}, 'mac.anaStopping'); }));
-    else row.appendChild(msButton(T('mac.anaStart'), function(){ msAnaSend({action: 'start'}, 'mac.anaStarted'); }, 'on'));
+    else {
+      row.appendChild(msButton(T('mac.anaStart'), function(){ msAnaSend({action: 'start'}, 'mac.anaStarted'); }, 'on'));
+      row.appendChild(msButton(T('mac.anaClean'), function(){
+        msAnaMsg = T('mac.anaCleanChecking'); msAnaBad = false; msRender();
+        msAnaSend({action: 'cleanCheck'});
+      }));
+    }
     c.appendChild(row);
     var nr = histEl('div', 'msSetRow');
     nr.appendChild(histEl('div', 'msSetLabel', T('mac.anaNightly')));

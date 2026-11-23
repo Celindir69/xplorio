@@ -781,6 +781,10 @@ python3 analyse.py --upload http://<player>:8766
   stehen, damit ein gerade nicht verbundenes Laufwerk seine Ergebnisse behält. Der Player lädt sie trotzdem in den
   Speicher. `--prune` entfernt beim Lauf alles außerhalb der angegebenen Ordner; vorher legt es `essentia.jsonl.bak` an.
   Dafür alle Musikordner angeben, sonst fallen die Ergebnisse der fehlenden weg.
+- In Xplorio auf dem Mac geht das ohne Befehl: Einstellungen, Abschnitt „Auf diesem Mac analysieren“, Knopf „Analyse bereinigen“. Es zählt zuerst und
+  fragt dann; entfernt werden ältere Zeilen derselben Datei, Dateien, die es nicht mehr gibt (nur auf angeschlossenen
+  Laufwerken), und alte Pfade außerhalb der Musikordner, deren Titel dort ebenfalls analysiert ist. Vorher entsteht
+  `essentia.jsonl.bak`. Andere Einträge außerhalb der Musikordner bleiben.
 - Neue Musik vorab auf dem Mac analysieren: in einem Import-Ordner ablegen, mit
   `python3 analyse.py --keep-missing --upload http://<player>:8766 ~/Music/<Import-Ordner>` analysieren und danach auf
   den Player kopieren (z. B. `rsync -av ~/Music/<Import-Ordner>/ volumio@<player>:/mnt/USB/<Ordner>/`). Ohne
