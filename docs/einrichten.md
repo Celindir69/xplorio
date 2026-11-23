@@ -715,7 +715,7 @@ Last.fm und ListenBrainz können gleichzeitig aktiv sein.
 ### Stimmungs-Tags
 Mit `LASTFM_KEY` holt der Tag-Dienst für jeden Titel der Bibliothek die Last.fm-Tags (`track.getTopTags`, ohne
 brauchbare Titel-Tags ersatzweise die Tags des Künstlers); ohne (funktionierenden) Key die Tags und Genres der Aufnahme
-bei MusicBrainz, sonst die des Künstlers (eine Anfrage alle 1,5 s, langsamer, solange die Erscheinungsdaten gesucht werden). Er rechnet sie nach `tags/mood/lastfm_mapping.json` und
+bei MusicBrainz, sonst die des Künstlers; Alben eines Künstlers fragt er dabei als Ganzes ab (zwei Anfragen statt einer je Titel) (eine Anfrage alle 1,5 s, langsamer, solange die Erscheinungsdaten gesucht werden). Er rechnet sie nach `tags/mood/lastfm_mapping.json` und
 `tags/mood/classification_rules.json` in Stimmung, Energie (1–5) und Stil um. Abgefragt wird nur, solange nichts spielt
 (Stopp oder Pause; geprüft alle 5 s), mit etwa 4 Anfragen je Sekunde. Die Musikdateien bleiben unverändert; die Rohtags
 liegen in `/data/xplorio/data/moodtags/`, die Titelliste dazu in `/data/xplorio/data/library-tracks.json` (entsteht

@@ -475,7 +475,7 @@ ListenBrainz imports your existing Last.fm history itself: on listenbrainz.org u
 
 ### Mood Tags
 
-With `LASTFM_KEY`, the Tag Service retrieves the Last.fm tags for every track in the library (`track.getTopTags`, falling back to the artist's tags if no useful track tags are available); without a (working) key the tags and genres of the recording at MusicBrainz, otherwise those of the artist (one request every 1.5 s, slower while release dates are looked up). It maps them to mood, energy (1–5), and style according to `tags/mood/lastfm_mapping.json` and `tags/mood/classification_rules.json`.
+With `LASTFM_KEY`, the Tag Service retrieves the Last.fm tags for every track in the library (`track.getTopTags`, falling back to the artist's tags if no useful track tags are available); without a (working) key the tags and genres of the recording at MusicBrainz, otherwise those of the artist; albums by one artist are fetched as a whole (two requests instead of one per track) (one request every 1.5 s, slower while release dates are looked up). It maps them to mood, energy (1–5), and style according to `tags/mood/lastfm_mapping.json` and `tags/mood/classification_rules.json`.
 
 Queries are only made while nothing is playing (stopped or paused; checked every 5 seconds), at around 4 requests per second. The music files remain unchanged; the raw tags are stored in `/data/xplorio/data/moodtags/`, and the associated track list is stored in `/data/xplorio/data/library-tracks.json` (generated together with the album list).
 

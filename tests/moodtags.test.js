@@ -20,7 +20,17 @@ var fake = http.createServer(function(req, res){
   var p = url.parse(req.url, true).query;
   function json(o) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify(o)); }
   if (/^\/ws\/2\//.test(req.url)) {
-    mbCalls.push(p.query);
+    mbCalls.push(p.query || 'browse ' + p.release);
+    if (/^\/ws\/2\/release\?/.test(req.url)) {
+      return json({releases: /^release:"Platte" AND artist:"Emil"$/.test(p.query) ? [
+        {id: 'r-big', title: 'Platte (Deluxe Edition)', score: 100, 'track-count': 20, 'artist-credit': [{name: 'Emil'}]},
+        {id: 'r-std', title: 'Platte', score: 100, 'track-count': 4, 'artist-credit': [{name: 'Emil'}]},
+        {id: 'r-other', title: 'Platte', score: 100, 'track-count': 4, 'artist-credit': [{name: 'Jemand'}]}] : []});
+    }
+    if (p.release) return json({recordings: p.release !== 'r-std' ? [] : [
+      {title: 'Sechs', tags: [{name: 'sad', count: 4}], genres: [{name: 'rock', count: 2}]},
+      {title: 'Sieben (Remastered 2011)', tags: [{name: 'happy', count: 1}]},
+      {title: 'Acht', tags: []}]});
     var m = /^recording:"([^"]*)" AND artist:"([^"]*)"$/.exec(p.query), a = /^artist:"([^"]*)"$/.exec(p.query);
     if (m) return json({recordings: MBTAGS['recording|' + m[1] + '|' + m[2]] ? [MBTAGS['recording|' + m[1] + '|' + m[2]]] : []});
     return json({artists: a && MBTAGS['artist|' + a[1]] ? [MBTAGS['artist|' + a[1]]] : []});
@@ -181,10 +191,10 @@ fake.listen(0, function(){
                 assert.strictEqual(c4.lib.length, 3);
               });
               c4.stop();
-              routeTest(dir, function(){
+              albumTest(dir, function(){ routeTest(dir, function(){
           fake.close();
           console.log(n + ' checks passed');
-        });
+        }); });
         });
             });
           }, 80);
@@ -193,6 +203,36 @@ fake.listen(0, function(){
     });
   }, 80);
 });
+
+/* without a key: one album as a whole at MusicBrainz (search + one request for all recordings), not one search per track */
+function albumTest(dir, done) {
+  var mt = require('../tags/moodtags.js'), d = path.join(dir, 'alb');
+  var raw = {m: 1, list: [['Emil', 'Sechs', 'USB/e/Platte (Remastered 2011)/1.flac', 0, 'Platte (Remastered 2011)'],
+                          ['Emil', 'Sieben', 'USB/e/Platte (Remastered 2011)/2.flac', 0, 'Platte (Remastered 2011)'],
+                          ['Emil', 'Acht', 'USB/e/Platte (Remastered 2011)/3.flac', 0, 'Platte (Remastered 2011)'],
+                          ['Emil', 'Neun (Bonus)', 'USB/e/Platte (Remastered 2011)/4.flac', 0, 'Platte (Remastered 2011)']]};
+  mbCalls = [];
+  var c = new mt.Collector({dir: d, getCfg: function(){ return {key: ''}; }, libRaw: function(){ return raw; },
+    playing: function(cb){ cb(false); }, stepMs: 5, idleMs: 1, waitMs: 20, mbStepMs: 5});
+  c.start();
+  waitFor(function(){ return c.status().state === 'fertig'; }, function(){
+    c.stop();
+    t('no key, album: one search and one request for three tracks; the edition with the fitting track count', function(){
+      assert.deepStrictEqual(mbCalls.slice(0, 2), ['release:"Platte" AND artist:"Emil"', 'browse r-std']);
+      assert.deepStrictEqual(c.moodOf('Emil', 'Sechs').mood, ['sad']);
+      assert.ok(c.tracks[mt.trackKey('Emil', 'Sieben')]);
+      assert.deepStrictEqual(c.tracks[mt.trackKey('Emil', 'Acht')].g, []);
+    });
+    t('a track not on the release is searched on its own; the album is not asked again', function(){
+      assert.ok(mbCalls.indexOf('recording:"Neun (Bonus)" AND artist:"Emil"') > 1);
+      assert.strictEqual(mbCalls.filter(function(q){ return /^release:/.test(q); }).length, 1);
+      var c2 = new mt.Collector({dir: d, getCfg: function(){ return {key: ''}; }, libRaw: function(){ return raw; },
+        playing: function(cb){ cb(false); }});
+      assert.ok(c2.albums['USB/e/Platte (Remastered 2011)']);
+    });
+    done();
+  });
+}
 
 /* route /moodtags of the tag service */
 function routeTest(dir, done) {
