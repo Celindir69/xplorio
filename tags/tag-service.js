@@ -2233,7 +2233,7 @@ function doLastfm(body, cb) {
   }
   if (a === 'send') { lfm.flush(); return cb(200, {ok: true, status: lfm.status()}); }
   if (a === 'lbSend') { lbz.flush(); return cb(200, {ok: true, listenbrainz: lbz.status()}); }
-  if (a === 'lbCheck') return lbz.check(function(){ lbz.flush(); cb(200, {ok: true, listenbrainz: lbz.status()}); });
+  if (a === 'lbCheck') return lbz.check(function(){ lbz.flush(); cb(200, {ok: true, listenbrainz: lbz.status()}); }, true);
   cb(400, {ok: false, error: 'unknown action'});
 }
 
@@ -3095,7 +3095,7 @@ var macSettings = new macsettings.MacSettings({
   },
   essentiaStatus: function(){ return audioStore.status(); },
   lastfmRejected: function(){ return !!lfmKeys().rejected; },
-  listenbrainzChanged: function(set){ if (set) lbz.check(function(){ lbz.flush(); }); else lbz.clear(); }
+  listenbrainzChanged: function(set){ if (set) lbz.check(function(){ lbz.flush(); }, true); else lbz.clear(); }
 });
 /* audio output (macaudio.js): MPD's sound outputs, one per device of the Mac. MAC_MPD_CONF from xplorio-services.sh
    (only there; MPD_CONF above falls back to Volumio's /etc/mpd.conf, which Xplorio never writes) */

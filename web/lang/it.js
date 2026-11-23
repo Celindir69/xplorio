@@ -371,6 +371,8 @@ langRegister('it', 'Italiano', {
   'hist.lb.connected': 'Connesso come {user}. I nuovi ascolti vengono inviati a ListenBrainz.',
   'hist.lb.checking': 'Verifica del token presso ListenBrainz…',
   'hist.lb.invalid': 'ListenBrainz rifiuta il token. Inserisci di nuovo il token da listenbrainz.org/settings.',
+  'hist.lb.recheck': 'Controlla di nuovo',
+  'hist.lb.waiting': '{n} ascolti sono in attesa e verranno inviati appena il token sarà accettato.',
   'hist.lb.none': 'Scrobbling gratuito: inserisci un token ListenBrainz nelle impostazioni (Volumio: plugin Xplorio, Mac: Impostazioni › ListenBrainz).',
   'hist.lastfm.rejected': 'Last.fm rifiuta la chiave API (da dicembre 2026 richiede Last.fm Pro). Nel frattempo artisti simili, testi e stati d\'animo arrivano da fonti libere (Deezer, ListenBrainz, Wikipedia, MusicBrainz).',
   'hist.lastfm.noSecret': 'Per lo scrobbling serve lo “Shared secret” del tuo account API di Last.fm in /data/xplorio/data/keys.json.',

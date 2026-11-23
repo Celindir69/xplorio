@@ -372,6 +372,8 @@ langRegister('fr', 'Français', {
   'hist.lb.connected': 'Connecté en tant que {user}. Les nouvelles écoutes sont envoyées à ListenBrainz.',
   'hist.lb.checking': 'Vérification du jeton auprès de ListenBrainz…',
   'hist.lb.invalid': 'ListenBrainz refuse le jeton. Saisis à nouveau le jeton de listenbrainz.org/settings.',
+  'hist.lb.recheck': 'Vérifier à nouveau',
+  'hist.lb.waiting': '{n} écoutes attendent et seront envoyées dès que le jeton sera accepté.',
   'hist.lb.none': 'Scrobbler gratuitement : ajoute un jeton ListenBrainz dans les réglages (Volumio : plugin Xplorio, Mac : Réglages › ListenBrainz).',
   'hist.lastfm.rejected': 'Last.fm refuse la clé API (depuis décembre 2026 elle exige Last.fm Pro). En attendant, artistes similaires, textes et ambiances viennent de sources libres (Deezer, ListenBrainz, Wikipedia, MusicBrainz).',
   'hist.lastfm.noSecret': 'Le scrobbling nécessite le « Shared secret » de ton compte API Last.fm dans /data/xplorio/data/keys.json.',

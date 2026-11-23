@@ -371,6 +371,8 @@ langRegister('de', 'Deutsch', {
   'hist.lb.connected': 'Verbunden als {user}. Neue Wiedergaben werden zu ListenBrainz gescrobbelt.',
   'hist.lb.checking': 'Token wird bei ListenBrainz geprüft…',
   'hist.lb.invalid': 'ListenBrainz lehnt den Token ab. Bitte den Token aus listenbrainz.org/settings neu eintragen.',
+  'hist.lb.recheck': 'Erneut prüfen',
+  'hist.lb.waiting': '{n} Wiedergaben warten und werden gesendet, sobald der Token gilt.',
   'hist.lb.none': 'Kostenlos scrobbeln: ListenBrainz-Token in den Einstellungen eintragen (Volumio: Xplorio-Plugin, Mac: Einstellungen › ListenBrainz).',
   'hist.lastfm.rejected': 'Last.fm lehnt den API-Key ab (seit Dezember 2026 braucht er Last.fm Pro). Ähnliche Künstler, Texte und Stimmungen kommen solange aus freien Quellen (Deezer, ListenBrainz, Wikipedia, MusicBrainz).',
   'hist.lastfm.noSecret': 'Zum Scrobbeln fehlt das „Shared secret“ deines Last.fm-API-Kontos in /data/xplorio/data/keys.json.',

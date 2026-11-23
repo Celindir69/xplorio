@@ -13,7 +13,8 @@ var UA    = 'Xplorio/1.0 ( https://github.com/Celindir69/xplorio )';
 var BATCH = 100;                      /* listens per request (ListenBrainz allows 1000) */
 var RETRY = 10 * 60 * 1000;           /* resend the queue */
 var QUEUE_MAX = 20000;                /* oldest plays are dropped beyond this */
-var CHECK_MS = 6 * 3600 * 1000;       /* check the token again */
+var CHECK_MS = 6 * 3600 * 1000;       /* check a valid token again */
+var RECHECK_MS = 15 * 60 * 1000;      /* check a refused token again (a hiccup must not stop scrobbling for hours) */
 
 /* method, path, token, body (object or null), cb(err {status, message}, json) */
 function request(method, p, token, body, cb) {
@@ -64,19 +65,22 @@ Sync.prototype.save = function() {
   try { fs.writeFileSync(this.file + '.neu', JSON.stringify(this.state)); fs.renameSync(this.file + '.neu', this.file); } catch (e) { /* next time */ }
 };
 Sync.prototype.token = function() { return String(this.getToken() || '').trim(); };
-/* the token as checked last: {user} when valid; a new token is checked first */
-Sync.prototype.check = function(cb) {
+/* the token as checked last: {user} when valid; a new token is checked first; force: ask ListenBrainz now */
+Sync.prototype.check = function(cb, force) {
   var self = this, t = this.token();
   cb = cb || function(){};
   if (!t) return cb(null);
   var c = this.state.checked;
-  if (c && c.token === t && Date.now() - c.at < CHECK_MS) return cb(null);
+  if (!force && c && c.token === t && Date.now() - c.at < (c.valid ? CHECK_MS : RECHECK_MS)) return cb(null);
   if (this.checking) return cb(null);
   this.checking = true;
-  request('GET', '/1/validate-token', t, null, function(e, j){
+  /* token also as query parameter: ListenBrainz reads it there when the header does not reach it (proxies) */
+  request('GET', '/1/validate-token?token=' + encodeURIComponent(t), t, null, function(e, j){
     self.checking = false;
-    if (e) { self.sendError = e.message; return cb(e); }            /* not reachable: keep the last result */
-    self.state.checked = {token: t, at: Date.now(), valid: !!j.valid, user: j.user_name || ''};
+    if (!e && typeof j.valid !== 'boolean') e = {status: 0, message: 'unexpected answer from ListenBrainz'};
+    if (e) { self.sendError = e.message; return cb(e); }            /* not reachable or no clear answer: keep the last result */
+    self.state.checked = {token: t, at: Date.now(), valid: j.valid, user: j.user_name || ''};
+    if (j.valid && self.sendError === 'token invalid') self.sendError = null;
     self.save();
     cb(null);
   });
@@ -109,14 +113,24 @@ Sync.prototype.flush = function() {
   clearTimeout(this.timer); this.timer = null;
   if (this.sending || !t || !this.state.queue.length) return;
   var c = this.state.checked;
-  if (c && c.token === t && !c.valid) { this.sendError = 'token invalid'; return; }   /* a new token is needed */
+  if (c && c.token === t && !c.valid) {                               /* refused: send again once a new check says valid */
+    this.sendError = 'token invalid';
+    if (Date.now() - c.at >= RECHECK_MS) this.check(function(e){ if (!e && self.valid()) self.flush(); });
+    return;
+  }
   var part = this.state.queue.slice(0, BATCH);
   this.sending = true;
   request('POST', '/1/submit-listens', t, {listen_type: part.length === 1 ? 'single' : 'import', payload: part.map(function(e){ return listen(e); })}, function(e){
     self.sending = false;
     if (e) {
       self.sendError = e.message;
-      if (e.status === 401) { self.state.checked = {token: t, at: Date.now(), valid: false, user: ''}; self.save(); return; }
+      if (e.status === 401) {                                         /* refused: only the token check decides, the queue stays */
+        return self.check(function(e2){
+          if (!e2 && !self.valid()) { self.sendError = 'token invalid'; return; }
+          self.timer = setTimeout(function(){ self.flush(); }, RETRY);
+          if (self.timer.unref) self.timer.unref();
+        }, true);
+      }
       if (e.status === 400) { self.state.queue = self.state.queue.slice(part.length); self.save(); }   /* bad listens: discard */
       self.timer = setTimeout(function(){ self.flush(); }, e.status === 429 && e.retryIn ? e.retryIn * 1000 + 1000 : RETRY);
       if (self.timer.unref) self.timer.unref();

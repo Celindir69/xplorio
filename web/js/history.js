@@ -488,7 +488,14 @@ function histListenbrainz(st, seq) {
   var info = histEl('div', 'ckInfo'), btns = histEl('div', 'hBtns');
   box.appendChild(info); box.appendChild(btns);
   if (!st.configured) { info.textContent = T('hist.lb.none'); return box; }
-  if (st.valid === false) { info.textContent = T('hist.lb.invalid'); return box; }
+  if (st.valid === false) {                          /* refused: ask ListenBrainz again (a stale refusal must not stick) */
+    info.textContent = T('hist.lb.invalid') + (st.queue ? ' ' + T('hist.lb.waiting', {n: st.queue}) : '');
+    btns.appendChild(histLastfmBtn(T('hist.lb.recheck'), function(){
+      info.textContent = T('hist.lb.checking');
+      histLastfmAction('lbCheck').then(function(){ setTimeout(function(){ histShow('stats'); }, 1500); });
+    }));
+    return box;
+  }
   if (st.valid === null) {
     info.textContent = T('hist.lb.checking');
     if (!histLbChecked) {
