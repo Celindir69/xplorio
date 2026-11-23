@@ -259,6 +259,16 @@ function browseTabs(e, defs) {
   return panes;
 }
 
+/* artist photo or cover: a tap shows it large (imgZoom, files.js; like in the tag editor) */
+function zoomable(img, name) {
+  img.style.cursor = 'zoom-in';
+  img.addEventListener('click', function(ev){
+    if (!img.src || !img.naturalWidth || typeof imgZoom !== 'function') return;
+    ev.stopPropagation(); imgZoom(img.src, name || '');
+  });
+  return img;
+}
+
 /* "Background" tab: artist or album text as on the info page (Volumio, otherwise Last.fm/Wikipedia),
    for albums followed by the expandable credits (info.js) */
 function backgroundFill(pane, e, seq, artist, album) {
@@ -309,7 +319,7 @@ function browseArtist(e, seq) {
     photo.alt = '';
     photo.addEventListener('error', function(){ if (photo.parentNode) photo.parentNode.removeChild(photo); });
     photo.src = TAGS + '/artistimage?name=' + encodeURIComponent(e.artist);
-    browseBody.appendChild(photo);
+    browseBody.appendChild(zoomable(photo, e.artist));
 
     if (!isStream) {                                  /* play everything by the artist (albums and single tracks) */
       browseBody.appendChild(playRow(T('browse.playAll'), albums.length ? T('browse.albumCount', {n: albums.length}) : '', function(){
@@ -432,6 +442,7 @@ function browseAlbum(e, seq) {
     var img = document.createElement('img');
     img.className = 'bCover';
     if (art) img.src = artUrl(art);
+    zoomable(img, e.album);
     var meta = document.createElement('div');
     meta.className = 'sMeta';
     /* artist (small) – album (large) – genre (small); artist and genre open their page */
