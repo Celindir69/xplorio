@@ -2918,7 +2918,8 @@ var autoDj = new autodjlib.AutoDJ({
       cb(null, (Array.isArray(a) ? a : a ? [a] : []).map(function(x){ return x && x.name; }).filter(Boolean));
     });
   },
-  log: function(t){ console.error(t); }
+  log: function(t){ console.error(t); },
+  skipped: function(){ return mixExcludedBase(); }     /* "don't like" and NoMix: never picked, like in the mixes */
 });
 setInterval(function(){ if (playerIsMpd()) autoDj.tick(); }, 15 * 1000).unref();   /* cheap while not needed: one status */
 /* TIDAL without Volumio (tags/tidal/: the user's own TIDAL login, proxy for MPD on 127.0.0.1:7780). Only with PLAYER 'mpd'
@@ -3610,6 +3611,8 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/remote')  return doRemoteGet(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/vu')      return doVu(req, res);
   if (req.method === 'GET' && route === '/vustatus') return doVuStatus(function(c, o){ send(res, c, o); });
+  /* tracks the AutoDJ plugin must never pick ("don't like", NoMix in the comment): {ok, files: ["USB/…", …]} */
+  if (req.method === 'GET' && route === '/autodj/excluded') return send(res, 200, {ok: true, files: Object.keys(mixExcludedBase())});
   if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!lfmKeys().key, similar: true});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });

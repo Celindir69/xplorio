@@ -5,9 +5,10 @@
    Repeat guards as in the plugin: the last few artists are not picked again right away, the last added tracks for
    longer. If every candidate is guarded, the one guarded longest ago is taken, so the queue never runs dry.
    Exclude keywords (title or album, ";"-separated) and a maximum length as in the plugin's settings.
+   Never picked either: tracks that never go into a mix ("don't like", NoMix in the comment; opts.skipped).
    Node 8, ES5 only.
    opts: mpd(cmds, cb(err, lists)), file (state JSON), similar(artist, cb(err, [names])) (Last.fm), ready() (key there),
-         log(text), random() */
+         log(text), random(), skipped() -> {file: true} of tracks never to pick (optional) */
 var fs = require('fs');
 
 var LOW = 3;               /* refill when this many tracks or fewer are left after the current one */
@@ -156,8 +157,11 @@ AutoDJ.prototype.tracksOf = function(name, inQueue, cb) {
   var self = this, want = norm(name);
   this.o.mpd(['search artist ' + q(name)], function(err, lists){
     if (err) return cb([]);
+    var skip = {};
+    try { skip = (self.o.skipped && self.o.skipped()) || {}; } catch (e) { self.log('AutoDJ: NoMix list not available: ' + e.message); }
     var list = songs(lists[0]).filter(function(t){
-      return norm(mainArtist(t.artist)) === want && !inQueue[t.file] && self.s.tracks.indexOf(t.file) < 0 && allowed(t, self.s) && !/^https?:/.test(t.file);
+      return norm(mainArtist(t.artist)) === want && !inQueue[t.file] && self.s.tracks.indexOf(t.file) < 0 && allowed(t, self.s) && !/^https?:/.test(t.file) &&
+             !skip[String(t.file).replace(/^\/+/, '')];
     });
     cb(list);
   });
