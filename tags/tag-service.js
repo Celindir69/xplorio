@@ -3674,7 +3674,14 @@ if (require.main === module) {
   process.on('uncaughtException', function(e){
     console.error('uncaught: ' + (e && e.stack || e));
     logs.appendCrash(CRASH_LOG, e);
+    try { sysInfo.save(); } catch (e2) { /* history as of the last save */ }
     process.exit(1);
+  });
+  /* systemd stops the service with SIGTERM (also when Volumio restarts: the plugin restarts its services then). Without a
+     handler Node ends at once and the System page history since the last save (every 10 min) is gone: a gap in the chart.
+     Save first, then end normally (the 'exit' handlers above still run) */
+  ['SIGTERM', 'SIGINT'].forEach(function(sig){
+    process.on(sig, function(){ try { sysInfo.stop(); } catch (e) { /* history as of the last save */ } process.exit(0); });
   });
   /* Node closes an idle keep-alive connection after 5 s; Safari often reuses it at that very moment and the request fails
      ("tag service not reachable", fine again a moment later). Keep idle connections open longer than the browsers do. */
