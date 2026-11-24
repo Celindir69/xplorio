@@ -815,6 +815,7 @@ langRegister('en', 'English', {
   'pb.db': '{n} dB',
   'pb.rgMissingNote': 'Tracks with ReplayGain tags are levelled to about −18 LUFS, radio and streaming are usually much louder. This value lowers everything without tags while ReplayGain is on (−6 dB usually fits). To apply it MPD restarts briefly, playback stops.',
   'pb.rgMissingBusy': 'MPD is restarting …',
+  'pb.rgMissingByHand': 'Set by hand in Volumio\'s MPD template ({n} dB); it applies as it stands there.',
   'pb.rgMissingFail': 'MPD could not be restarted; the setting is saved and applies after the next start of Xplorio.',
   'pb.norm': "Volumio's normalization",
   'pb.normState': 'Normalization',

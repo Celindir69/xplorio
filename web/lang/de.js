@@ -813,6 +813,7 @@ langRegister('de', 'Deutsch', {
   'pb.db': '{n} dB',
   'pb.rgMissingNote': 'Titel mit ReplayGain-Tags werden auf etwa −18 LUFS gebracht, Radio und Streaming sind meist deutlich lauter. Dieser Wert senkt alles ohne Tags ab, solange ReplayGain an ist (−6 dB passt meist). Zum Übernehmen startet MPD kurz neu, die Wiedergabe stoppt dabei.',
   'pb.rgMissingBusy': 'MPD startet neu …',
+  'pb.rgMissingByHand': 'Steht von Hand in Volumios MPD-Vorlage ({n} dB) und gilt so, wie er dort steht.',
   'pb.rgMissingFail': 'MPD ließ sich nicht neu starten, die Einstellung ist gespeichert und gilt nach dem nächsten Start von Xplorio.',
   'pb.norm': 'Volumios Normalisierung',
   'pb.normState': 'Normalisierung',

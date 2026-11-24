@@ -518,6 +518,15 @@ zurücksetzt, ist noch nicht geprüft.
 Ist ReplayGain an, zeigt der Player neben dem Dateiformat den Wert, den MPD gerade auf den Titel anwendet (etwa „−6.5 dB“);
 der Tooltip sagt, ob es der Titel- oder der Album-Wert ist. Ohne ReplayGain-Tags in der Datei bleibt die Anzeige leer.
 
+**Radio, Streaming und Dateien ohne Tags:** Titel mit ReplayGain-Tags landen bei etwa −18 LUFS, Radio und Streams sind
+meist deutlich lauter. Unter ReplayGain lässt sich deshalb ein Wert (unverändert, −3, −6, −9 oder −12 dB) wählen, um den
+alles ohne Tags leiser spielt, solange ReplayGain an ist; −6 dB passt meist. MPD kennt dafür `replaygain_missing_preamp`
+und startet zum Übernehmen einmal neu, die Wiedergabe stoppt dabei kurz. Im Mac-Programm schreibt Xplorio den Wert in die
+eigene `mpd.conf`. Mit Volumio übernimmt das Plugin (dieselbe Wahl auch auf seiner Einstellungsseite): Es meldet die Zeile
+wie den VU-Ausgang über Volumios Schnittstelle für Plugins an, Volumio baut `mpd.conf` damit neu, unter `/volumio` ändert
+sich nichts. Steht `replaygain_missing_preamp` schon von Hand in Volumios Vorlage, gilt dieser Wert. Bei MPD allein, von
+Hand eingerichtet, die Zeile selbst in `mpd.conf` eintragen, etwa `replaygain_missing_preamp "-6"`.
+
 **ReplayGain-Tags mit rsgain (optional):** Fehlen die Tags, schreibt sie [rsgain](https://github.com/complexlogic/rsgain)
 nachträglich in die Dateien; der Ton selbst bleibt unverändert. Wie die Audio-Analyse läuft es auf dem Mac oder PC, nicht
 auf dem Player. Liegt die Musik auf dem Player, die Freigabe mit Schreibrechten verbinden.

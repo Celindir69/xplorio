@@ -106,7 +106,10 @@ function pbRender() {
   rg.appendChild(pbChips(PB_RG.map(function(m){ return [m, T('pb.rg.' + m)]; }), d.replaygain, function(m){ pbSet({replaygain: m}); }));
   rg.appendChild(histEl('div', 'syNote', T('pb.rgNote.' + (PB_RG.indexOf(d.replaygain) >= 0 ? d.replaygain : 'off'))));
   if (d.missingPreamp === undefined) rg.appendChild(histEl('div', 'syNote', T('pb.rgTags')));
-  else {                                                   /* Mac: gain for radio, streaming and untagged files */
+  else if (d.preampByHand) {                               /* Volumio: the line is in Volumio's template by hand */
+    rg.appendChild(histEl('div', 'sySub pbSubHead', T('pb.rgMissing')));
+    rg.appendChild(histEl('div', 'syNote', T('pb.rgMissingByHand', {n: String(d.missingPreamp).replace('-', '−')})));
+  } else {                                                 /* Mac, or Volumio with the plugin: gain for radio, streaming and untagged files */
     rg.appendChild(histEl('div', 'sySub pbSubHead', T('pb.rgMissing')));
     rg.appendChild(pbChips((d.missingPreamps || [0]).map(function(v){ return [v, v ? T('pb.db', {n: String(v).replace('-', '−')}) : T('pb.rgMissing0')]; }),
       d.missingPreamp, function(v){

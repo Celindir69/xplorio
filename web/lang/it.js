@@ -813,6 +813,7 @@ langRegister('it', 'Italiano', {
   'pb.db': '{n} dB',
   'pb.rgMissingNote': 'I brani con tag ReplayGain vengono portati a circa −18 LUFS, radio e streaming di solito sono molto più forti. Questo valore abbassa tutto ciò che non ha tag finché ReplayGain è attivo (−6 dB di solito va bene). Per applicarlo MPD si riavvia brevemente e la riproduzione si ferma.',
   'pb.rgMissingBusy': 'MPD si sta riavviando …',
+  'pb.rgMissingByHand': 'Impostato a mano nel modello MPD di Volumio ({n} dB); vale così com\'è.',
   'pb.rgMissingFail': 'Non è stato possibile riavviare MPD; l\'impostazione è salvata e vale dal prossimo avvio di Xplorio.',
   'pb.norm': 'Normalizzazione di Volumio',
   'pb.normState': 'Normalizzazione',

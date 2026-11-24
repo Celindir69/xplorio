@@ -76,6 +76,7 @@ ControllerXplorio.prototype.onVolumioStart = function() {
   if (this.config.get('port') === undefined) this.config.set('port', 4040);
   if (this.config.get('tagService') === undefined) this.config.set('tagService', true);
   if (this.config.get('vuOutput') === undefined) this.config.set('vuOutput', true);
+  if (this.config.get('streamPreamp') === undefined) this.config.set('streamPreamp', '0');
   this.defaults();
   this.vuHook(true);                                  /* early, so the MPD plugin has it when it writes mpd.conf at boot */
   return libQ.resolve();
@@ -95,7 +96,8 @@ ControllerXplorio.prototype.onStart = function() {
   self.writeConfig();
   self.writeEnv();
   self.vuHook(true);
-  self.vuSync();
+  self.mpdSync();
+  self.restEndpoint(true);
   var amp = self.ampPlugin(), failed = null;
   var todo = SERVICES.filter(function(s){ return !s.id || (self.config.get(s.id) && !(amp && s.id === 'rotelBridge')); });   /* not both on the amplifier */
   if (amp && self.config.get('rotelBridge')) self.logger.info('Xplorio: SerialAmpControl is on, Rotel bridge not started');
@@ -129,6 +131,7 @@ ControllerXplorio.prototype.onStart = function() {
 ControllerXplorio.prototype.onStop = function() {
   var self = this, defer = libQ.defer(), left = SERVICES.length;
   self.vuHook(false);                                 /* removed or switched off: Volumio must not call into it any more */
+  self.restEndpoint(false);
   SERVICES.forEach(function(s){ self.systemctl('stop', s.unit, function(){ if (--left === 0) defer.resolve(); }); });
   return defer.promise;
 };
@@ -147,7 +150,7 @@ ControllerXplorio.prototype.systemctl = function(action, unit, cb) {
 ControllerXplorio.prototype.writeEnv = function() {
   var web = path.join(APP, 'web'), envs = {
     'xplorio-web':   {HTTP_PORT: this.port(), XPLORIO_WWW: APP},
-    'xplorio-tags':  {APP_CONFIG_DIR: web, TAGS_DATA: path.join(DATA, 'data')},
+    'xplorio-tags':  {APP_CONFIG_DIR: web, TAGS_DATA: path.join(DATA, 'data'), XPLORIO_PLUGIN: 1},   /* the plugin's REST endpoint is there */
     'xplorio-rotel': {APP_CONFIG_DIR: web}
   };
   try {
@@ -219,6 +222,11 @@ ControllerXplorio.prototype.getUIConfig = function() {
     ['tagService', 'rotelBridge', 'vuOutput'].forEach(function(id){ el(id).value = !!self.config.get(id); });
     var vuNote = !self.mpd() ? 'VU_NO_HOOK' : vuInTemplate() ? 'VU_BY_HAND' : '';
     if (vuNote) el('vuOutput').doc = self.str('VU_OUTPUT_DOC') + ' ' + self.str(vuNote);
+    var sp = el('streamPreamp'), spv = self.preamp();
+    sp.options = PREAMPS.map(function(o){ return {value: o, label: o === '0' ? self.str('PREAMP_0') : o.replace('-', '−') + ' dB'}; });
+    sp.value = sp.options.filter(function(o){ return o.value === String(spv); })[0] || sp.options[0];
+    var spNote = !self.mpd() ? 'VU_NO_HOOK' : preampInTemplate() ? 'PREAMP_BY_HAND' : '';
+    if (spNote) sp.doc = self.str('PREAMP_DOC') + ' ' + self.str(spNote);
     FIELDS.forEach(function(f){
       var e = el(f.id), v = self.config.get(f.id);
       if (f.kind === 'bool') { e.value = !!v; return; }
@@ -269,6 +277,9 @@ ControllerXplorio.prototype.saveSettings = function(data) {
     if (!(p >= 1024 && p <= 65535) || p === 3000) err = 'BAD_PORT'; else set.port = p;
   }
   ['tagService', 'rotelBridge', 'vuOutput'].forEach(function(id){ if (has(id)) set[id] = !!data[id]; });
+  if (has('streamPreamp')) {
+    if (PREAMPS.indexOf(String(val('streamPreamp'))) < 0) err = 'BAD_DB'; else set.streamPreamp = String(val('streamPreamp'));
+  }
   FIELDS.forEach(function(f){
     if (!has(f.id) || err) return;
     var v = check(f, val(f.id));
@@ -345,20 +356,28 @@ ControllerXplorio.prototype.saveKeys = function(vals) {
   this.logger.info('Xplorio: ' + ({DISCOGS_TOKEN: 'Discogs', LISTENBRAINZ_TOKEN: 'ListenBrainz'}[name] || 'Last.fm') + ' access ' + (vals && (!name || vals[name] !== null) ? 'saved' : 'deleted'));
 };
 
-/* ---------- VU meter: MPD's fifo output, added to Volumio's own mpd.conf ----------
+/* ---------- additions to Volumio's own mpd.conf: VU meter output and the level of radio and streams ----------
    Xplorio never writes mpd.conf itself. Volumio's MPD plugin builds it from its template and appends what plugins return
-   through registerConfigCallback, on every rebuild (boot, playback settings). With "VU meter" on, Xplorio returns the fifo
-   output (switched off; the tag service switches it on only while someone looks at the meters, tags/vumeter.js). Is a VU
-   output already in the template (added by hand), nothing is added. */
+   through registerConfigCallback, on every rebuild (boot, playback settings).
+   VU meter: with the switch on, Xplorio returns the fifo output (switched off; the tag service switches it on only while
+   someone looks at the meters, tags/vumeter.js). Is a VU output already in the template (added by hand), nothing is added.
+   Radio and streams: replaygain_missing_preamp (dB) for everything without ReplayGain tags while ReplayGain is on. Tagged
+   files are levelled to about -18 LUFS, streams are usually much louder. 0 = MPD's default (line left out); one in the
+   template stays as it is. Same values as on the Mac (tags/macaudio.js). */
 var VU_BLOCK = 'audio_output {\n    type            "fifo"\n    name            "VU"\n    path            "/tmp/mpd-vu.fifo"\n' +
                '    format          "44100:16:2"\n    enabled         "no"\n}\n';
+var PREAMPS = ['0', '-3', '-6', '-9', '-12'];
+var PREAMP_RE = /^[ \t]*replaygain_missing_preamp[ \t]+"?(-?\d+(?:\.\d+)?)/m;
 var MPD_TMPL = process.env.XPLORIO_MPD_TMPL || '/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl';
 var MPD_CONF = process.env.XPLORIO_MPD_CONF || '/etc/mpd.conf';
+var MPD_ADDR = {host: process.env.MPD_HOST || '127.0.0.1', port: +process.env.MPD_PORT || 6600};
 var VU_HOOK = {type: 'user_interface', plugin: 'xplorio', data: 'getMpdConfig'};
 function vuOutputIn(text) {
   return require(path.join(APP, 'tags', 'remote.js')).confOutputs(text).some(function(o){ return o.type === 'fifo' && /vu/i.test(o.name); });
 }
 function vuInTemplate() { return vuOutputIn(read(MPD_TMPL)); }
+function preampIn(text) { var m = PREAMP_RE.exec(text); return m ? +m[1] : 0; }
+function preampInTemplate() { return PREAMP_RE.test(read(MPD_TMPL)); }
 
 ControllerXplorio.prototype.mpd = function() {
   var pm = this.commandRouter.pluginManager, m = null;
@@ -374,22 +393,88 @@ ControllerXplorio.prototype.vuHook = function(on) {
   for (var i = list.length - 1; i >= 0; i--) if (list[i] && list[i].plugin === VU_HOOK.plugin && list[i].data === VU_HOOK.data) list.splice(i, 1);
   if (on) m.registerConfigCallback({type: VU_HOOK.type, plugin: VU_HOOK.plugin, data: VU_HOOK.data});
 };
+/* level for radio and streams as set (dB, 0 = unchanged) */
+ControllerXplorio.prototype.preamp = function() {
+  var v = this.config && String(this.config.get('streamPreamp'));
+  return PREAMPS.indexOf(v) >= 0 ? +v : 0;
+};
 /* called by the MPD plugin while it builds mpd.conf; the text is appended as it is (always a string) */
 ControllerXplorio.prototype.getMpdConfig = function() {
-  return this.config && this.config.get('vuOutput') && !vuInTemplate() ? VU_BLOCK : '';
+  var text = this.config && this.config.get('vuOutput') && !vuInTemplate() ? VU_BLOCK : '', db = this.preamp();
+  if (db && !preampInTemplate()) text += 'replaygain_missing_preamp "' + db + '"\n';
+  return text;
 };
-/* mpd.conf as it should be with the switch? Otherwise let the MPD plugin rebuild it and restart MPD (only then:
-   switched on or off, or the first start after installing) */
-ControllerXplorio.prototype.vuSync = function() {
+/* mpd.conf as it should be with the settings? Otherwise let the MPD plugin rebuild it and restart MPD (only then:
+   a setting changed, or the first start after installing). MPD forgets the ReplayGain mode set at runtime (Xplorio's
+   "Playback" page) when it restarts: it is set again afterwards. cb(err) optional */
+ControllerXplorio.prototype.mpdSync = function(cb) {
   var self = this, m = self.mpd();
-  if (!m || typeof m.createMPDFile !== 'function') return;
-  var conf = read(MPD_CONF), want = !!self.getMpdConfig(), has = vuOutputIn(conf);
-  if (want ? has : conf.indexOf(VU_BLOCK) < 0) return;              /* off: only our own block goes, one added by hand stays */
-  self.logger.info('Xplorio: VU output ' + (want ? 'added to' : 'removed from') + ' mpd.conf, MPD restarts');
-  m.createMPDFile(function(err){
-    if (err) return self.logger.error('Xplorio: mpd.conf not rebuilt: ' + err);
-    if (typeof m.restartMpd === 'function') m.restartMpd(function(){});
+  cb = cb || function(){};
+  if (!m || typeof m.createMPDFile !== 'function') return cb(new Error('nohook'));
+  var conf = read(MPD_CONF), want = self.getMpdConfig(), vu = want.indexOf(VU_BLOCK) >= 0;
+  var vuOk = vu ? vuOutputIn(conf) : conf.indexOf(VU_BLOCK) < 0;  /* off: only our own block goes, one added by hand stays */
+  var preOk = preampInTemplate() || preampIn(conf) === self.preamp();
+  if (vuOk && preOk) return cb(null);
+  self.logger.info('Xplorio: mpd.conf rebuilt (VU output ' + (vu ? 'on' : 'off') + ', radio and streams ' + self.preamp() + ' dB), MPD restarts');
+  self.mpdCmd('replay_gain_status', function(e, rg){
+    var mode = !e && /^replay_gain_mode: (off|track|album|auto)$/m.exec(rg || '');
+    m.createMPDFile(function(err){
+      if (err) { self.logger.error('Xplorio: mpd.conf not rebuilt: ' + err); return cb(new Error('conf')); }
+      if (typeof m.restartMpd !== 'function') return cb(null);
+      m.restartMpd(function(err2){
+        if (err2) { self.logger.error('Xplorio: MPD did not restart: ' + err2); return cb(new Error('restart')); }
+        if (!mode || mode[1] === 'off') return cb(null);
+        self.mpdCmd('replay_gain_mode ' + mode[1], function(){ cb(null); }, 20);
+      });
+    });
+  }, 0);
+};
+/* one MPD command on its own connection; tries: MPD may still be starting. cb(err, answer text) */
+ControllerXplorio.prototype.mpdCmd = function(cmd, cb, tries) {
+  var self = this, done = false, buf = '';
+  var sock = net.connect(MPD_ADDR.port, MPD_ADDR.host);
+  function end(e, text) {
+    if (done) return; done = true; sock.destroy();
+    if (e && tries > 0) return setTimeout(function(){ self.mpdCmd(cmd, cb, tries - 1); }, 500);
+    cb(e, text);
+  }
+  sock.setTimeout(5000, function(){ end(new Error('timeout')); });
+  sock.on('error', function(e){ end(e); });
+  sock.on('data', function(d){
+    buf += d;
+    if (buf.indexOf('OK MPD') === 0 && buf.indexOf('\n') > 0 && !sock.sent) { sock.sent = true; buf = ''; sock.write(cmd + '\n'); return; }
+    if (/^(OK|ACK.*)$/m.test(buf)) end(/^ACK/m.test(buf) ? new Error('ack') : null, buf);
   });
+};
+/* REST for Xplorio's "Playback" page (POST /api/v1/pluginEndpoint {endpoint: 'xplorio', data}), reached through the
+   tag service, which checks the password first: {action: 'preamp'} = state, {action: 'preamp', db} = set (MPD restarts) */
+var REST_ENDPOINT = {endpoint: 'xplorio', type: 'user_interface', name: 'xplorio', method: 'restApi'};
+ControllerXplorio.prototype.restEndpoint = function(on) {
+  var r = this.commandRouter, fn = on ? 'addPluginRestEndpoint' : 'removePluginRestEndpoint';
+  try { if (typeof r[fn] === 'function') r[fn](REST_ENDPOINT); } catch (e) { this.logger.error('Xplorio: REST endpoint: ' + e.message); }
+};
+ControllerXplorio.prototype.restApi = function(data) {
+  var self = this, defer = libQ.defer();
+  data = data || {};
+  function state() {
+    return {ok: true, missingPreamp: preampIn(read(MPD_CONF)), missingPreamps: PREAMPS.map(Number), byHand: preampInTemplate(), hook: !!self.mpd()};
+  }
+  if (data.action !== 'preamp') return libQ.resolve({ok: false, error: 'action'});
+  if (data.db === undefined) return libQ.resolve(state());
+  var db = String(parseInt(data.db, 10));
+  if (PREAMPS.indexOf(db) < 0) return libQ.resolve({ok: false, error: 'value'});
+  if (!self.mpd()) return libQ.resolve({ok: false, error: 'conf'});
+  if (preampInTemplate()) return libQ.resolve({ok: false, error: 'byhand'});
+  if (self.preampBusy) return libQ.resolve({ok: false, error: 'busy'});
+  self.preampBusy = true;
+  self.config.set('streamPreamp', db);
+  self.mpdSync(function(err){
+    self.preampBusy = false;
+    var r = state();
+    if (err) { r.ok = false; r.error = err.message === 'restart' ? 'restart' : 'conf'; }
+    defer.resolve(r);
+  });
+  return defer.promise;
 };
 
 /* ---------- helpers ---------- */

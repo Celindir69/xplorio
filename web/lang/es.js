@@ -813,6 +813,7 @@ langRegister('es', 'Español', {
   'pb.db': '{n} dB',
   'pb.rgMissingNote': 'Las pistas con etiquetas ReplayGain se ajustan a unos −18 LUFS; la radio y el streaming suelen sonar mucho más fuerte. Este valor baja todo lo que no tiene etiquetas mientras ReplayGain está activo (−6 dB suele ir bien). Para aplicarlo, MPD se reinicia un momento y la reproducción se detiene.',
   'pb.rgMissingBusy': 'MPD se está reiniciando …',
+  'pb.rgMissingByHand': 'Fijado a mano en la plantilla MPD de Volumio ({n} dB); se aplica tal cual.',
   'pb.rgMissingFail': 'No se pudo reiniciar MPD; el ajuste está guardado y se aplica en el próximo inicio de Xplorio.',
   'pb.norm': 'Normalización de Volumio',
   'pb.normState': 'Normalización',

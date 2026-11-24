@@ -2305,23 +2305,60 @@ var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mp
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
-/* on the Mac: gain for radio, streaming and files without ReplayGain tags (mpd.conf, macaudio.js), in every answer */
-function withPreamp(r) {
+/* gain for radio, streaming and files without ReplayGain tags (replaygain_missing_preamp), in every answer.
+   On the Mac in its own mpd.conf (macaudio.js). With Volumio through the Xplorio plugin (XPLORIO_PLUGIN, set by the
+   plugin): it adds the line to Volumio's mpd.conf by Volumio's interface for plugins (plugin/index.js, restApi);
+   without the plugin (installed by hand, old plugin) the choice is not offered */
+function preampViaPlugin() { return !playerIsMpd() && !!process.env.XPLORIO_PLUGIN; }
+function volumioPlugin(data, ms, cb) {
+  var done = false, body = JSON.stringify({endpoint: 'xplorio', data: data});
+  function finish(e, j) { if (!done) { done = true; cb(e, j); } }
+  var opts = url.parse(VOLUMIO_URL + '/api/v1/pluginEndpoint');
+  opts.method = 'POST'; opts.headers = {'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body)};
+  var req = http.request(opts, function(res){
+    var text = '';
+    res.setEncoding('utf8');
+    res.on('data', function(d){ text += d; if (text.length > 65536) { req.abort(); finish(new Error('response too large')); } });
+    res.on('end', function(){
+      var j = null;
+      try { j = JSON.parse(text); } catch (e) { return finish(e); }
+      var r = j && j.data && typeof j.data.ok === 'boolean' ? j.data : null;
+      finish(r ? null : new Error('noplugin'), r);
+    });
+  });
+  req.setTimeout(ms, function(){ req.abort(); finish(new Error('timeout')); });
+  req.on('error', finish);
+  req.end(body);
+}
+function withPreamp(r, cb) {
   if (r && r.ok && onMac() && MAC_MPD_CONF) { r.missingPreamp = macaudio.missingPreamp(macAudio.conf()); r.missingPreamps = macaudio.PREAMPS; }
-  return r;
+  if (!r || !r.ok || !preampViaPlugin()) return cb(r);
+  volumioPlugin({action: 'preamp'}, 5000, function(e, p){
+    if (!e && p.ok && p.hook) { r.missingPreamp = p.missingPreamp; r.missingPreamps = p.missingPreamps; r.preampByHand = !!p.byHand; }
+    cb(r);
+  });
 }
 function doPlaybackGet(query, cb) {
-  playCtl.read(function(r){ cb(r.ok ? 200 : 503, withPreamp(r)); });
+  playCtl.read(function(r){ withPreamp(r, function(r2){ cb(r.ok ? 200 : 503, r2); }); });
 }
 function doPlaybackSet(body, cb) {
-  if (!body || body.missingPreamp === undefined) return playCtl.set(body, function(c, r){ cb(c, withPreamp(r)); });
-  if (!onMac() || !MAC_MPD_CONF) return cb(400, {ok: false, error: 'conf'});
+  if (!body || body.missingPreamp === undefined) return playCtl.set(body, function(c, r){ withPreamp(r, function(r2){ cb(c, r2); }); });
+  var mac = onMac() && MAC_MPD_CONF;
+  if (!mac && !preampViaPlugin()) return cb(400, {ok: false, error: 'conf'});
   var bad = authFail(body);
   if (bad) return cb(200, {ok: false, error: bad});
+  var db = parseInt(body.missingPreamp, 10) || 0;
+  if (!mac) {                       /* Volumio: the plugin rebuilds mpd.conf, restarts MPD and sets the ReplayGain mode again */
+    return volumioPlugin({action: 'preamp', db: db}, 60000, function(e, p){
+      if (e) return cb(200, {ok: false, error: 'mpd'});
+      if (!p.ok) return cb(200, {ok: false, error: /^(value|restart|busy|byhand)$/.test(p.error) ? p.error : 'mpd'});
+      doPlaybackGet({}, cb);
+    });
+  }
   /* MPD restarts with the new mpd.conf; the ReplayGain mode set at runtime is set again afterwards */
   mpdOne('replay_gain_status', function(e, rg){
     var mode = !e && rg && rg.replay_gain_mode;
-    macAudio.setMissingPreamp(parseInt(body.missingPreamp, 10) || 0, function(err){
+    macAudio.setMissingPreamp(db, function(err){
       if (err) return cb(200, {ok: false, error: /^(value|restart|busy)$/.test(err.message) ? err.message : 'mpd'});
       if (!mode) return doPlaybackGet({}, cb);
       mpdOne('replay_gain_mode ' + mode, function(){ doPlaybackGet({}, cb); });
