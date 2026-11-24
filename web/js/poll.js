@@ -45,6 +45,25 @@ function mqaAttach(st) {
       if (qualityState && qualityState.uri === uri) paintQuality(qualityState);
     }).catch(function(){ delete mqaPending[uri]; });
 }
+/* Bitrate of a lossy file (GET /bitrate from the tag service): Volumio's getState has none for files, MPD's status only
+   the bitrate of the moment (jumps with VBR). Once per file; m4a only once the probe found AAC */
+var brCache = {}, brPending = {};
+var BR_LOSSY = /\.(mp3|mp2|aac|ogg|oga|opus|wma|m4a|mp4|m4b)$/i;
+function bitrateAttach(st) {
+  var uri = st.uri;
+  if (!uri || !BR_LOSSY.test(uri) || typeof TAGS === 'undefined' || typeof isLocalTrack !== 'function' || !isLocalTrack(st)) return;
+  if (/\.(m4a|mp4|m4b)$/i.test(uri) && !(st.fileCodec && st.fileCodec.codec === 'aac')) return;
+  if (brCache.hasOwnProperty(uri)) { st.fileKbps = brCache[uri]; return; }
+  if (brPending[uri]) return;
+  brPending[uri] = true;
+  withTimeout(fetch(TAGS + '/bitrate?uri=' + encodeURIComponent(uri)), 8000).then(function(r){ return r.json(); })
+    .then(function(j){
+      delete brPending[uri];
+      if (!j || !j.ok) return;
+      brCache[uri] = j.kbps ? {kbps: j.kbps, vbr: !!j.vbr} : null;
+      if (qualityState && qualityState.uri === uri) paintQuality(qualityState);
+    }).catch(function(){ delete brPending[uri]; });
+}
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
@@ -52,6 +71,7 @@ function paintQuality(st) {
   if (inp) { mTech.dataset.key = ''; mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
   mqaAttach(st);
+  bitrateAttach(st);
   var rq = typeof remoteQuality === 'function' ? remoteQuality() : null;   /* listening here: the stream (MP3 etc.) */
   var q = rq || classifyQuality(st, window.APP_CONFIG);
   rgFetch(st);

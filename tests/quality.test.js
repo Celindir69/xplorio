@@ -35,6 +35,18 @@ var cases = [
     'mqa', 'MQA', ['44.1 kHz', '24 bit', 'FLAC', 'Original 192 kHz']],
   ['[assumed] MQA without original rate', {trackType:'flac', samplerate:'48 kHz', bitdepth:'24 bit', service:'mpd', fileMqa:{orig:null}},
     'mqa', 'MQA', ['48 kHz', '24 bit', 'FLAC']],
+  ['[assumed] MP3 with bitrate from the file (CBR)', {trackType:'mp3', samplerate:'44.1 kHz', bitdepth:'24 bit', service:'mpd', fileKbps:{kbps:320, vbr:false}},
+    'lossy', 'Lossy', ['44.1 kHz', 'MP3', '320 kbps']],
+  ['[assumed] MP3 VBR: average from the file wins over MPD\'s bitrate of the moment', {trackType:'mp3', samplerate:'44.1 kHz', bitdepth:'24 bit', bitrate:'287 Kbps', service:'mpd', fileKbps:{kbps:245, vbr:true}},
+    'lossy', 'Lossy', ['44.1 kHz', 'MP3', 'VBR 245 kbps']],
+  ['[assumed] MP3 in MPD mode, file not readable: MPD\'s bitrate', {trackType:'mp3', samplerate:'44.1 kHz', bitdepth:'24 bit', bitrate:'256 Kbps', service:'mpd', fileKbps:null},
+    'lossy', 'Lossy', ['44.1 kHz', 'MP3', '256 kbps']],
+  ['[assumed] Opus', {trackType:'opus', samplerate:'48 kHz', bitdepth:'', service:'mpd', fileKbps:{kbps:134, vbr:false}},
+    'lossy', 'Lossy', ['48 kHz', 'OPUS', '134 kbps']],
+  ['[assumed] AAC m4a (probe) with bitrate', {trackType:'m4a', samplerate:'44.1 kHz', bitdepth:'16 bit', service:'mpd', fileCodec:{codec:'aac'}, fileKbps:{kbps:256, vbr:false}},
+    'lossy', 'Lossy', ['44.1 kHz', 'AAC', '256 kbps']],
+  ['[assumed] FLAC ignores a bitrate', {trackType:'flac', samplerate:'44.1 kHz', bitdepth:'16 bit', bitrate:'900 Kbps', service:'mpd', fileKbps:{kbps:900, vbr:false}},
+    'lossless', 'Lossless', ['44.1 kHz', '16 bit', 'FLAC']],
   ['empty', {}, '', '', []]
 ];
 var fail = 0;
