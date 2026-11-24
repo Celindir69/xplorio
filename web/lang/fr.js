@@ -1411,7 +1411,7 @@ langRegister('fr', 'Français', {
   'tag.ana.err.other': 'Impossible de lancer l’analyse.',
   'tag.rec.manual': 'Chercher soi-même (artiste et album)',
   'tag.rec.search': 'Chercher',
-  'tag.rec.noDiscogs': 'Discogs nécessite un jeton personnel (Réglages > Discogs).',
+  'tag.rec.noDiscogs': 'Discogs nécessite un jeton personnel (Réglages > Discogs ; sur Volumio : Plugins > Xplorio > Réglages > Discogs).',
   'tag.rec.noneFound': 'Rien trouvé. Essaie une recherche plus courte ou un autre service.',
   'tag.rec.results': '{n} résultats, ✓ = correspond aux {m} fichiers. Touche pour l’aperçu.',
   'tag.rec.loading': 'Chargement de la liste des titres …',

@@ -243,6 +243,8 @@ ControllerXplorio.prototype.getUIConfig = function() {
     el('lastfmSecret').label = self.str('LASTFM_SECRET') + ' (' + self.str(k.LASTFM_SECRET ? 'STATE_SAVED' : 'STATE_NONE') + ')';
     el('listenbrainzToken').doc = self.str('LB_TOKEN_DOC') + ' ' + self.str(k.LISTENBRAINZ_TOKEN ? 'LASTFM_SAVED' : 'LASTFM_NONE');
     el('listenbrainzToken').label = self.str('LB_TOKEN') + ' (' + self.str(k.LISTENBRAINZ_TOKEN ? 'STATE_SAVED' : 'STATE_NONE') + ')';
+    el('discogsToken').doc = self.str('DC_TOKEN_DOC') + ' ' + self.str(k.DISCOGS_TOKEN ? 'LASTFM_SAVED' : 'LASTFM_NONE');
+    el('discogsToken').label = self.str('DC_TOKEN') + ' (' + self.str(k.DISCOGS_TOKEN ? 'STATE_SAVED' : 'STATE_NONE') + ')';
     if (pwSet) el('password').label = self.str('PASSWORD_NEW');
     else el('password').label = self.str('PASSWORD') + ' (' + self.str('STATE_NO_PASSWORD') + ')';
     if (!pwSet) ui.sections.forEach(function(sec){                 /* nothing to confirm yet: no field for the current one */
@@ -276,6 +278,7 @@ ControllerXplorio.prototype.saveSettings = function(data) {
   var key = String(data.lastfmKey || '').trim(), secret = String(data.lastfmSecret || '').trim();
   if (!err && (!/^[A-Za-z0-9]{0,64}$/.test(key) || !/^[A-Za-z0-9]{0,64}$/.test(secret))) err = 'LASTFM_BAD';
   if (!err && !/^(|[A-Za-z0-9-]{20,100})$/.test(String(data.listenbrainzToken || '').trim())) err = 'LB_BAD';
+  if (!err && !/^(|[A-Za-z0-9]{10,100})$/.test(String(data.discogsToken || '').trim())) err = 'DC_BAD';   /* as tags/macsettings.js */
   var pw = String(data.password || '');
   if (!err && pw && pw.length < 4) err = 'PASSWORD_SHORT';
   if (err) { self.toast('error', self.str(err)); return libQ.resolve({}); }
@@ -303,12 +306,19 @@ ControllerXplorio.prototype.applySettings = function(data, set, key, secret, pw)
     try { self.saveKeys(data.listenbrainzClear ? {LISTENBRAINZ_TOKEN: null} : {LISTENBRAINZ_TOKEN: lb}); }
     catch (e) { self.toast('error', self.str('LASTFM_FAIL').replace('{error}', e.message)); return libQ.resolve({}); }
   }
+  var dc = String(data.discogsToken || '').trim();
+  if (data.discogsClear || dc) {
+    try { self.saveKeys(data.discogsClear ? {DISCOGS_TOKEN: null} : {DISCOGS_TOKEN: dc}); }
+    catch (e) { self.toast('error', self.str('LASTFM_FAIL').replace('{error}', e.message)); return libQ.resolve({}); }
+  }
   if (pw) {
     try { self.auth().setPassword(pw); self.logger.info('Xplorio: password for the System page set'); }
     catch (e) { self.toast('error', self.str('PASSWORD_FAIL').replace('{error}', e.message)); return libQ.resolve({}); }
   }
   Object.keys(set).forEach(function(k){ self.config.set(k, set[k]); });
-  if (!Object.keys(set).length) { self.toast('success', self.str(pw ? 'PASSWORD_SAVED' : (data.listenbrainzClear || lb) && !key && !secret && !data.lastfmClear ? 'LB_STORED' : 'LASTFM_STORED')); return libQ.resolve({}); }
+  var lfm = key || secret || data.lastfmClear;
+  if (!Object.keys(set).length) { self.toast('success', self.str(pw ? 'PASSWORD_SAVED' : (data.discogsClear || dc) && !lfm ? (data.discogsClear ? 'DC_CLEARED' : 'DC_STORED') :
+                                                                (data.listenbrainzClear || lb) && !lfm ? 'LB_STORED' : 'LASTFM_STORED')); return libQ.resolve({}); }
   return self.onStop().then(function(){ return self.onStart(); }).then(function(){ self.toast('success', self.str('SAVED')); return {}; });
 };
 
@@ -324,14 +334,15 @@ ControllerXplorio.prototype.keys = function() {
   var appdata = require(path.join(APP, 'tags', 'appdata.js'));
   return new appdata.Keys(path.join(DATA, 'data'));
 };
-/* vals: {LASTFM_KEY, LASTFM_SECRET, LISTENBRAINZ_TOKEN} (empty = keep, null = delete that one), null = delete both Last.fm entries */
+/* vals: {LASTFM_KEY, LASTFM_SECRET, LISTENBRAINZ_TOKEN, DISCOGS_TOKEN} (empty = keep, null = delete that one), null = delete both Last.fm entries */
 ControllerXplorio.prototype.saveKeys = function(vals) {
   var keys = this.keys(), k = {}, cur = keys.read();
   Object.keys(cur).forEach(function(n){ k[n] = cur[n]; });
   if (!vals) { delete k.LASTFM_KEY; delete k.LASTFM_SECRET; }
   else Object.keys(vals).forEach(function(n){ if (vals[n]) k[n] = vals[n]; else if (vals[n] === null) delete k[n]; });
   keys.write(k);
-  this.logger.info('Xplorio: ' + (vals && vals.LISTENBRAINZ_TOKEN !== undefined ? 'ListenBrainz' : 'Last.fm') + ' access ' + (vals && (vals.LISTENBRAINZ_TOKEN !== null) ? 'saved' : 'deleted'));
+  var name = vals && vals.DISCOGS_TOKEN !== undefined ? 'DISCOGS_TOKEN' : vals && vals.LISTENBRAINZ_TOKEN !== undefined ? 'LISTENBRAINZ_TOKEN' : '';
+  this.logger.info('Xplorio: ' + ({DISCOGS_TOKEN: 'Discogs', LISTENBRAINZ_TOKEN: 'ListenBrainz'}[name] || 'Last.fm') + ' access ' + (vals && (!name || vals[name] !== null) ? 'saved' : 'deleted'));
 };
 
 /* ---------- VU meter: MPD's fifo output, added to Volumio's own mpd.conf ----------
