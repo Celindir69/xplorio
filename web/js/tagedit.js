@@ -491,7 +491,7 @@ function tagRecognizeSection(good) {
     var a = ai.value.trim(), b = al.value.trim(), s = src.value, my = ++seq;
     if (!a && !b) return;
     try { localStorage.setItem('tagRecSource', s); } catch (e) { /* none */ }
-    go.disabled = true; note(T('tag.rec.searching'));
+    go.disabled = true; note(T('tag.rec.searchingIn', {src: T('tag.rec.src.' + s)}));   /* not the MusicBrainz text of "Album erkennen" */
     tagPost('/albumsearch', {uris: uris, artist: a, album: b, source: s}).then(function(res){
       go.disabled = false;
       if (my !== seq) return;
@@ -529,16 +529,20 @@ function tagRecognizeSection(good) {
       if (i === 0 && c.match === 'exact' && tagAutoRecognize) apply(c);
     });
   }
+  /* shares seq with search(): whichever was started last fills the list (an "Album erkennen" still running when opening
+     the editor no longer replaces the results of a search started meanwhile, nor its text) */
   function run() {
+    var my = ++seq;
     btn.disabled = true;
     note(T('tag.rec.searching'));
     tagPost('/albumid', {uris: uris}).then(function(res){
       btn.disabled = false;
+      if (my !== seq) { tagAutoRecognize = false; return; }
       if (!res.ok) { out.firstChild.textContent = T('tag.error', {error: res.error || T('tag.unknown')}); return; }
       show(res);
       if (!(res.candidates || []).length && tagAutoRecognize) ai.focus();
       tagAutoRecognize = false;
-    }).catch(function(){ btn.disabled = false; out.firstChild.textContent = T('tag.serviceDown'); tagAutoRecognize = false; });
+    }).catch(function(){ btn.disabled = false; if (my === seq) out.firstChild.textContent = T('tag.serviceDown'); tagAutoRecognize = false; });
   }
   btn.addEventListener('click', run);
   if (tagAutoRecognize && oneDir) setTimeout(run, 0);

@@ -1386,6 +1386,7 @@ langRegister('es', 'Español', {
   'tag.bulkButton': 'Edición por lotes (patrón, reemplazar …)',
   'tag.rec.button': 'Reconocer álbum (MusicBrainz)',
   'tag.rec.searching': 'Buscando en MusicBrainz por número y duración de pistas …',
+  'tag.rec.searchingIn': 'Buscando en {src} …',
   'tag.rec.none': 'No se encontró nada. Probablemente este álbum (en esta edición) no está en MusicBrainz.',
   'tag.rec.use': 'Aplicar',
   'tag.rec.filled': 'Sugerencia rellenada. Revísala y luego Guardar.',

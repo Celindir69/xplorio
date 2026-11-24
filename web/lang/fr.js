@@ -1387,6 +1387,7 @@ langRegister('fr', 'Français', {
   'tag.bulkButton': 'Modification groupée (modèle, remplacement …)',
   'tag.rec.button': 'Reconnaître l’album (MusicBrainz)',
   'tag.rec.searching': 'Recherche sur MusicBrainz par nombre et durée des titres …',
+  'tag.rec.searchingIn': 'Recherche sur {src} …',
   'tag.rec.none': 'Rien trouvé. Cet album (dans cette édition) n’est sans doute pas répertorié sur MusicBrainz.',
   'tag.rec.use': 'Appliquer',
   'tag.rec.filled': 'Suggestion remplie. Vérifiez, puis Enregistrer.',

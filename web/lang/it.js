@@ -1386,6 +1386,7 @@ langRegister('it', 'Italiano', {
   'tag.bulkButton': 'Modifica multipla (schema, sostituisci …)',
   'tag.rec.button': 'Riconosci album (MusicBrainz)',
   'tag.rec.searching': 'Ricerca su MusicBrainz per numero e durata delle tracce …',
+  'tag.rec.searchingIn': 'Ricerca su {src} …',
   'tag.rec.none': 'Nessun risultato. Questo album (in questa edizione) probabilmente non è su MusicBrainz.',
   'tag.rec.use': 'Applica',
   'tag.rec.filled': 'Suggerimento inserito. Controlla, poi Salva.',

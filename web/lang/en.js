@@ -1388,6 +1388,7 @@ langRegister('en', 'English', {
   'tag.bulkButton': 'Batch edit (pattern, replace …)',
   'tag.rec.button': 'Recognise album (MusicBrainz)',
   'tag.rec.searching': 'Searching MusicBrainz by track count and lengths …',
+  'tag.rec.searchingIn': 'Searching {src} …',
   'tag.rec.none': 'Nothing found. This album (in this edition) is probably not listed at MusicBrainz.',
   'tag.rec.use': 'Use',
   'tag.rec.filled': 'Suggestion filled in. Please check, then Save.',
