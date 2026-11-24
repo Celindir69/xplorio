@@ -113,3 +113,18 @@ ta('excludes and length; all guarded: the one guarded longest ago; no key: nothi
     });
   });
 });
+
+ta('"don\'t like" and NoMix (skipped): never picked, the next similar artist instead; no list: as before', function(done){
+  var q = [LIB[0]], st = {state: 'play', song: '0'};
+  var a = make(q, st, {skipped: function(){ return {'USB/PSB/1.flac': true}; }});
+  a.s.enabled = true;
+  a.tick(function(e, f){
+    assert.strictEqual(f, 'USB/NO/1.flac');                         /* Pet Shop Boys' only track is NoMix */
+    var b = make([LIB[0]], st, {skipped: function(){ throw new Error('not ready'); }});
+    b.s.enabled = true;
+    b.tick(function(e2, f2){
+      assert.strictEqual(f2, 'USB/PSB/1.flac');                     /* list not available: not blocking */
+      done();
+    });
+  });
+});
