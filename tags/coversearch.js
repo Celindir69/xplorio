@@ -37,7 +37,8 @@ function publicLookup(host, opts, cb) {
 }
 
 /* simple GET with redirects, time and size limit: cb(err, {type, body:Buffer})
-   o.pub: public addresses only (for URLs from third-party data, e.g. station logos) */
+   o.pub: public addresses only (for URLs from third-party data, e.g. station logos)
+   o.timeout: ms without an answer before giving up (default 12 s, also for each redirect) */
 function fetchUrl(u, maxBytes, cb, o) {
   o = typeof o === 'object' && o ? o : {};
   var hops = o.hops || 0;
@@ -56,7 +57,7 @@ function fetchUrl(u, maxBytes, cb, o) {
   var req = (p.protocol === 'https:' ? https : http).get(opts, function(res){
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hops < 4) {
       res.resume();
-      return fetchUrl(url.resolve(u, res.headers.location), maxBytes, finish, {hops: hops + 1, pub: o.pub, headers: o.headers});
+      return fetchUrl(url.resolve(u, res.headers.location), maxBytes, finish, {hops: hops + 1, pub: o.pub, headers: o.headers, timeout: o.timeout});
     }
     if (res.statusCode !== 200) { res.resume(); return finish(new Error('HTTP ' + res.statusCode)); }
     var parts = [], size = 0;
@@ -67,7 +68,7 @@ function fetchUrl(u, maxBytes, cb, o) {
     });
     res.on('end', function(){ finish(null, {type: String(res.headers['content-type'] || ''), body: Buffer.concat(parts)}); });
   });
-  req.setTimeout(12000, function(){ req.abort(); finish(new Error('timeout')); });
+  req.setTimeout(o.timeout || 12000, function(){ req.abort(); finish(new Error('timeout')); });
   req.on('error', function(e){ finish(e); });
 }
 
@@ -111,9 +112,12 @@ function lastfm(artist, album, apiKey, cb) {
   });
 }
 
-function coverArtArchive(artist, album, cb) {
+/* mbJson(url, cb): the shared MusicBrainz queue of the tag service (mbgate.js). A direct request competes with the
+   background collectors for MusicBrainz' one request per second and then often gets 503 (= no hit, only the next
+   search found something) */
+function coverArtArchive(artist, album, mbJson, cb) {
   var q = 'releasegroup:"' + album.replace(/"/g, '') + '"' + (artist ? ' AND artist:"' + artist.replace(/"/g, '') + '"' : '');
-  getJson(BASE.mb + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
+  (mbJson || getJson)(BASE.mb + '/ws/2/release-group/?fmt=json&limit=5&query=' + encodeURIComponent(q), function(e, j){
     var groups = (!e && j && j['release-groups']) || [];
     var hit = groups.filter(function(g){ return (g.score || 0) >= 90 && similar(g.title, album); })[0];
     if (!hit) return cb([]);
@@ -121,28 +125,51 @@ function coverArtArchive(artist, album, cb) {
   });
 }
 
-/* all sources at once; order of the answer: iTunes, Last.fm, Cover Art Archive */
+/* all sources at once; order of the answer: iTunes, Last.fm, Cover Art Archive.
+   opts.mbJson: MusicBrainz requests through this function (queue); opts.waitMs: answer at the latest after this time,
+   a source still waiting (e.g. MusicBrainz paused after 503) then counts as no hit */
 function search(opts, cb) {
   var artist = String(opts.artist || '').trim(), album = String(opts.album || '').trim();
   var jobs = [
     function(done){ itunes(artist, album, done); },
     function(done){ lastfm(artist, album, opts.lastfmKey, done); },
-    function(done){ coverArtArchive(artist, album, done); }
+    function(done){ coverArtArchive(artist, album, opts.mbJson, done); }
   ];
-  var out = new Array(jobs.length), left = jobs.length;
+  var out = jobs.map(function(){ return []; }), left = jobs.length, sent = false, timer = null;
+  function answer() {
+    if (sent) return;
+    sent = true; if (timer) clearTimeout(timer);
+    cb([].concat.apply([], out));
+  }
+  if (opts.waitMs > 0) timer = setTimeout(answer, opts.waitMs);
   jobs.forEach(function(job, i){
-    job(function(list){ out[i] = list; if (--left === 0) cb([].concat.apply([], out)); });
+    var once = false;
+    job(function(list){
+      if (once || sent) return;
+      once = true; out[i] = list || [];
+      if (--left === 0) answer();
+    });
   });
 }
 
-/* load and check image: cb(err, {mime, body}) */
+/* load and check image: cb(err, {mime, body}).
+   Cover Art Archive redirects to archive.org, whose first answer for an image not asked for lately often takes longer
+   than 12 s (the next search then found it at once): more time, and one more try after a timeout, network error or
+   5xx. A release group without a 1200 px thumbnail (404) gets the 500 px one. */
+var IMAGE_TIMEOUT = +process.env.COVER_IMAGE_TIMEOUT_MS || 25000;
+function transient(e) { return !/^HTTP [1-4]\d\d$|too large|invalid URL|not allowed/.test(e && e.message || ''); }
 function image(u, cb) {
-  fetchUrl(u, 10 * 1024 * 1024, function(e, r){
-    if (e) return cb(e);
-    var b = r.body, jpeg = b[0] === 0xff && b[1] === 0xd8, png = b[0] === 0x89 && b[1] === 0x50;
-    if (!jpeg && !png) return cb(new Error('not a JPEG or PNG'));
-    cb(null, {mime: jpeg ? 'image/jpeg' : 'image/png', body: b});
-  });
+  function load(v, tries) {
+    fetchUrl(v, 10 * 1024 * 1024, function(e, r){
+      if (e && tries < 1 && transient(e)) return load(v, tries + 1);
+      if (e && e.message === 'HTTP 404' && /\/front-1200$/.test(v)) return load(v.replace(/-1200$/, '-500'), 1);
+      if (e) return cb(e);
+      var b = r.body, jpeg = b[0] === 0xff && b[1] === 0xd8, png = b[0] === 0x89 && b[1] === 0x50;
+      if (!jpeg && !png) return cb(new Error('not a JPEG or PNG'));
+      cb(null, {mime: jpeg ? 'image/jpeg' : 'image/png', body: b});
+    }, {timeout: IMAGE_TIMEOUT});
+  }
+  load(u, 0);
 }
 
 module.exports = {search: search, image: image, key: key, fetchUrl: fetchUrl, getJson: getJson, privateIp: privateIp};

@@ -942,14 +942,29 @@ function tagCoverSection(good) {
     cFolder.checked = true;
   });
 
+  /* searchSeq: only the latest search may fill the list. An older answer, or an image of an older search that only
+     arrives now, is dropped (it showed covers of another album); the cards of the old search stop loading */
+  var searchSeq = 0;
+  function clearFound() {
+    while (found.firstChild) {
+      var old = found.firstChild;
+      old.onEmpty = null;
+      var im = old.querySelector('img');
+      if (im) { im.onload = im.onerror = null; im.removeAttribute('src'); }
+      found.removeChild(old);
+    }
+    found.style.display = 'none';
+  }
   online.addEventListener('click', function(){
     var nm = curNames(), artist = nm.artist, album = nm.album;
     if (!album) { tagStatus.textContent = T('tag.cover.noAlbum'); return; }
+    var seq = ++searchSeq;
+    function current() { return seq === searchSeq; }
     tagStatus.textContent = T('tag.cover.searching', {album: album});
     online.disabled = true;
-    while (found.firstChild) found.removeChild(found.firstChild);
-    found.style.display = 'none';
+    clearFound();
     tagGetJson('/coversearch?artist=' + encodeURIComponent(artist) + '&album=' + encodeURIComponent(album)).then(function(res){
+      if (seq !== searchSeq) return;
       online.disabled = false;
       if (!res.ok) { tagStatus.textContent = res.error || T('tag.errorShort'); return; }
       var left = res.results.length, countText = null;     /* countText: status last set by count() */
@@ -966,21 +981,22 @@ function tagCoverSection(good) {
         var src = TAGS + '/coverimage?id=' + encodeURIComponent(r.id);
         var card = tagThumb(r.source);
         card.classList.add('tagPick');
-        card.onEmpty = function(){ if (card.parentNode) found.removeChild(card); gone(); };
+        card.onEmpty = function(){ if (!current()) return; if (card.parentNode) found.removeChild(card); gone(); };
         card.show(src);
         card.addEventListener('click', function(){
           tagStatus.textContent = T('tag.cover.preparing');
           fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
             .then(tagPrepareImage)
             .then(function(img){
+              if (!current() || card.parentNode !== found) return;   /* new search started meanwhile */
               Array.prototype.forEach.call(found.children, function(c){ c.classList.toggle('on', c === card); });
               useImage(img, r.source);
-            }).catch(function(e){ tagStatus.textContent = e.message; });
+            }).catch(function(e){ if (current()) tagStatus.textContent = e.message; });
         });
         found.appendChild(card);
       });
       count();
-    }).catch(function(){ online.disabled = false; tagStatus.textContent = T('tag.serviceDown'); });
+    }).catch(function(){ if (seq !== searchSeq) return; online.disabled = false; tagStatus.textContent = T('tag.serviceDown'); });
   });
 
   /* one /cover request; an existing folder.jpg is replaced only after asking -> res, or null when declined */
