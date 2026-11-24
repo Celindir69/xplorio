@@ -118,6 +118,15 @@
 		"LB_CLEAR": "Delete ListenBrainz token",
 		"LB_CLEAR_DOC": "Removes the token from the player when saving.",
 		"LB_BAD": "The ListenBrainz token is invalid (letters, digits and hyphens).",
-		"LB_STORED": "ListenBrainz token saved."
+		"LB_STORED": "ListenBrainz token saved.",
+		"SECTION_DISCOGS": "Discogs",
+		"SECTION_DISCOGS_DOC": "For the Discogs album search in the tag editor. Get a free personal token in your Discogs account at https://www.discogs.com/settings/developers (“Generate new token”).",
+		"DC_TOKEN": "Discogs token",
+		"DC_TOKEN_DOC": "Stays on the player and is not shown again; leave empty to keep the saved one.",
+		"DC_CLEAR": "Delete Discogs token",
+		"DC_CLEAR_DOC": "Removes the token from the player when saving.",
+		"DC_BAD": "The Discogs token is invalid (letters and digits only).",
+		"DC_STORED": "Discogs token saved.",
+		"DC_CLEARED": "Discogs token deleted."
 	}
 }

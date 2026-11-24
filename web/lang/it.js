@@ -1410,7 +1410,7 @@ langRegister('it', 'Italiano', {
   'tag.ana.err.other': 'Impossibile avviare l’analisi.',
   'tag.rec.manual': 'Cerca tu (artista e album)',
   'tag.rec.search': 'Cerca',
-  'tag.rec.noDiscogs': 'Discogs richiede un token personale (Impostazioni > Discogs).',
+  'tag.rec.noDiscogs': 'Discogs richiede un token personale (Impostazioni > Discogs; su Volumio: Plugin > Xplorio > Impostazioni > Discogs).',
   'tag.rec.noneFound': 'Nessun risultato. Prova una ricerca più breve o un altro servizio.',
   'tag.rec.results': '{n} risultati, ✓ = corrisponde ai {m} file. Tocca per l’anteprima.',
   'tag.rec.loading': 'Caricamento dell’elenco brani …',

@@ -394,6 +394,42 @@
 			]
 		},
 		{
+			"id": "section_discogs",
+			"element": "section",
+			"label": "TRANSLATE.XPLORIO.SECTION_DISCOGS",
+			"description": "TRANSLATE.XPLORIO.SECTION_DISCOGS_DOC",
+			"icon": "fa-search",
+			"onSave": {
+				"type": "controller",
+				"endpoint": "user_interface/xplorio",
+				"method": "saveSettings"
+			},
+			"saveButton": {
+				"label": "TRANSLATE.XPLORIO.SAVE",
+				"data": [
+					"discogsToken",
+					"discogsClear"
+				]
+			},
+			"content": [
+				{
+					"id": "discogsToken",
+					"element": "input",
+					"type": "password",
+					"label": "TRANSLATE.XPLORIO.DC_TOKEN",
+					"doc": "TRANSLATE.XPLORIO.DC_TOKEN_DOC",
+					"value": ""
+				},
+				{
+					"id": "discogsClear",
+					"element": "switch",
+					"label": "TRANSLATE.XPLORIO.DC_CLEAR",
+					"doc": "TRANSLATE.XPLORIO.DC_CLEAR_DOC",
+					"value": false
+				}
+			]
+		},
+		{
 			"id": "section_system",
 			"element": "section",
 			"label": "TRANSLATE.XPLORIO.SECTION_SYSTEM",

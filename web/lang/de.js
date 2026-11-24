@@ -1410,7 +1410,7 @@ langRegister('de', 'Deutsch', {
   'tag.ana.err.other': 'Die Analyse ließ sich nicht starten.',
   'tag.rec.manual': 'Selbst suchen (Künstler und Album)',
   'tag.rec.search': 'Suchen',
-  'tag.rec.noDiscogs': 'Discogs braucht einen persönlichen Token (Einstellungen > Discogs).',
+  'tag.rec.noDiscogs': 'Discogs braucht einen persönlichen Token (Einstellungen > Discogs; bei Volumio: Plugins > Xplorio > Einstellungen > Discogs).',
   'tag.rec.noneFound': 'Nichts gefunden. Vielleicht kürzer suchen oder einen anderen Dienst wählen.',
   'tag.rec.results': '{n} Treffer, ✓ = passt zu den {m} Dateien. Tippen zeigt die Vorschau.',
   'tag.rec.loading': 'Titelliste wird geladen …',

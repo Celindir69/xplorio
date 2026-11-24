@@ -197,7 +197,8 @@ sie bekommt (Längen, die mehr als 5 s abweichen, farbig). Hat das Album mehr Ti
 ersten Tags, mit Hinweis. „Übernehmen und speichern“ trägt alles ein und speichert gleich (mit Rückgängig). Auch Alben in
 CD1/CD2-Ordnern lassen sich so zusammen taggen, wenn beide im Editor offen sind (CD-Nummer pro Datei). Discogs braucht
 einen persönlichen Token aus dem Discogs-Konto (Settings > Developers > „Generate new token“): auf dem Mac unter
-Einstellungen > Discogs, auf Volumio als `"DISCOGS_TOKEN": "…"` in `/data/xplorio/data/keys.json`.
+Einstellungen > Discogs, auf Volumio in den Plugin-Einstellungen von Xplorio (Abschnitt „Discogs“; landet als
+`DISCOGS_TOKEN` in `/data/xplorio/data/keys.json`).
 
 Auf dem Mac zeigt der Tag-Editor **„Audioanalyse für dieses Album“**, solange Titel mit Künstler und Titel noch keine
 Audioanalyse haben (Stimmung, Tempo, Tonart). Der Knopf startet sie nur für den Ordner der geöffneten Titel; den

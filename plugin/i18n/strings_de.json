@@ -118,6 +118,15 @@
 		"LB_CLEAR": "ListenBrainz-Token löschen",
 		"LB_CLEAR_DOC": "Entfernt den Token beim Speichern vom Player.",
 		"LB_BAD": "Der ListenBrainz-Token ist ungültig (Buchstaben, Ziffern und Bindestriche).",
-		"LB_STORED": "ListenBrainz-Token gespeichert."
+		"LB_STORED": "ListenBrainz-Token gespeichert.",
+		"SECTION_DISCOGS": "Discogs",
+		"SECTION_DISCOGS_DOC": "Für die Album-Suche bei Discogs im Tag-Editor. Den persönlichen Token bekommst du kostenlos in deinem Discogs-Konto unter https://www.discogs.com/settings/developers („Generate new token“).",
+		"DC_TOKEN": "Discogs-Token",
+		"DC_TOKEN_DOC": "Bleibt auf dem Player und wird nicht wieder angezeigt; leer lassen behält den gespeicherten.",
+		"DC_CLEAR": "Discogs-Token löschen",
+		"DC_CLEAR_DOC": "Entfernt den Token beim Speichern vom Player.",
+		"DC_BAD": "Der Discogs-Token ist ungültig (nur Buchstaben und Ziffern).",
+		"DC_STORED": "Discogs-Token gespeichert.",
+		"DC_CLEARED": "Discogs-Token gelöscht."
 	}
 }

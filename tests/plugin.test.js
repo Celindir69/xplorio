@@ -295,6 +295,20 @@ plug.onStart().then(function(){
     plug.saveKeys({LASTFM_KEY: '', LASTFM_SECRET: 'sec1'});
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1'});
   });
+  t('Discogs: token into keys.json for the album search, other entries stay; invalid ones refused; no restart', function(){
+    ['kurz', 'abc def ghi jkl'].forEach(function(bad){
+      plug.saveSettings({discogsToken: bad});
+      var last = toasts.pop();
+      assert.ok(last[0] === 'error' && /Discogs-Token ist ungültig/.test(last[1]), last);
+    });
+    assert.ok(!JSON.parse(fs.readFileSync(kf, 'utf8')).DISCOGS_TOKEN);
+    calls.length = 0;
+    plug.saveSettings({discogsToken: ' dcTok1234567890 ', discogsClear: false});
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt', LASTFM_KEY: 'abc123', LASTFM_SECRET: 'sec1', DISCOGS_TOKEN: 'dcTok1234567890'});
+    assert.deepStrictEqual(toasts.pop(), ['success', 'Discogs-Token gespeichert.']);
+    assert.strictEqual(plug.keys().discogs(), 'dcTok1234567890');
+    assert.deepStrictEqual(sudo(), []);
+  });
   process.env.XPLORIO_AUTODJ_DIR = T;                               /* AutoDJ installed from here on */
   return plug.getUIConfig();
 }).then(function(ui2){
@@ -304,6 +318,10 @@ plug.onStart().then(function(){
     assert.ok(/Gespeichert/.test(el(ui2, 'lastfmKey').doc) && /Gespeichert/.test(el(ui2, 'lastfmSecret').doc));
     assert.ok(JSON.stringify(ui2).indexOf('abc123') < 0 && JSON.stringify(ui2).indexOf('anders') < 0);
     assert.ok(/Passwort ist gesetzt/.test(el(ui2, 'password').doc));
+    assert.strictEqual(el(ui2, 'discogsToken').label, 'Discogs-Token (gespeichert)');
+    assert.ok(/Gespeichert/.test(el(ui2, 'discogsToken').doc) && JSON.stringify(ui2).indexOf('dcTok') < 0);
+    plug.saveSettings({discogsToken: '', discogsClear: true});
+    assert.deepStrictEqual(toasts.pop(), ['success', 'Discogs-Token gelöscht.']);
     plug.saveSettings({lastfmKey: '', lastfmSecret: '', lastfmClear: true});
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(kf, 'utf8')), {OTHER: 'bleibt'});
     assert.deepStrictEqual(el(ui2, 'rotelModel').options.map(function(o){ return o.value; }), ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']);
