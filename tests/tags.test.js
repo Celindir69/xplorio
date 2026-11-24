@@ -135,6 +135,20 @@ else {
     assert.strictEqual(run({op: 'read', path: path.join(root, 'USB', 'nix.flac')}).ok, false);
   });
 
+  t('tags.py: bitrate of lossy files (MP3 CBR, MP3 VBR with Xing header), FLAC refused', function(){
+    /* MPEG-1 Layer III, 44.1 kHz, joint stereo: frames of 417 bytes at 128 kbps; VBR: an Xing frame first, then 40 frames (flags: frames, bytes, quality) */
+    var mk4 = 'import struct\ndef fr(idx,size,body=b""):\n  return bytes([0xff,0xfb,(idx<<4),0x44])+body+b"\\0"*(size-4-len(body))\n' +
+      'cbr=b"".join(fr(9,417) for _ in range(60))\nopen(%c,"wb").write(cbr)\n' +
+      'frames=[fr(9,417)]*20+[fr(14,1044)]*20\nn=len(frames)\nbody=sum(len(f) for f in frames)\n' +
+      'xing=fr(9,417,b"\\0"*32+b"Xing"+struct.pack(">IIII",11,n,body,78))\nopen(%v,"wb").write(xing+b"".join(frames))\n';
+    var cbr = path.join(root, 'USB', 'c.mp3'), vbr = path.join(root, 'USB', 'v.mp3');
+    cp.spawnSync(py, ['-c', mk4.replace('%c', JSON.stringify(cbr)).replace('%v', JSON.stringify(vbr))]);
+    assert.deepStrictEqual(run({op: 'bitrate', path: cbr}), {ok: true, kbps: 128, vbr: false});
+    var v = run({op: 'bitrate', path: vbr});
+    assert.ok(v.ok && v.vbr, JSON.stringify(v)); assert.ok(v.kbps > 180 && v.kbps < 240, JSON.stringify(v));   /* half 128, half 320 */
+    assert.strictEqual(run({op: 'bitrate', path: path.join(root, 'USB', 'Ärzte', 'a.flac')}).ok, false);
+    assert.strictEqual(run({op: 'bitrate', path: path.join(root, 'USB', 'nix.mp3')}).ok, false);
+  });
   t('tags.py: ReplayGain values from TXXX (any case), none without tags', function(){
     assert.deepStrictEqual(run({op: 'replaygain', path: dsf}), {ok: true, track: null, album: null, mqa: null});
     var set = 'import sys\nsys.path.insert(0, %v)\nfrom mutagen.dsf import DSF\nfrom mutagen.id3 import TXXX\n' +

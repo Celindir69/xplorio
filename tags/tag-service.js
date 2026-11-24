@@ -72,10 +72,10 @@ function libPath(rel, minParts, noTrash) {
 }
 
 /* Volumio URI ("USB/Folder/x.flac", "music-library/USB/…", "/mnt/USB/…") -> absolute path; null if not allowed */
-function resolveUri(uri) {
+function resolveUri(uri, extRe) {
   if (typeof uri !== 'string') return null;
   var rel = uri.replace(/^\/+/, '').replace(/^music-library\//, '').replace(/^mnt\//, '');
-  if (!EXT_RE.test(rel)) return null;
+  if (!(extRe || EXT_RE).test(rel)) return null;
   var p = libPath(rel, 2, false);
   return p && (p.missing ? {rel: rel, full: p.full, missing: true} : {rel: rel, full: p.full});
 }
@@ -2394,6 +2394,34 @@ function doMqa(query, cb) {
   });
 }
 
+/* GET /bitrate?uri=: average bitrate of a lossy file for the player view, {ok, kbps: 320|null, vbr: bool}.
+   Read from the file (MP3 Xing header, Ogg nominal, …): Volumio's getState has none for files, MPD's status only the
+   bitrate of the moment. One Python call per file, cached like the ReplayGain tags (key: path, size, modification time) */
+var LOSSY_EXT_RE = /\.(mp3|mp2|m4a|mp4|m4b|aac|ogg|oga|opus|wma)$/i;
+var brCache = new Map(), BR_CACHE_MAX = 200, brWaiting = {};
+function doBitrate(query, cb) {
+  var r = resolveUri(query.uri, LOSSY_EXT_RE);
+  if (!r || r.missing) return cb(200, {ok: true, kbps: null, vbr: false});
+  fs.stat(r.full, function(e, st){
+    if (e) return cb(200, {ok: false, kbps: null, vbr: false});
+    var stamp = st.size + ':' + st.mtime.getTime(), hit = brCache.get(r.full);
+    if (hit && hit.stamp === stamp) return cb(200, hit.o);
+    var key = r.full + '|' + stamp;
+    if (brWaiting[key]) return brWaiting[key].push(cb);
+    brWaiting[key] = [cb];
+    runPy({op: 'bitrate', path: r.full}, function(p){
+      var o = {ok: !!p.ok, kbps: p.ok && p.kbps > 0 ? p.kbps : null, vbr: !!(p.ok && p.vbr)};
+      if (p.ok) {
+        brCache.delete(r.full);
+        if (brCache.size >= BR_CACHE_MAX) brCache.delete(brCache.keys().next().value);
+        brCache.set(r.full, {stamp: stamp, o: o});
+      }
+      var list = brWaiting[key]; delete brWaiting[key];
+      list.forEach(function(f){ f(200, o); });
+    });
+  });
+}
+
 function doSysinfo(query, res) {
   sysInfo.report(query.full === '1', function(r){ send(res, 200, r); });
 }
@@ -3637,6 +3665,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/radiocover')  return doRadioCover(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/stationlogo') return doStationLogo(url.parse(req.url, true).query, res);
   if (req.method === 'GET' && route === '/playback') return doPlaybackGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/bitrate') return doBitrate(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/mqa') return doMqa(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/replaygain') return doReplayGain(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/sysinfo') return doSysinfo(url.parse(req.url, true).query, res);

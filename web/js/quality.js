@@ -72,7 +72,12 @@ function classifyQuality(st, cfg) {
   if (bits && kind !== 'lossy' && kind !== 'dsd' && bits !== qParseBits(st.bitdepth)) tech.push(bits + ' bit');
   else if (st.bitdepth && kind !== 'lossy') tech.push(st.bitdepth);
   if (fmt) tech.push(fmt);
-  if (kind === 'lossy' && kbps) tech.push(kbps + ' kbps');
+  /* lossy: bitrate from the file (st.fileKbps, poll.js bitrateAttach: average, VBR marked), else what the player reports */
+  if (kind === 'lossy') {
+    var fk = st.fileKbps;
+    if (fk && fk.kbps) tech.push((fk.vbr ? 'VBR ' : '') + fk.kbps + ' kbps');
+    else if (kbps) tech.push(kbps + ' kbps');
+  }
   if (kind === 'mqa' && st.fileMqa.orig) tech.push('Original ' + qRateText(st.fileMqa.orig));
   return { kind: kind, label: label, tech: tech };
 }

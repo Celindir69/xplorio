@@ -27,6 +27,11 @@ ReplayGain values (for the player view, read only):
   {"op":"replaygain", "path":"..."}  -> {"ok":true, "track":-6.53|null, "album":-7.1|null, "mqa":{"orig":192000|null}|null}
                                        (gain in dB; mqa: MQA file per its tags, orig = original sample rate)
 
+Bitrate of a lossy file (player view; also ogg, opus, wma, aac, mp2, which the other jobs do not handle):
+  {"op":"bitrate", "path":"..."}  -> {"ok":true, "kbps":320|null, "vbr":true|false}
+                                    (MP3: from the Xing/VBRI header, else the frame header; Ogg Vorbis: nominal;
+                                    otherwise what mutagen reports, or file size / length as the average)
+
 Values under a name MPD does not read (album artist as "ALBUM ARTIST" or TXXX, date as YEAR or ORIGINALDATE), only
 where the usual field is empty:
   {"op":"hidden", "path":"..."}  -> {"ok":true, "found":{"albumartist":["ALBUM ARTIST","Velvet Static"], "date":["YEAR","1999"]}}
@@ -48,7 +53,7 @@ from mutagen.flac import FLAC  # noqa: E402
 from mutagen.flac import Picture  # noqa: E402
 from mutagen.id3 import (APIC, COMM, TALB, TCMP, TCOM, TCON, TDRC, TIT2, TPE1, TPE2,  # noqa: E402
                          TPOS, TRCK)
-from mutagen.mp3 import MP3  # noqa: E402
+from mutagen.mp3 import MP3, BitrateMode  # noqa: E402
 from mutagen.mp4 import MP4, MP4Cover  # noqa: E402
 
 PY2 = sys.version_info[0] == 2
@@ -530,9 +535,39 @@ def cover_job(job, path, kind, audio):
     return {'ok': True, 'changed': True, 'backup': backup}
 
 
+BITRATE_EXT = ('.mp3', '.mp2', '.m4a', '.mp4', '.m4b', '.aac', '.ogg', '.oga', '.opus', '.wma')
+
+
+def bitrate_job(path):
+    """average bitrate in kbps (rounded) and whether it varies (MP3 VBR); kbps None if unknown"""
+    if os.path.splitext(path)[1].lower() not in BITRATE_EXT:
+        fail('file type not supported')
+    if not os.path.isfile(path):
+        fail('file not found')
+    audio = mutagen.File(path)
+    info = getattr(audio, 'info', None)
+    if info is None:
+        fail('file type not supported')
+    bps = getattr(info, 'bitrate', 0) or 0
+    length = getattr(info, 'length', 0) or 0
+    if not bps and length > 0:                # e.g. Opus: no bitrate in the header, the average from the size
+        bps = os.path.getsize(path) * 8 / length
+    mode = getattr(info, 'bitrate_mode', None)
+    vbr = mode == BitrateMode.VBR             # only MP3 reports a mode
+    kbps = int(round(bps / 1000.0)) if bps > 0 else None
+    return {'ok': True, 'kbps': kbps, 'vbr': bool(vbr and kbps)}
+
+
 def run_job(job):
     path = job.get('path')
     op = job.get('op')
+    if path and op == 'bitrate':
+        if PY2 and isinstance(path, text_type):
+            path = path.encode('utf-8')
+        try:
+            return bitrate_job(path)
+        except (mutagen.MutagenError, IOError, OSError) as e:
+            fail(txt(e))
     if not path or op not in ('read', 'write', 'cover_get', 'cover_has', 'cover_set', 'replaygain',
                               'images_strip', 'images_restore', 'hidden'):
         fail('invalid job')

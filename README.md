@@ -24,7 +24,7 @@ Diese Funktionalitäten sind in anderen Setups nicht nutzbar.
 ## Funktionen
 
 ### Wiedergabe, Lyrics und Infos
-Großes Cover, Titel und Album, Abzeichen für die Klangqualität (Hi-Res, Abtastrate, Bittiefe, Format), Fortschritt,
+Großes Cover, Titel und Album, Abzeichen für die Klangqualität (Hi-Res, Abtastrate, Bittiefe, Format; bei MP3, AAC, Ogg und Opus die Bitrate aus der Datei, „VBR“ bei variabler), Fortschritt,
 Lautstärke und die üblichen Knöpfe. Die Hintergrundfarbe und der Akzent kommen aus dem Cover (nur bei Covern vom Player selbst; bei Streamingdiensten bleibt die Standardfarbe, weil der Browser deren Cover nicht auslesen darf). Lyrics laufen synchron mit
 (lrclib.net); passt der Text nicht genau zur Aufnahme, verschieben „−“ und „+“ ihn in Schritten von 0,5 s, und der Wert
 gilt dann für diesen Titel auf allen Geräten. Die Info-Seite zeigt Album, Künstler, Mitwirkende und was von diesem

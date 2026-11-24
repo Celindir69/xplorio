@@ -21,7 +21,7 @@ Note: Some features were designed to suite my individual setup (Rotel Amp, iPad,
 
 ### Playback, Lyrics, and Information
 
-Large cover art, track and album information, badges for audio quality (Hi-Res, sample rate, bit depth, format), progress,
+Large cover art, track and album information, badges for audio quality (Hi-Res, sample rate, bit depth, format; for MP3, AAC, Ogg and Opus the bitrate from the file, “VBR” when variable), progress,
 volume, and the usual controls. The background color and accent are derived from the cover art (only for covers served by the player itself; streaming services keep the default color, since the browser may not read their covers). Lyrics are synchronized
 (lrclib.net); if the lyrics do not perfectly match the recording, "−" and "+" shift them in 0.5-second increments, and the
 offset then applies to that track on all devices. The information page shows the album, artist, contributors, and which
