@@ -1319,6 +1319,10 @@ function dupFillUndo(batch, cb) {
 var coversearch = require('./coversearch.js');
 var APP_CONFIG_DIR = process.env.APP_CONFIG_DIR || path.join(__dirname, '..', 'web');   /* app/web in the plugin */
 var coverHits = Object.create(null), coverHitIds = [], coverHitSeq = 0;   /* no prototype: ?id=constructor and the like match nothing */
+/* ids unique beyond a restart of the service: the browser keeps /coverimage?id=… for 10 minutes, with a counter starting
+   at 1 again after a restart it showed the cover of an earlier search (another album) */
+var coverHitRun = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+var COVER_WAIT_MS = +process.env.COVER_WAIT_MS || 20000;   /* answer at the latest after this, even if MusicBrainz is paused */
 
 /* reread only when one of the two files has changed (asked for very often) */
 var appConfigCache = null, appConfigStamp = '';
@@ -1340,9 +1344,10 @@ function appConfig() {
 function doCoverSearch(query, cb) {
   var album = String(query.album || '').trim();
   if (!album) return cb(400, {ok: false, error: 'album missing'});
-  coversearch.search({artist: query.artist, album: album, lastfmKey: lfmKeys().key}, function(list){
+  coversearch.search({artist: query.artist, album: album, lastfmKey: lfmKeys().key, waitMs: COVER_WAIT_MS,
+                      mbJson: function(u, done){ mbgate.getJson(u, done, {front: true}); }}, function(list){
     cb(200, {ok: true, results: list.map(function(r){
-      var id = String(++coverHitSeq);
+      var id = coverHitRun + '-' + (++coverHitSeq);
       coverHits[id] = r.url; coverHitIds.push(id);
       if (coverHitIds.length > 100) delete coverHits[coverHitIds.shift()];
       return {id: id, source: r.source};
@@ -1366,7 +1371,7 @@ function doCoverImage(query, res) {
    GET /coverbestimage?dir=…&which=new|cur: the image found, or the folder's current one. Only folders of the last check */
 var coverbest = require('./coverbest.js');
 var coverBest = new coverbest.Best({file: path.join(DATA_DIR, 'cover-best.json'),
-  search: function(q, cb){ coversearch.search({artist: q.artist, album: q.album, lastfmKey: lfmKeys().key}, cb); },
+  search: function(q, cb){ coversearch.search({artist: q.artist, album: q.album, lastfmKey: lfmKeys().key, mbJson: mbgate.getJson}, cb); },
   load: coversearch.image, dims: filecheck.imageDims});
 function coverSmall(dir, any) {                             /* any: also a cover that is too big (only its current image) */
   var last = readCheck();

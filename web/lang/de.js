@@ -1386,6 +1386,7 @@ langRegister('de', 'Deutsch', {
   'tag.bulkButton': 'Mehrfachbearbeitung (Muster, Ersetzen …)',
   'tag.rec.button': 'Album erkennen (MusicBrainz)',
   'tag.rec.searching': 'Suche bei MusicBrainz nach Titelanzahl und -längen …',
+  'tag.rec.searchingIn': 'Suche bei {src} …',
   'tag.rec.none': 'Nichts gefunden. Bei MusicBrainz ist dieses Album (in dieser Fassung) wohl nicht eingetragen.',
   'tag.rec.use': 'Übernehmen',
   'tag.rec.filled': 'Vorschlag eingetragen. Bitte prüfen und dann Speichern.',
