@@ -36,12 +36,12 @@ function sine(fmt, frames, ampL, ampR) {
   return b;
 }
 
-t('levels: sine at full scale = -3 dBFS RMS, 0 dBFS peak; half = -6 dB lower; one window per 25 ms', function(){
+t('levels: sine at full scale = 0 dBFS RMS (AES17, as the 0 VU reference counts), 0 dBFS peak; half = -6 dB lower; one window per 25 ms', function(){
   var fmt = vu.parseFormat('44100:16:2'), an = vu.analyzer(fmt);
   var w = an.push(sine(fmt, 4412, 1, 0.5));                         /* 100 ms (4 × 1103 frames) */
   assert.strictEqual(w.length, 4);
-  assert.ok(Math.abs(w[1][0] + 3) < 0.15 && Math.abs(w[1][1]) < 0.15, JSON.stringify(w[1]));
-  assert.ok(Math.abs(w[1][2] + 9) < 0.2 && Math.abs(w[1][3] + 6) < 0.2, JSON.stringify(w[1]));
+  assert.ok(Math.abs(w[1][0]) < 0.15 && Math.abs(w[1][1]) < 0.15, JSON.stringify(w[1]));
+  assert.ok(Math.abs(w[1][2] + 6) < 0.2 && Math.abs(w[1][3] + 6) < 0.2, JSON.stringify(w[1]));
   assert.deepStrictEqual(vu.analyzer(fmt).push(Buffer.alloc(4 * 1103)), [[-99, -99, -99, -99]]);   /* silence */
 });
 
@@ -49,8 +49,13 @@ t('levels: frames split across chunks, 24 bit, mono on both sides', function(){
   var fmt = vu.parseFormat('48000:24:1'), an = vu.analyzer(fmt), b = sine(fmt, 1200, 0.1, 0), out = [];
   [b.slice(0, 7), b.slice(7, 2001), b.slice(2001)].forEach(function(c){ out = out.concat(an.push(c)); });
   assert.strictEqual(out.length, 1);
-  assert.ok(Math.abs(out[0][0] + 23) < 0.2, JSON.stringify(out[0]));
+  assert.ok(Math.abs(out[0][0] + 20) < 0.2, JSON.stringify(out[0]));
   assert.strictEqual(out[0][0], out[0][2]);
+});
+
+t('levels: a sine with its peak at -18 dBFS reads -18 dBFS RMS, so with 0 VU = -18 dBFS the needle stands at 0 VU', function(){
+  var fmt = vu.parseFormat('44100:16:2'), w = vu.analyzer(fmt).push(sine(fmt, 2206, Math.pow(10, -18 / 20), Math.pow(10, -18 / 20)));
+  assert.ok(Math.abs(w[1][0] + 18) < 0.15 && Math.abs(w[1][1] + 18) < 0.15 && Math.abs(w[1][2] + 18) < 0.15, JSON.stringify(w[1]));
 });
 
 t('pacing: one window per tick, a long queue is shortened from the front', function(){
@@ -118,7 +123,7 @@ mpd.listen(0, function(){
               t('/vu: output switched on, levels arrive evenly, a block of 4 windows as 3 lines (catching up)', function(){
                 assert.deepStrictEqual(cmds, ['enableoutput 2']);
                 assert.strictEqual(got.length, 3);
-                assert.ok(Math.abs(got[1][0] + 9) < 0.2 && Math.abs(got[1][2] + 15) < 0.2, JSON.stringify(got[1]));
+                assert.ok(Math.abs(got[1][0] + 6) < 0.2 && Math.abs(got[1][2] + 12) < 0.2, JSON.stringify(got[1]));
               });
               fs.closeSync(wfd);
               req.abort();

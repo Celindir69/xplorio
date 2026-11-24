@@ -802,9 +802,11 @@ bit-perfect.
 - `xplorio.html?vustyle=blue`: color of the meters (`accent`, `amberAccent`, `amber`, `white`, `blue`, `digital`), also remembered per device
 
 **Fine-tuning** in `web/config.local.js`:
-- `VU_REF_DBFS` (default `-8`; with the plugin, **VU meter: 0 VU equals** on its settings page): the level (dBFS RMS) shown as 0 VU. Most current recordings sit at -8 to -12 dBFS,
-  so the needle swings around -3 to 0. If the needles often hit the stop, raise it, for example to `-6`. If quiet
-  recordings (classical, older CDs) barely move it, lower it, for example to `-12`.
+- `VU_REF_DBFS` (default `-8`; with the plugin, **VU meter: 0 VU equals** on its settings page): the level (dBFS RMS) shown as 0 VU.
+  Measured as studio meters do (AES17): a sine reads the same as its peak, so with `-18` a sine peaking at -18 dBFS sits
+  exactly at 0 VU. The fifo gets the sound **after** ReplayGain: with ReplayGain on, every track sits at about -18 LUFS
+  and `-18` fits. Without ReplayGain most current recordings sit at -5 to -9 dBFS and the default `-8` fits. If the
+  needles often hit the stop, raise it; if quiet recordings (classical, older CDs) barely move them, lower it.
 - `VU_NEEDLE` (default `'fast'`; with the plugin, **VU meter: needle**): `'fast'` follows the level almost at once,
   `'classic'` is slow like a real VU meter (about 300 ms to the value, slight overshoot).
 - `VU_DELAY_MS` (default `400`; with the plugin, **VU meter: delay**): MPD fills the fifo before the sound goes through the buffer to the DAC. The needles
