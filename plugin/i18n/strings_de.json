@@ -14,7 +14,7 @@
 		"VU_NO_HOOK": "Diese Volumio-Version bietet die Schnittstelle nicht: Den Ausgang bitte von Hand eintragen (Anleitung).",
 		"VU_BY_HAND": "Ein VU-Ausgang steht schon von Hand in Volumios Vorlage, Xplorio fügt keinen zweiten hinzu.",
 		"VU_REF": "VU-Meter: 0 VU entspricht",
-		"VU_REF_DOC": "Welcher Pegel als 0 VU gilt. Stehen die Nadeln oft am Anschlag, einen höheren Wert wählen (etwa -6), bewegen sich leise Aufnahmen kaum, einen niedrigeren (etwa -12).",
+		"VU_REF_DOC": "Welcher Pegel als 0 VU gilt. Mit ReplayGain passt -18, ohne meist -8 (Standard). Stehen die Nadeln oft am Anschlag, einen höheren Wert wählen, bewegen sich leise Aufnahmen kaum, einen niedrigeren.",
 		"VU_REF_STD": "Standard",
 		"VU_NEEDLE": "VU-Meter: Nadel",
 		"VU_NEEDLE_DOC": "Flink: Die Nadel folgt dem Pegel fast sofort. Klassisch: träge wie ein echtes VU-Meter (etwa 300 ms bis zum Wert, leichtes Überschwingen).",

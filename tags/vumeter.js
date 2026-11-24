@@ -30,7 +30,9 @@ function parseFormat(s) {
 function db(x) { return x > 0 ? Math.round(200 * Math.log(x) / Math.LN10) / 10 : -99; }   /* 20·log10, 0.1 dB steps */
 
 /* analyzer(fmt) -> {push(buf) -> [[rmsL, peakL, rmsR, peakR], ...]} in dBFS per 25 ms window; a frame split across two
-   chunks is carried over. Mono: the same values for both sides */
+   chunks is carried over. Mono: the same values for both sides.
+   RMS as studio meters and the "0 VU = -18 dBFS" alignment count it (AES17): a sine reads the same as its peak, so a
+   full-scale sine is 0 dBFS RMS, not -3. Without this the needles stood 3 dB too low for the chosen reference */
 function analyzer(fmt) {
   var frame = fmt.bytes * fmt.channels, per = Math.max(1, Math.round(fmt.rate * WINDOW_MS / 1000));
   var full = fmt.bits === 16 ? 32768 : 2147483648;
@@ -49,7 +51,7 @@ function analyzer(fmt) {
         if (v > peak[ch]) peak[ch] = v;
       }
       if (++n >= per) {
-        out.push([db(Math.sqrt(sum[0] / n)), db(peak[0]), db(Math.sqrt(sum[1] / n)), db(peak[1])]);
+        out.push([db(Math.sqrt(2 * sum[0] / n)), db(peak[0]), db(Math.sqrt(2 * sum[1] / n)), db(peak[1])]);   /* × 2 = +3.01 dB, AES17 */
         n = 0; sum = [0, 0]; peak = [0, 0];
       }
     }
