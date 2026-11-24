@@ -106,6 +106,8 @@ function makePlugin() {
       pluginManager: {getConfigurationFile: function(){ return path.join(T, 'conf/config.json'); },
                       getPlugin: function(c, n){ return c === 'music_service' && n === 'mpd' ? fakeMpd : (c === 'user_interface' && n === 'xplorio' ? plug : undefined); }},
       pushToastMessage: function(k, ti, tx){ toasts.push([k, tx]); },
+      addPluginRestEndpoint: function(e){ restEps.push(e.endpoint); },
+      removePluginRestEndpoint: function(e){ restEps = restEps.filter(function(x){ return x !== e.endpoint; }); },
       sharedVars: {get: function(){ return 'de'; }},
       i18nJson: function(a, b, ui){ return kew.resolve(JSON.parse(fs.readFileSync(ui, 'utf8'))); }},
     logger: {info: function(){}, error: function(){}}});
@@ -115,8 +117,10 @@ function makePlugin() {
     if (args[0] === 'is-active') return setImmediate(function(){ cb(active[args[2]] ? null : new Error('inactive')); });   /* /bin/systemctl is-active --quiet <unit> */
     setImmediate(function(){ cb(failing[args[3]] ? new Error('failed') : null); });
   };
+  p.mpdCmd = function(cmd, cb){ mpdCmds.push(cmd); setImmediate(function(){ cb(null, /status/.test(cmd) ? 'replay_gain_mode: ' + rgMode + '\nOK\n' : 'OK\n'); }); };
   return p;
 }
+var mpdCmds = [], rgMode = 'off', restEps = [];
 var PORT = 40000 + Math.floor(Math.random() * 20000), plug = makePlugin();
 function el(ui, id) {
   var all = []; ui.sections.forEach(function(s){ all = all.concat(s.content || []); });
@@ -152,7 +156,7 @@ plug.onStart().then(function(){
     assert.deepStrictEqual(outs.map(function(o){ return [o.type, o.name, o.path, o.format, o.enabled]; }),
                            [['alsa', 'alsa', '', '', true], ['fifo', 'VU', '/tmp/mpd-vu.fifo', '44100:16:2', false]]);
     assert.strictEqual(mpdRestarts, 1);
-    plug.vuSync(); assert.strictEqual(mpdRestarts, 1);              /* as it should be: nothing to do */
+    plug.mpdSync(); assert.strictEqual(mpdRestarts, 1);              /* as it should be: nothing to do */
   });
   t('start: settings of the services in /tmp/xplorio/<service>.env', function(){
     assert.strictEqual(env('xplorio-web'), 'HTTP_PORT=' + PORT + '\nXPLORIO_WWW=' + path.join(P, 'app') + '\n');
@@ -351,12 +355,51 @@ plug.onStart().then(function(){
     assert.strictEqual(evalConfig().VU_NEEDLE, 'fast');
     assert.ok(!/Vorlage|Schnittstelle nicht/.test(el(ui3, 'vuOutput').doc));
   });
-  var r0 = mpdRestarts;
+  var r0 = mpdRestarts, r1 = 0;
   return plug.saveSettings({vuRef: {value: '-99'}}).then(function(){
     t('VU reference: only values from the list', function(){ assert.strictEqual(plug.config.get('vuRef'), '-8'); });
     return plug.saveSettings({vuRef: {value: '-12', label: '-12 dBFS'}, vuDelay: {value: '800'}, vuNeedle: {value: 'classic'}});
   }).then(function(){
     t('VU reference from the page into config.local.js as a number', function(){ assert.strictEqual(evalConfig().VU_REF_DBFS, -12); assert.strictEqual(evalConfig().VU_DELAY_MS, 800); assert.strictEqual(evalConfig().VU_NEEDLE, 'classic'); });
+    return plug.restApi({action: 'preamp'});
+  }).then(function(st){
+    t('radio and streams: REST endpoint registered, state without the line (0 = unchanged)', function(){
+      assert.deepStrictEqual(restEps, ['xplorio']);
+      assert.deepStrictEqual(st, {ok: true, missingPreamp: 0, missingPreamps: [0, -3, -6, -9, -12], byHand: false, hook: true});
+      assert.ok(!/missing_preamp/.test(fs.readFileSync(MPDC, 'utf8')));
+      assert.ok(/XPLORIO_PLUGIN=1/.test(env('xplorio-tags')));                /* the tag service knows it can ask */
+    });
+    return plug.restApi({action: 'preamp', db: -5});
+  }).then(function(st){
+    t('radio and streams: only offered values', function(){ assert.deepStrictEqual(st, {ok: false, error: 'value'}); });
+    r1 = mpdRestarts; rgMode = 'album'; mpdCmds = [];
+    return plug.restApi({action: 'preamp', db: -6});
+  }).then(function(st){
+    t('radio and streams -6 dB: line appended by Volumio, MPD restarted, ReplayGain mode set again', function(){
+      assert.strictEqual(st.ok, true); assert.strictEqual(st.missingPreamp, -6);
+      var conf = fs.readFileSync(MPDC, 'utf8');
+      assert.ok(/^replaygain_missing_preamp "-6"$/m.test(conf));
+      assert.ok(/name +"VU"/.test(conf));                                  /* the VU output stays */
+      assert.strictEqual(mpdRestarts, r1 + 1);
+      assert.deepStrictEqual(mpdCmds, ['replay_gain_status', 'replay_gain_mode album']);
+      assert.strictEqual(plug.config.get('streamPreamp'), '-6');
+      plug.mpdSync(); assert.strictEqual(mpdRestarts, r1 + 1);              /* as it should be */
+    });
+    return plug.getUIConfig();
+  }).then(function(ui){
+    t('radio and streams on the settings page: values from the list, current one selected', function(){
+      var e = el(ui, 'streamPreamp');
+      assert.deepStrictEqual(e.options.map(function(o){ return o.value; }), ['0', '-3', '-6', '-9', '-12']);
+      assert.strictEqual(e.value.value, '-6');
+      assert.ok(sec(ui, 'section_settings').saveButton.data.indexOf('streamPreamp') >= 0);
+    });
+    return plug.saveSettings({streamPreamp: {value: '0'}});
+  }).then(function(){
+    t('radio and streams back to unchanged from the settings page: line removed', function(){
+      assert.ok(!/missing_preamp/.test(fs.readFileSync(MPDC, 'utf8')));
+      assert.strictEqual(plug.config.get('streamPreamp'), '0');
+    });
+    r0 = mpdRestarts;
     return plug.saveSettings({vuOutput: false});
   }).then(function(){
     t('VU switch off: Volumio rebuilds mpd.conf without the output, MPD restarts, hook stays registered once', function(){
@@ -379,6 +422,7 @@ plug.onStart().then(function(){
   }).then(function(){
     t('stopped or removed: out of the MPD plugin\'s list, so no "undefined" in a later mpd.conf', function(){
       assert.strictEqual(fakeMpd.registeredCallbacks.length, 0);
+      assert.deepStrictEqual(restEps, []);
     });
   });
 }).then(function(){

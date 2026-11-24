@@ -42,6 +42,7 @@
 					"vuRef",
 					"vuNeedle",
 					"vuDelay",
+					"streamPreamp",
 					"language",
 					"theme"
 				]
@@ -106,6 +107,17 @@
 					"doc": "TRANSLATE.XPLORIO.VU_DELAY_DOC",
 					"value": {
 						"value": "400",
+						"label": ""
+					},
+					"options": []
+				},
+				{
+					"id": "streamPreamp",
+					"element": "select",
+					"label": "TRANSLATE.XPLORIO.PREAMP",
+					"doc": "TRANSLATE.XPLORIO.PREAMP_DOC",
+					"value": {
+						"value": "0",
 						"label": ""
 					},
 					"options": []

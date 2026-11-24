@@ -394,6 +394,15 @@ mix. Whether Volumio resets crossfade and the ReplayGain mode after a restart ha
 With ReplayGain on, the player shows the gain MPD applies to the current track next to the file format (e.g. "−6.5 dB");
 the tooltip says whether it is the track or the album value. Files without ReplayGain tags show nothing.
 
+**Radio, streaming and files without tags:** Tracks with ReplayGain tags end up at about −18 LUFS, radio and streams are
+usually much louder. Under ReplayGain you can therefore pick a value (unchanged, −3, −6, −9 or −12 dB) by which everything
+without tags plays quieter while ReplayGain is on; −6 dB usually fits. MPD's option for it is `replaygain_missing_preamp`;
+MPD restarts once to apply it, playback stops briefly. In the Mac app Xplorio writes the value to its own `mpd.conf`. With
+Volumio the plugin does it (the same choice is also on its settings page): it hands the line to Volumio through the
+interface for plugins, like the VU output, and Volumio rebuilds `mpd.conf`; nothing below `/volumio` changes. If
+`replaygain_missing_preamp` is already in Volumio's template by hand, that value applies. With MPD alone, set up by hand,
+add the line to `mpd.conf` yourself, e.g. `replaygain_missing_preamp "-6"`.
+
 **ReplayGain tags with rsgain (optional):** If the tags are missing, [rsgain](https://github.com/complexlogic/rsgain)
 adds them to the files afterwards; the audio itself stays unchanged. Like the audio analysis, it runs on a Mac or PC, not
 on the player. If the music is on the player, connect its share with write access.
