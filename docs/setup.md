@@ -482,6 +482,25 @@ Scrobble for free without Last.fm: sign in at https://listenbrainz.org (MusicBra
 
 ListenBrainz imports your existing Last.fm history itself: on listenbrainz.org under "Connect services" › Last.fm. Last.fm and ListenBrainz can be active at the same time.
 
+### Record collection from Discogs
+
+If you keep your records in a [Discogs](https://www.discogs.com) collection, Xplorio can show them for information (they can't be
+played, of course). Menu › "My records" › Set up: enter your Discogs name (empty takes the owner of the Discogs token), "Load
+folders", tick the folders with your records and give each a short label, e.g. "LP" and "12″". Without folders of your own,
+"Whole collection" works too. Private collections need your own Discogs token (see album recognition above); public ones work
+without. After that:
+- the Tag Service reads the chosen folders at once and then once a day, and fetches the tracklists one record at a time in the
+  background (Discogs allows 60 requests a minute; 500 records take about ten minutes). Everything is kept in
+  `/data/xplorio/data/vinyl.json`; "Update" reads again at once,
+- search has the "Vinyl" source (artists, albums and tracks of the records), "My records" shows the collection by folder,
+- album and artist pages show "On vinyl · LP" or "My records" when the album is on your shelf too,
+- a record's page offers "Play local" (same album in the library) and "Play on TIDAL" (or Qobuz …) when the service has it,
+- records that exist only on vinyl get their release date from MusicBrainz and appear in the album birthdays.
+
+Matching uses artist and album title (case, accents, "The" and additions like "Remastered" or "Deluxe Edition" don't count;
+"Live" stays a separate album). Titles that differ a lot are not matched. To turn it off: "Turn off the record collection" in the
+setup; your collection at Discogs stays as it is.
+
 ### Mood Tags
 
 With `LASTFM_KEY`, the Tag Service retrieves the Last.fm tags for every track in the library (`track.getTopTags`, falling back to the artist's tags if no useful track tags are available); without a (working) key the tags and genres of the recording at MusicBrainz, otherwise those of the artist; albums by one artist are fetched as a whole (two requests instead of one per track) (one request every 1.5 s, slower while release dates are looked up). It maps them to mood, energy (1–5), and style according to `tags/mood/lastfm_mapping.json` and `tags/mood/classification_rules.json`.

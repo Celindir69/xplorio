@@ -90,7 +90,8 @@ function bdayRows(sec, b, which, dates) {
   return any;
 }
 function bdayTile(it) {
-  var tile = discoverShelfTile('album', 'never', it);
+  var tile = it.vinyl && typeof vinylTile === 'function' ? vinylTile(it) : discoverShelfTile('album', 'never', it);   /* only on vinyl (vinyl.js) */
+  if (it.onVinyl && typeof vinylIcon === 'function') tile.appendChild(vinylIcon('vnIcon vnTileMark'));                 /* also on vinyl */
   var p = it.date.split('-');
   var date = p[2] ? langDate(new Date(+p[0], +p[1] - 1, +p[2]), {day: 'numeric', month: 'numeric'}) : '';   /* the year is implied by the age; year-month: the month is the section */
   tile.appendChild(histEl('div', 'dSub', it.mark ? date : [date, T('bday.years', {n: it.years})].filter(Boolean).join(' · ')));

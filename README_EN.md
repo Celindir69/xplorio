@@ -62,6 +62,9 @@ nothing has been entered, the selected tab shows rows to discover: random discov
 while, never heard, and once played a lot. Below them, buttons lead on by mood, energy, style and decade. Next to "Play all" and on every Discover row, a dice starts a random mix of 25 tracks. On every artist page, the "Discover" tab leads to similar artists (with a random mix of them and the artist), the artist's moods, styles and decades; on every album page to similar albums, mood, style, year and more albums by the artist. The "Background" tab there shows the artist or album text and the credits. Tapping the current title shows similar tracks by mood, energy and tempo. Every album title shows its release year; tapping it opens that year's albums with suggestions from the decade.
 Ratings: a heart for artists, one to five stars for albums, thumbs up or down for tracks (thumbs up is the Volumio favourite). For web radio, the app retrieves cover art for the currently playing
 track and displays station logos in the station list.
+If you keep your records in a Discogs collection, add them under Menu › "My records" (your own Discogs name, any folders with your
+own labels such as "LP" or "12″"): they show up in search as the "Vinyl" source, as an "On vinyl" hint on album and artist pages and
+in the album birthdays. Playing uses the version in your library or at a streaming service ([setup](docs/setup.md#record-collection-from-discogs)).
 
 <p>
   <img src="docs/bilder/en/entdecken.jpg" width="200" alt="discover in search">

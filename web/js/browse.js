@@ -104,7 +104,7 @@ function browseRender() {
   var e = browseStack[browseStack.length - 1];
   var seq = ++browseSeq;
   browseBack.style.display = (browseStack.length > 1 || browseOrigin) ? '' : 'none';
-  browseTitle.textContent = e.kind === 'artist' ? e.artist : e.kind === 'playlist' ? e.name : e.kind === 'genre' ? e.genre + (e.sub ? ' · ' + e.sub : '') : e.kind === 'decade' ? T('disc.decade', {d: e.decade}) : e.kind === 'year' ? String(e.year) : e.kind === 'moodset' ? e.title : e.kind === 'similar' ? T('similar.title', {ti: e.title}) : e.kind === 'together' ? togetherName(e.artists) : e.album;
+  browseTitle.textContent = e.kind === 'artist' ? e.artist : e.kind === 'playlist' ? e.name : e.kind === 'genre' ? e.genre + (e.sub ? ' · ' + e.sub : '') : e.kind === 'decade' ? T('disc.decade', {d: e.decade}) : e.kind === 'year' ? String(e.year) : e.kind === 'moodset' ? e.title : e.kind === 'similar' ? T('similar.title', {ti: e.title}) : e.kind === 'together' ? togetherName(e.artists) : e.kind === 'records' ? (e.setup ? T('vinyl.setupTitle') : e.artist ? e.artist + ' · ' + T('vinyl.source') : T('vinyl.myRecords')) : e.album;
   browseBody.scrollTop = 0;
   while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
   browseBody.appendChild(browseNote(T('browse.loading')));
@@ -116,6 +116,8 @@ function browseRender() {
   else if (e.kind === 'moodset') browseMoodSet(e, seq);             /* genre.js */
   else if (e.kind === 'similar') browseSimilar(e, seq);             /* discover.js */
   else if (e.kind === 'together') browseTogether(e, seq);           /* discover.js */
+  else if (e.kind === 'vinyl') browseVinyl(e, seq);                 /* vinyl.js */
+  else if (e.kind === 'records') browseRecords(e, seq);             /* vinyl.js */
   else browseAlbum(e, seq);
 }
 
@@ -361,6 +363,7 @@ function browseArtist(e, seq) {
     var albumHead = browseHeading(T('browse.albums'));
     albumHead.style.display = 'none';
     pane.appendChild(albumHead);
+    if (typeof vinylArtistRow === 'function') vinylArtistRow(pane, albumHead, e.artist, seq);   /* own records (vinyl.js) */
     if (!albums.length && !isStream) pane.appendChild(browseNote(T('browse.noAlbumsLocal')));
     var genreRows = [];
 
@@ -494,6 +497,7 @@ function browseAlbum(e, seq) {
     }
     head.appendChild(img); head.appendChild(meta);
     browseBody.appendChild(head);
+    if (typeof vinylAlbumHint === 'function') vinylAlbumHint(meta, who, e.album, seq);   /* also on vinyl (vinyl.js) */
     if (vers) {                                              /* several versions: choose one first, name without "[HD]" etc. */
       if (vers.name) { e.album = vers.name; ti.textContent = vers.name; browseTitle.textContent = vers.name; }   /* also for Discover and Background */
       return versionsLayer(e, seq, vers.versions, who);

@@ -50,9 +50,11 @@ function pickDate(j, al, ar, y) { var h = pickHit(j, al, ar, y); return h ? h.d 
 
 /* opts: file, list() -> album list (albums.json), extra() -> further albums [{dir, al, ar, y}] to look up even with a full
    Date tag (library check: year or album name not the same in all tracks; title t then gives the MusicBrainz spelling),
+   more() -> albums outside the library looked up after it (records from the Discogs collection, vinyl.js),
    getJson(url, cb) for testing, stepMs */
 function Collector(opts) {
   this.file = opts.file; this.list = opts.list; this.extra = opts.extra || function(){ return []; }; this.stepMs = opts.stepMs || STEP_MS;
+  this.more = opts.more || function(){ return []; };
   this.getJson = opts.getJson || mbgate.getJson;
   this.by = {}; this.timer = null; this.running = false; this.fetched = 0; this.rev = 0; this.errors = 0;
   var self = this, txt = '';
@@ -79,6 +81,12 @@ Collector.prototype.next = function(now) {
     var a = list[i], r = this.by[a.dir];
     if (full(a.rd) || !a.al || !a.ar || a.ar === 'Verschiedene') continue;   /* year-month only: MusicBrainz may know the day */
     if (!r || (!r.d && (r.v !== VERSION || now - r.at > RETRY_DAYS * DAY))) return a;
+  }
+  var more = this.more() || [];
+  for (var m = 0; m < more.length; m++) {
+    var o = more[m], s = this.by[o.dir];
+    if (!o.al || !o.ar || o.ar === 'Verschiedene') continue;
+    if (!s || (!s.d && (s.v !== VERSION || now - s.at > RETRY_DAYS * DAY))) return o;
   }
   return null;
 };
