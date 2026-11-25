@@ -48,6 +48,13 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor'))
 
 import mutagen  # noqa: E402
+import mutagen._util  # noqa: E402
+
+# No mmap when mutagen moves the audio data (a larger cover or more tags than the file has room for): the moved data
+# then sits as dirty mapped pages that the kernel has to write back through the exFAT FUSE driver (mount.exfat) on the
+# player. With little free memory that hung: "task python blocked for more than 120 seconds", player frozen until
+# restarted (25.11.2026). read()/write() in 64 KB steps goes straight through FUSE instead.
+mutagen._util.mmap = None
 from mutagen.dsf import DSF  # noqa: E402
 from mutagen.flac import FLAC  # noqa: E402
 from mutagen.flac import Picture  # noqa: E402
