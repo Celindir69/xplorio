@@ -164,20 +164,14 @@ function browseVinyl(e, seq) {
     /* playing: the own files, else the streaming services that have it */
     var ways = histEl('div');
     browseBody.appendChild(ways);
-    if (it.dir) {
-      var uri = 'music-library/' + it.dir;
-      var lp = playRow(T('vinyl.playLocal'), T('vinyl.playLocalSub'), function(){
-        browsePlay({uri: uri, service: 'mpd', type: 'folder', title: it.al, artist: it.ar});
-      }, [queueAddButton([{uri: uri, service: 'mpd', type: 'folder', title: it.al, artist: it.ar}], 0)]);
-      ways.appendChild(lp);
-      var open = histEl('div', 'sHint vnOpen bLink', T('vinyl.openLocal'));
-      open.addEventListener('click', function(){ browseStack.push({kind: 'album', artist: it.ar, album: it.al, uri: uri}); browseRender(); });
-      ways.appendChild(open);
-    }
+    var local = r.local && r.local.length ? r.local : it.dir ? [{dir: it.dir, al: it.al}] : [];
+    var versBox = histEl('div');                         /* the list of own versions after all play rows */
+    if (local.length) vinylLocalWays(ways, versBox, it, local);
+    browseBody.appendChild(versBox);
     var svcs = streamsOn();
     var searching = svcs.length ? browseNote(T('vinyl.searching', {services: streamNames()})) : null;
     if (searching) ways.appendChild(searching);
-    else if (!it.dir) ways.appendChild(browseNote(T('vinyl.nowhere')));
+    else if (!local.length) ways.appendChild(browseNote(T('vinyl.nowhere')));
     var found = 0, left = svcs.length;
     svcs.forEach(function(svc){
       streamFindAlbum(svc, it.ar, it.al, true).then(function(hit){
@@ -190,7 +184,7 @@ function browseVinyl(e, seq) {
           }, [queueAddButton([{uri: hit.uri, service: hit.service, type: 'folder', title: hit.title || it.al, artist: hit.artist || it.ar}], 0)]), searching);
         }
         if (!left && searching && searching.parentNode) {
-          if (found || it.dir) ways.removeChild(searching);
+          if (found || local.length) ways.removeChild(searching);
           else searching.textContent = T('vinyl.nowhere');
         }
       });
@@ -220,6 +214,50 @@ function browseVinyl(e, seq) {
     if (seq !== browseSeq) return;
     while (browseBody.firstChild) browseBody.removeChild(browseBody.firstChild);
     browseBody.appendChild(browseNote(T('browse.loadError')));
+  });
+}
+
+/* own versions of the record: "Play local" (several: "Play best local", which one it is in the line below, then each
+   version with its quality: tap opens it, ▶ plays it); "Open in the library" inside the row, above its line */
+function vinylLocalWays(box, listBox, it, local) {
+  function item(v) { return {uri: 'music-library/' + v.dir, service: 'mpd', type: 'folder', title: v.al || it.al, artist: it.ar}; }
+  function open(v) { browseStack.push({kind: 'album', artist: it.ar, album: v.al || it.al, uri: 'music-library/' + v.dir, version: local.length > 1}); browseRender(); }
+  function quality(v) {
+    if (!v.ext || typeof versionQuality !== 'function') return [];
+    var q = versionQuality(v);
+    return [q.label || ''].concat(q.tech || []).filter(Boolean);
+  }
+  var best = local[0];
+  var lp = playRow(T(local.length > 1 ? 'vinyl.playBestLocal' : 'vinyl.playLocal'),
+                   [best.al || it.al].concat(quality(best)).join(' · '),
+                   function(){ browsePlay(item(best)); }, [queueAddButton([item(best)], best.tracks || 0)]);
+  if (local.length === 1) {
+    var link = histEl('div', 'sSub vnOpen bLink', T('vinyl.openLocal'));
+    link.addEventListener('click', function(ev){ ev.stopPropagation(); open(best); });
+    lp.sub.parentNode.appendChild(link);
+  }
+  box.appendChild(lp);
+  if (local.length < 2) return;
+  box = listBox;
+  box.appendChild(browseHeading(T('vinyl.localVersions', {n: local.length})));
+  local.forEach(function(v){
+    var row = histEl('div', 'sRow verRow vnVersion');
+    var img = histEl('img', 'sCover');
+    img.src = artUrl('/albumart?path=' + encodeURIComponent('/mnt/' + v.dir));
+    var meta = histEl('div', 'sMeta');
+    var ti = histEl('div', 'sTitle', v.al || it.al);
+    if (v.y) ti.appendChild(yearSpan(v.y));
+    var line = histEl('div', 'sSub verQ', [quality(v).join(' · '), v.tracks ? T('browse.trackCount', {n: v.tracks}) : ''].filter(Boolean).join(' · '));
+    if (v.best) line.appendChild(histEl('span', 'verBest', ' \u00b7 ' + T('browse.versionBest')));
+    meta.appendChild(ti); meta.appendChild(line); meta.appendChild(histEl('div', 'sSub verPath', v.dir));
+    row.appendChild(img); row.appendChild(meta);
+    var pb = histEl('button', 'mxIcon vnPlay');
+    pb.title = T('browse.play');
+    pb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    pb.addEventListener('click', function(ev){ ev.stopPropagation(); browsePlay(item(v)); });
+    row.appendChild(pb);
+    row.addEventListener('click', function(){ open(v); });
+    box.appendChild(row);
   });
 }
 

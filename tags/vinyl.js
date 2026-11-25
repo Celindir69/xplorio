@@ -277,21 +277,23 @@ function Matcher(albums) {
   (albums || []).forEach(function(a){
     var t = tkey(a.al), k = akey(a.ar) + '|' + t;
     if (!t) return;
-    if (!by[k]) by[k] = a.dir;
+    (by[k] || (by[k] = [])).push(a.dir);
     (byTitle[t] || (byTitle[t] = [])).push(a);
   });
   this.by = by; this.byTitle = byTitle;
 }
-Matcher.prototype.match = function(ar, al) {
+Matcher.prototype.match = function(ar, al) { return this.matchAll(ar, al)[0] || ''; };
+/* every own album that fits (several versions: "[HD]", CD rip …), in the order of the album list */
+Matcher.prototype.matchAll = function(ar, al) {
   var t = tkey(al), a = akey(ar);
-  if (!t) return '';
-  if (this.by[a + '|' + t]) return this.by[a + '|' + t];
+  if (!t) return [];
+  if (this.by[a + '|' + t]) return this.by[a + '|' + t].slice();
   /* same title, artist written a little differently ("Simon & Garfunkel" / "Simon And Garfunkel", "A feat. B") */
   var cands = (this.byTitle[t] || []).filter(function(x){
     var b = akey(x.ar);
     return a && b && a.length >= 3 && b.length >= 3 && (a.indexOf(b) === 0 || b.indexOf(a) === 0);
   });
-  return cands.length ? cands[0].dir : '';
+  return cands.map(function(x){ return x.dir; });
 };
 function sameAlbum(ar1, al1, ar2, al2) {
   var a = akey(ar1), b = akey(ar2);
