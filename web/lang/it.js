@@ -65,6 +65,8 @@ langRegister('it', 'Italiano', {
   'browse.playAlbum': 'Riproduci tutto l\'album',
   'browse.playFull': 'Completo su {service}',
   'browse.fullMore': {one: '{total} brani, 1 in più che qui', other: '{total} brani, {n} in più che qui'},
+  'browse.playBetter': 'Lossless su {service}',
+  'browse.insteadOf': 'invece di {fmt}',
   'browse.playAll': 'Riproduci tutto',
   'browse.tab.albums': 'Album e brani',
   'browse.tab.more': 'Scopri',

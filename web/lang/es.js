@@ -65,6 +65,8 @@ langRegister('es', 'Español', {
   'browse.playAlbum': 'Reproducir el álbum entero',
   'browse.playFull': 'Completo en {service}',
   'browse.fullMore': {one: '{total} canciones, 1 más que aquí', other: '{total} canciones, {n} más que aquí'},
+  'browse.playBetter': 'Sin pérdida en {service}',
+  'browse.insteadOf': 'en lugar de {fmt}',
   'browse.playAll': 'Reproducir todo',
   'browse.tab.albums': 'Álbumes y canciones',
   'browse.tab.more': 'Descubrir',

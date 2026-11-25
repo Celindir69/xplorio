@@ -511,7 +511,7 @@ function browseAlbum(e, seq) {
     play.title = T('browse.playAlbum');
     browseBody.appendChild(play);
     albumPlaysInfo(play, seq, e.uri, e.album, who);
-    if (!streamOf(e.uri)) albumStreamFull(play, seq, e, who, tracks.length);
+    if (!streamOf(e.uri)) albumStreamFull(play, seq, e, who, tracks);
 
     /* Tabs "Tracks", "Discover" (for a service "Discover locally") and "Background" */
     var stream = !!streamOf(e.uri);
@@ -569,43 +569,68 @@ function browseAlbum(e, seq) {
 
 /* ---------- Own album with fewer tracks than at a streaming service: second play row "Complete at Qobuz" ---------- */
 /* After a short wait (only if the album is still open) one search per active service, in order, until one has the album
-   by the same artist with more tracks. Remembered per album for the session, also "not found". */
+   by the same artist with more tracks. Lossy album (MP3, AAC …): also the same album with at least as many tracks at a
+   lossless service (TIDAL, Qobuz, HRA, these searched first) -> "Lossless at TIDAL".
+   Remembered per album for the session, also "not found". */
 var STREAM_FULL_WAIT_MS = 1200;
 var streamFullCache = {};
-function albumStreamFull(play, seq, e, who, have) {
-  var svcs = streamsOn();
+function streamLossless(svc) { return Q_SERVICES.indexOf(svc.id) > -1; }
+/* format of a lossy own album ('MP3', 'AAC' …) or null; m4a only once the probe found AAC */
+function albumLossyFmt(tracks) {
+  var r = typeof qAlbumLossy === 'function' ? qAlbumLossy(tracks.map(function(t){ return t.uri; })) : null;
+  if (!r) return Promise.resolve(null);
+  if (!r.probe) return Promise.resolve(r.fmt);
+  if ((window.APP_CONFIG && window.APP_CONFIG.M4A_PROBE === false) || typeof mp4Codec !== 'function') return Promise.resolve(null);
+  return mp4Codec(r.probe).then(function(c){ return c && c.codec === 'aac' ? r.fmt : null; }, function(){ return null; });
+}
+function albumStreamFull(play, seq, e, who, tracks) {
+  var svcs = streamsOn(), have = tracks.length;
   if (!svcs.length || !who || !e.album || /^various( artists)?$/i.test(who) || who === 'Verschiedene') return;
   var key = who.toLowerCase() + '|' + e.album.toLowerCase();
-  function show(hit) {
-    if (!hit || seq !== browseSeq || hit.n <= have || !play.parentNode) return;
-    var row = playRow(T('browse.playFull', {service: hit.name}), T('browse.fullMore', {n: hit.n - have, total: hit.n}) + (hit.secs ? ' · ' + mixDuration(hit.secs) : ''), function(){
+  var local = tracks.filter(isLocalTrack);
+  var lossyP = local.length === have ? albumLossyFmt(local) : Promise.resolve(null);
+  function wanted(hit, lossy) { return hit && (hit.n > have || (lossy && hit.lossless && hit.n >= have)); }
+  function show(hit, lossy) {
+    if (!wanted(hit, lossy) || seq !== browseSeq || !play.parentNode) return;
+    var better = lossy && hit.lossless, more = hit.n > have;
+    var label = T(better ? 'browse.playBetter' : 'browse.playFull', {service: hit.name});
+    var sub = (more ? T('browse.fullMore', {n: hit.n - have, total: hit.n}) : T('browse.trackCount', {n: hit.n}))
+            + (better ? ' · ' + T('browse.insteadOf', {fmt: lossy}) : '')
+            + (hit.secs ? ' · ' + mixDuration(hit.secs) : '');
+    var row = playRow(label, sub, function(){
       browsePlay({uri: hit.uri, service: hit.service, type: 'folder', title: e.album, artist: who});
     }, [queueAddButton([{uri: hit.uri, service: hit.service, type: 'folder', title: e.album, artist: who}], hit.n)]);
     row.classList.add('playFull');
-    row.title = T('browse.playFull', {service: hit.name});
+    if (better) row.classList.add('playBetter');
+    row.title = label;
     play.parentNode.insertBefore(row, play.nextSibling);
   }
-  if (key in streamFullCache) return show(streamFullCache[key]);
   setTimeout(function(){
     if (seq !== browseSeq) return;
-    svcs.reduce(function(chain, svc){
-      return chain.then(function(hit){
-        if (hit || seq !== browseSeq || Date.now() < svc.downUntil) return hit;
-        return streamFindAlbum(svc, who, e.album, true).then(function(it){
-          if (!it || !it.uri) return null;
-          return browseGet(it.uri).then(function(j){
-            var ts = browseItems(j).filter(function(t){ return t.uri && !/^folder/.test(t.type || ''); });
-            var secs = 0;
-            ts.forEach(function(t){ secs += Number(t.duration) || 0; });
-            var info = (j && j.navigation && j.navigation.info) || {};
-            return ts.length > have ? {name: svc.name, uri: it.uri, service: it.service || info.service || svc.id, n: ts.length, secs: secs} : null;
-          });
-        }).catch(function(){ return null; });
+    lossyP.then(function(lossy){
+      if (seq !== browseSeq) return;
+      if (key in streamFullCache) return show(streamFullCache[key], lossy);
+      var order = lossy ? svcs.filter(streamLossless).concat(svcs.filter(function(s){ return !streamLossless(s); })) : svcs;
+      order.reduce(function(chain, svc){
+        return chain.then(function(hit){
+          if (wanted(hit, lossy) || seq !== browseSeq || Date.now() < svc.downUntil) return hit;
+          return streamFindAlbum(svc, who, e.album, true).then(function(it){
+            if (!it || !it.uri) return hit;
+            return browseGet(it.uri).then(function(j){
+              var ts = browseItems(j).filter(function(t){ return t.uri && !/^folder/.test(t.type || ''); });
+              var secs = 0;
+              ts.forEach(function(t){ secs += Number(t.duration) || 0; });
+              var info = (j && j.navigation && j.navigation.info) || {};
+              var cand = {name: svc.name, uri: it.uri, service: it.service || info.service || svc.id, n: ts.length, secs: secs, lossless: streamLossless(svc)};
+              return wanted(cand, lossy) ? cand : hit;
+            });
+          }).catch(function(){ return hit; });
+        });
+      }, Promise.resolve(null)).then(function(hit){
+        if (seq !== browseSeq) return;                  /* left early: try again next time */
+        streamFullCache[key] = hit;
+        show(hit, lossy);
       });
-    }, Promise.resolve(null)).then(function(hit){
-      if (seq !== browseSeq) return;                    /* left early: try again next time */
-      streamFullCache[key] = hit;
-      show(hit);
     });
   }, STREAM_FULL_WAIT_MS);
 }
