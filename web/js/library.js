@@ -444,6 +444,7 @@ function doSearch(q) {
   var seq = ++searchSeq;
   searchMessage(T('search.searching'));
   superSearchStart(q, seq);
+  if (typeof vinylSearch === 'function') vinylSearch(q, seq);   /* own records (vinyl.js) */
   var slow = setTimeout(function(){ if (seq === searchSeq) searchMessage(streamsOn().length ? T('search.slowWaiting', {services: streamNames()}) : T('search.slow')); }, SEARCH_SLOW_MS);
   withTimeout(player.search(q), SEARCH_TIMEOUT_MS)
     .then(function(j){
@@ -511,12 +512,13 @@ function renderSearchResults() {
     return {s: s, list: (searchData.stream && searchData.stream[s.id] && searchData.stream[s.id][searchCat]) || []};
   }).filter(function(p){ return p.list.length; });
   var supers = searchQuery && superSeq === searchSeq ? superVisible() : [];
+  var vinylRows = typeof vinylSearchRows === 'function' ? vinylSearchRows() : [];
 
-  if (!list.length && !parts.length && !supers.length) {
+  if (!list.length && !parts.length && !supers.length && !vinylRows.length) {
     if (!searchQuery && typeof discoverShow === 'function' && discoverShow()) return;     /* Discover (discover.js) */
     var hint = document.createElement('div');
     hint.className = 'sHint';
-    var none = !searchShowLocal && !streamsOn().some(function(s){ return s.show; });
+    var none = !searchShowLocal && !streamsOn().some(function(s){ return s.show; }) && !(typeof vinylOn === 'function' && vinylOn() && searchShowVinyl);
     hint.textContent = none ? T('search.pickSource', {services: streamsOn().map(function(s){ return s.name; }).join(T('search.or'))})
                      : (searchQuery ? T('search.noResults') : T('search.minChars'));
     searchResults.appendChild(hint);
@@ -542,6 +544,12 @@ function renderSearchResults() {
     if (searchCat === 'albums') genreRows.push({row: row, uri: it.uri, album: it.title || it.name || '', artist: it.artist || ''});
   });
   if (genreRows.length && typeof genreDecorate === 'function') genreDecorate(genreRows);
+  if (vinylRows.length) {                                   /* own records (vinyl.js): after the local hits */
+    var vh = document.createElement('div');
+    vh.className = 'infoSection'; vh.textContent = T('vinyl.source');
+    searchResults.appendChild(vh);
+    vinylRows.forEach(function(r){ searchResults.appendChild(r); });
+  }
   parts.forEach(function(p){
     var hd = document.createElement('div');
     hd.className = 'infoSection'; hd.textContent = p.s.name;

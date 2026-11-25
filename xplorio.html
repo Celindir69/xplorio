@@ -215,6 +215,7 @@
     <h2 data-i18n="html.search">Suchen &amp; Entdecken</h2>
     <div id="searchSources">
       <label><input type="checkbox" id="srcLocal" checked> <span data-i18n="html.src.local">Lokal</span></label>
+      <label class="srcVinyl"><input type="checkbox" id="srcVinyl" checked> Vinyl</label>
       <label class="srcTidal"><input type="checkbox" id="srcTidal" checked> TIDAL</label>
       <label class="srcQobuz"><input type="checkbox" id="srcQobuz" checked> Qobuz</label>
       <label class="srcHra" title="HIGHRESAUDIO"><input type="checkbox" id="srcHra" checked> HRA</label>
@@ -467,7 +468,7 @@
   langApply(document);                      /* data-i18n texts in the HTML in the chosen language */
 
   /* load app scripts per build (?v=): fresh after an update, else from the browser cache (order matters) */
-  ['player', 'streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'trash', 'files', 'playback', 'macsettings', 'moodmix', 'discover', 'genre', 'smartlist', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'vumeter', 'welcome', 'remote', 'amexport'].forEach(function(n){
+  ['player', 'streaming', 'infotext', 'core', 'lyrics', 'autodj', 'controls', 'info', 'queue', 'library', 'marquee', 'browse', 'textfn', 'tagedit', 'rating', 'check', 'history', 'system', 'trash', 'files', 'playback', 'macsettings', 'moodmix', 'discover', 'genre', 'smartlist', 'ui', 'volumio', 'menu', 'help', 'quality', 'mp4probe', 'color', 'poll', 'stage', 'vumeter', 'welcome', 'remote', 'amexport', 'vinyl'].forEach(function(n){
     document.write('<script src="web/js/' + n + '.js?v=' + XV + '"><\/script>');
   });
 </script>

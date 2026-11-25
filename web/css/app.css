@@ -784,6 +784,9 @@ html.manyStreams #overlaySearch .overlayHead { flex-wrap:wrap; }
 html.manyStreams #searchSources { order:10; flex-basis:100%; margin:calc(2 * var(--vw)) 0 calc(2 * var(--vw)); }
 html.noTidal #searchSources .srcTidal, html.noQobuz #searchSources .srcQobuz,
 html.noHra #searchSources .srcHra, html.noSpotify #searchSources .srcSpotify { display:none; }
+/* own records (vinyl.js): the "Vinyl" box only with a collection; then the choice is shown even without a service */
+html:not(.hasVinyl) #searchSources .srcVinyl { display:none; }
+html.noStream.hasVinyl #searchSources { display:flex; }
 
 /* ---------- Papierkorb (trash.js) ---------- */
 #overlayTrash .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
@@ -1599,3 +1602,28 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
 .tagGenreHint { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:-4px 0 10px; font-size:.85em; color:rgba(var(--fg-rgb),.7); }
 .tagGenreHint .tagBtn { flex:0 0 auto; }
 .pbSubHead { margin-top:12px; color:rgba(var(--fg-rgb),.8); }
+
+/* ---------- Own records from Discogs (vinyl.js) ---------- */
+.vnIcon { flex:0 0 auto; width:calc(4.5 * var(--vw)); height:calc(4.5 * var(--vw)); max-width:22px; max-height:22px; fill:currentColor; opacity:.45; margin-left:calc(2 * var(--vw)); }
+.vnLocal { flex:0 0 auto; font-size:calc(2.6 * var(--vw)); padding:.15em .7em; border-radius:999px; border:1px solid rgba(var(--fg-rgb),.3); opacity:.7; margin-left:calc(2 * var(--vw)); }
+.vnHint { display:inline-flex; align-items:center; gap:calc(1.5 * var(--vw)); margin-top:calc(1 * var(--vw)); font-size:calc(3 * var(--vw)); opacity:.75; }
+.vnHint .vnIcon { margin:0; opacity:.8; }
+.vnBig { flex:0 0 calc(12 * var(--vw)); height:calc(12 * var(--vw)); max-width:60px; max-height:60px; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:rgba(var(--fg-rgb),.08); margin-right:calc(3 * var(--vw)); }
+.vnBig .vnIcon { width:60%; height:60%; max-width:none; max-height:none; margin:0; opacity:.75; }
+.vnArtist { cursor:pointer; }
+.vnTile, .dTile { position:relative; }
+.vnTileMark { position:absolute; top:calc(1.5 * var(--vw)); right:calc(1.5 * var(--vw)); margin:0; opacity:1; fill:#fff;
+  background:rgba(0,0,0,.55); border-radius:50%; padding:2px; }
+.vnOpen { text-align:left; padding:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); opacity:.6; text-decoration:underline; }
+.vnTrack { cursor:default; }
+.vnDiscogs { display:block; color:inherit; }
+.vnStatus { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:calc(2 * var(--vw)); margin:calc(2 * var(--vw)) 0; }
+.vnFilter { display:block; width:100%; box-sizing:border-box; margin:calc(2 * var(--vw)) 0; }
+.vnText, .vnStatus .sSub { margin:calc(1.5 * var(--vw)) 0; line-height:1.4; white-space:normal; overflow:visible; text-overflow:clip; text-align:left; }
+.vnMsg { margin:calc(1.5 * var(--vw)) 0; color:#c77700; }
+.vnMsg:empty { display:none; }
+.vnFolder { display:flex; align-items:center; gap:calc(2.5 * var(--vw)); padding:calc(1.5 * var(--vw)) 0; border-top:1px solid rgba(var(--fg-rgb),.08); }
+.vnFolderName { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.vnFolder .vnLabel { flex:0 0 7em; }
+.vnSave { margin:calc(3 * var(--vw)) 0; }

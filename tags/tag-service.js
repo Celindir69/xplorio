@@ -1908,7 +1908,7 @@ var WELCOME_FILE = path.join(DATA_DIR, 'welcome.json');
 var mbgate = require('./mbgate.js');                   /* shared MusicBrainz queue (one request per second, pause on 503) */
 var releasedates = require('./releasedates.js');          /* release dates (Date tag, otherwise MusicBrainz) for the birthdays */
 var releaseDates = new releasedates.Collector({file: path.join(DATA_DIR, 'releasedates.jsonl'), list: function(){ return albumIdx && albumIdx.list; },
-  extra: releaseExtra});
+  extra: releaseExtra, more: function(){ return vinylOnly(); }});   /* records only on vinyl (vinyl.js): birthdays too */
 /* usual spelling of the artists (MusicBrainz, Last.fm) for the library check; slower while the release dates are looked up */
 var artistnames = require('./artistnames.js');
 var artistNames = new artistnames.Collector({file: path.join(DATA_DIR, 'artistnames.jsonl'),
@@ -1944,9 +1944,115 @@ function doWelcome(query, cb) {
     var tz = {w: parseInt(query.tzw, 10) || 0, s: parseInt(query.tzs, 10) || 0};
     var ago = plays.ago(pl, now, tz, 8, 'album');        /* played around this time X years ago (like the row in Discover) */
     ago.items.forEach(function(it){ if (it.u) it.u = relUri(it.u); if (!it.u) delete it.u; var y = yearOf({u: it.u, al: it.ti, ar: it.ar}); if (y) it.y = y; });
+    var bdays = releasedates.birthdays(list.concat(vinylOnly()), function(a){ return releaseDates.dateOf(a); }, day);
+    vinylMarkBirthdays(bdays);
     cb(200, {ok: true, day: pick, recent: recent, fresh: albums.freshAlbums(list, now, 8), ago: ago.items.length ? ago : null,
-             birthdays: releasedates.birthdays(list, function(a){ return releaseDates.dateOf(a); }, day), dates: releaseDates.status()});
+             birthdays: bdays, dates: releaseDates.status()});
   });
+}
+
+/* ---------- Own records from Discogs (vinyl.js) ---------- */
+/* GET /vinyl -> {ok, status, labels: {folderId: label}, items: [{id, f, ar, al, y, fmt, th, img, dir?, n}]} (dir: the same album
+   in the library); ?q=… -> {ok, artists, albums, songs} (search); ?ar=&al= -> {ok, items} (this album on vinyl);
+   ?artist=… -> {ok, items} (the artist's records); ?id=… -> {ok, item, tracks}.
+   POST /vinyl {action: 'folders', user} -> {ok, user, folders: [{id, name, count}]}; {action: 'save', user, folders: [{id,
+   name, label}]} -> {ok, status}; {action: 'refresh'} -> {ok} */
+var vinyl = require('./vinyl.js');
+var vinylColl = new vinyl.Collection({file: path.join(DATA_DIR, 'vinyl.json'), token: function(){ return keys.discogs(); },
+  getJson: function(u, headers, cb){
+    coversearch.fetchUrl(u, 8 * 1024 * 1024, function(e, r){
+      if (e) return cb(e);
+      try { cb(null, JSON.parse(r.body.toString('utf8'))); } catch (x) { cb(new Error('no JSON response')); }
+    }, {headers: headers, timeout: 20000});
+  }});
+var vinylIdx = null;   /* {list, rev, matcher, dirs: {releaseId: dir}, only: [albums for the birthdays]} */
+function vinylIndex() {
+  var list = (albumIdx && albumIdx.list) || [];
+  if (vinylIdx && vinylIdx.list === list && vinylIdx.rev === vinylColl.rev) return vinylIdx;
+  var m = new vinyl.Matcher(list), dirs = {}, only = [], seenOnly = {};
+  vinylColl.data.items.forEach(function(it){
+    var d = m.match(it.ar, it.al);
+    if (d) { dirs[it.id] = d; return; }
+    var k = vinyl.akey(it.ar) + '|' + vinyl.tkey(it.al);
+    if (seenOnly[k]) return;
+    seenOnly[k] = 1;
+    only.push({dir: 'discogs:' + it.id, al: it.al, ar: /^various$/i.test(it.ar) ? 'Verschiedene' : it.ar, y: it.y, vinyl: it});
+  });
+  vinylIdx = {list: list, rev: vinylColl.rev, matcher: m, dirs: dirs, only: only};
+  return vinylIdx;
+}
+function vinylOnly() { return vinylColl.configured() && albumIdx ? vinylIndex().only : []; }
+function vinylOut(it) {
+  var o = {}, idx = vinylIndex();
+  Object.keys(it).forEach(function(k){ o[k] = it[k]; });
+  o.lbl = vinylColl.label(it.f);
+  if (idx.dirs[it.id]) o.dir = idx.dirs[it.id];
+  var tr = vinylColl.data.tracks[it.id];
+  if (tr) o.n = tr.length;
+  return o;
+}
+/* birthdays: records only on vinyl get their cover and id; albums also on vinyl a mark */
+function vinylMarkBirthdays(b) {
+  if (!vinylColl.configured()) return;
+  var idx = vinylIndex(), onVinyl = {};
+  Object.keys(idx.dirs).forEach(function(id){ onVinyl[idx.dirs[id]] = 1; });
+  ['today', 'week', 'month'].forEach(function(k){
+    (b[k] || []).forEach(function(o){
+      var m = /^discogs:(\d+)$/.exec(o.dir);
+      if (m) {
+        var it = vinylColl.data.items.filter(function(x){ return x.id === +m[1]; })[0];
+        o.vinyl = it ? vinylOut(it) : {id: +m[1]};
+        delete o.dir;
+      } else if (onVinyl[o.dir]) o.onVinyl = true;
+    });
+  });
+}
+function doVinylGet(query, cb) {
+  albumsEnsure(function(){
+    var items = vinylColl.data.items, st = vinylColl.status();
+    if (query.q !== undefined) {
+      var r = vinyl.search(items, vinylColl.data.tracks, String(query.q).slice(0, 100), 50);
+      return cb(200, {ok: true, artists: r.artists, albums: r.albums.map(vinylOut),
+                      songs: r.songs.map(function(x){ return {t: x.t, p: x.p, d: x.d, ar: x.ar, item: vinylOut(x.item)}; })});
+    }
+    if (query.id !== undefined) {
+      var it = items.filter(function(x){ return x.id === +query.id; })[0];
+      if (!it) return cb(200, {ok: false, error: 'not found'});
+      return cb(200, {ok: true, item: vinylOut(it), tracks: vinylColl.data.tracks[it.id] || null, status: st,
+                      also: items.filter(function(x){ return x !== it && vinyl.sameAlbum(x.ar, x.al, it.ar, it.al); }).map(vinylOut)});
+    }
+    if (query.al !== undefined) {
+      return cb(200, {ok: true, items: items.filter(function(x){ return vinyl.sameAlbum(x.ar, x.al, query.ar || '', query.al); }).map(vinylOut)});
+    }
+    if (query.artist !== undefined) {
+      var a = vinyl.akey(query.artist);
+      return cb(200, {ok: true, items: !a ? [] : items.filter(function(x){
+        return vinyl.akey(x.ar) === a || x.ar.split(/\s*(?:,|&|\band\b|\bfeat\.?|\bwith\b|\bund\b)\s*/i).some(function(n){ return vinyl.akey(n) === a; });
+      }).map(vinylOut)});
+    }
+    cb(200, {ok: true, status: st, items: items.map(vinylOut)});
+  });
+}
+function doVinylPost(body, cb) {
+  if (body.action === 'folders') {
+    return vinylColl.folders(body.user, function(e, r){
+      if (e) return cb(200, {ok: false, error: /404/.test(e.message) ? 'user' : /401|403/.test(e.message) ? 'private' : e.message === 'no user' ? 'nouser' : e.message});
+      cb(200, {ok: true, user: r.user, folders: r.folders});
+    });
+  }
+  if (body.action === 'save') {
+    return vinylColl.setConfig({user: body.user, folders: body.folders}, function(e){
+      if (e) return cb(200, {ok: false, error: e.message});
+      vinylIdx = null;
+      cb(200, {ok: true, status: vinylColl.status()});
+    });
+  }
+  if (body.action === 'refresh') {
+    if (!vinylColl.configured()) return cb(200, {ok: false, error: 'not configured'});
+    vinylColl.refresh(function(e){ vinylIdx = null; if (e) console.error('vinyl: ' + e.message); });
+    return cb(200, {ok: true, status: vinylColl.status()});
+  }
+  cb(400, {ok: false, error: 'unknown action'});
 }
 
 /* ---------- "Did you mean …?" (suggest.js) ---------- */
@@ -3720,6 +3826,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/togethermix') return doTogetherMix(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/similar') return doSimilar(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/suggest') return doSuggest(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
+  if (req.method === 'GET' && route === '/vinyl') return doVinylGet(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/welcome') return doWelcome(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/discover') return doDiscover(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/random')  return doRandom(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
@@ -3728,7 +3835,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/lastfm')  return send(res, 200, {ok: true, recording: recording, lastfm: lfm.status(), listenbrainz: lbz.status()});
   if (req.method === 'GET' && route === '/artist')  return doArtist(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'POST' && route === '/essentia') return doEssentiaUpload(req, res);
-  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings', '/coverbest', '/albumid', '/albumsearch', '/albumrelease'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
+  if (req.method !== 'POST' || ['/read', '/write', '/undo', '/cover', '/scan', '/check', '/checkdone', '/genreok', '/patterns', '/remote', '/dupmove', '/filemove', '/trashrestore', '/trashdelete', '/files', '/dupfill', '/lastfm', '/lyricsoffset', '/randommix', '/ratings', '/rate', '/service', '/servicelogin', '/power', '/playback', '/logs', '/applemusic', '/warnings', '/coverbest', '/albumid', '/albumsearch', '/albumrelease', '/vinyl'].indexOf(route) < 0) return send(res, 404, {ok: false, error: 'unknown path'});
   var data = '', tooBig = false;
   req.setEncoding('utf8');
   req.on('data', function(d){ data += d; if (data.length > MAX_BODY) { tooBig = true; req.destroy(); } });
@@ -3737,7 +3844,7 @@ function handle(req, res) {
     var body;
     try { body = JSON.parse(data); } catch (e) { return send(res, 400, {ok: false, error: 'invalid JSON'}); }
     body = fromWhere(body, req);
-    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead, '/coverbest': doCoverBest, '/albumid': doAlbumId, '/albumsearch': doAlbumSearch, '/albumrelease': doAlbumRelease}[route];
+    var fn = {'/read': doRead, '/write': doWrite, '/cover': doCover, '/scan': doScan, '/undo': doUndo, '/check': doCheckStart, '/checkdone': doCheckDone, '/genreok': doGenreOk, '/patterns': doPatterns, '/remote': doRemoteSet, '/dupmove': doDupMove, '/filemove': doFileMove, '/trashrestore': doTrashRestore, '/trashdelete': doTrashDelete, '/files': doFiles, '/dupfill': doDupFill, '/lastfm': doLastfm, '/lyricsoffset': doOffsetSet, '/randommix': doRandomMix, '/ratings': doRatings, '/rate': doRate, '/service': doService, '/servicelogin': doServiceLogin, '/power': doPower, '/logs': doLogs, '/playback': doPlaybackSet, '/applemusic': doAppleMusic, '/warnings': doWarningsRead, '/coverbest': doCoverBest, '/albumid': doAlbumId, '/albumsearch': doAlbumSearch, '/albumrelease': doAlbumRelease, '/vinyl': doVinylPost}[route];
     try { fn(body || {}, function(c, o){ send(res, c, o); }); }
     catch (e) { console.error('request ' + route + ' failed: ' + (e && e.stack || e)); if (!res.headersSent) send(res, 500, {ok: false, error: 'internal error'}); }
   });
@@ -3770,6 +3877,7 @@ if (require.main === module) {
   rgAuto.start();                                         /* follows the queue via MPD idle */
   if (process.env.RELEASEDATES !== '0' && appConfig().RELEASEDATES !== false) releaseDates.start();   /* birthdays: MusicBrainz */
   if (process.env.ARTISTNAMES !== '0' && appConfig().ARTISTNAMES !== false) artistNames.start();      /* library check: usual spelling */
+  if (process.env.VINYL !== '0') vinylColl.start();       /* own records from Discogs: once a day, tracklists in the background */
   if (process.env.MOODTAGS !== '0' && appConfig().MOODTAGS !== false) {
     moodCollector.start();
     setInterval(function(){ albumsEnsure(); }, 3600000);  /* keep the track list current (rereads only when MPD has changed) */

@@ -723,6 +723,25 @@ Einstellungen › ListenBrainz eintragen (`LISTENBRAINZ_TOKEN` in `/data/xplorio
 Den bisherigen Last.fm-Verlauf übernimmt ListenBrainz selbst: auf listenbrainz.org unter „Connect services“ › Last.fm.
 Last.fm und ListenBrainz können gleichzeitig aktiv sein.
 
+### Plattensammlung von Discogs
+Wer seine Schallplatten bei [Discogs](https://www.discogs.com) verwaltet, kann sie zur Information in Xplorio einbinden
+(abspielen lassen sie sich natürlich nicht). Menü › „Meine Platten“ › Einrichten: den eigenen Discogs-Namen eintragen
+(leer lassen nimmt den Besitzer des Discogs-Tokens), „Ordner laden“, die Ordner mit den Platten ankreuzen und jedem eine kurze
+Bezeichnung geben, z. B. „LP“ und „12″“. Ohne eigene Ordner geht auch „Ganze Sammlung“. Private Sammlungen liest Xplorio nur mit
+dem eigenen [Discogs-Token](#album-erkennen); öffentliche auch ohne. Danach:
+- der Tag-Dienst liest die gewählten Ordner sofort und dann einmal am Tag und holt die Titellisten der Platten nach und nach im
+  Hintergrund (Discogs erlaubt 60 Anfragen pro Minute; bei 500 Platten dauert das rund zehn Minuten). Alles liegt in
+  `/data/xplorio/data/vinyl.json`, „Aktualisieren“ liest sofort neu,
+- die Suche hat die Quelle „Vinyl“ (Künstler, Alben und Titel der Platten), „Meine Platten“ zeigt die Sammlung nach Ordnern,
+- Album- und Künstlerseiten zeigen „Auf Vinyl · LP“ bzw. „Meine Platten“, wenn das Album auch im Regal steht,
+- die Seite einer Platte bietet „Lokal abspielen“ (gleiches Album in der Bibliothek) und „Bei TIDAL abspielen“ (bzw. Qobuz …),
+  wenn der Dienst es findet,
+- Platten, die es nur auf Vinyl gibt, bekommen ihr Erscheinungsdatum von MusicBrainz und erscheinen bei den Album-Geburtstagen.
+
+Zugeordnet wird über Künstler und Albumtitel (Groß-/Kleinschreibung, Akzente, „The“ und Zusätze wie „Remastered“ oder
+„Deluxe Edition“ zählen nicht; „Live“ bleibt ein eigenes Album). Bei stark abweichenden Titeln greift die Zuordnung nicht.
+Ausschalten: „Plattensammlung ausschalten“ in der Einrichtung; die Sammlung bei Discogs bleibt unverändert.
+
 ### Stimmungs-Tags
 Mit `LASTFM_KEY` holt der Tag-Dienst für jeden Titel der Bibliothek die Last.fm-Tags (`track.getTopTags`, ohne
 brauchbare Titel-Tags ersatzweise die Tags des Künstlers); ohne (funktionierenden) Key die Tags und Genres der Aufnahme

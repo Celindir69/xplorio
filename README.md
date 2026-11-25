@@ -63,6 +63,10 @@ eingegeben ist, zeigt sie passend zum Reiter Reihen zum Entdecken: zufällige En
 nicht gehört, noch nie gehört und früher oft gehört. Darunter führen Knöpfe nach Stimmung, Energie, Stil und Jahrzehnt weiter. Neben „Alle abspielen“ und an jeder Entdecken-Reihe startet ein Würfel einen Zufallsmix aus 25 Titeln. Auf jeder Künstlerseite führt der Reiter „Entdecken“ zu ähnlichen Künstlern (mit Zufallsmix aus ihnen und dem Künstler selbst), seinen Stimmungen, Stilen und Jahrzehnten; auf jeder Albumseite zu ähnlichen Alben, Stimmung, Stil, Jahr und weiteren Alben des Künstlers. Der Reiter „Hintergrund“ zeigt dort Künstler- bzw. Albumtext und Mitwirkende. Ein Tipp auf den laufenden Titel zeigt ähnliche Titel nach Stimmung, Energie und Tempo. Hinter jedem Albumtitel steht das Erscheinungsjahr; ein Tipp darauf öffnet die Alben dieses Jahres mit Empfehlungen aus dem Jahrzehnt.
 Bewertungen: Herz für Künstler, ein bis fünf Sterne für Alben, Daumen hoch oder runter für Titel (Daumen hoch ist der Volumio-Favorit). Bei Webradio holt die App ein Cover
 zum laufenden Titel und zeigt Senderlogos in der Senderliste.
+Wer seine Schallplatten bei Discogs verwaltet, bindet sie unter Menü › „Meine Platten“ ein (eigener Discogs-Name, beliebige Ordner
+mit eigener Bezeichnung wie „LP“ oder „12″“): Sie erscheinen in der Suche als Quelle „Vinyl“, als Hinweis „Auf Vinyl“ auf Album-
+und Künstlerseiten und bei den Album-Geburtstagen. Abgespielt wird die Version aus der eigenen Bibliothek oder vom Streamingdienst
+([Einrichtung](docs/einrichten.md#plattensammlung-von-discogs)).
 
 <p>
   <img src="docs/bilder/entdecken.jpg" width="200" alt="Entdecken in der Suche">
