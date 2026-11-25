@@ -1189,7 +1189,7 @@ function tagPostJson(route, body) { return tagPost(route, body); }
    request ("Tag-Dienst nicht erreichbar", while the service goes on writing). Starts with TAG_PART_FIRST files, then sizes
    each part from the time per file so far (big 24/96 FLACs on USB 2: seconds per file; MP3s: a few ms) -> Promise.
    fn(part, done, total): done = files finished before this part */
-var TAG_PART_MS = 20000, TAG_PART_FIRST = 3, TAG_PART_MAX = 100;
+var TAG_PART_MS = 20000, TAG_PART_FIRST = 1, TAG_PART_MAX = 100;   /* first part 1: a big FLAC takes 10-20 s with the paced writing */
 function tagParts(list, fn) {
   var i = 0, ms = 0, n = 0;
   function size() {

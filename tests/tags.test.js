@@ -55,6 +55,14 @@ t('rescan: many folders (genre across many albums) result in one scan', function
   assert.deepStrictEqual(svc.scanDirs(['USB/A/1/a.flac', 'USB/B/1/a.flac', 'NAS/C/1/a.flac', 'NAS/D/1/a.flac']), ['']);
 });
 
+t('cover writing is paced: pause from the bytes written, minus the time the write took, within limits', function(){
+  assert.strictEqual(svc.writeGap(10 * 1024 * 1024, 0), 2000);            /* 10 MB at 5 MB/s */
+  assert.strictEqual(svc.writeGap(10 * 1024 * 1024, 1500), 500);
+  assert.strictEqual(svc.writeGap(70000, 0), 250);                         /* small in-place write: the minimum */
+  assert.strictEqual(svc.writeGap(500 * 1024 * 1024, 0), 15000);           /* at most 15 s */
+  assert.strictEqual(svc.writeGap(undefined, 0), 250);
+});
+
 /* tags.py with a self-built DSF file */
 var py = ['python3', 'python'].filter(function(c){ return cp.spawnSync(c, ['--version']).status === 0; })[0];
 if (!py) { console.log('ok   (tags.py skipped: no Python found)'); }
@@ -190,6 +198,23 @@ else {
   t('tags.py: without image the cover is removed', function(){
     assert.ok(run({op: 'cover_set', path: dsf}).changed);
     assert.strictEqual(run({op: 'cover_get', path: dsf}).data, undefined);
+  });
+  /* a larger cover rewrites the whole FLAC: tags.py reports the bytes written, so the service paces the next file */
+  t('tags.py: cover_set reports the bytes the drive takes (whole FLAC when it grows, little in place)', function(){
+    var flac = path.join(root, 'USB', 'big.flac');
+    var mkf = 'import struct\nsi=struct.pack(">HH",4096,4096)+b"\\0"*6+struct.pack(">Q",(44100<<44)|(1<<41)|(15<<36))+b"\\0"*16\n' +
+      'open(%s,"wb").write(b"fLaC"+struct.pack(">I",(0x80<<24)|34)+si+b"\\xff"*300000)\n';
+    cp.spawnSync(py, ['-c', mkf.replace('%s', JSON.stringify(flac))]);
+    var big = path.join(root, 'big.jpg');
+    fs.writeFileSync(big, Buffer.concat([fs.readFileSync(jpgA), Buffer.alloc(50000, 7)]));
+    var r = run({op: 'cover_set', path: flac, image: big, mime: 'image/jpeg'});
+    assert.ok(r.ok && r.changed, JSON.stringify(r));
+    assert.strictEqual(r.bytes, fs.statSync(flac).size);                    /* file grew: all of it was rewritten */
+    var same = path.join(root, 'same.jpg');                                  /* same size, other content: fits in place */
+    var b = fs.readFileSync(big); b[b.length - 1] = 9; fs.writeFileSync(same, b);
+    var size = fs.statSync(flac).size, r2 = run({op: 'cover_set', path: flac, image: same, mime: 'image/jpeg'});
+    assert.ok(r2.changed); assert.strictEqual(fs.statSync(flac).size, size);
+    assert.ok(r2.bytes < 100000, String(r2.bytes));
   });
   /* all embedded images out (DSF: MPD 0.20 ignores tags whose ID3 block is over 1 MB): saved into the folder first */
   function withImages(file) {

@@ -1516,6 +1516,7 @@ langRegister('en', 'English', {
   'tag.cover.partFiles': {one: 'cover to {n} file', other: 'cover to {n} files'},
   'tag.cover.partFolders': {one: 'folder.jpg to {n} folder', other: 'folder.jpg to {n} folders'},
   'tag.cover.pick': 'Choose image…',
+  'tag.cover.queued': 'Waiting for the previous album…',
   'tag.cover.preparing': 'Preparing image…',
   'tag.cover.reading': 'Reading cover…',
   'tag.cover.searching': 'Searching cover for “{album}”…',

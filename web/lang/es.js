@@ -1514,6 +1514,7 @@ langRegister('es', 'Español', {
   'tag.cover.partFiles': {one: 'portada en {n} archivo', other: 'portada en {n} archivos'},
   'tag.cover.partFolders': {one: 'folder.jpg en {n} carpeta', other: 'folder.jpg en {n} carpetas'},
   'tag.cover.pick': 'Elegir imagen…',
+  'tag.cover.queued': 'Esperando al álbum anterior…',
   'tag.cover.preparing': 'Preparando imagen…',
   'tag.cover.reading': 'Leyendo portada…',
   'tag.cover.searching': 'Buscando portada para “{album}”…',

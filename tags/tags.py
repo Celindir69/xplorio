@@ -48,6 +48,13 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor'))
 
 import mutagen  # noqa: E402
+import mutagen._util  # noqa: E402
+
+# No mmap when mutagen moves the audio data (a larger cover or more tags than the file has room for): the moved data
+# then sits as dirty mapped pages that the kernel has to write back through the exFAT FUSE driver (mount.exfat) on the
+# player. With little free memory that hung: "task python blocked for more than 120 seconds", player frozen until
+# restarted (25.11.2026). read()/write() in 64 KB steps goes straight through FUSE instead.
+mutagen._util.mmap = None
 from mutagen.dsf import DSF  # noqa: E402
 from mutagen.flac import FLAC  # noqa: E402
 from mutagen.flac import Picture  # noqa: E402
@@ -476,10 +483,10 @@ def strip_job(job, path, kind, audio):
         if t:
             saved.append(t.decode('utf-8') if PY2 else t)
     put_images(audio, kind, [])
-    save(audio, kind)
+    written = save(audio, kind)
     m = base + native('.json')
     return {'ok': True, 'changed': True, 'manifest': m.decode('utf-8') if PY2 else m,
-            'saved': saved, 'images': len(imgs)}
+            'saved': saved, 'images': len(imgs), 'bytes': written}
 
 
 def restore_job(job, path, kind, audio):
@@ -490,16 +497,46 @@ def restore_job(job, path, kind, audio):
         with open(native(m['file']), 'rb') as f:
             imgs.append({'type': m['type'], 'mime': m['mime'], 'desc': m['desc'], 'data': f.read()})
     put_images(audio, kind, imgs)
-    save(audio, kind)
-    return {'ok': True, 'changed': True}
+    return {'ok': True, 'changed': True, 'bytes': save(audio, kind)}
 
 
 def save(audio, kind):
+    """write the tags, then wait until the file is on the drive (settle) -> bytes the drive had to take
+    (whole file when it changed size: mutagen moved the audio data; else only the changed block)"""
+    path = audio.filename
+    try:
+        before = os.path.getsize(path)
+    except OSError:
+        before = None
     if kind == 'mp3':
         ver = audio.tags.version[1] if audio.tags.version[1] in (3, 4) else 4
         audio.save(v2_version=ver)
     else:
         audio.save()
+    settle(path)
+    try:
+        after = os.path.getsize(path)
+    except OSError:
+        return 0
+    if before is None or after == before or kind == 'dsf':      # in place / DSF: tag block at the end only
+        return abs(after - (before or after)) + 65536
+    return after
+
+
+def settle(path):
+    """fsync: the rewritten file goes to the drive now, not later together with many others. Without this the
+    kernel collects hundreds of MB (a whole album of FLACs rewritten for a larger cover) and then writes them in
+    one go to the USB drive; meanwhile everything that reads or writes the drive stalls (MPD, Volumio, SSH)."""
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
 
 
 def native(p):
@@ -531,8 +568,8 @@ def cover_job(job, path, kind, audio):
         with open(native(backup), 'wb') as f:
             f.write(old)
     set_cover(audio, kind, data, mime)
-    save(audio, kind)
-    return {'ok': True, 'changed': True, 'backup': backup}
+    written = save(audio, kind)
+    return {'ok': True, 'changed': True, 'backup': backup, 'bytes': written}
 
 
 BITRATE_EXT = ('.mp3', '.mp2', '.m4a', '.mp4', '.m4b', '.aac', '.ogg', '.oga', '.opus', '.wma')
