@@ -64,5 +64,14 @@ assert.strictEqual(qGainText(-6.53), '\u22126.5 dB');
 assert.strictEqual(qGainText(1.2), '+1.2 dB');
 assert.strictEqual(qGainText(0.04), '0.0 dB');
 console.log('ok   ReplayGain text with sign');
+// lossy album (offer the lossless version at a streaming service)
+assert.deepStrictEqual(qAlbumLossy(['music-library/NAS/a/01.mp3', 'music-library/NAS/a/02.MP3']), {fmt:'MP3', probe:''});
+assert.deepStrictEqual(qAlbumLossy(['music-library/NAS/a/01.m4a', 'music-library/NAS/a/02.m4a']), {fmt:'AAC', probe:'music-library/NAS/a/01.m4a'});
+assert.deepStrictEqual(qAlbumLossy(['x/01.ogg', 'x/02.m4a']), {fmt:'OGG', probe:'x/02.m4a'});
+assert.strictEqual(qAlbumLossy(['x/01.mp3', 'x/02.flac']), null);
+assert.strictEqual(qAlbumLossy(['x/01.flac']), null);
+assert.strictEqual(qAlbumLossy(['x/track']), null);
+assert.strictEqual(qAlbumLossy([]), null);
+console.log('ok   lossy album by file extension');
 process.exit(fail ? 1 : 0);
 

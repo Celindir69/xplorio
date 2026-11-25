@@ -67,6 +67,8 @@ langRegister('en', 'English', {
   'browse.playAlbum': 'Play whole album',
   'browse.playFull': 'Complete on {service}',
   'browse.fullMore': {one: '{total} tracks, 1 more than here', other: '{total} tracks, {n} more than here'},
+  'browse.playBetter': 'Lossless on {service}',
+  'browse.insteadOf': 'instead of {fmt}',
   'browse.playAll': 'Play all',
   'browse.tab.albums': 'Albums & tracks',
   'browse.tab.more': 'Discover',

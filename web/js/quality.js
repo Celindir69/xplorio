@@ -82,6 +82,21 @@ function classifyQuality(st, cfg) {
   return { kind: kind, label: label, tech: tech };
 }
 
+/* Album of the own collection in a lossy format? uris: the addresses of its local tracks.
+   -> {fmt: 'MP3', probe: ''} if every file is lossy by its extension; m4a/mp4 among them: {fmt: 'AAC', probe: <uri of the
+   first one>}, lossy only if the probe (mp4probe.js) finds AAC there; null = not lossy (or a lossless/unknown file among them) */
+function qAlbumLossy(uris) {
+  if (!uris || !uris.length) return null;
+  var fmt = '', probe = '';
+  for (var i = 0; i < uris.length; i++) {
+    var m = /\.([a-z0-9]+)$/i.exec(String(uris[i] || '')), ext = m ? m[1].toLowerCase() : '';
+    if (Q_LOSSY.indexOf(ext) > -1) { if (!fmt) fmt = ext.toUpperCase(); }
+    else if (ext === 'm4a' || ext === 'mp4' || ext === 'm4b') { if (!probe) probe = uris[i]; }
+    else return null;
+  }
+  return { fmt: fmt || 'AAC', probe: probe };
+}
+
 /* ReplayGain in the tech line: -6.53 -> "−6.5 dB", 1.2 -> "+1.2 dB", 0 -> "0.0 dB" */
 function qGainText(db) {
   var v = Math.round(db * 10) / 10;
