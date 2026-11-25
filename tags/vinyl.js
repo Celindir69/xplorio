@@ -8,6 +8,7 @@
 var fs = require('fs');
 var writeAtomic = require('./atomic.js').writeAtomic;
 var releasedates = require('./releasedates.js');
+var duplicates = require('./duplicates.js');           /* additions as with the album versions */
 
 var API = process.env.DISCOGS_URL || 'https://api.discogs.com';
 var REFRESH_MS = 24 * 3600 * 1000;           /* folders read again once a day */
@@ -34,9 +35,11 @@ function akey(s) {
   var k = fold(cleanName(s)).replace(/^the\s+/, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
   return /^(various|variousartists|verschiedene|verschiedeneinterpreten|va)$/.test(k) ? 'va' : k;
 }
-/* album key: edition additions ("Remastered", "Deluxe") aside, "(Live)" stays a different album; "(Disc 2)" aside */
+/* album key: additions aside as with the album versions ("[HD]", "(24-96)", "Remastered", "Deluxe", " - 2011 Remaster"),
+   "(Live)" stays a different album; "(Disc 2)" aside */
 function tkey(s) {
-  s = releasedates.stripEdition(String(s || '').replace(/\s*[\(\[]\s*(cd|disc|disk|lp|side)\s*\d+\s*[\)\]]\s*$/i, ''));
+  s = String(s || '').replace(/\s*[\(\[]\s*(cd|disc|disk|lp|side)\s*\d+\s*[\)\]]\s*$/i, '');
+  s = releasedates.stripEdition(duplicates.bareName(s));
   return fold(s).replace(/^the\s+/, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
 }
 

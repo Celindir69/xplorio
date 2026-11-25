@@ -44,6 +44,12 @@ t('matching with the library: spelling, "The", edition additions, Various Artist
   assert.strictEqual(m.match('Polar Echo', 'Nebelbank (Live)'), '');
   assert.strictEqual(m.match('Andere Band', 'Nebelbank'), '');
   assert.ok(vinyl.sameAlbum('Polar Echo', 'Nebelbank [Deluxe Edition]', 'The Polar Echo', 'Nebelbank'));
+  var hd = new vinyl.Matcher([{dir: 'USB/Highres/Polar Echo/Glas [HD 4824]', al: 'Glas [HD]', ar: 'Polar Echo'},
+                              {dir: 'USB/Highres/Polar Echo/Eis', al: 'Eis (Bonus & Live) (HD)', ar: 'Polar Echo'},
+                              {dir: 'USB/Polar Echo/Wind', al: 'Wind - 2011 Remaster', ar: 'Polar Echo'}]);
+  assert.strictEqual(hd.match('Polar Echo', 'Glas'), 'USB/Highres/Polar Echo/Glas [HD 4824]');   /* as with the album versions */
+  assert.strictEqual(hd.match('Polar Echo', 'Eis'), 'USB/Highres/Polar Echo/Eis');
+  assert.strictEqual(hd.match('Polar Echo', 'Wind'), 'USB/Polar Echo/Wind');
 });
 
 t('search: artists with count, albums, tracks', function(){
