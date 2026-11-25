@@ -295,6 +295,7 @@ function scanRun() {
 var WRITE_RATE    = parseInt(process.env.TAGS_WRITE_RATE || String(5 * 1024 * 1024), 10);  /* bytes per second */
 var WRITE_GAP_MIN = parseInt(process.env.TAGS_WRITE_GAP_MIN || '250', 10);                 /* ms after each rewritten file */
 var WRITE_GAP_MAX = 15000;
+var WRITE_NO_PAUSE = process.platform === 'darwin';   /* Mac: internal SSD or Thunderbolt/USB 3, no shared USB 2 bus; one file at a time stays */
 var writeQ = [], writeBusy = false;
 function writeGap(bytes, tookMs) {
   return Math.min(WRITE_GAP_MAX, Math.max(WRITE_GAP_MIN, Math.round((bytes || 0) * 1000 / WRITE_RATE) - tookMs));
@@ -308,7 +309,7 @@ function writeNext() {
   writeBusy = true;
   var w = writeQ.shift(), t0 = Date.now();
   runPy(w.job, function(r){
-    var gap = r && r.changed ? writeGap(r.bytes, Date.now() - t0) : 0;
+    var gap = r && r.changed && !WRITE_NO_PAUSE ? writeGap(r.bytes, Date.now() - t0) : 0;
     if (r) delete r.bytes;
     setTimeout(function(){ writeBusy = false; writeNext(); }, gap);
     w.cb(r);
