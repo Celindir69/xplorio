@@ -1514,6 +1514,7 @@ langRegister('it', 'Italiano', {
   'tag.cover.partFiles': {one: 'copertina in {n} file', other: 'copertina in {n} file'},
   'tag.cover.partFolders': {one: 'folder.jpg in {n} cartella', other: 'folder.jpg in {n} cartelle'},
   'tag.cover.pick': 'Scegli immagine…',
+  'tag.cover.queued': 'In attesa dell\'album precedente…',
   'tag.cover.preparing': 'Preparazione immagine…',
   'tag.cover.reading': 'Lettura copertina…',
   'tag.cover.searching': 'Ricerca copertina per “{album}”…',

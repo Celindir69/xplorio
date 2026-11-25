@@ -1515,6 +1515,7 @@ langRegister('fr', 'Français', {
   'tag.cover.partFiles': {one: 'pochette dans {n} fichier', other: 'pochette dans {n} fichiers'},
   'tag.cover.partFolders': {one: 'folder.jpg dans {n} dossier', other: 'folder.jpg dans {n} dossiers'},
   'tag.cover.pick': 'Choisir une image…',
+  'tag.cover.queued': 'En attente de l\'album précédent…',
   'tag.cover.preparing': 'Préparation de l\'image…',
   'tag.cover.reading': 'Lecture de la pochette…',
   'tag.cover.searching': 'Recherche de pochette pour « {album} »…',

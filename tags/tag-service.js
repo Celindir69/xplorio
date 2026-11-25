@@ -285,6 +285,36 @@ function scanRun() {
   });
 }
 
+/* ---------- Writing images into music files: one file at a time, paced ----------
+   A larger cover usually does not fit into the room the file keeps for tags: mutagen then rewrites the whole file
+   (FLAC, m4a: 30-150 MB each). Replacing the covers of several albums in a row wrote GBs to the USB SSD without a
+   break; the player froze (no SSH, restart needed). Now tags.py waits after each file until it is on the drive (fsync)
+   and the service pauses after it so that at most WRITE_RATE bytes per second reach the drive on average. Covers,
+   image removal and their undo go through this one queue, also when several albums are saved at the same time.
+   Python jobs of others (ReplayGain, tag editor) get their turn during the pause. */
+var WRITE_RATE    = parseInt(process.env.TAGS_WRITE_RATE || String(5 * 1024 * 1024), 10);  /* bytes per second */
+var WRITE_GAP_MIN = parseInt(process.env.TAGS_WRITE_GAP_MIN || '250', 10);                 /* ms after each rewritten file */
+var WRITE_GAP_MAX = 15000;
+var writeQ = [], writeBusy = false;
+function writeGap(bytes, tookMs) {
+  return Math.min(WRITE_GAP_MAX, Math.max(WRITE_GAP_MIN, Math.round((bytes || 0) * 1000 / WRITE_RATE) - tookMs));
+}
+function runPyPaced(job, cb) {
+  writeQ.push({job: job, cb: cb});
+  writeNext();
+}
+function writeNext() {
+  if (writeBusy || !writeQ.length) return;
+  writeBusy = true;
+  var w = writeQ.shift(), t0 = Date.now();
+  runPy(w.job, function(r){
+    var gap = r && r.changed ? writeGap(r.bytes, Date.now() - t0) : 0;
+    if (r) delete r.bytes;
+    setTimeout(function(){ writeBusy = false; writeNext(); }, gap);
+    w.cb(r);
+  });
+}
+
 /* ---------- Jobs ---------- */
 
 function mapSeq(items, fn, cb) {
@@ -2777,7 +2807,7 @@ function doCover(body, cb) {
   if (!body.embed) return finish();
   var i = 0;
   mapSeq(paths, function(p, done){
-    runPy({op: 'cover_set', path: p.full, image: tmp, mime: 'image/jpeg', backup: path.join(bdir, part + '-' + (i++))}, function(r){
+    runPyPaced({op: 'cover_set', path: p.full, image: tmp, mime: 'image/jpeg', backup: path.join(bdir, part + '-' + (i++))}, function(r){
       r.uri = p.uri;
       if (r.ok && r.changed) {
         changedRel.push(p.rel);
@@ -2810,7 +2840,7 @@ function doCoverStrip(body, cb) {
   var results = bad.map(function(u){ return {uri: u, ok: false, error: 'path not allowed or file missing'}; });
   var changedRel = [], saved = [], i = 0;
   mapSeq(paths, function(p, done){
-    runPy({op: 'images_strip', path: p.full, backup: path.join(bdir, 'img-' + part + '-' + (i++))}, function(r){
+    runPyPaced({op: 'images_strip', path: p.full, backup: path.join(bdir, 'img-' + part + '-' + (i++))}, function(r){
       r.uri = p.uri;
       if (r.ok && r.changed) {
         changedRel.push(p.rel);
@@ -2851,7 +2881,7 @@ function doUndo(body, cb) {
     if (!p || p.missing) return done({uri: e.uri, ok: false, error: 'file not found'});
     var job = e.images ? {op: 'images_restore', path: p.full, manifest: e.images.manifest}
                        : {op: 'cover_set', path: p.full, image: e.cover.backup || null};
-    runPy(job, function(r){
+    runPyPaced(job, function(r){
       r.uri = e.uri;
       if (r.ok && r.changed) changedRel.push(p.rel);
       if (r.ok && e.images) (e.images.saved || []).forEach(function(rel){   /* the images it saved into the folder */
@@ -3908,4 +3938,4 @@ if (require.main === module) {
     setInterval(function(){ albumsEnsure(); }, 3600000);  /* keep the track list current (rereads only when MPD has changed) */
   }
 }
-module.exports = {pruneLog: pruneLog, resolveUri: resolveUri, scanDirs: scanDirs, server: server, tracker: tracker, playStore: playStore, lastfm: lfm, moodtags: moodCollector, hiddenKeys: hiddenKeys};
+module.exports = {pruneLog: pruneLog, resolveUri: resolveUri, scanDirs: scanDirs, server: server, tracker: tracker, playStore: playStore, lastfm: lfm, moodtags: moodCollector, hiddenKeys: hiddenKeys, writeGap: writeGap};

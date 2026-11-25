@@ -599,6 +599,9 @@ var cbKnown = {};               /* dir -> answer already shown (found / none): a
 /* writing a cover takes a while; the list is drawn again meanwhile (every 10–15 s while the mood or year search runs).
    cbBusy: dir -> progress text while writing; cbLive: dir -> the row shown now, which gets progress and result */
 var cbBusy = {}, cbLive = {};
+/* covers are saved one album after another: each one rewrites whole files on the player (see runPyPaced in the
+   tag service); several at once only made each request wait longer, up to the browser's 60 s limit */
+var cbChain = Promise.resolve();
 function checkCoverBest(row, it, key) {
   var box = document.createElement('div'); box.className = 'ckCb';
   var cur = document.createElement('img'); cur.className = 'ckCbImg'; cur.alt = '';
@@ -676,15 +679,19 @@ function checkCoverBest(row, it, key) {
     applyB = btn(T('check.conflict.apply'), T('check.coverq.applyHint'), function(){
       var dir = it.dir;
       function say(t) { cbBusy[dir] = t; if (cbLive[dir]) cbLive[dir].text(t); }
-      say(T('tag.cover.preparing'));
-      fetch(src).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
+      say(T('tag.cover.queued'));
+      var job = cbChain.then(function(){
+        say(T('tag.cover.preparing'));
+        return fetch(src);
+      }).then(function(x){ if (!x.ok) throw new Error(T('tag.imageNotLoadable')); return x.blob(); })
         .then(tagPrepareImage)
-        .then(function(img){ say(T('tag.cover.writing')); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, say); })
-        .then(function(batch){
-          delete cbBusy[dir];
-          cbKnown[dir] = {state: 'saved', batch: batch, found: st};   /* stays "saved" when the list is drawn again */
-          if (cbLive[dir]) cbLive[dir].saved(batch, st);
-        }).catch(function(x){ delete cbBusy[dir]; if (cbLive[dir]) cbLive[dir].failed(x.message, st); });
+        .then(function(img){ say(T('tag.cover.writing')); return checkCoverSave(it.files.map(function(f){ return f.uri; }), img.b64, say); });
+      cbChain = job.catch(function(){});                 /* the next album starts when this one is done, also after an error */
+      job.then(function(batch){
+        delete cbBusy[dir];
+        cbKnown[dir] = {state: 'saved', batch: batch, found: st};   /* stays "saved" when the list is drawn again */
+        if (cbLive[dir]) cbLive[dir].saved(batch, st);
+      }).catch(function(x){ delete cbBusy[dir]; if (cbLive[dir]) cbLive[dir].failed(x.message, st); });
     });
   }
 }
