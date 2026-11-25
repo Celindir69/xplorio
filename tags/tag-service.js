@@ -1969,17 +1969,41 @@ var vinylIdx = null;   /* {list, rev, matcher, dirs: {releaseId: dir}, only: [al
 function vinylIndex() {
   var list = (albumIdx && albumIdx.list) || [];
   if (vinylIdx && vinylIdx.list === list && vinylIdx.rev === vinylColl.rev) return vinylIdx;
-  var m = new vinyl.Matcher(list), dirs = {}, only = [], seenOnly = {};
+  var m = new vinyl.Matcher(list), dirs = {}, all = {}, only = [], seenOnly = {};
   vinylColl.data.items.forEach(function(it){
-    var d = m.match(it.ar, it.al);
-    if (d) { dirs[it.id] = d; return; }
+    var ds = vinylBestFirst(m.matchAll(it.ar, it.al));
+    if (ds.length) { dirs[it.id] = ds[0]; all[it.id] = ds; return; }
     var k = vinyl.akey(it.ar) + '|' + vinyl.tkey(it.al);
     if (seenOnly[k]) return;
     seenOnly[k] = 1;
     only.push({dir: 'discogs:' + it.id, al: it.al, ar: /^various$/i.test(it.ar) ? 'Verschiedene' : it.ar, y: it.y, vinyl: it});
   });
-  vinylIdx = {list: list, rev: vinylColl.rev, matcher: m, dirs: dirs, only: only};
+  vinylIdx = {list: list, rev: vinylColl.rev, matcher: m, dirs: dirs, all: all, only: only};
   return vinylIdx;
+}
+/* own versions of an album, best first as on the album page (albumIdx.versions, versions.js) */
+function vinylVersion(dir) {
+  var groups = (albumIdx && albumIdx.versions) || [];
+  for (var i = 0; i < groups.length; i++)
+    for (var j = 0; j < groups[i].v.length; j++) if (groups[i].v[j].dir === dir) return {v: groups[i].v[j], rank: j};
+  return null;
+}
+function vinylBestFirst(ds) {
+  if (ds.length < 2) return ds;
+  return ds.map(function(d, i){ var x = vinylVersion(d); return {d: d, r: x ? x.rank : 99, i: i}; })
+    .sort(function(a, b){ return a.r - b.r || a.i - b.i; }).map(function(x){ return x.d; });
+}
+/* [{dir, al, ext, bits, rate, codec, tracks, seconds, best}] for the record page */
+function vinylLocal(ds) {
+  var list = (albumIdx && albumIdx.list) || [];
+  return ds.map(function(d, i){
+    var x = vinylVersion(d), a = list.filter(function(l){ return l.dir === d; })[0] || {}, o = {dir: d};
+    if (x) ['al', 'ext', 'bits', 'rate', 'codec', 'tracks', 'seconds'].forEach(function(k){ if (x.v[k] !== undefined) o[k] = x.v[k]; });
+    else { o.al = a.al || ''; if (a.fi) { o.ext = a.fi.ext; o.tracks = a.fi.n; } }
+    if (a.y) o.y = a.y;
+    if (i === 0 && ds.length > 1) o.best = true;
+    return o;
+  });
 }
 function vinylOnly() { return vinylColl.configured() && albumIdx ? vinylIndex().only : []; }
 function vinylOut(it) {
@@ -2019,6 +2043,7 @@ function doVinylGet(query, cb) {
       var it = items.filter(function(x){ return x.id === +query.id; })[0];
       if (!it) return cb(200, {ok: false, error: 'not found'});
       return cb(200, {ok: true, item: vinylOut(it), tracks: vinylColl.data.tracks[it.id] || null, status: st,
+                      local: vinylLocal(vinylIndex().all[it.id] || []),
                       also: items.filter(function(x){ return x !== it && vinyl.sameAlbum(x.ar, x.al, it.ar, it.al); }).map(vinylOut)});
     }
     if (query.al !== undefined) {

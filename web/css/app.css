@@ -1615,7 +1615,8 @@ html.stage.vuOn #vuStage { display:block; flex:0 0 auto; margin:0 0 calc(var(--s
 .vnTile, .dTile { position:relative; }
 .vnTileMark { position:absolute; top:calc(1.5 * var(--vw)); right:calc(1.5 * var(--vw)); margin:0; opacity:1; fill:#fff;
   background:rgba(0,0,0,.55); border-radius:50%; padding:2px; }
-.vnOpen { text-align:left; padding:calc(1 * var(--vw)) 0 calc(2 * var(--vw)); opacity:.6; text-decoration:underline; }
+.vnOpen { margin-top:calc(1 * var(--vw)); text-decoration:underline; cursor:pointer; }
+.vnVersion .vnPlay { margin-left:calc(2 * var(--vw)); }
 .vnTrack { cursor:default; }
 .vnDiscogs { display:block; color:inherit; }
 .vnStatus { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:calc(2 * var(--vw)); margin:calc(2 * var(--vw)) 0; }
