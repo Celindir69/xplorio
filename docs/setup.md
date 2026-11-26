@@ -325,7 +325,7 @@ When the page opens (only with the Tag Service), a card in the middle of the win
 
 ### System
 
-In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (internal card, USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 10 seconds, and every 2 seconds only while the page is open (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
+In the menu under "System": the current CPU load (refreshed every 2 seconds, with the last 3 minutes and per core), a history of the last 24 hours (load, temperature or memory, averaged per minute), temperature, memory, the usage of each drive (the internal drive with its name, e.g. "Internal · SC64G", USB and each connection under `/mnt/NAS/` separately; an unreachable connection is shown as "not reachable"), Volumio version, kernel, uptime and the file currently playing. The Tag Service reads the values from `/proc`, `/sys` and `df`; it samples every 10 seconds, and every 2 seconds only while the page is open (one small file, no noticeable load) and saves the history every 10 minutes to `/data/xplorio/data/sysinfo.json`.
 
 #### Warnings
 At the very top of the page is the "Warnings" card, as soon as there is something to report. The Tag Service checks once a minute for:
@@ -334,7 +334,7 @@ At the very top of the page is the "Warnings" card, as soon as there is somethin
   the third time; once is normal) and under-voltage on the player. Grouped per drive, with the last line from the log.
 - **Drive gone:** a USB drive that was mounted is missing. Unplugged on purpose: "Read", and it is forgotten.
 - **Memory** over 80 % used for 5 minutes (over below 75 %).
-- **Drive space:** USB and network drives from 90 %, the internal card already from 80 % or under 500 MB free (it holds the
+- **Drive space:** USB and network drives from 90 %, the internal drive already from 80 % or under 500 MB free (it holds the
   MPD database, Volumio's settings, Xplorio's data and "Internal music"); checked every 10 minutes.
 
 The app shows new warnings once as a red notice at the top (a tap opens "System"), and the gear gets a red dot until they

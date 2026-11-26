@@ -441,7 +441,7 @@ Einstellungsseite unter „Funktionen“ (Erscheinungstage).
 ### System
 Im Menü unter „System“: die aktuelle Prozessorlast (alle 2 Sekunden neu, mit den letzten 3 Minuten und je Kern), ein Verlauf
 der letzten 24 Stunden (Last, Temperatur oder Arbeitsspeicher, je Minute gemittelt), Temperatur, Arbeitsspeicher, die Belegung
-jedes Laufwerks (interne Karte, USB und jede Verbindung unter `/mnt/NAS/` einzeln; eine nicht erreichbare Verbindung steht als
+jedes Laufwerks (internes Laufwerk mit seiner Bezeichnung, z. B. „Intern · SC64G“, USB und jede Verbindung unter `/mnt/NAS/` einzeln; eine nicht erreichbare Verbindung steht als
 „nicht erreichbar“ da), Volumio-Version, Kernel, Laufzeit und die gerade gespielte Datei. Die Werte liest der Tag-Dienst aus
 `/proc`, `/sys` und `df`; er misst alle 10 Sekunden und nur bei offener Seite alle 2 Sekunden (eine kleine Datei, ohne spürbare Last) und sichert den Verlauf alle
 10 Minuten in `/data/xplorio/data/sysinfo.json`.
@@ -454,7 +454,7 @@ Ganz oben auf der Seite steht die Karte „Warnungen“, sobald es etwas zu meld
   letzten Zeile aus dem Protokoll.
 - **Laufwerk weg:** Ein USB-Laufwerk, das eingehängt war, fehlt. Absichtlich abgezogen: „Gelesen“, dann ist es vergessen.
 - **Arbeitsspeicher** 5 Minuten lang über 80 % belegt (vorbei unter 75 %).
-- **Speicherplatz:** USB- und Netzwerk-Laufwerke ab 90 %, die interne Karte schon ab 80 % oder unter 500 MB frei (sie trägt
+- **Speicherplatz:** USB- und Netzwerk-Laufwerke ab 90 %, das interne Laufwerk schon ab 80 % oder unter 500 MB frei (es trägt
   die MPD-Datenbank, die Einstellungen von Volumio, die Daten von Xplorio und „Interne Musik“); geprüft alle 10 Minuten.
 
 Neue Warnungen blendet die App einmal oben rot ein (ein Tipp öffnet „System“), und das Zahnrad bekommt einen roten Punkt,

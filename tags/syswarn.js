@@ -173,7 +173,7 @@ Warnings.prototype.space = function(now, cb) {
       var p = Math.round(d.used / d.size * 100), id = 'space:' + d.mount, it = self.find(id), card = d.kind === 'card';
       var warn = card ? p >= CARD_WARN || d.avail < CARD_MIN_KB : p >= SPACE_WARN;
       var clear = card ? p < CARD_CLEAR && d.avail >= CARD_OK_KB : p < SPACE_CLEAR;
-      if (warn) { if (!it || !it.active) self.raise(id, 'space', {mount: d.mount, kind: d.kind, p: p, avail: d.avail}, now); else { it.p.p = p; it.p.avail = d.avail; } }
+      if (warn) { if (!it || !it.active) self.raise(id, 'space', {mount: d.mount, kind: d.kind, label: d.label || '', p: p, avail: d.avail}, now); else { it.p.p = p; it.p.avail = d.avail; if (d.label) it.p.label = d.label; } }
       else if (it && it.active && clear) self.settle(id, now);
     });
     /* a full drive that is no longer there (unplugged, unmounted): its space warning is over */

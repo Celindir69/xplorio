@@ -56,12 +56,13 @@ function mountRank(m) {
   return 2;
 }
 function parseMounts(text) {
-  var byDev = {}, out = [], rootLine = false;
+  var byDev = {}, out = [], rootLine = false, sysDev = '';
   String(text || '').split('\n').forEach(function(l){
     var p = l.split(' ');
     if (p.length < 3) return;
     var dev = p[0].replace(/\\040/g, ' '), mount = p[1].replace(/\\040/g, ' '), type = p[2];
     if (mount === '/') rootLine = true;
+    if (/^\/(imgpart|boot)$/.test(mount) && /^\/dev\//.test(dev) && (!sysDev || mount === '/imgpart')) sysDev = dev;   /* device of the system drive when only the overlay is on / */
     if (SKIP_FS.test(type) || SKIP_MOUNT.test(mount)) return;
     var net = NET_FS.test(type);
     if (!net && dev.indexOf('/dev/') !== 0) return;
@@ -69,13 +70,14 @@ function parseMounts(text) {
     var kind = net ? 'net' : /^\/dev\/(sd|usb)/.test(dev) && mount !== '/' && mount !== '/data' ? 'usb' : 'card';
     var d = {mount: mount, type: type, net: net, kind: kind};
     if (net) return out.push(d);
+    d.dev = dev;
     var have = byDev[dev];
     if (have) { if (mountRank(mount) < mountRank(have.mount)) { have.mount = mount; have.type = type; have.kind = kind; } return; }
     byDev[dev] = d;
     out.push(d);
   });
   /* data partition not visibly mounted (only as overlay under /): df on / shows its usage */
-  if (rootLine && !out.some(function(d){ return d.kind === 'card'; })) out.push({mount: '/', type: 'overlay', net: false, kind: 'card'});
+  if (rootLine && !out.some(function(d){ return d.kind === 'card'; })) out.push({mount: '/', type: 'overlay', net: false, kind: 'card', dev: sysDev});
   /* internal card first, then USB, then network; otherwise in /proc/mounts order */
   var order = {card: 0, usb: 1, net: 2};
   return out.map(function(d, i){ return [d, i]; })
@@ -117,6 +119,48 @@ function parseMacMounts(text) {
 }
 function runText(cmd, args, cb) {
   cp.execFile(cmd, args, {timeout: DF_TIMEOUT}, function(e, out){ cb(e ? '' : String(out || '')); });
+}
+
+/* name of the internal drive for "Internal · <name>", like the name of a USB drive: the file system label,
+   unless it is one of Volumio's own partition labels (volumio_data, …), otherwise the model of the device
+   (SSD/NVMe model, the product name of an SD card or eMMC). '' when nothing useful is found.
+   dev: /dev/mmcblk0p3, /dev/sda2, /dev/nvme0n1p3, …; root: prefix for /sys and /dev (tests) */
+var SYS_LABEL = /^(volumio|volumio_data|volumio_boot|boot|bootfs|rootfs|root|data|system|efi|esp|imgpart|writable|linux)$/i;
+function cleanName(s) { return String(s || '').replace(/\\x([0-9a-f]{2})/gi, function(m, h){ return String.fromCharCode(parseInt(h, 16)); }).replace(/\s+/g, ' ').trim(); }
+function blockBase(name) {
+  var m = /^(mmcblk\d+|nvme\d+n\d+|[shv]d[a-z]+|xvd[a-z]+)/.exec(name);
+  return m ? m[1] : name;
+}
+function driveLabel(dev, root) {
+  root = root || '';
+  var name = String(dev || '').replace(/^\/dev\//, '');
+  if (!name || name.indexOf('/') >= 0) return '';
+  function rd(p) { try { return cleanName(fs.readFileSync(root + p, 'utf8')); } catch (e) { return ''; } }
+  var label = '';
+  try {
+    fs.readdirSync(root + '/dev/disk/by-label').some(function(l){
+      var to;
+      try { to = fs.readlinkSync(root + '/dev/disk/by-label/' + l); } catch (e) { return false; }
+      if (path.basename(to) !== name) return false;
+      label = cleanName(l);
+      return true;
+    });
+  } catch (e) { /* no labels */ }
+  if (label && !SYS_LABEL.test(label)) return label;
+  var base = blockBase(name), d = '/sys/block/' + base + '/device/';
+  return rd(d + 'model') || rd(d + 'name') || '';
+}
+/* Mac: the name of the system volume ("Macintosh HD"), which /Volumes shows as a link to / */
+function macRootName(root) {
+  root = root || '';
+  try {
+    var hit = '';
+    fs.readdirSync(root + '/Volumes').some(function(v){
+      try { if (fs.readlinkSync(root + '/Volumes/' + v) === '/') { hit = v; return true; } } catch (e) { /* no link */ }
+      return false;
+    });
+    return hit;
+  } catch (e) { return ''; }
 }
 
 /* output of df -kP for one path -> kB */
@@ -280,12 +324,23 @@ Sysinfo.prototype.diskList = function(cb) {
   }
   if (!left) return fin();
   list.forEach(function(d, i){
+    var label = d.kind === 'card' ? self.cardLabel(d) : '';
     self.df(d.mount, function(r){
       res[i] = {mount: d.mount, type: d.type, net: d.net, kind: d.kind, ok: !!r, size: r ? r.size : 0, used: r ? r.used : 0, avail: r ? r.avail : 0};
+      if (label) res[i].label = label;
       if (--left === 0) fin();
     });
   });
   }
+};
+
+/* name of the internal drive (see driveLabel), kept per device: it does not change while running */
+Sysinfo.prototype.cardLabel = function(d) {
+  var key = this.mac ? 'mac:' + d.mount : d.dev || '';
+  if (!key) return '';
+  this.labels = this.labels || {};
+  if (!(key in this.labels)) this.labels[key] = this.mac ? (d.mount === '/' ? macRootName(this.root) : '') : driveLabel(d.dev, this.root);
+  return this.labels[key];
 };
 
 /* response for GET /sysinfo; full: with history, drives and static details */
@@ -330,5 +385,5 @@ Sysinfo.prototype.mpd = function(cb) {
   });
 };
 
-module.exports = {Sysinfo: Sysinfo, parseStat: parseStat, pct: pct, parseMeminfo: parseMeminfo, parseMounts: parseMounts,
+module.exports = {Sysinfo: Sysinfo, parseStat: parseStat, pct: pct, parseMeminfo: parseMeminfo, parseMounts: parseMounts, driveLabel: driveLabel, macRootName: macRootName,
                   parseDf: parseDf, parseOsRelease: parseOsRelease, statFromCpus: statFromCpus, parseVmStat: parseVmStat, parseMacMounts: parseMacMounts, parseMpdVersion: parseMpdVersion};
