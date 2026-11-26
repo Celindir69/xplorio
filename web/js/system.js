@@ -89,7 +89,7 @@ function sysTime(t) {
 }
 function sysDiskName(k) {
   var m = k.mount, last = m.split('/').filter(Boolean).pop() || m;
-  if (k.kind === 'card' || m === '/data' || m === '/') return T('sys.diskInternal');
+  if (k.kind === 'card' || m === '/data' || m === '/') return T('sys.diskInternal') + (k.label ? ' · ' + k.label : '');   /* Internal · <drive name> */
   if (/^\/mnt\/INTERNAL(\/|$)/.test(m)) return T('sys.diskInternalMusic');
   if (k.kind === 'usb') return 'USB · ' + last;
   var p = m.split('/');                                   /* /mnt/NAS/Name -> NAS · Name */
@@ -665,7 +665,7 @@ document.addEventListener('visibilitychange', function(){ if (sysOpen() && sysEl
 var sysWarnList = null, SYS_WARN_SEEN = 'xplorio.warnSeen', sysWarnTimer = null;
 function sysWarnName(it) {
   var p = it.p || {};
-  if (p.mount) return sysDiskName({mount: p.mount, kind: p.kind || (/^\/data$|^\/$/.test(p.mount) ? 'card' : 'usb')});
+  if (p.mount) return sysDiskName({mount: p.mount, label: p.label, kind: p.kind || (/^\/data$|^\/$/.test(p.mount) ? 'card' : 'usb')});
   if (/^usb /.test(p.dev || '')) return T('warn.usbDev', {port: p.dev.slice(4)});
   return p.dev || T('warn.drive');
 }

@@ -50,6 +50,26 @@ t('drives: Volumio 2 without mounted /data -> usage via the overlay under /', fu
   assert.deepStrictEqual(l.map(function(d){ return d.mount + ':' + d.kind; }), ['/:card', '/media/MX-Media:usb', '/mnt/NAS/M:net']);
 });
 
+t('name of the internal drive: file system label, else the device model; Volumio labels are skipped', function(){
+  var r = fs.mkdtempSync(path.join(os.tmpdir(), 'sysinfo-lbl-'));
+  function mk(p) { p.split('/').reduce(function(acc, x){ acc = path.join(acc, x); if (!fs.existsSync(acc)) fs.mkdirSync(acc); return acc; }, r); }
+  mk('dev/disk/by-label'); mk('sys/block/mmcblk0/device'); mk('sys/block/sda/device'); mk('sys/block/nvme0n1/device');
+  fs.writeFileSync(path.join(r, 'sys/block/mmcblk0/device/name'), 'SC64G\n');
+  fs.writeFileSync(path.join(r, 'sys/block/sda/device/model'), 'Samsung SSD 860 \n');
+  fs.writeFileSync(path.join(r, 'sys/block/nvme0n1/device/model'), 'WD Blue SN570  \n');
+  fs.symlinkSync('../../mmcblk0p3', path.join(r, 'dev/disk/by-label/volumio_data'));
+  fs.symlinkSync('../../nvme0n1p3', path.join(r, 'dev/disk/by-label/Musik\\x20SSD'));
+  assert.strictEqual(si.driveLabel('/dev/mmcblk0p3', r), 'SC64G');               /* Raspberry Pi: SD card product name */
+  assert.strictEqual(si.driveLabel('/dev/sda3', r), 'Samsung SSD 860');            /* PC: SATA model */
+  assert.strictEqual(si.driveLabel('/dev/nvme0n1p3', r), 'Musik SSD');             /* own label wins */
+  assert.strictEqual(si.driveLabel('/dev/mmcblk1p2', r), '');
+  assert.strictEqual(si.driveLabel('', r), '');
+  var l = si.parseMounts(['/dev/mmcblk0p2 /imgpart ext4 rw 0 0', 'overlay / overlay rw 0 0', '/dev/mmcblk0p1 /boot vfat rw 0 0'].join('\n'));
+  assert.strictEqual(l[0].dev, '/dev/mmcblk0p2');                                  /* overlay on /: device from /imgpart */
+  mk('Volumes'); fs.symlinkSync('/', path.join(r, 'Volumes/Macintosh HD'));
+  assert.strictEqual(si.macRootName(r), 'Macintosh HD');
+});
+
 t('parse df -kP', function(){
   assert.deepStrictEqual(si.parseDf('Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 1000 600 400 60% /mnt/USB\n'), {size: 1000, used: 600, avail: 400});
   assert.strictEqual(si.parseDf(''), null);
@@ -92,6 +112,7 @@ s.report(true, function(r){
     var nas = r.disks.filter(function(d){ return d.mount === '/mnt/NAS/Musik'; })[0];
     assert.strictEqual(nas.ok, false);
     assert.strictEqual(r.disks[0].used, 250);
+    assert.strictEqual(r.disks[0].label, undefined);                         /* no model in the test /sys: just "Internal" */
   });
   s.report(false, function(r2){
     t('short report for the live display without history and drives', function(){
