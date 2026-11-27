@@ -240,6 +240,21 @@ t('refused with what is there: an album folder that exists already, an album imp
   });
 });
 
+t('tag editor after the import: the albums one after another, CD1, CD2 … of one album together', function(done){
+  var src = fs.readFileSync(path.join(__dirname, '../web/js/macsettings.js'), 'utf8');
+  var m = /\nfunction msImpEditorGroups[\s\S]*?\n}\n/.exec(src), ed = fs.readFileSync(path.join(__dirname, '../web/js/tagedit.js'), 'utf8');
+  var disc = Function('return ' + /var TAG_DISC_RE = (\/.*\/i);/.exec(ed)[1])();
+  var groups = Function(m[0] + 'return msImpEditorGroups;')();
+  var g = groups([{dir: 'USB/import/Madonna/American Pie', files: ['a1', 'a2']},
+                  {dir: 'USB/import/Madonna/Eroica/CD1', files: ['e1']}, {dir: 'USB/import/Madonna/Eroica/CD2', files: ['e2']},
+                  {dir: 'USB/import/Madonna/Music', files: ['m1']}], disc);
+  assert.deepStrictEqual(g, [{dir: 'USB/import/Madonna/American Pie', name: 'American Pie', files: ['a1', 'a2'], disc: false},
+                             {dir: 'USB/import/Madonna/Eroica/CD1', name: 'Eroica', files: ['e1', 'e2'], disc: true},
+                             {dir: 'USB/import/Madonna/Music', name: 'Music', files: ['m1'], disc: false}]);
+  assert.deepStrictEqual(groups([], disc), []);
+  done();
+});
+
 (function run(i){
   if (i >= queue.length) { console.log(n + ' tests passed'); return; }
   queue[i][1](function(){ n++; console.log('ok   ' + queue[i][0]); run(i + 1); });

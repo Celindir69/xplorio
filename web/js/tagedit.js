@@ -252,7 +252,16 @@ function tagBusy(text) {
 /* files: [{uri, title}]; opts.move: the editor shows a whole album, offer "Move album" (true: its folder from the files,
    or a list of folders, e.g. a version of a duplicate album) */
 var tagMoveDirs = null;
+/* opts.onClose: once the editor is closed (any way: X, Escape, after Undo or "Move album"), e.g. the next album of an
+   import; opening the editor again on top drops it */
+var tagOnClose = null;
+if (typeof MutationObserver !== 'undefined' && overlayTags) new MutationObserver(function(){
+  if (overlayTags.classList.contains('on') || !tagOnClose) return;
+  var f = tagOnClose; tagOnClose = null;
+  setTimeout(f, 0);
+}).observe(overlayTags, {attributes: true, attributeFilter: ['class']});
 function openTagEditor(files, heading, opts) {
+  tagOnClose = opts && opts.onClose || null;
   tagMode = 'album';
   tagLastOpen = [files, heading, opts];                   /* back from the file manager */
   tagMoveDirs = opts && opts.move ? (Array.isArray(opts.move) ? opts.move : tagAlbumDir(files)) : null;
