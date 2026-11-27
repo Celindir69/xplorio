@@ -56,7 +56,8 @@ var FIELDS = [
   {id: 'vuDelay',      key: 'VU_DELAY_MS',   kind: 'db', options: ['0', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1200', '1500', '2000'], def: '400', unit: 'ms'},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582']},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host'},
-  {id: 'rotelInputs',  key: 'ROTEL_INPUTS',  kind: 'inputs'}
+  {id: 'rotelInputs',  key: 'ROTEL_INPUTS',  kind: 'inputs'},
+  {id: 'rotelXplorio', key: 'ROTEL_XPLORIO_INPUTS', kind: 'cmds'}   /* inputs Xplorio plays on; empty = PC-USB */
 ];
 var LANG_NAMES = {de: 'Deutsch', en: 'English', fr: 'Français', es: 'Español', it: 'Italiano'};
 var ICONS = ['phono', 'cd', 'tuner', 'bluetooth', 'usb', 'digital', 'aux', 'pc', 'tv'];
@@ -499,6 +500,7 @@ function fromApp(f, v) {
   if (f.kind === 'db') return f.options.indexOf(String(v)) >= 0 ? String(v) : f.def;
   if (f.kind === 'tri') return v === true ? 'on' : v === false ? 'off' : 'auto';
   if (f.kind === 'hosts') return Array.isArray(v) ? v.filter(function(h){ return typeof h === 'string'; }).join(', ') : '';
+  if (f.kind === 'cmds') return Array.isArray(v) ? v.filter(function(c){ return typeof c === 'string'; }).join(', ') : '';
   if (f.kind === 'inputs') {
     return v && typeof v === 'object' ? Object.keys(v).filter(function(c){ return v[c] && (v[c].name || v[c].icon); }).map(function(c){
       return c + '=' + (v[c].name || c) + (v[c].icon ? '/' + v[c].icon : '');
@@ -512,6 +514,7 @@ function toApp(f, v) {
   if (f.kind === 'tri') return v === 'on' ? true : v === 'off' ? false : 'auto';
   if (f.kind === 'db') return Number(v);
   if (f.kind === 'hosts') return splitList(v);
+  if (f.kind === 'cmds') return splitList(v).map(function(c){ return c.toLowerCase(); });
   if (f.kind === 'inputs') {
     var o = {};
     splitList(v).forEach(function(x){
@@ -532,6 +535,7 @@ function check(f, v) {
   if (v.length > 500) return undefined;
   if (f.kind === 'host') return /^[A-Za-z0-9.:\-]*$/.test(v) ? v : undefined;
   if (f.kind === 'hosts') return splitList(v).every(function(h){ return /^[A-Za-z0-9.\-]+$/.test(h); }) ? splitList(v).join(', ') : undefined;
+  if (f.kind === 'cmds') return splitList(v).length <= 20 && splitList(v).every(function(c){ return /^[A-Za-z0-9_+\-]{1,24}$/.test(c); }) ? splitList(v).join(', ') : undefined;
   if (f.kind === 'inputs') {
     return splitList(v).every(function(x){
       var m = /^([A-Za-z0-9_]+)\s*=\s*([^\/<>"]*?)\s*(?:\/\s*([a-z]+))?$/.exec(x);

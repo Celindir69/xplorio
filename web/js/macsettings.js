@@ -995,7 +995,7 @@ function msAdjCard() {
   return c;
 }
 
-/* ---------- Rotel amplifier (config.local.js: ROTEL, ROTEL_HOST, ROTEL_MODEL; the tag service runs the Rotel bridge) ---------- */
+/* ---------- Rotel amplifier (config.local.js: ROTEL, ROTEL_HOST, ROTEL_MODEL, ROTEL_XPLORIO_INPUTS; the tag service runs the Rotel bridge) ---------- */
 function msRotelCard(d) {
   var c = sysCard(T('mac.rotel'), 'syWide'), s = d.settings, ch = msEdit.rotel || (msEdit.rotel = {});
   function cur(id) { return Object.prototype.hasOwnProperty.call(ch, id) ? ch[id] : s[id]; }
@@ -1012,6 +1012,28 @@ function msRotelCard(d) {
   line(T('mac.rotelHost'), host);
   line(T('mac.rotelModel'), pbChips([['RA-1572', 'RA-1572 / MKII'], ['RA-1592', 'RA-1592'], ['RC-1592', 'RC-1592'], ['RSP-1582', 'RSP-1582']],
     cur('rotelModel'), function(v){ ch.rotelModel = v; msRender(); }));
+  /* Xplorio inputs: several possible; none chosen = the power-on input (PC-USB) */
+  var mi = (d.rotelInputs || {})[cur('rotelModel')];
+  if (mi && mi.inputs && mi.inputs.length) {
+    var norm = function(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+    var chosen = (cur('rotelXplorio') || []).map(norm).filter(function(x){ return mi.inputs.some(function(i){ return norm(i.cmd) === x; }); });
+    if (!chosen.length) chosen = [norm(mi.player)];
+    var box = histEl('div', 'mxChips pbChips');
+    mi.inputs.forEach(function(i){
+      var on = chosen.indexOf(norm(i.cmd)) >= 0;
+      var chip = histEl('div', 'mxChip mxSmall' + (on ? ' on' : ''), i.name);
+      chip.addEventListener('click', function(){
+        if (on && chosen.length === 1) { msMsg = T('mac.rotelXplorioOne'); msMsgBad = true; return msRender(); }   /* one at least */
+        var next = mi.inputs.filter(function(x){ var n = norm(x.cmd); return n === norm(i.cmd) ? !on : chosen.indexOf(n) >= 0; })
+          .map(function(x){ return x.cmd; });
+        ch.rotelXplorio = next.length === 1 && norm(next[0]) === norm(mi.player) ? [] : next;   /* only the default: stays default */
+        msRender();
+      });
+      box.appendChild(chip);
+    });
+    line(T('mac.rotelXplorio'), box);
+    c.appendChild(histEl('div', 'syNote', T('mac.rotelXplorioNote')));
+  }
   var row = histEl('div', 'pbRow msAddRow');
   row.appendChild(msButton(T('mac.saveReload'), function(){
     if (!Object.keys(ch).length) return;

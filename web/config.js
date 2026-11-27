@@ -25,6 +25,8 @@ window.APP_CONFIG = {
   ROTEL_HOST: '',     /* network address of the amplifier (read only by rotel-bridge.js), e.g. '192.168.1.50' */
   ROTEL_INPUTS: {},   /* change name and icon of individual inputs (read by rotel-bridge.js), e.g. {aux: {name: 'Turntable', icon: 'phono'}};
                          icons: phono, cd, tuner, bluetooth, usb, digital, aux, pc, tv */
+  ROTEL_XPLORIO_INPUTS: [], /* inputs Xplorio plays on (read by rotel-bridge.js), e.g. ['opt1'] for Xplorio on a Mac at the
+                         optical input. On other inputs the player shows the input and locks playback. [] = PC-USB */
   ROTEL_MODEL: 'RA-1572', /* amplifier model (read by rotel-bridge.js): 'RA-1572' (also MKII), 'RA-1592', 'RC-1592', 'RSP-1582' */
   ROTEL_AMP_PORT: null, /* amplifier port (ASCII protocol); null = the model's (9590, RSP-1582: 9596) */
   ROTEL_PORT: 8765,   /* port of the Rotel service on the player */
