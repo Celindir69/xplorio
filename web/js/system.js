@@ -7,6 +7,7 @@ var overlaySystem = document.getElementById('overlaySystem');
 var sysBody = document.getElementById('sysBody');
 var sysTimer = null, sysFullTimer = null, sysSeq = 0, sysData = null, sysHistKind = 'cpu', sysEls = null;
 var sysSvc = null, sysSvcBusy = {}, sysSvcMsg = '', sysSvcTimers = [], sysSvcPending = null;
+var sysIgnBox = null;
 var SYS_NS = 'http://www.w3.org/2000/svg';
 
 /* the Volumio plugin's services carry other names, same texts */
@@ -14,7 +15,7 @@ function openSystem() {
   closeAllOverlays();
   overlaySystem.classList.add('on');
   sysSeq++;
-  sysEls = null; sysSvcPending = null; sysSvcBusy = {}; sysSvcMsg = '';
+  sysEls = null; sysSvcPending = null; sysIgnBox = null; sysSvcBusy = {}; sysSvcMsg = '';
   clearTimeout(sysLog.timer); sysLog.src = ''; sysLog.live = false; sysLog.data = null; sysLog.filter = ''; sysLog.focus = false;   /* log only after a source is chosen */
   while (sysBody.firstChild) sysBody.removeChild(sysBody.firstChild);
   sysBody.appendChild(browseNote(T('hist.loading')));
@@ -274,6 +275,12 @@ function sysRender(st) {
     disks.appendChild(row);
   });
   if (!(d.disks || []).length) disks.appendChild(histEl('div', 'syNote', T('sys.diskNone')));
+  /* hidden from the library (.mpdignore, files.js); on the Mac under settings › music folders. Kept while the page is open,
+     so the minute's redraw does not search again */
+  if (typeof filesIgnoredBox === 'function' && !(typeof player !== 'undefined' && player.kind === 'mpd')) {
+    if (!sysIgnBox) sysIgnBox = filesIgnoredBox(openSystem, T('files.backToSystem'));
+    disks.appendChild(sysIgnBox);
+  }
   grid.appendChild(disks);
 
   /* services: state and restart (missing with an older tag service) */

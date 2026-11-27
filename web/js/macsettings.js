@@ -24,8 +24,10 @@ var MS_BOOLS = ['history', 'releaseDates', 'artistNames', 'moodTags', 'colorMood
 function msToken() { return (typeof sysSvcToken === 'function' && sysSvcToken()) || (typeof sysSvcMem !== 'undefined' && sysSvcMem) || ''; }
 
 var msFocus = '';                                          /* card title to unfold and scroll to once (e.g. from the tag editor) */
+var msIgnBox = null;
 function openMacSettings(focus) {
   msFocus = typeof focus === 'string' ? focus : '';
+  msIgnBox = null;
   closeAllOverlays();
   overlayMacSettings.classList.add('on');
   msSeq++; msMsg = ''; msData = null; msEdit = {};
@@ -363,6 +365,11 @@ function msMusicCard(d) {
   }, 'on'));
   c.appendChild(row);
   c.appendChild(histEl('div', 'syNote', T('mac.musicScan')));
+  /* hidden from the library (.mpdignore, files.js): kept while the page is open, every redraw would search again */
+  if (typeof filesIgnoredBox === 'function' && d.music.length) {
+    if (!msIgnBox) msIgnBox = filesIgnoredBox(function(){ openMacSettings(T('mac.music')); }, T('files.backToSettings'));
+    c.appendChild(msIgnBox);
+  }
   msImpPart(c, d);
   return c;
 }
