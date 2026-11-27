@@ -94,6 +94,14 @@ t('interface settings: written through the link, own lines stay, values the page
   s.saveSettings({rotel: true, rotelHost: ' 192.168.1.50 ', rotelModel: 'RA-1592'}, c);
   c = cfgOf(file);
   assert.deepStrictEqual([c.ROTEL, c.ROTEL_HOST, c.ROTEL_MODEL], [true, '192.168.1.50', 'RA-1592']);
+  assert.deepStrictEqual(s.settings(c).rotelXplorio, []);                                      /* Xplorio inputs: default */
+  assert.strictEqual(s.saveSettings({rotelXplorio: ['opt1', 'x; rm']}, c).error, 'value');
+  s.saveSettings({rotelXplorio: ['OPT1', 'pcusb']}, c);
+  c = cfgOf(file);
+  assert.strictEqual(JSON.stringify(c.ROTEL_XPLORIO_INPUTS), '["opt1","pcusb"]'); assert.deepStrictEqual(s.settings(c).rotelXplorio, ['opt1', 'pcusb']);
+  var ri = s.read(c).rotelInputs;                                                             /* choice on the page: inputs per model */
+  assert.strictEqual(ri['RA-1572'].player, 'pcusb'); assert.strictEqual(ri['RSP-1582'].player, 'pc_usb');
+  assert.ok(ri['RA-1572'].inputs.some(function(i){ return i.cmd === 'opt1' && i.name === 'Opt 1'; }));
 });
 
 ta('commands: ListenBrainz token saved, checked for its form, deleted', function(done){

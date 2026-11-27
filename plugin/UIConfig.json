@@ -287,7 +287,8 @@
 					"rotelBridge",
 					"rotelModel",
 					"rotelHost",
-					"rotelInputs"
+					"rotelInputs",
+					"rotelXplorio"
 				]
 			},
 			"content": [
@@ -320,6 +321,14 @@
 					"type": "text",
 					"label": "TRANSLATE.XPLORIO.ROTEL_INPUTS",
 					"doc": "TRANSLATE.XPLORIO.ROTEL_INPUTS_DOC",
+					"value": ""
+				},
+				{
+					"id": "rotelXplorio",
+					"element": "input",
+					"type": "text",
+					"label": "TRANSLATE.XPLORIO.ROTEL_XPLORIO",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_XPLORIO_DOC",
 					"value": ""
 				}
 			]

@@ -57,6 +57,22 @@ t('models: RA-1592, RC-1592, RSP-1582 (port, queries, volume commands, reply end
   assert.strictEqual(x.volSet, 'vol_##'); assert.deepStrictEqual(x.queries, ['power?']); assert.strictEqual(x.delimiter, '$');
 });
 
+t('Xplorio inputs (ROTEL_XPLORIO_INPUTS): default PC-USB, several possible, power-on input follows them', function(){
+  var d = rb.makeProfile();
+  assert.deepStrictEqual(d.players, ['pcusb']); assert.strictEqual(d.powerOnSource, 'pcusb');
+  assert.ok(rb.isPlayer(d, 'PCUSB') && !rb.isPlayer(d, 'opt1') && !rb.isPlayer(d, ''));
+  var o = rb.makeProfile(null, null, null, ['OPT1']);                        /* Mac at the optical input */
+  assert.deepStrictEqual(o.players, ['opt1']); assert.strictEqual(o.powerOnSource, 'opt1');
+  assert.ok(rb.isPlayer(o, 'opt1') && !rb.isPlayer(o, 'pcusb'));
+  var m = rb.makeProfile(null, null, null, ['opt1', 'pc_usb', 'nope', 'rm -rf']);   /* order of the profile, unknown dropped */
+  assert.deepStrictEqual(m.players, ['opt1', 'pcusb']); assert.strictEqual(m.powerOnSource, 'pcusb');
+  assert.deepStrictEqual(rb.makeProfile(null, null, null, ['nope']).players, ['pcusb']);
+  var r = rb.makeProfile(null, null, 'RSP-1582', ['pcusb']);                 /* written as the model has it */
+  assert.deepStrictEqual(r.players, ['pc_usb']); assert.strictEqual(r.powerOnSource, 'pc_usb');
+  var n = rb.makeProfile({powerOnSource: ''}, null, null, ['opt1']);         /* "don't switch" stays */
+  assert.strictEqual(n.powerOnSource, ''); assert.deepStrictEqual(n.players, ['opt1']);
+});
+
 t('amplifier replies', function(){
   ['bass=-04', 'treble=000', 'balance=R03', 'bypass=on', 'speaker=b'].forEach(rb.parseMsg);
   assert.strictEqual(rb.state.bass, -4); assert.strictEqual(rb.state.treble, 0); assert.strictEqual(rb.state.balance, 3);

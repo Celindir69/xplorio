@@ -9,6 +9,7 @@ var fs = require('fs');
 var path = require('path');
 
 var SLOTS = ['INTERNAL', 'USB', 'NAS'];
+var CMD_RE = /^[a-z0-9_+\-]{1,24}$/;                        /* amplifier command, as in rotel/rotel-bridge.js */
 var MARK = '/* ---- own additions (kept) ---- */';
 /* settings of the interface: id, APP_CONFIG key, kind (like plugin/index.js) */
 var FIELDS = [
@@ -25,6 +26,7 @@ var FIELDS = [
   {id: 'rotel',        key: 'ROTEL',         kind: 'bool', def: false},
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host', def: ''},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582'], def: 'RA-1572'},
+  {id: 'rotelXplorio', key: 'ROTEL_XPLORIO_INPUTS', kind: 'cmds', def: []},   /* inputs Xplorio plays on; [] = PC-USB */
   {id: 'effects',      key: 'EFFECTS',       kind: 'select', options: ['full', 'lite'], def: 'full'},
   {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'num', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
   {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic'], def: 'fast'},
@@ -140,6 +142,7 @@ function valueOf(f, cfg) {
   if (f.kind === 'hosts') return Array.isArray(v) ? v.filter(function(h){ return typeof h === 'string'; }).join(', ') : '';
   if (f.kind === 'host') return typeof v === 'string' ? v : f.def;
   if (f.kind === 'num') return v !== undefined && f.options.indexOf(String(v)) >= 0 ? String(v) : f.def;
+  if (f.kind === 'cmds') return Array.isArray(v) ? [].concat(v).filter(function(c){ return typeof c === 'string' && CMD_RE.test(c); }) : f.def.slice();
   return v;
 }
 function check(f, v) {
@@ -147,6 +150,10 @@ function check(f, v) {
   if (f.kind === 'select') return f.options.indexOf(v) >= 0 ? v : undefined;
   if (f.kind === 'host') { var h = String(v == null ? '' : v).trim(); return /^[A-Za-z0-9.\-:]{0,253}$/.test(h) ? h : undefined; }
   if (f.kind === 'num') return v !== undefined && v !== null && f.options.indexOf(String(v)) >= 0 ? String(v) : undefined;   /* written as a number */
+  if (f.kind === 'cmds') {
+    var cmds = (Array.isArray(v) ? [].concat(v) : String(v || '').split(/[\s,;]+/)).map(function(c){ return String(c).trim().toLowerCase(); }).filter(Boolean);
+    return cmds.length <= 20 && cmds.every(function(c){ return CMD_RE.test(c); }) ? cmds : undefined;
+  }
   if (f.kind === 'hosts') {
     var list = String(v || '').split(/[\s,;]+/).filter(Boolean);
     return list.length <= 20 && list.every(function(h){ return /^[A-Za-z0-9.\-]{1,253}$/.test(h); }) ? list : undefined;
@@ -198,8 +205,20 @@ MacSettings.prototype.read = function(cfg) {
   if (this.o.essentiaStatus) { try { es.tracks = this.o.essentiaStatus().tracks || 0; } catch (e) { es.tracks = 0; } }
   return {ok: true, mac: process.platform === 'darwin', musicRoot: this.o.musicRoot, music: this.music(), essentia: es,
           lastfm: {key: !!k.key, secret: !!k.secret, rejected: !!(this.o.lastfmRejected && this.o.lastfmRejected())},
-          listenbrainz: !!(this.o.keys.listenbrainz && this.o.keys.listenbrainz()), discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg)};
+          listenbrainz: !!(this.o.keys.listenbrainz && this.o.keys.listenbrainz()), discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg),
+          rotelInputs: rotelInputs(cfg || {})};
 };
+/* inputs of each Rotel model with the names from ROTEL_INPUTS (for the choice of the Xplorio inputs):
+   {model: {inputs: [{cmd, name}], player: power-on input}}; {} without the bridge next to the tag service */
+function rotelInputs(cfg) {
+  var rb, out = {};
+  try { rb = require('../rotel/rotel-bridge.js'); } catch (e) { return out; }
+  Object.keys(rb.MODELS).forEach(function(m){
+    var p = rb.makeProfile(cfg.ROTEL_PROFILE, cfg.ROTEL_INPUTS, m);
+    out[m] = {inputs: p.sources.map(function(x){ return {cmd: x.cmd, name: x.name}; }), player: p.players[0]};
+  });
+  return out;
+}
 
 /* POST body {action, …} -> cb(code, answer). cfg: current APP_CONFIG */
 MacSettings.prototype.command = function(body, cfg, cb) {

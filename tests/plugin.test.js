@@ -250,6 +250,7 @@ plug.onStart().then(function(){
     refused({rotelBridge: true, rotelHost: '', rotelInputs: ''}, /Adresse des Verstärkers/);
     refused({rotelBridge: true, rotelHost: '1.2.3.4; rm', rotelInputs: ''}, /ungültige Zeichen/);
     refused({rotelBridge: true, rotelHost: '1.2.3.4', rotelInputs: 'aux=Platte/blink'}, /Eingänge/);
+    refused({rotelBridge: true, rotelHost: '1.2.3.4', rotelInputs: '', rotelXplorio: 'opt1; reboot'}, /Xplorio-Eingänge/);
     refused({theme: {value: 'pink', label: 'x'}}, /Auswahl/);
     refused({allowedHosts: 'a.example.net, b c'}, /Namen/);
     refused({password: 'abc'}, /4 Zeichen/);
@@ -280,13 +281,14 @@ plug.onStart().then(function(){
   return plug.saveSettings({port: String(PORT), tagService: false, language: {value: 'en'}, theme: {value: 'light'}});
 }).then(function(){
   calls = [];
-  return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV'});
+  return plug.saveSettings({rotelBridge: true, rotelHost: '10.0.0.9', rotelInputs: 'aux = Plattenspieler / phono, OPT1=TV', rotelXplorio: 'pcusb, OPT1'});
 }).then(function(){
   t('saving: values into config.local.js; restart: all stopped, then only the services switched on', function(){
     var c = evalConfig();
     assert.deepStrictEqual([c.THEME, c.TIDAL, c.HRA, c.HISTORY, c.M4A_LOSSLESS, c.LANGUAGE, c.ROTEL_HOST], ['light', true, false, false, false, 'en', '10.0.0.9']);
     assert.deepStrictEqual(c.ALLOWED_HOSTS, ['player.example.net', 'x.lan']);
     assert.deepStrictEqual(c.ROTEL_INPUTS, {aux: {name: 'Plattenspieler', icon: 'phono'}, opt1: {name: 'TV'}});
+    assert.deepStrictEqual(c.ROTEL_XPLORIO_INPUTS, ['pcusb', 'opt1']);
     assert.deepStrictEqual(sudo(), ['stop xplorio-web.service', 'stop xplorio-tags.service', 'stop xplorio-rotel.service',
                                     'restart xplorio-web.service', 'restart xplorio-rotel.service']);
     assert.strictEqual(toasts.pop()[0], 'success');

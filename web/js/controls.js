@@ -121,7 +121,7 @@ btnRotelPower.addEventListener('click', function(){
   stopPlaybackThen(function(){ sendRotelPower(false); rotelBusy = false; });
 });
 
-/* Active input on the amplifier: if it is not the player's, the player shows the input's name and an icon
+/* Active input on the amplifier: if it is not one of Xplorio's (ROTEL_XPLORIO_INPUTS, else PC-USB), the player shows the input's name and an icon
    instead of format and pen (poll.js paintQuality, tagedit.js tagPaintPlayer).
    Names and icons come from the bridge profile (ROTEL_PROFILE, ROTEL_INPUTS) */
 var ROTEL_ICONS = {
@@ -139,6 +139,11 @@ var ROTEL_ICONS = {
 var rotelSource = null;       /* last reported input */
 var rotelProf = null, rotelProfAt = 0;
 function rotelNorm(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }   /* pc_usb = pcusb */
+/* is the input one Xplorio plays on? (profile.players; older bridge: profile.player) */
+function rotelIsPlayer(src) {
+  var list = rotelProf && (Array.isArray(rotelProf.players) ? rotelProf.players : [rotelProf.player]) || [], s = rotelNorm(src);
+  return list.some(function(x){ return rotelNorm(x) === s; });
+}
 function rotelProfLoad() {
   if (rotelProf || Date.now() - rotelProfAt < 60000) return;          /* try at most once per minute */
   rotelProfAt = Date.now();
@@ -153,7 +158,7 @@ function rotelInput() {
   if (!rotelOn) return {name: T('rotel.standby'), icon: 'power', off: true};      /* standby/off: the player's USB output is gone too */
   if (!rotelProf || !rotelLinked || !rotelSource) return null;
   var src = rotelNorm(rotelSource);
-  if (src === rotelNorm(rotelProf.player)) return null;
+  if (rotelIsPlayer(src)) return null;
   var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];
   return hit ? {name: hit.name, icon: hit.icon} : {name: rotelSource, icon: 'aux'};
 }
@@ -163,7 +168,7 @@ function rotelForeignWhileStream() {
   if (!ROTEL_ON || !rotelReachable || !rotelOn || !rotelProf || !rotelLinked || !rotelSource) return '';
   if (typeof remoteMode === 'undefined' || remoteMode === 'lokal') return '';
   var src = rotelNorm(rotelSource);
-  if (src === rotelNorm(rotelProf.player)) return '';
+  if (rotelIsPlayer(src)) return '';
   var hit = (rotelProf.sources || []).filter(function(x){ return rotelNorm(x.cmd) === src; })[0];
   return hit ? hit.name : rotelSource;
 }

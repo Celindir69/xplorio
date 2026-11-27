@@ -131,4 +131,27 @@ t('Volumio queue unavailable: MPD queue as before', function(){
   makeQ('vq5.json', {fail: true}).check();
   assert.strictEqual(mpdState.mode, 'album');
 });
+t('Mac: the chosen mode comes back after MPD (re)starts with the mode of mpd.conf (update, restart)', function(){
+  reset([A, A2], 0, 'off');
+  var f = path.join(dir, 'restore.json'), change = null;
+  var r = new rga.RgAuto({file: f, mpd: mpd, restore: true, idle: function(fn){ change = fn; return function(){}; }});
+  r.start();
+  r.choose('album', function(){});                                    /* Playback page (playback.js sent it to MPD) */
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(f, 'utf8')), {auto: false, mode: 'album'});
+  var again = new rga.RgAuto({file: f, mpd: mpd, restore: true, idle: function(fn){ change = fn; return function(){}; }});
+  again.start();
+  mpdState.mode = 'off';                                              /* new MPD */
+  change(true);
+  assert.strictEqual(mpdState.mode, 'album');
+  mpdState.mode = 'track'; change();                                  /* set elsewhere while running: stays */
+  assert.strictEqual(mpdState.mode, 'track');
+  var vol = new rga.RgAuto({file: f, mpd: mpd, idle: function(fn){ change = fn; return function(){}; }});   /* Volumio: its own */
+  vol.start(); mpdState.mode = 'off'; change(true);
+  assert.strictEqual(mpdState.mode, 'off');
+  r.choose('auto', function(){});                                     /* auto: kept as before */
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(f, 'utf8')), {auto: true, mode: 'auto'});
+  r.choose('off', function(){});
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(f, 'utf8')), {auto: false, mode: 'off'});
+});
+
 console.log(n + ' checks');

@@ -2463,7 +2463,8 @@ function volumioQueue(cb) {
   });
 }
 var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne, queue: volumioQueue,
-  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); watchPlayerSoon(); }); }});
+  restore: playerIsMpd(),                               /* Mac: MPD forgets the mode on every start (Volumio keeps its own) */
+  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(connected){ onChange(connected); xfAuto.check(); watchPlayerSoon(); }); }});
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});
@@ -3748,7 +3749,7 @@ function rotelWanted() { var c = appConfig(); return process.env.XPLORIO_ROTEL =
 function rotelSync() {
   if (process.env.XPLORIO_ROTEL !== 'manage') return;
   var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
-  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
+  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_XPLORIO_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
   if (key === rotelKey && (!want || rotelChild || rotelStarting)) return;
   rotelKey = key;
   var gen = ++rotelGen;                                  /* a newer call wins over a start still on its way */
