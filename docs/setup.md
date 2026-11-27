@@ -300,6 +300,11 @@ A device already logged in under System goes straight in, otherwise the file man
   `ehthumbs.db`, `desktop.ini`, and the folders `.Trashes`, `.Spotlight-V100`, `.fseventsd`, `.TemporaryItems`, `.AppleDouble`
   with their content) do not count and go along; the same applies when the trash tidies up empty folders. `$RECYCLE.BIN` and
   `System Volume Information` are left alone. Any other file, a hidden one such as `.mpdignore` too, prevents it, and the message names it.
+- **Mac, one music folder as one drive:** when the place USB or NAS in the Mac settings points straight at a folder
+  (e.g. `/Volumes/MX-Media`), it is a single drive: the file manager shows "USB" with the folders inside it, and there is
+  only one `Xplorio Trash` there. The same holds for a real folder USB or NAS without links inside. Trash folders of earlier
+  versions in the folders below are gathered into it by the Tag Service at start. Track paths (ratings, NoMix, history,
+  playlists) stay the same.
 - **Hide from library:** for ticked folders or files, "Hide from library" writes the name into the `.mpdignore` file of
   their folder (characters such as `*`, `?`, `[` as `?`); then the library reads that folder again, for an entry directly on
   the drive that is the whole drive. The files stay where they are. Hidden entries show grey with "Hidden from the

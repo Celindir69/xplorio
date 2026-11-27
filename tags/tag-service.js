@@ -908,6 +908,8 @@ function doCheckDone(body, cb) {
    album folder of the library, from the album editor) into the folder "Xplorio Trash" on the same drive (duplicates.js); MPD forgets it with the next scan. Nothing is deleted:
    moving it back restores it. Password only if one is set (adminpass.js), like restarting the player. */
 var duplicates = require('./duplicates.js');
+var drives = require('./drives.js');                    /* which folders are drives: USB/<x>, or USB as one on the Mac */
+drives.setup(MUSIC_ROOT, function(){ return onMac(); });
 var m4aprobe = require('./m4aprobe.js');
 var trash = require('./trash.js');
 /* journal of what went into "Xplorio Trash" (trash.js): from where, when, why; for the Papierkorb view */
@@ -919,7 +921,7 @@ function trashNote(moved, reasonOf) {
   trashJournalSave(trash.journalAdd(trashJournal(), moved.map(function(m){ return {to: m.to, from: m.from, at: at, reason: reasonOf(m.from)}; }), MUSIC_ROOT));
 }
 function dupFolder(rel) {
-  var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
+  var p = libPath(rel, drives.driveParts(String(rel).split('/'), MUSIC_ROOT) + 1, true);
   if (!p || p.missing) return null;
   try { if (!fs.statSync(p.full).isDirectory()) return null; } catch (e) { return null; }
   return p.full;
@@ -935,15 +937,21 @@ function dupIgnore(drive) {
   catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
 }
 /* at the start: the folder of earlier versions (".duplicates", hidden on the Mac, then "Xplorio Duplicates") gets its
-   current name ("Xplorio Trash"), and every such folder its .mpdignore line. MPD forgets the old path when exactly it is updated */
+   current name ("Xplorio Trash"), and every such folder its .mpdignore line. MPD forgets the old path when exactly it is updated.
+   On a place that is one drive (Mac, drives.js) the trash folders of its folders are gathered into the one of the drive */
 function dupMigrate() {
-  var drives = ['INTERNAL'];
-  ['USB', 'NAS'].forEach(function(r){
-    try { fs.readdirSync(path.join(MUSIC_ROOT, r)).forEach(function(d){ drives.push(r + '/' + d); }); } catch (e) { /* not there */ }
-  });
   function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } }
   var forget = [];
-  drives.forEach(function(d){
+  drives.reset();
+  try {
+    var g = trash.gatherWhole(MUSIC_ROOT);
+    g.errors.forEach(function(e){ console.error('trash not gathered: ' + e); });
+    if (g.moves.length) {
+      trashJournalSave(trash.journalMove(trashJournal(), g.moves));   /* its .mpdignore line: below, like every trash folder */
+      console.log('trash folders gathered: ' + g.moves.map(function(m){ return m.from + ' -> ' + m.to; }).join(', '));
+    }
+  } catch (e) { console.error('trash not gathered: ' + e.message); }
+  ['INTERNAL'].concat(drives.list(MUSIC_ROOT)).forEach(function(d){
     var neu = path.join(MUSIC_ROOT, d, duplicates.TRASH);
     duplicates.OLD_TRASHES.forEach(function(name){
       var old = path.join(MUSIC_ROOT, d, name);
@@ -1008,7 +1016,7 @@ function doTrackNums(query, cb) {
 /* POST /filemove {files, token}: move single tracks aside, only files the last check listed as duplicate tracks
    (dupTracks) or as the worse tracks of an album of mixed quality (mixedQuality), into "Xplorio Trash" on the same drive with the rest of the path (like /dupmove for folders) */
 function dupFile(rel) {
-  var p = libPath(rel, String(rel).split('/')[0] === 'INTERNAL' ? 2 : 3, true);
+  var p = libPath(rel, drives.driveParts(String(rel).split('/'), MUSIC_ROOT) + 1, true);
   if (!p || p.missing) return null;
   try { if (!fs.statSync(p.full).isFile()) return null; } catch (e) { return null; }
   return p.full;
@@ -1066,7 +1074,7 @@ function doTrashGet(cb) {
   child.on('message', function(r){ clearTimeout(timer); finish(r || {ok: false, error: 'empty'}); });
   child.on('error', function(e){ clearTimeout(timer); finish({ok: false, error: e.message}); });
   child.on('exit', function(){ clearTimeout(timer); finish({ok: false, error: 'worker ended'}); });
-  child.send({root: MUSIC_ROOT, journal: trashJournal()});
+  child.send({root: MUSIC_ROOT, journal: trashJournal(), mac: onMac()});
 }
 /* GET /trashfiles?p=<entry>: the files of a folder entry, to put back or delete one by one */
 function doTrashFiles(query, cb) {
@@ -3350,7 +3358,7 @@ function doMpd(req, res, route) {
 var macsettings = require('./macsettings.js');
 var macSettings = new macsettings.MacSettings({
   musicRoot: MUSIC_ROOT, configFile: path.join(APP_CONFIG_DIR, 'config.local.js'), keys: keys, essentiaFile: ESSENTIA_FILE,
-  scan: function(cb){ mpdPlayer.mpd(['update'], function(e){ if (!e) albumsAfterScan(0); cb(e); }); },
+  scan: function(cb){ drives.reset(); mpdPlayer.mpd(['update'], function(e){ if (!e) albumsAfterScan(0); cb(e); }); },
   choose: function(kind, cb){
     var what = kind === 'file' ? 'choose file with prompt "essentia.jsonl"' : 'choose folder with prompt "Musikordner"';
     cp.execFile('osascript', ['-e', 'POSIX path of (' + what + ')'], {timeout: 300000}, function(e, out){
@@ -3876,7 +3884,7 @@ function handle(req, res) {
   if (req.method === 'GET' && route === '/vustatus') return doVuStatus(function(c, o){ send(res, c, o); });
   /* tracks the AutoDJ plugin must never pick ("don't like", NoMix in the comment): {ok, files: ["USB/…", …]} */
   if (req.method === 'GET' && route === '/autodj/excluded') return send(res, 200, {ok: true, files: Object.keys(mixExcludedBase())});
-  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!lfmKeys().key, similar: true});
+  if (req.method === 'GET' && route === '/health')  return send(res, 200, {ok: true, lastfm: !!lfmKeys().key, similar: true, drives: drives.wholeList(MUSIC_ROOT)});
   if (req.method === 'GET' && route === '/lastfmapi') return doLastfmApi(url.parse(req.url, true).query, function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/history') return doHistory(function(c, o){ send(res, c, o); });
   if (req.method === 'GET' && route === '/image')   return doImage(url.parse(req.url, true).query, res);

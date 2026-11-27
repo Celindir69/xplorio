@@ -671,7 +671,7 @@ function tagPathBar(dir) {
 /* "Move album": into "Xplorio Trash" on the same drive (tag service POST /dupmove), like a duplicate in the library check */
 var TAG_TRASH = 'Xplorio Trash';                         /* duplicates.TRASH in the tag service */
 function tagTrashPath(dir) {
-  var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
+  var drive = libDrive(dir);
   return drive + '/' + TAG_TRASH + '/' + dir.slice(drive.length + 1);
 }
 function tagMoveSection(dirs) {
@@ -1163,6 +1163,12 @@ function tagGetJson(route) {
    retry later (5 s, 10 s, … up to 1 min) and when returning to the page, e.g. when the iPad loads faster than the
    player after a power cut */
 var tagsHealth = null, tagsWaiters = [], tagsChecking = false, tagsRetry = null, tagsTries = 0;
+/* the drive of a library path: INTERNAL, USB/<x>, NAS/<x>, or USB / NAS itself when the tag service reports the place as
+   one drive (health.drives, Dateimanager lists; tags/drives.js: on the Mac USB is often one music folder) */
+var libWholeDrives = [];
+function libDriveParts(parts) { return parts[0] === 'INTERNAL' || libWholeDrives.indexOf(parts[0]) >= 0 ? 1 : 2; }
+function libDrive(rel) { var p = String(rel).split('/'); return p.slice(0, libDriveParts(p)).join('/'); }
+function libDrivesSet(list) { if (Array.isArray(list)) libWholeDrives = list.map(String); }
 function whenTags(fn) {
   if (tagsHealth) return fn(tagsHealth);
   tagsWaiters.push(fn);
@@ -1175,6 +1181,7 @@ function tagsCheck() {
     tagsChecking = false;
     if (!r || !r.ok) throw new Error('kein Tag-Dienst');
     tagsHealth = r;
+    libDrivesSet(r.drives);
     var list = tagsWaiters; tagsWaiters = [];
     list.forEach(function(f){ try { f(r); } catch (e) { console.error(e); } });
   }).catch(function(){

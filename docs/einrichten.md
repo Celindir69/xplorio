@@ -398,6 +398,11 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   `.TemporaryItems`, `.AppleDouble` mit Inhalt) zählen nicht und gehen mit; das gilt auch, wenn der Papierkorb leere Ordner
   aufräumt. `$RECYCLE.BIN` und `System Volume Information` bleiben unangetastet. Jede andere Datei, auch eine versteckte wie `.mpdignore`, verhindert das
   Löschen, und die Meldung nennt sie.
+- **Mac, ein Musikordner als Laufwerk:** Zeigt der Platz USB oder NAS in den Mac-Einstellungen direkt auf einen Ordner
+  (etwa `/Volumes/MX-Media`), ist er ein einziges Laufwerk: Der Dateimanager zeigt „USB“ mit den Ordnern darin, und es
+  gibt dort nur einen `Xplorio Trash`. Dasselbe gilt für einen echten Ordner USB oder NAS ohne Verknüpfungen darin.
+  Papierkörbe aus früheren Versionen in den Ordnern darunter holt der Tag-Dienst beim Start dort hinein. Die Pfade der
+  Titel (Bewertungen, NoMix, Verlauf, Playlisten) bleiben gleich.
 - **In der Bibliothek ausblenden:** Für angehakte Ordner oder Dateien trägt „In der Bibliothek ausblenden“ den Namen in
   die Datei `.mpdignore` ihres Ordners ein (Zeichen wie `*`, `?`, `[` als `?`); danach liest die Bibliothek diesen Ordner neu
   ein, bei einem Eintrag direkt auf dem Laufwerk also das ganze Laufwerk. Die Dateien bleiben, wo sie sind. Ausgeblendetes
