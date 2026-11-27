@@ -163,10 +163,10 @@ function unhide(root, items) {
   return {ok: true, done: done, still: still};
 }
 
-/* one line of the .mpdignore in folder dir removed (overview). Never the trash's line -> {ok, dir} */
+/* one line of the .mpdignore in folder dir removed (overview). Never the trash's line (also its names of earlier versions) -> {ok, dir} */
 function removeLine(root, dir, pattern) {
   dir = String(dir || ''); pattern = String(pattern || '').trim();
-  if (!pattern || pattern === duplicates.TRASH) return {ok: false, error: 'bad pattern'};
+  if (!pattern || duplicates.isTrash(pattern)) return {ok: false, error: 'bad pattern'};
   var p = fileops.check(root, dir, false, false);
   if (!p) return {ok: false, error: 'not found'};
   var changed = edit(p.full, function(lines){
@@ -190,7 +190,7 @@ function findAll(root, opts, cb) {
     var rootReal = path.resolve(root);
     var files = String(out || '').split('\n').filter(Boolean).map(function(f){
       var dir = path.relative(rootReal, path.dirname(f)).split(path.sep).join('/');
-      var lines = readPatterns(path.dirname(f)).map(function(pt){ return {pattern: pt, trash: pt === duplicates.TRASH}; });
+      var lines = readPatterns(path.dirname(f)).map(function(pt){ return {pattern: pt, trash: duplicates.isTrash(pt)}; });
       return {dir: dir, lines: lines};
     }).filter(function(x){ return x.lines.length && x.dir && !x.dir.split('/').some(function(part){ return part.charAt(0) === '.' || duplicates.isTrash(part); }); });
     files.sort(function(a, b){ return a.dir.localeCompare(b.dir, undefined, {numeric: true, sensitivity: 'base'}); });
