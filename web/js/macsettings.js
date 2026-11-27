@@ -1011,7 +1011,7 @@ function msAdjCard() {
   return c;
 }
 
-/* ---------- Rotel amplifier (config.local.js: ROTEL, ROTEL_HOST, ROTEL_MODEL, ROTEL_XPLORIO_INPUTS; the tag service runs the Rotel bridge) ---------- */
+/* ---------- Rotel amplifier (config.local.js: ROTEL, ROTEL_HOST, ROTEL_MODEL, ROTEL_XPLORIO_INPUTS, ROTEL_TURNTABLE_INPUTS; the tag service runs the Rotel bridge) ---------- */
 function msRotelCard(d) {
   var c = sysCard(T('mac.rotel'), 'syWide'), s = d.settings, ch = msEdit.rotel || (msEdit.rotel = {});
   function cur(id) { return Object.prototype.hasOwnProperty.call(ch, id) ? ch[id] : s[id]; }
@@ -1049,6 +1049,18 @@ function msRotelCard(d) {
     });
     line(T('mac.rotelXplorio'), box);
     c.appendChild(histEl('div', 'syNote', T('mac.rotelXplorioNote')));
+    /* turntable: one input (not one of Xplorio's); "Standard" = the record-icon inputs (Phono) */
+    var tt = (cur('rotelTurntable') || []).map(norm)[0] || '';
+    var ttChoices = [['', T('mac.rotelTurntableStd', {name: (mi.phono || []).map(function(cmd){
+      return (mi.inputs.filter(function(i){ return norm(i.cmd) === norm(cmd); })[0] || {name: cmd}).name; }).join(', ') || '–'})]]
+      .concat(mi.inputs.filter(function(i){ return chosen.indexOf(norm(i.cmd)) < 0; }).map(function(i){ return [norm(i.cmd), i.name]; }));
+    if (!ttChoices.some(function(x){ return x[0] === tt; })) tt = '';
+    line(T('mac.rotelTurntable'), pbChips(ttChoices, tt, function(v){
+      var hit = mi.inputs.filter(function(i){ return norm(i.cmd) === v; })[0];
+      ch.rotelTurntable = hit ? [hit.cmd] : [];
+      msRender();
+    }));
+    c.appendChild(histEl('div', 'syNote', T('mac.rotelTurntableNote')));
   }
   var row = histEl('div', 'pbRow msAddRow');
   row.appendChild(msButton(T('mac.saveReload'), function(){

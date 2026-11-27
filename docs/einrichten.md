@@ -963,6 +963,15 @@ des Stifts ein Icon (Tippen öffnet die Fernbedienung). An Stelle des Covers ste
 ändern, ohne die ganze Liste neu zu schreiben (gilt auch für die Fernbedienung): auf der Einstellungsseite unter
 „Rotel-Verstärker“, z. B. `aux=Plattenspieler/phono, opt1=Fernseher/tv`.
 
+**Plattenspieler:** Bei deinen Platten aus Discogs zeigt „Läuft auf dem Plattenspieler“ die Platte im Player aller
+Geräte (Cover, Künstler, Album, Jahr, Format, Titelliste mit Seiten) und schaltet den Verstärker, wenn er an ist, auf
+den Eingang des Plattenspielers. Standard ist Phono; hängt der Plattenspieler an einem anderen Eingang, z. B. Aux mit
+einem externen Phono-Vorverstärker, wählst du ihn auf der Einstellungsseite unter „Rotel-Verstärker“ bei
+„Plattenspieler“ (`ROTEL_TURNTABLE_INPUTS`, z. B. `['aux']`); er bekommt dann das Plattensymbol. Die Anzeige endet,
+wenn der Verstärker vom Plattenspieler auf einen anderen Eingang oder in Standby geht, wenn Xplorio etwas abspielt,
+mit einem Tipp auf dieselbe Zeile, und spätestens nach 3 Stunden. Ist das Album verlustfrei in der Bibliothek, bietet
+die Seite der Platte keinen Streamingdienst mehr an.
+
 ## Streamingdienste (TIDAL, Qobuz, HIGHRESAUDIO, Spotify)
 Die Teile für Streamingdienste (Kästchen in der Suche, ähnliche Künstler beim Dienst in den Infos, Künstler- und
 Albumseiten des Dienstes) erscheinen nur, wenn das jeweilige Plugin in Volumio aktiv ist. Fest ein- oder ausschalten

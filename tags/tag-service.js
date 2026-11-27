@@ -3808,7 +3808,7 @@ function rotelWanted() { var c = appConfig(); return process.env.XPLORIO_ROTEL =
 function rotelSync() {
   if (process.env.XPLORIO_ROTEL !== 'manage') return;
   var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
-  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_XPLORIO_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
+  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_XPLORIO_INPUTS, c.ROTEL_TURNTABLE_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
   if (key === rotelKey && (!want || rotelChild || rotelStarting)) return;
   rotelKey = key;
   var gen = ++rotelGen;                                  /* a newer call wins over a start still on its way */

@@ -90,8 +90,10 @@ function iconFor(cmd) {
 /* Override the default with ROTEL_PROFILE; invalid commands are dropped.
    inputs (ROTEL_INPUTS): change only the name and icon of individual inputs, e.g. {aux: {name: 'Turntable', icon: 'phono'}}
    players (ROTEL_XPLORIO_INPUTS): the inputs Xplorio plays on, e.g. ['opt1'] for Xplorio on a Mac at the optical input.
-   Empty: the power-on input (PC-USB). Elsewhere the interface shows the input instead of the track and locks the controls */
-function makeProfile(over, inputs, model, players) {
+   Empty: the power-on input (PC-USB). Elsewhere the interface shows the input instead of the track and locks the controls.
+   turntables (ROTEL_TURNTABLE_INPUTS): the inputs a turntable is on, e.g. ['aux'] with an external phono preamp; they get
+   the record icon. Empty: the inputs with the record icon (Phono). "Läuft auf dem Plattenspieler" switches to the first */
+function makeProfile(over, inputs, model, players, turntables) {
   var p = {}, o = over && typeof over === 'object' ? over : {}, base = modelBase(model);
   Object.keys(base).forEach(function(k){ p[k] = Object.prototype.hasOwnProperty.call(o, k) ? o[k] : base[k]; });
   p.sources = (Array.isArray(p.sources) ? p.sources : []).map(function(x){
@@ -101,8 +103,10 @@ function makeProfile(over, inputs, model, players) {
   if (inputs && typeof inputs === 'object') Object.keys(inputs).forEach(function(k){ ins[norm(k)] = inputs[k]; });
   var icons = {};
   ((over && Array.isArray(over.sources)) ? over.sources : []).forEach(function(x){ if (x && x.icon) icons[norm(x.cmd)] = String(x.icon); });
+  var tt = (Array.isArray(turntables) ? turntables : []).map(norm).filter(Boolean);
   p.sources = p.sources.map(function(x){
     var o = ins[norm(x.cmd)], name = typeof o === 'string' ? o : (o && o.name), icon = (o && o.icon) || icons[norm(x.cmd)];
+    if (ICONS.indexOf(icon) < 0 && tt.indexOf(norm(x.cmd)) >= 0) icon = 'phono';   /* turntable: record icon, unless chosen */
     return {cmd: x.cmd, name: String(name || x.name).slice(0, 40), icon: ICONS.indexOf(icon) >= 0 ? icon : iconFor(x.cmd)};
   });
   function cmds(v, len) { return Array.isArray(v) && v.length === len && v.every(function(c){ return CMD_RE.test(String(c)); }) ? v.map(String) : false; }
@@ -114,6 +118,7 @@ function makeProfile(over, inputs, model, players) {
   p.players = playerInputs(p, players);
   /* after power-on: switch to an Xplorio input (the power-on input if it is one of them, else the first) */
   if (p.powerOnSource && !isPlayer(p, p.powerOnSource)) p.powerOnSource = p.players[0];
+  p.turntables = turntableInputs(p, tt);
   ['volUp', 'volDown'].forEach(function(k){ if (!CMD_RE.test(String(p[k] || ''))) p[k] = base[k]; });
   if (!/^[a-z_]{1,20}#{1,3}$/.test(String(p.volSet || ''))) p.volSet = base.volSet;
   p.queries = (Array.isArray(p.queries) ? p.queries : base.queries).map(String).filter(function(q){ return /^[a-z0-9_]{1,30}\??$/.test(q); });
@@ -127,6 +132,13 @@ function playerInputs(p, list) {
   var want = (Array.isArray(list) ? list : []).map(norm).filter(Boolean);
   var out = p.sources.filter(function(x){ return want.indexOf(norm(x.cmd)) >= 0; }).map(function(x){ return x.cmd; });
   return out.length ? out : [p.powerOnSource || 'pcusb'];
+}
+/* turntable inputs: those of the list the amplifier has and Xplorio does not play on; none: the inputs with the record icon */
+function turntableInputs(p, want) {
+  var ok = p.sources.filter(function(x){ return !isPlayer(p, x.cmd); });
+  var out = ok.filter(function(x){ return want.indexOf(norm(x.cmd)) >= 0; });
+  if (!out.length) out = ok.filter(function(x){ return x.icon === 'phono'; });
+  return out.map(function(x){ return x.cmd; });
 }
 function isPlayer(p, src) {
   var s = norm(src);
@@ -181,7 +193,7 @@ function volSetCmd(p, v) {
   return p.volSet.replace(/#+$/, s);
 }
 var ROTEL_MODEL = String(process.env.ROTEL_MODEL || CFG.ROTEL_MODEL || 'RA-1572');
-var PROFILE = makeProfile(CFG.ROTEL_PROFILE, CFG.ROTEL_INPUTS, ROTEL_MODEL, CFG.ROTEL_XPLORIO_INPUTS);
+var PROFILE = makeProfile(CFG.ROTEL_PROFILE, CFG.ROTEL_INPUTS, ROTEL_MODEL, CFG.ROTEL_XPLORIO_INPUTS, CFG.ROTEL_TURNTABLE_INPUTS);
 var ROTEL_PORT = parseInt(process.env.ROTEL_PORT || CFG.ROTEL_AMP_PORT || PROFILE.port, 10);
 var POWER_ON_SOURCE = PROFILE.powerOnSource;
 
@@ -370,7 +382,7 @@ var server = http.createServer(function(req, res){
     /* for the remote control: which controls exist (without commands) */
     res.writeHead(200, head);
     return res.end(JSON.stringify({ok: true, state: state, profile: {model: PROFILE.model, maxVol: MAX_VOL,
-      sources: PROFILE.sources, player: PROFILE.players[0], players: PROFILE.players, bypass: !!PROFILE.bypass, bass: !!PROFILE.bass, treble: !!PROFILE.treble, toneMax: PROFILE.toneMax,
+      sources: PROFILE.sources, player: PROFILE.players[0], players: PROFILE.players, turntables: PROFILE.turntables, bypass: !!PROFILE.bypass, bass: !!PROFILE.bass, treble: !!PROFILE.treble, toneMax: PROFILE.toneMax,
       balance: !!PROFILE.balance, balanceMax: PROFILE.balanceMax, speakerA: !!PROFILE.speakerA, speakerB: !!PROFILE.speakerB,
       cmd: {bypass: PROFILE.bypass, speakerA: PROFILE.speakerA, speakerB: PROFILE.speakerB, bass: PROFILE.bass, treble: PROFILE.treble, balance: PROFILE.balance}}}));
   } else if (u.pathname !== '/state') {

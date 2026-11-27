@@ -27,6 +27,7 @@ var FIELDS = [
   {id: 'rotelHost',    key: 'ROTEL_HOST',    kind: 'host', def: ''},
   {id: 'rotelModel',   key: 'ROTEL_MODEL',   kind: 'select', options: ['RA-1572', 'RA-1592', 'RC-1592', 'RSP-1582'], def: 'RA-1572'},
   {id: 'rotelXplorio', key: 'ROTEL_XPLORIO_INPUTS', kind: 'cmds', def: []},   /* inputs Xplorio plays on; [] = PC-USB */
+  {id: 'rotelTurntable', key: 'ROTEL_TURNTABLE_INPUTS', kind: 'cmds', def: []},   /* inputs the turntable is on; [] = Phono */
   {id: 'effects',      key: 'EFFECTS',       kind: 'select', options: ['full', 'lite'], def: 'full'},
   {id: 'vuRef',        key: 'VU_REF_DBFS',   kind: 'num', options: ['-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-16', '-18'], def: '-8'},
   {id: 'vuNeedle',     key: 'VU_NEEDLE',     kind: 'select', options: ['fast', 'classic'], def: 'fast'},
@@ -208,14 +209,15 @@ MacSettings.prototype.read = function(cfg) {
           listenbrainz: !!(this.o.keys.listenbrainz && this.o.keys.listenbrainz()), discogs: !!(this.o.keys.discogs && this.o.keys.discogs()), settings: this.settings(cfg),
           rotelInputs: rotelInputs(cfg || {})};
 };
-/* inputs of each Rotel model with the names from ROTEL_INPUTS (for the choice of the Xplorio inputs):
-   {model: {inputs: [{cmd, name}], player: power-on input}}; {} without the bridge next to the tag service */
+/* inputs of each Rotel model with the names from ROTEL_INPUTS (for the choice of the Xplorio and turntable inputs):
+   {model: {inputs: [{cmd, name}], player: power-on input, phono: the record-icon inputs (turntable by default)}};
+   {} without the bridge next to the tag service */
 function rotelInputs(cfg) {
   var rb, out = {};
   try { rb = require('../rotel/rotel-bridge.js'); } catch (e) { return out; }
   Object.keys(rb.MODELS).forEach(function(m){
     var p = rb.makeProfile(cfg.ROTEL_PROFILE, cfg.ROTEL_INPUTS, m);
-    out[m] = {inputs: p.sources.map(function(x){ return {cmd: x.cmd, name: x.name}; }), player: p.players[0]};
+    out[m] = {inputs: p.sources.map(function(x){ return {cmd: x.cmd, name: x.name}; }), player: p.players[0], phono: p.turntables};
   });
   return out;
 }

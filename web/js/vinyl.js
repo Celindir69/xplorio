@@ -272,7 +272,7 @@ function vinylLocalWays(box, listBox, it, local) {
 /* Tap on the record page: the player of every device shows the record (Discogs cover, artist, album, year, track list in
    the lyrics pane, the usual album info) instead of Volumio. Kept by the tag service (POST /vinyl {action: 'now'}), so
    the iPad shows it too, when the phone started it. Ends with a tap on the same row, when Xplorio plays something,
-   when the amplifier goes from the turntable to Xplorio's input or to standby, and after 3 hours (tag service) */
+   when the amplifier goes from the turntable to another input or to standby, and after 3 hours (tag service) */
 var vinylNow = null;             /* {item, tracks, at, seen, amp: {foreign, on}} or null */
 function vinylNowKey(n) { return n ? n.item.id + '|' + n.at : ''; }
 function vinylNowSet(now) {
@@ -297,19 +297,26 @@ setInterval(function(){
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) vinylNowFetch(); });
 whenTags(function(){ setTimeout(vinylNowFetch, 1500); });
 
-/* the amplifier's input for the turntable (icon or command "phono"), or null */
-function vinylPhonoSource() {
+/* the amplifier's turntable inputs (setting "Plattenspieler", ROTEL_TURNTABLE_INPUTS; older bridge: the inputs with the
+   record icon) as commands; [] without Rotel */
+function vinylTurntables() {
   var p = typeof rotelProf !== 'undefined' && rotelProf;
-  return p && (p.sources || []).filter(function(x){ return x.icon === 'phono' || rotelNorm(x.cmd) === 'phono'; })[0] || null;
+  if (!p) return [];
+  if (Array.isArray(p.turntables)) return p.turntables;
+  return (p.sources || []).filter(function(x){ return x.icon === 'phono'; }).map(function(x){ return x.cmd; });
+}
+function vinylOnTurntable(src) {
+  var s = rotelNorm(src);
+  return !!s && vinylTurntables().some(function(x){ return rotelNorm(x) === s; });
 }
 function vinylNowStart(it) {
   tagPostJson('/vinyl', {action: 'now', id: it.id}).then(function(r){
     if (!r || !r.ok || !r.now) { showToast(T('genre.offline')); return; }
     var here = typeof remoteMode === 'undefined' || remoteMode !== 'remote';
     if (here) player.state().then(function(st){ if (st && st.status === 'play') player.cmd('pause'); }).catch(function(){});
-    var ph = vinylPhonoSource();                          /* amplifier on: switch it to the turntable */
-    if (here && ph && typeof rotelOn !== 'undefined' && rotelOn && rotelLinked && rotelNorm(rotelSource) !== rotelNorm(ph.cmd))
-      rotel('/cmd?c=' + encodeURIComponent(ph.cmd));
+    var tt = vinylTurntables()[0];                        /* amplifier on: switch it to the turntable */
+    if (here && tt && typeof rotelOn !== 'undefined' && rotelOn && rotelLinked && !vinylOnTurntable(rotelSource))
+      rotel('/cmd?c=' + encodeURIComponent(tt));
     vinylNowSet(r.now);
     showToast(T('vinyl.nowShown'));
     if (typeof closeAllOverlays === 'function') closeAllOverlays();
@@ -336,17 +343,20 @@ function vinylNowRow(it, seq) {
   return row;
 }
 /* what the player shows instead of Volumio's state (poll.js inputApply), or null; ends the display when Xplorio plays
-   or the amplifier left the turntable (only after it was seen on another input, resp. on, since the start) */
+   or the amplifier left the turntable input for another one or for standby (only after it was seen there, resp. on,
+   since the start). No turntable input known: when it went from another input back to Xplorio's */
 function vinylNowApply(st) {
   var n = vinylNow;
   if (!n) return null;
   if (st.status === 'play' && st.trackType !== 'input' && Date.now() - n.seen > 8000) { vinylNowEnd(); return null; }
   if (typeof ROTEL_ON !== 'undefined' && ROTEL_ON && rotelReachable && rotelLinked && (typeof remoteMode === 'undefined' || remoteMode !== 'remote')) {
-    var mine = rotelOn && rotelProf && rotelSource && rotelIsPlayer(rotelSource);
-    var foreign = rotelOn && rotelProf && rotelSource && !mine;
-    if (foreign) n.amp.foreign = true;
+    var known = rotelOn && rotelProf && rotelSource, hasTt = vinylTurntables().length > 0;
+    var onTt = known && vinylOnTurntable(rotelSource), mine = known && rotelIsPlayer(rotelSource);
+    if (onTt) n.amp.tt = true;
+    if (known && !mine) n.amp.foreign = true;
     if (rotelOn) n.amp.on = true;
-    if ((mine && n.amp.foreign) || (!rotelOn && n.amp.on)) { vinylNowEnd(); return null; }
+    var left = hasTt ? known && n.amp.tt && !onTt : mine && n.amp.foreign;
+    if (left || (!rotelOn && n.amp.on)) { vinylNowEnd(); return null; }
   }
   var it = n.item, r = {};
   for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];   /* volume, shuffle, repeat stay from Volumio */

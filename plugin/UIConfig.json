@@ -288,7 +288,8 @@
 					"rotelModel",
 					"rotelHost",
 					"rotelInputs",
-					"rotelXplorio"
+					"rotelXplorio",
+					"rotelTurntable"
 				]
 			},
 			"content": [
@@ -329,6 +330,14 @@
 					"type": "text",
 					"label": "TRANSLATE.XPLORIO.ROTEL_XPLORIO",
 					"doc": "TRANSLATE.XPLORIO.ROTEL_XPLORIO_DOC",
+					"value": ""
+				},
+				{
+					"id": "rotelTurntable",
+					"element": "input",
+					"type": "text",
+					"label": "TRANSLATE.XPLORIO.ROTEL_TURNTABLE",
+					"doc": "TRANSLATE.XPLORIO.ROTEL_TURNTABLE_DOC",
 					"value": ""
 				}
 			]
