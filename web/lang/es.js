@@ -713,7 +713,7 @@ langRegister('es', 'Español', {
   'mac.rotelModel': 'Modelo',
   'mac.rotelNoHost': 'Introduce la dirección del amplificador.',
   'mac.rotelXplorio': 'Entradas de Xplorio',
-  'mac.rotelXplorioNote': 'Xplorio reproduce en estas entradas, se pueden elegir varias (p. ej. Opt 1 si el Mac está conectado por óptico al amplificador). En todas las demás, Xplorio muestra la entrada en lugar del título y bloquea la reproducción y el volumen. Al encenderse, el amplificador cambia a la primera de ellas. Por defecto: PC-USB.',
+  'mac.rotelXplorioNote': 'Xplorio reproduce en estas entradas, se pueden elegir varias (p. ej. Opt 1 si el Mac está conectado por óptico al amplificador). En todas las demás, Xplorio muestra la entrada en lugar del título y bloquea la reproducción. Al encenderse, el amplificador cambia a la primera de ellas. Por defecto: PC-USB.',
   'mac.rotelXplorioOne': 'Debe quedar seleccionada al menos una entrada.',
   'mac.vu': 'Vúmetro',
   'mac.set.vuRef': '0 VU equivale a',

@@ -713,7 +713,7 @@ langRegister('de', 'Deutsch', {
   'mac.rotelModel': 'Modell',
   'mac.rotelNoHost': 'Bitte die Adresse des Verstärkers eintragen.',
   'mac.rotelXplorio': 'Xplorio-Eingänge',
-  'mac.rotelXplorioNote': 'Auf diesen Eingängen spielt Xplorio, mehrere sind möglich (z. B. Opt 1, wenn der Mac optisch am Verstärker hängt). Auf allen anderen zeigt Xplorio den Eingang statt des Titels und sperrt Wiedergabe und Lautstärke. Nach dem Einschalten schaltet der Verstärker auf den ersten davon. Standard: PC-USB.',
+  'mac.rotelXplorioNote': 'Auf diesen Eingängen spielt Xplorio, mehrere sind möglich (z. B. Opt 1, wenn der Mac optisch am Verstärker hängt). Auf allen anderen zeigt Xplorio den Eingang statt des Titels und sperrt die Wiedergabe. Nach dem Einschalten schaltet der Verstärker auf den ersten davon. Standard: PC-USB.',
   'mac.rotelXplorioOne': 'Mindestens ein Eingang muss gewählt bleiben.',
   'mac.vu': 'VU-Meter',
   'mac.set.vuRef': '0 VU entspricht',
