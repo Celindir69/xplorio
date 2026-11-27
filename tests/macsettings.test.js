@@ -102,6 +102,12 @@ t('interface settings: written through the link, own lines stay, values the page
   var ri = s.read(c).rotelInputs;                                                             /* choice on the page: inputs per model */
   assert.strictEqual(ri['RA-1572'].player, 'pcusb'); assert.strictEqual(ri['RSP-1582'].player, 'pc_usb');
   assert.ok(ri['RA-1572'].inputs.some(function(i){ return i.cmd === 'opt1' && i.name === 'Opt 1'; }));
+  assert.deepStrictEqual(ri['RA-1572'].phono, ['phono']);                                    /* turntable: Phono by default */
+  assert.deepStrictEqual(s.settings(c).rotelTurntable, []);
+  assert.strictEqual(s.saveSettings({rotelTurntable: ['aux;reboot']}, c).error, 'value');
+  s.saveSettings({rotelTurntable: ['AUX']}, c);
+  c = cfgOf(file);
+  assert.strictEqual(JSON.stringify(c.ROTEL_TURNTABLE_INPUTS), '["aux"]'); assert.deepStrictEqual(s.settings(c).rotelTurntable, ['aux']);
 });
 
 ta('commands: ListenBrainz token saved, checked for its form, deleted', function(done){

@@ -33,7 +33,7 @@ function renderTrackList(tracks) {
   tracks.forEach(function(t, i){
     var row = document.createElement('div'), n = document.createElement('span'), ti = document.createElement('span'), d = document.createElement('span');
     row.className = 'lyrTrk' + (typeof curTitle !== 'undefined' && curTitle && (t.title || t.name) === curTitle ? ' cur' : ''); n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
-    n.textContent = (i + 1) + '.';
+    n.textContent = t.pos || (i + 1) + '.';             /* record: side and number ("A1") */
     ti.textContent = t.title || t.name || '';
     d.textContent = fmtTrackDur(t.duration);
     row.appendChild(n); row.appendChild(ti); row.appendChild(d);

@@ -73,6 +73,17 @@ t('Xplorio inputs (ROTEL_XPLORIO_INPUTS): default PC-USB, several possible, powe
   assert.strictEqual(n.powerOnSource, ''); assert.deepStrictEqual(n.players, ['opt1']);
 });
 
+t('turntable inputs (ROTEL_TURNTABLE_INPUTS): default the record-icon inputs, else the chosen one with the record icon', function(){
+  assert.deepStrictEqual(rb.makeProfile().turntables, ['phono']);
+  var a = rb.makeProfile(null, null, null, null, ['AUX']);                   /* external phono preamp at Aux */
+  assert.deepStrictEqual(a.turntables, ['aux']);
+  assert.strictEqual(a.sources.filter(function(x){ return x.cmd === 'aux'; })[0].icon, 'phono');
+  var n = rb.makeProfile(null, {aux: {name: 'Platte', icon: 'tv'}}, null, null, ['aux']);   /* an icon chosen for it stays */
+  assert.strictEqual(n.sources.filter(function(x){ return x.cmd === 'aux'; })[0].icon, 'tv'); assert.deepStrictEqual(n.turntables, ['aux']);
+  assert.deepStrictEqual(rb.makeProfile(null, null, null, null, ['pcusb']).turntables, ['phono']);   /* not one of Xplorio's */
+  assert.deepStrictEqual(rb.makeProfile(null, null, null, null, ['nope']).turntables, ['phono']);
+});
+
 t('amplifier replies', function(){
   ['bass=-04', 'treble=000', 'balance=R03', 'bypass=on', 'speaker=b'].forEach(rb.parseMsg);
   assert.strictEqual(rb.state.bass, -4); assert.strictEqual(rb.state.treble, 0); assert.strictEqual(rb.state.balance, 3);

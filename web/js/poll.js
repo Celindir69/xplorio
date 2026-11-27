@@ -67,6 +67,7 @@ function bitrateAttach(st) {
 function paintQuality(st) {
   qualityState = st;
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;   /* other input on the amplifier: its name instead of the format */
+  if (st.vinyl) { mTech.dataset.key = ''; mTech.textContent = vinylNowTech(st.vinyl); mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* record on the turntable */
   if (st.trackType === 'input') { mTech.dataset.key = ''; mTech.textContent = ''; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }   /* large icon instead of cover */
   if (inp) { mTech.dataset.key = ''; mTech.textContent = inp.name; mBadge.textContent = ''; mBadge.className = 'qBadge'; return; }
   mp4Attach(st, function(){ if (qualityState === st) paintQuality(st); });   /* m4a: codec from the file, once known */
@@ -249,6 +250,9 @@ var inputSession = '', inputBaseUri = '';
 function inputApply(st) {
   var inp = typeof rotelInput === 'function' ? rotelInput() : null;
   document.documentElement.classList.toggle('otherInput', !!inp);
+  var vn = typeof vinylNowApply === 'function' ? vinylNowApply(st) : null;   /* record on the turntable (vinyl.js) */
+  document.documentElement.classList.toggle('vinylNow', !!vn);
+  if (vn) { inputSession = inp ? inp.name : ''; inputBaseUri = st.uri || ''; return vn; }
   if (!inp) { inputSession = ''; return st; }
   if (inputSession !== inp.name) {                                     /* what was loaded when switching */
     inputSession = inp.name; inputBaseUri = st.uri || '';
@@ -345,7 +349,8 @@ updateSyncedLyrics();
     var artist = st.artist || '', album = st.album || '';
     var title  = st.title  || '';
     var radio  = (st.trackType === 'webradio');
-    var preview = !!st.inputAlbum;                      /* other input, album selected: album title large, no track title */
+    var vinylRec = st.vinyl || null;                    /* record on the turntable (vinyl.js): shown like an album selected */
+    var preview = !!st.inputAlbum || !!vinylRec;        /* other input, album selected: album title large, no track title */
     if (preview) title = '';
 
     marqueeSet(mTitle, preview ? album : title);
@@ -354,6 +359,10 @@ updateSyncedLyrics();
       curAlbumTitle = radio || preview ? '' : album; curAlbumUri = st.uri;
       mAlbum.textContent = curAlbumTitle;
       if (typeof playerYear === 'function') playerYear(st.uri || '', curAlbumTitle, artist);
+      if (vinylRec) {                                   /* the record: "Vinyl LP (1984)" from Discogs */
+        mAlbum.textContent = vinylRec.item.lbl || T('vinyl.source');
+        if (vinylRec.item.y) mAlbum.appendChild(yearSpan(vinylRec.item.y));
+      }
     }
     mArtist.classList.toggle('link', !radio && !!artist);      /* click opens albums or tracks (browse.js) */
     mAlbum.classList.toggle('link',  !radio && !preview && !!album);
@@ -370,13 +379,16 @@ updateSyncedLyrics();
     mTitle.classList.toggle('link', !!radioArtist || similarOk());   /* click opens their albums or similar tracks (browse.js) */
 
     var key    = artist + '|' + album + '|' + (radio ? title : '');
-    var tracks = (preview || (typeof stagePaneTracks === 'function' && stagePaneTracks())) && stageOn && !!album;   /* stage view, album only queued (other input) or "Track list" chosen: its track list */
-    var lyrKey = tracks ? 'tracks|' + artist + '|' + album : artist + '|' + title;
+    var tracks = (preview || (typeof stagePaneTracks === 'function' && stagePaneTracks())) && stageOn && !!album;
+    if (vinylRec) tracks = !!(vinylRec.tracks && vinylRec.tracks.length);   /* record: its side/track list everywhere */   /* stage view, album only queued (other input) or "Track list" chosen: its track list */
+    var lyrKey = vinylRec ? 'vinyl|' + st.uri + '|' + (vinylRec.tracks ? vinylRec.tracks.length : 0)   /* the track list may come later */
+      : tracks ? 'tracks|' + artist + '|' + album : artist + '|' + title;
 
     if (lyrKey !== lastLyrKey) {
       lastLyrKey = lyrKey;
       setTrackInfo(lyrKey, title, null, radio);                   /* remove the previous track's tab */
-      if (tracks) {
+      if (tracks && vinylRec) showLyrics({kind: 'tracks', value: vinylNowTracks(vinylRec)});
+      else if (tracks) {
         (function(k, al, ar){
           player.queue().then(function(q){
             if (k === lastLyrKey) showLyrics({kind: 'tracks', value: albumTracks(q && q.queue, al, ar)});

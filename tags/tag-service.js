@@ -2023,9 +2023,11 @@ function doWelcome(query, cb) {
 /* ---------- Own records from Discogs (vinyl.js) ---------- */
 /* GET /vinyl -> {ok, status, labels: {folderId: label}, items: [{id, f, ar, al, y, fmt, th, img, dir?, n}]} (dir: the same album
    in the library); ?q=… -> {ok, artists, albums, songs} (search); ?ar=&al= -> {ok, items} (this album on vinyl);
-   ?artist=… -> {ok, items} (the artist's records); ?id=… -> {ok, item, tracks}.
+   ?artist=… -> {ok, items} (the artist's records); ?id=… -> {ok, item, tracks}; ?now -> {ok, now: {item, tracks, at} | null}
+   (record on the turntable).
    POST /vinyl {action: 'folders', user} -> {ok, user, folders: [{id, name, count}]}; {action: 'save', user, folders: [{id,
-   name, label}]} -> {ok, status}; {action: 'refresh'} -> {ok} */
+   name, label}]} -> {ok, status}; {action: 'refresh'} -> {ok}; {action: 'now', id} -> {ok, now} (id empty: end it; with at:
+   only if it is still that one) */
 var vinyl = require('./vinyl.js');
 var vinylColl = new vinyl.Collection({file: path.join(DATA_DIR, 'vinyl.json'), token: function(){ return keys.discogs(); },
   getJson: function(u, headers, cb){
@@ -2100,6 +2102,16 @@ function vinylMarkBirthdays(b) {
     });
   });
 }
+/* record on the turntable ("Läuft auf dem Plattenspieler"): shown in the player of every device; only in memory, ends
+   after VINYL_NOW_MS (a forgotten display does not stay for days) -> {item, tracks, at} or null */
+var vinylNow = null, VINYL_NOW_MS = 3 * 3600 * 1000;
+function vinylNowOut() {
+  if (vinylNow && Date.now() - vinylNow.at > VINYL_NOW_MS) vinylNow = null;
+  if (!vinylNow) return null;
+  var it = vinylColl.data.items.filter(function(x){ return x.id === vinylNow.id; })[0];
+  if (!it) { vinylNow = null; return null; }
+  return {item: vinylOut(it), tracks: vinylColl.data.tracks[it.id] || null, at: vinylNow.at};
+}
 function doVinylGet(query, cb) {
   albumsEnsure(function(){
     var items = vinylColl.data.items, st = vinylColl.status();
@@ -2108,6 +2120,7 @@ function doVinylGet(query, cb) {
       return cb(200, {ok: true, artists: r.artists, albums: r.albums.map(vinylOut),
                       songs: r.songs.map(function(x){ return {t: x.t, p: x.p, d: x.d, ar: x.ar, item: vinylOut(x.item)}; })});
     }
+    if (query.now !== undefined) return cb(200, {ok: true, now: vinylNowOut()});
     if (query.id !== undefined) {
       var it = items.filter(function(x){ return x.id === +query.id; })[0];
       if (!it) return cb(200, {ok: false, error: 'not found'});
@@ -2140,6 +2153,13 @@ function doVinylPost(body, cb) {
       vinylIdx = null;
       cb(200, {ok: true, status: vinylColl.status()});
     });
+  }
+  if (body.action === 'now') {                           /* record on the turntable: set (id) or end (no id) */
+    var id = +body.id || 0;
+    if (id && !vinylColl.data.items.some(function(x){ return x.id === id; })) return cb(200, {ok: false, error: 'not found'});
+    if (!id && body.at && vinylNow && vinylNow.at !== +body.at) return albumsEnsure(function(){ cb(200, {ok: true, now: vinylNowOut()}); });   /* another record meanwhile */
+    vinylNow = id ? {id: id, at: Date.now()} : null;
+    return albumsEnsure(function(){ cb(200, {ok: true, now: vinylNowOut()}); });
   }
   if (body.action === 'refresh') {
     if (!vinylColl.configured()) return cb(200, {ok: false, error: 'not configured'});
@@ -3788,7 +3808,7 @@ function rotelWanted() { var c = appConfig(); return process.env.XPLORIO_ROTEL =
 function rotelSync() {
   if (process.env.XPLORIO_ROTEL !== 'manage') return;
   var c = appConfig(), want = c.ROTEL === true && !!c.ROTEL_HOST;
-  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_XPLORIO_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
+  var key = want ? JSON.stringify([c.ROTEL_HOST, c.ROTEL_MODEL, c.ROTEL_AMP_PORT, c.ROTEL_PORT, c.ROTEL_INPUTS, c.ROTEL_XPLORIO_INPUTS, c.ROTEL_TURNTABLE_INPUTS, c.ROTEL_PROFILE, c.ALLOWED_HOSTS]) : '';
   if (key === rotelKey && (!want || rotelChild || rotelStarting)) return;
   rotelKey = key;
   var gen = ++rotelGen;                                  /* a newer call wins over a start still on its way */
