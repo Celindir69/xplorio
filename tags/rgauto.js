@@ -6,7 +6,9 @@
    without opts.queue, or if Volumio does not answer, MPD's queue is used. MPD reports every change (idle), the mode is switched at runtime.
    Taken over: Volumio or MPD set to "auto" (e.g. Volumio's playback options). Ended: another mode set here or
    elsewhere (e.g. AutoDJ's automatic mode). The choice is kept in replaygain.json. Node 8, ES5 only.
-   opts: file, mpd(cmd, cb(err, fields)), idle(onChange) -> stop(),
+   MPD does not keep the ReplayGain mode in its state file: after each start (update, restart of the Mac) it is the one
+   of mpd.conf again. With opts.restore (Mac) the mode chosen on the Playback page is set again when MPD is back.
+   opts: file, mpd(cmd, cb(err, fields)), idle(onChange(connected)) -> stop(), restore,
          queue(cb(err, {pos, random, items})) optional: Volumio's queue (all replaceable for tests) */
 var fs  = require('fs');
 var net = require('net');
@@ -47,7 +49,7 @@ function mpdIdle(host, port, onChange) {
       var n;
       while ((n = buf.indexOf('\n')) >= 0) {
         var l = buf.slice(0, n); buf = buf.slice(n + 1);
-        if (!greeted) { greeted = true; onChange(); sock.write('idle playlist player options\n'); continue; }
+        if (!greeted) { greeted = true; onChange(true); sock.write('idle playlist player options\n'); continue; }
         if (l === 'OK') { onChange(); sock.write('idle playlist player options\n'); }
       }
     });
@@ -64,33 +66,53 @@ function RgAuto(opts) {
   this.idle = opts.idle;
   this.queue = opts.queue || null;
   this.on = false;
+  this.mode = '';                /* mode last chosen on the Playback page (off, track, album, auto) */
+  this.restoreMode = !!opts.restore;
   this.mine = null;              /* mode last set here: a different one comes from elsewhere */
   this.busy = false; this.again = false;
-  try { this.on = JSON.parse(fs.readFileSync(this.file, 'utf8')).auto === true; } catch (e) { /* not chosen yet */ }
+  try {
+    var j = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+    this.on = j.auto === true;
+    this.mode = this.on ? 'auto' : /^(off|track|album)$/.test(j.mode) ? j.mode : '';
+  } catch (e) { /* not chosen yet */ }
 }
 
 RgAuto.prototype.start = function() {
   var self = this;
   var later = null;
-  this.stop = this.idle(function(){
+  this.stop = this.idle(function(connected){
+    if (connected) self.mine = null;                    /* a new MPD knows nothing of the mode set before */
+    if (connected) return self.restore(function(){ self.check(); });   /* MPD (re)started: its mode is that of mpd.conf */
     self.check();
     /* Volumio updates its state a moment after MPD: look again so a track change is judged by the new position */
     if (self.queue) { clearTimeout(later); later = setTimeout(function(){ self.check(); }, 2500); if (later.unref) later.unref(); }
   });
 };
 
-RgAuto.prototype.save = function(on) {
+RgAuto.prototype.save = function(on, mode) {
   this.on = on;
   if (!on) this.mine = null;
-  try { require('./atomic.js').writeAtomic(this.file, JSON.stringify({auto: on})); } catch (e) { console.log('replaygain.json: ' + e.message); }
+  if (mode) this.mode = mode; else if (on) this.mode = 'auto'; else if (this.mode === 'auto') this.mode = '';
+  try { require('./atomic.js').writeAtomic(this.file, JSON.stringify({auto: on, mode: this.mode})); } catch (e) { console.log('replaygain.json: ' + e.message); }
 };
 
 /* Playback page: "auto" switches it on (and sets the mode right away), any other mode off */
 RgAuto.prototype.choose = function(mode, cb) {
-  if (mode !== 'auto') { if (this.on) this.save(false); return cb(); }
+  if (mode !== 'auto') { if (this.on || this.mode !== mode) this.save(false, mode); return cb(); }
   if (!this.on) this.save(true);
   this.mine = null;
   this.check(cb);
+};
+
+/* MPD started again (opts.restore): set the mode chosen here if MPD came up with another one. "auto" is set by check() */
+RgAuto.prototype.restore = function(cb) {
+  var self = this;
+  cb = cb || function(){};
+  if (!this.restoreMode || this.on || !this.mode) return cb();
+  this.mpd('replay_gain_status', function(err, rg){
+    if (err || !rg || rg.replay_gain_mode === self.mode) return cb();
+    self.mpd('replay_gain_mode ' + self.mode, function(){ cb(); });
+  });
 };
 
 /* after every MPD change: take over "auto", notice a mode set elsewhere, set the mode for the current track */

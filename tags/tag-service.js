@@ -2463,7 +2463,8 @@ function volumioQueue(cb) {
   });
 }
 var rgAuto = new rgauto.RgAuto({file: path.join(DATA_DIR, 'replaygain.json'), mpd: mpdOne, queue: volumioQueue,
-  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(){ onChange(); xfAuto.check(); watchPlayerSoon(); }); }});
+  restore: playerIsMpd(),                               /* Mac: MPD forgets the mode on every start (Volumio keeps its own) */
+  idle: function(onChange){ return rgauto.mpdIdle(MPD_HOST, MPD_PORT, function(connected){ onChange(connected); xfAuto.check(); watchPlayerSoon(); }); }});
 var xfauto = require('./xfauto.js');                    /* crossfade "Automatic": off inside an album, on for mixes */
 var xfAuto = new xfauto.XfAuto({file: path.join(DATA_DIR, 'crossfade.json'), mpd: mpdOne});
 var playCtl = new playback.Playback({mpd: mpdOne, rg: rgAuto, xf: xfAuto});

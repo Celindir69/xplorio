@@ -958,9 +958,9 @@ html.noStream.hasVinyl #searchSources { display:flex; }
 
 /* History and statistics */
 .qEmptyBtn { display:block; margin:2vh auto; }
-#historyBack, #welcomeBack, #macSettingsBack, #systemBack, #helpBack { cursor:pointer; opacity:.7; display:flex; }
+#historyBack, #welcomeBack, #macSettingsBack, #playbackBack, #systemBack, #helpBack { cursor:pointer; opacity:.7; display:flex; }
 #welcomeBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
-#historyBack svg, #macSettingsBack svg, #systemBack svg, #helpBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
+#historyBack svg, #macSettingsBack svg, #playbackBack svg, #systemBack svg, #helpBack svg { width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); fill:var(--fg); }
 #overlayHistory .overlayHead h2 { flex:1 1 auto; margin-left:calc(2 * var(--vw)); }
 
 /* ---------- Menu (gear) ---------- */
@@ -1250,7 +1250,7 @@ html.light.stage #cover { box-shadow:0 10px 30px rgba(0,0,0,.25); }
 
 /* tap targets about 44 px (Apple guideline): padding plus equal negative margin, icons and spacing stay the same */
 .vBtn { padding:9px; margin:-9px; align-items:center; justify-content:center; }
-#checkBack, #historyBack, #macSettingsBack, #welcomeBack, #volumioBack, #systemBack, #helpBack { padding:10px; margin:-10px; }
+#checkBack, #historyBack, #macSettingsBack, #playbackBack, #welcomeBack, #volumioBack, #systemBack, #helpBack { padding:10px; margin:-10px; }
 #browseBack { padding:8px; margin:-8px calc(1 * var(--vw) - 6px) -8px calc(-2 * var(--vw) - 6px); }
 .rateStars { gap:0; margin-left:calc(-1.8 * var(--vw)); margin-top:0; }
 .rateStar { box-sizing:content-box; padding:calc(1.8 * var(--vw)); }
