@@ -602,7 +602,7 @@ langRegister('fr', 'Français', {
   'mac.impErrSource': 'Le dossier choisi est illisible.',
   'mac.impErrTarget': 'La destination est inaccessible.',
   'mac.impErrInside': 'La source et la destination sont imbriquées.',
-  'mac.impErrExists': 'La destination a déjà un dossier de ce nom sous import.',
+  'mac.impErrExists': 'La destination a déjà import/{name}. Les nouveaux sous-dossiers d\'un dossier existant (p. ex. artiste/album) sont ajoutés, pas ceux qui existent.',
   'mac.impErrRunning': 'Un import est déjà en cours.',
   'mac.impErrBusy': 'rsgain ou l\'analyse audio tourne ; importez ensuite.',
   'mac.impErrFs': 'La copie a échoué (droits d\'écriture, place ?).',

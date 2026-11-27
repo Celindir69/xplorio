@@ -601,7 +601,7 @@ langRegister('it', 'Italiano', {
   'mac.impErrSource': 'La cartella scelta non è leggibile.',
   'mac.impErrTarget': 'La destinazione non è raggiungibile.',
   'mac.impErrInside': 'Origine e destinazione sono una dentro l\'altra.',
-  'mac.impErrExists': 'La destinazione ha già una cartella con questo nome in import.',
+  'mac.impErrExists': 'La destinazione ha già import/{name}. Le nuove sottocartelle di una cartella esistente (es. artista/album) vengono aggiunte, quelle esistenti no.',
   'mac.impErrRunning': 'È già in corso un\'importazione.',
   'mac.impErrBusy': 'rsgain o l\'analisi audio sono in corso; importa dopo.',
   'mac.impErrFs': 'Copia non riuscita (permessi di scrittura, spazio?).',

@@ -601,7 +601,7 @@ langRegister('es', 'Español', {
   'mac.impErrSource': 'No se puede leer la carpeta elegida.',
   'mac.impErrTarget': 'No se alcanza el destino.',
   'mac.impErrInside': 'Origen y destino están uno dentro del otro.',
-  'mac.impErrExists': 'El destino ya tiene una carpeta con ese nombre en import.',
+  'mac.impErrExists': 'El destino ya tiene import/{name}. Las subcarpetas nuevas de una carpeta existente (p. ej. artista/álbum) se añaden, las existentes no.',
   'mac.impErrRunning': 'Ya hay una importación en marcha.',
   'mac.impErrBusy': 'rsgain o el análisis de audio están en marcha; importa después.',
   'mac.impErrFs': 'Falló la copia (¿permisos de escritura, espacio?).',

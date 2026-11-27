@@ -385,7 +385,7 @@ function msImpSend(body) {
     if (seq !== msSeq) return;
     if (r && r.available === false) { msImp = r; return; }
     if (r && r.ok) { msImp = r; if (body.action) { msImpForm = null; msImpMsg = ''; msImpBad = false; } }
-    else { msImpBad = true; msImpMsg = T(MS_IMP_ERRORS[r && r.error] || 'mac.impErrFs'); }
+    else { msImpBad = true; msImpMsg = T(MS_IMP_ERRORS[r && r.error] || 'mac.impErrFs', {name: r && r.conflict || ''}); }
     if (msImp && msImp.job && !msImp.job.end) msImpTimer = setTimeout(function(){
       if (seq !== msSeq || !overlayMacSettings.classList.contains('on')) return;
       if (msImp.job.step === 'analysis' && !(msAna && msAna.running)) msAnaSend({});   /* its progress, asked from then on */

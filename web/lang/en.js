@@ -603,7 +603,7 @@ langRegister('en', 'English', {
   'mac.impErrSource': 'The chosen folder cannot be read.',
   'mac.impErrTarget': 'The destination cannot be reached.',
   'mac.impErrInside': 'Source and destination are inside each other.',
-  'mac.impErrExists': 'The destination already has a folder of this name under import.',
+  'mac.impErrExists': 'The destination already has import/{name}. New subfolders of an existing folder (e.g. artist/album) are added, existing ones are not.',
   'mac.impErrRunning': 'An import is already running.',
   'mac.impErrBusy': 'rsgain or the audio analysis is running; please import afterwards.',
   'mac.impErrFs': 'Copying failed (write access, space?).',

@@ -169,6 +169,77 @@ t('resume after editing tags: MPD reads them first, and the result shows the tag
   });
 });
 
+/* Madonna/Music imported earlier, now Madonna with American Pie: added to import/Madonna */
+function artist(x, albums) {
+  var src = path.join(x.dir, 'Neu', 'Madonna'), old = path.join(x.disk, 'import', 'Madonna', 'Music');
+  fs.mkdirSync(src); fs.writeFileSync(path.join(src, 'artist.jpg'), 'img'); fs.writeFileSync(path.join(src, '.DS_Store'), 'x');
+  albums.forEach(function(a){ fs.mkdirSync(path.join(src, a)); fs.writeFileSync(path.join(src, a, '01.flac'), 'cccc'); });
+  fs.mkdirSync(path.join(x.disk, 'import')); fs.mkdirSync(path.dirname(old)); fs.mkdirSync(old);
+  fs.writeFileSync(path.join(old, '01.flac'), 'alt');
+  return {src: src, dest: path.dirname(old), old: old};
+}
+function artistMpd(x) {
+  return function(cmds, cb){
+    x.log.push(cmds[0]);
+    if (cmds[0] === 'listallinfo "USB/import/Madonna/American Pie"') return cb(null, [['directory: USB/import/Madonna/American Pie',
+      'file: USB/import/Madonna/American Pie/01.flac', 'Artist: Madonna', 'Album: American Pie', 'Title: American Pie', 'Track: 1']]);
+    if (/^listallinfo/.test(cmds[0])) return cb(new Error('ACK [50@0] {listallinfo} No such directory'));
+    cb(null, [[]]);
+  };
+}
+
+t('artist folder already there: only the new album is added, and only it is checked, tagged and analysed', function(done){
+  var x = setup(), a = artist(x, ['American Pie']), calls = [];
+  var rsgain = {bin: function(){ return '/bin/rsgain'; }, start: function(cb, run){ calls.push(['rsgain', run.dirs]); cb(null); setTimeout(function(){ run.done(1); }, 5); }};
+  var analysis = {start: function(cb, run){ calls.push(['analysis', run.roots]); cb(null); setTimeout(function(){ run.done({done: 1}); }, 5); }};
+  var imp = new mi.Import({musicRoot: x.music, mpd: artistMpd(x), rsgain: rsgain, analysis: analysis});
+  imp.start({source: a.src, rel: 'USB', target: x.disk, rsgain: true, analysis: true}, function(e){
+    assert.strictEqual(e, null);
+    waitEnd(imp, function(j){
+      assert.strictEqual(j.error, '');
+      assert.deepStrictEqual(j.parts, ['American Pie', 'artist.jpg']);
+      assert.deepStrictEqual(fs.readdirSync(a.dest).sort(), ['American Pie', 'Music', 'artist.jpg']);
+      assert.strictEqual(fs.readFileSync(path.join(a.old, '01.flac'), 'utf8'), 'alt');        /* the earlier album untouched */
+      assert.ok(fs.existsSync(a.src));
+      assert.deepStrictEqual([j.done, j.total], [2, 2]);
+      assert.deepStrictEqual(calls, [['rsgain', [path.join(a.dest, 'American Pie')]],
+                                     ['analysis', [path.join(x.music, 'USB/import/Madonna/American Pie')]]]);
+      assert.ok(x.log.every(function(c){ return !/^listallinfo/.test(c) || c === 'listallinfo "USB/import/Madonna/American Pie"'; }));
+      assert.deepStrictEqual([j.check.tracks, j.check.audioFiles], [1, 1]);
+      assert.deepStrictEqual(j.check.noCover, ['USB/import/Madonna/American Pie']);
+      done();
+    });
+  });
+});
+
+t('artist folder already there, moved on the same drive: the new album moves in, the source is gone', function(done){
+  var x = setup(), a = artist(x, ['American Pie', 'Ray of Light']), imp = new mi.Import({musicRoot: x.music, mpd: artistMpd(x)});
+  imp.start({source: a.src, rel: 'USB', target: x.disk, move: true}, function(e){
+    assert.strictEqual(e, null);
+    waitEnd(imp, function(j){
+      assert.strictEqual(j.error, '');
+      assert.ok(!fs.existsSync(a.src));
+      assert.deepStrictEqual(fs.readdirSync(a.dest).sort(), ['American Pie', 'Music', 'Ray of Light', 'artist.jpg']);
+      assert.strictEqual(fs.readFileSync(path.join(a.old, '01.flac'), 'utf8'), 'alt');
+      done();
+    });
+  });
+});
+
+t('refused with what is there: an album folder that exists already, an album imported again', function(done){
+  var x = setup(), a = artist(x, ['American Pie', 'Music']), imp = new mi.Import({musicRoot: x.music, mpd: x.mpd});
+  imp.start({source: a.src, rel: 'USB', target: x.disk}, function(e){
+    assert.strictEqual(e, 'exists'); assert.strictEqual(imp.conflict(), 'Madonna/Music');
+    assert.ok(!fs.existsSync(path.join(a.dest, 'American Pie')));                              /* nothing copied */
+    fs.mkdirSync(path.join(x.disk, 'import', 'Band - Album'));                                 /* an album: never merged */
+    imp.start({source: x.src, rel: 'USB', target: x.disk}, function(e2){
+      assert.strictEqual(e2, 'exists'); assert.strictEqual(imp.conflict(), 'Band - Album');
+      assert.deepStrictEqual(fs.readdirSync(path.join(x.disk, 'import', 'Band - Album')), []);
+      done();
+    });
+  });
+});
+
 (function run(i){
   if (i >= queue.length) { console.log(n + ' tests passed'); return; }
   queue[i][1](function(){ n++; console.log('ok   ' + queue[i][0]); run(i + 1); });
