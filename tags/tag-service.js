@@ -931,7 +931,7 @@ function dupIgnore(drive) {
   try { text = fs.readFileSync(f, 'utf8'); } catch (e) { /* none yet */ }
   var neu = duplicates.ignoreLine(text);
   if (neu === null) return false;
-  try { writeAtomic(f, neu); return true; }
+  try { writeAtomic(f, neu); ignoredCache = null; return true; }
   catch (e) { console.error('cannot write ' + f + ': ' + e.message); return false; }
 }
 /* at the start: the folder of earlier versions (".duplicates", hidden on the Mac, then "Xplorio Duplicates") gets its
@@ -1121,8 +1121,16 @@ function doTrashDelete(body, cb) {
      image {path}             -> {mime, data}: an image (jpg, png, gif, webp, bmp) as base64, for the preview
      mkdir {dest, name}, rename {path, name}, rmdir {path}, trash {items}: right away
      copy / move {items, dest} -> runs as a job in the background (one at a time)
-     job                      -> {ok, job}: the running or last job; cancel: stop it after the current file */
+     job                      -> {ok, job}: the running or last job; cancel: stop it after the current file
+     hide / unhide {items}    -> hide from the library or show again: Xplorio's line in the .mpdignore of their folder
+                                 (mpdignore.js), then MPD reads that folder (hide) or the entry (unhide) again
+     ignored {fresh}          -> {files: [{dir, lines: [{pattern, trash}]}], partial}: every .mpdignore below the drives
+                                 (overview "Ausgeblendet"), kept IGNORED_TTL unless changed here
+     unignore {dir, pattern}  -> that line removed from the .mpdignore in dir, MPD reads dir again */
 var fileops = require('./fileops.js');
+var mpdignore = require('./mpdignore.js');
+var IGNORED_TTL = 10 * 60000;
+var ignoredCache = null;
 var filesJob = null, filesJobSeq = 0;
 function filesErr(e, rel) {
   if (e && (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS')) return 'no write permission: /mnt/' + rel;
@@ -1160,6 +1168,7 @@ function doFiles(body, cb) {
   var op = String(body.op || ''), r;
   if (op === 'list') {
     var l = fileops.list(MUSIC_ROOT, String(body.path || ''));
+    try { mpdignore.mark(MUSIC_ROOT, l); } catch (e) { console.error('.mpdignore not read: ' + e.message); }
     if (!l.ok || !l.files || !l.files.some(function(f){ return f.audio; })) return cb(200, l);
     /* album and album artist of the audio files from MPD's database (no file is opened), only this folder */
     return libcheck.mpdWalk({host: MPD_HOST, port: MPD_PORT, roots: [l.path], flat: true, timeout: 5000}, function(err, songs){
@@ -1185,6 +1194,27 @@ function doFiles(body, cb) {
   if (op === 'job' || op === 'cancel') {
     if (op === 'cancel' && filesJob && filesJob.state === 'running') filesJob.cancel = true;
     return cb(200, {ok: true, job: filesJobView()});
+  }
+  if (op === 'ignored') {
+    if (ignoredCache && !body.fresh && Date.now() - ignoredCache.at < IGNORED_TTL) return cb(200, ignoredCache.r);
+    return mpdignore.findAll(MUSIC_ROOT, function(r){ ignoredCache = {at: Date.now(), r: r}; cb(200, r); });
+  }
+  if (op === 'unignore') {
+    try { r = mpdignore.removeLine(MUSIC_ROOT, body.dir, body.pattern); }
+    catch (e) { return cb(200, {ok: false, error: filesErr(e, body.dir)}); }
+    ignoredCache = null;
+    if (r.ok) mpdForget([r.dir], function(){});
+    return cb(200, r);
+  }
+  if (op === 'hide' || op === 'unhide') {
+    var hi = Array.isArray(body.items) ? body.items.map(String) : [];
+    if (!hi.length || hi.length > fileops.MAX_ITEMS) return cb(400, {ok: false, error: 'items missing or too many'});
+    try { r = op === 'hide' ? mpdignore.hide(MUSIC_ROOT, hi) : mpdignore.unhide(MUSIC_ROOT, hi); }
+    catch (e) { return cb(200, {ok: false, error: filesErr(e, path.dirname(hi[0]))}); }
+    ignoredCache = null;
+    var again = op === 'hide' ? mpdignore.scanAfterHide(r.done) : mpdignore.scanAfterUnhide(r.done);
+    if (again.length) mpdForget(again, function(){});
+    return cb(200, r);
   }
   if (checkRun) return cb(200, {ok: false, error: 'check running'});
   if (op === 'rename') {

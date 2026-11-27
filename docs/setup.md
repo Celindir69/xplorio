@@ -300,6 +300,13 @@ A device already logged in under System goes straight in, otherwise the file man
   `ehthumbs.db`, `desktop.ini`, and the folders `.Trashes`, `.Spotlight-V100`, `.fseventsd`, `.TemporaryItems`, `.AppleDouble`
   with their content) do not count and go along; the same applies when the trash tidies up empty folders. `$RECYCLE.BIN` and
   `System Volume Information` are left alone. Any other file, a hidden one such as `.mpdignore` too, prevents it, and the message names it.
+- **Hide from library:** for ticked folders or files, "Hide from library" writes the name into the `.mpdignore` file of
+  their folder (characters such as `*`, `?`, `[` as `?`); then the library reads that folder again, for an entry directly on
+  the drive that is the whole drive. The files stay where they are. Hidden entries show grey with "Hidden from the
+  library"; "Show in library" removes the line again (an otherwise empty `.mpdignore` goes). As in MPD a line also applies
+  to all subfolders: whatever lies in a hidden folder is hidden too; patterns not written by Xplorio (e.g. `*.wav`) are
+  named ("Hidden by …"). An overview "Hidden" with every `.mpdignore` and its lines is under System → Drives, on the Mac
+  under Settings → Music folders; each line can be removed there, except the trash's.
 
 Rules: nothing is overwritten; if a name already exists in the target, the copy gets "(2)", "(3)" and so on. Moving within
 a drive is a rename and done at once. Between drives (e.g. USB → NAS) everything is copied first, each file checked for its

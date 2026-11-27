@@ -398,6 +398,15 @@ Ein Gerät, das schon unter System angemeldet ist, kommt direkt hinein, sonst fr
   `.TemporaryItems`, `.AppleDouble` mit Inhalt) zählen nicht und gehen mit; das gilt auch, wenn der Papierkorb leere Ordner
   aufräumt. `$RECYCLE.BIN` und `System Volume Information` bleiben unangetastet. Jede andere Datei, auch eine versteckte wie `.mpdignore`, verhindert das
   Löschen, und die Meldung nennt sie.
+- **In der Bibliothek ausblenden:** Für angehakte Ordner oder Dateien trägt „In der Bibliothek ausblenden“ den Namen in
+  die Datei `.mpdignore` ihres Ordners ein (Zeichen wie `*`, `?`, `[` als `?`); danach liest die Bibliothek diesen Ordner neu
+  ein, bei einem Eintrag direkt auf dem Laufwerk also das ganze Laufwerk. Die Dateien bleiben, wo sie sind. Ausgeblendetes
+  erscheint grau mit „In der Bibliothek ausgeblendet“, „In der Bibliothek einblenden“ nimmt die Zeile wieder heraus (eine
+  sonst leere `.mpdignore` verschwindet). Wie bei MPD gilt eine Zeile auch in allen Unterordnern: Was in einem
+  ausgeblendeten Ordner liegt, ist mit ausgeblendet; Muster, die nicht von Xplorio stammen (z. B. `*.wav`), stehen dabei
+  („Ausgeblendet durch …“). Eine Übersicht „Ausgeblendet“ mit allen `.mpdignore` und ihren Zeilen steht unter System →
+  Laufwerke, auf dem Mac unter Einstellungen → Musikordner; dort lässt sich jede Zeile einzeln entfernen, nur die des
+  Papierkorbs nicht.
 
 Regeln: Es wird nichts überschrieben; gibt es einen Namen im Ziel schon, bekommt die Kopie „(2)“, „(3)“ usw. Verschieben
 innerhalb eines Laufwerks ist ein Umbenennen und sofort fertig. Zwischen Laufwerken (z. B. USB → NAS) wird zuerst kopiert,

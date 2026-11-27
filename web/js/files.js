@@ -234,8 +234,9 @@ function filesList(i, r) {
     if (!r.drives.length) p.list.appendChild(browseNote(T('files.noDrives')));
     return filesPaint();
   }
-  r.dirs.forEach(function(d){ p.list.appendChild(filesRow(i, {name: d.name, path: rel + '/' + d.name, kind: 'dir'})); });
-  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio, image: f.image, al: f.al, aa: f.aa})); });
+  if (r.hidden) p.list.appendChild(filesHiddenHere(i, rel, r.hidden));
+  r.dirs.forEach(function(d){ p.list.appendChild(filesRow(i, {name: d.name, path: rel + '/' + d.name, kind: 'dir', hidden: d.hidden})); });
+  r.files.forEach(function(f){ p.list.appendChild(filesRow(i, {name: f.name, path: rel + '/' + f.name, kind: 'file', bytes: f.bytes, audio: f.audio, image: f.image, al: f.al, aa: f.aa, hidden: f.hidden})); });
   if (!r.dirs.length && !r.files.length) p.list.appendChild(histEl('div', 'sHint fmEmpty', T('files.emptyDir')));
   if (r.more) p.list.appendChild(histEl('div', 'sHint', T('files.more')));
   filesPaint();
@@ -258,6 +259,11 @@ function filesRow(i, it) {
   row.appendChild(icon);
   var nm = histEl('div', 'fmName', it.name);
   if (it.al || it.aa) nm.appendChild(histEl('div', 'fmMeta', [it.al, it.aa].filter(Boolean).join(' – ')));   /* from MPD */
+  if (it.hidden) {                                             /* left out of the library (.mpdignore): grey, with the reason */
+    row.classList.add('fmHidden');
+    nm.appendChild(histEl('div', 'fmMeta fmHidNote', it.hidden.own ? T('files.hidden')
+      : T('files.hiddenBy', {p: it.hidden.pattern, dir: filesShown(it.hidden.dir)})));
+  }
   row.appendChild(nm);
   if (it.kind === 'file') row.appendChild(histEl('div', 'fmSize', trashSize(it.bytes)));
   if (it.kind === 'file' && TAG_EXT_RE.test(it.name)) {        /* pencil: tag editor on top, the file manager stays open behind it */
@@ -273,6 +279,24 @@ function filesRow(i, it) {
     filesOpen(i, it.path);
   });
   return row;
+}
+
+/* the open folder is (or lies inside) a folder hidden from the library: a line on top, with a way to it */
+function filesHiddenHere(i, rel, h) {
+  var box = histEl('div', 'fmHidHere');
+  var self = h.path === rel;
+  box.appendChild(histEl('div', '', self ? T('files.hiddenSelf') : T('files.hiddenInside', {name: filesName(h.path)})));
+  if (h.own || !self) {
+    var go = histEl('button', 'ckBtn fmHidGo', T('files.hiddenGo'));
+    go.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      filesOpen(i, filesParent(h.path));
+      filesPanes[i].sel[filesName(h.path)] = true;                  /* ticked there: "Einblenden" is one tap away */
+      filesActive = i;
+    });
+    box.appendChild(go);
+  }
+  return box;
 }
 
 /* ---------- index at the outer edge (left pane left, right pane right): # (other), 0-9, A … Z; only when the list does not fit ---------- */
@@ -402,6 +426,23 @@ function filesBar() {
     rm.addEventListener('click', function(){ filesRmdir(i); });
     bar.appendChild(rm);
   }
+  /* library: hide what is shown, show again what Xplorio hid (its own line); nothing inside a hidden folder */
+  var data = filesEls.panes[i].data, ent = filesSelEntries(i);
+  if (data && !data.hidden) {
+    var canHide = ent.filter(function(e){ return !e.hidden; }), canShow = ent.filter(function(e){ return e.hidden && e.hidden.own; });
+    if (canHide.length) {
+      var hb = histEl('button', 'ckBtn', T('files.hide'));
+      hb.disabled = busy;
+      hb.addEventListener('click', function(){ filesHide(i, canHide.map(function(e){ return filesPanes[i].path + '/' + e.name; })); });
+      bar.appendChild(hb);
+    }
+    if (canShow.length) {
+      var sb = histEl('button', 'ckBtn', T('files.unhide'));
+      sb.disabled = busy;
+      sb.addEventListener('click', function(){ filesUnhide(i, canShow.map(function(e){ return filesPanes[i].path + '/' + e.name; })); });
+      bar.appendChild(sb);
+    }
+  }
   var tagItems = filesItems(i).filter(function(f){ return TAG_EXT_RE.test(f); });
   if (tagItems.length && tagItems.length === n) {                 /* only audio files ticked: their tags together */
     var ed = histEl('button', 'ckBtn', T('files.editTags'));
@@ -417,6 +458,13 @@ function filesBar() {
   var none = histEl('button', 'ckBtn fmNone', T('files.untick'));
   none.addEventListener('click', function(){ filesPanes[i].sel = {}; filesPaint(); });
   bar.appendChild(none);
+}
+
+/* the ticked entries of a pane as listed ({name, hidden, …}) */
+function filesSelEntries(i) {
+  var d = filesEls.panes[i].data, sel = filesPanes[i].sel;
+  if (!d || !d.dirs) return [];
+  return d.dirs.concat(d.files).filter(function(e){ return sel[e.name]; });
 }
 
 /* ---------- actions ---------- */
@@ -473,6 +521,34 @@ function filesTrash(i) {
   filesPost({op: 'trash', items: items}).then(function(r){
     filesPanes[i].sel = {};
     filesNote(r && r.ok ? T('files.trashed', {n: r.moved.length}) : filesError(r));
+    filesReload();
+  }).catch(function(){ filesNote(filesError(null)); });
+}
+
+/* hide from the library: the names into the folder's .mpdignore; MPD then reads the folder again (a whole drive when the
+   entries lie directly on it) */
+function filesHide(i, items) {
+  if (!items.length) return;
+  var what = items.length === 1 ? '„' + filesName(items[0]) + '“' : T('files.entries', {n: items.length});
+  var dir = filesPanes[i].path, onDrive = filesDrive(dir) === dir;
+  if (!confirm(T('files.confirmHide', {what: what, file: filesShown(dir) + '/.mpdignore'}) + (onDrive ? '\n\n' + T('files.hideDrive') : ''))) return;
+  filesPost({op: 'hide', items: items}).then(function(r){
+    if (!r || !r.ok) return filesNote(filesError(r));
+    filesPanes[i].sel = {};
+    filesNote(T('files.hiddenDone', {n: r.done.length + r.skipped.length}));
+    filesIgnoredDirty = true;
+    filesReload();
+  }).catch(function(){ filesNote(filesError(null)); });
+}
+function filesUnhide(i, items) {
+  if (!items.length) return;
+  filesPost({op: 'unhide', items: items}).then(function(r){
+    if (!r || !r.ok) return filesNote(filesError(r));
+    filesPanes[i].sel = {};
+    var text = r.done.length ? T('files.shownDone', {n: r.done.length}) : '';
+    if (r.still.length) text += (text ? ' ' : '') + T('files.stillHidden', {names: r.still.map(function(s){ return filesName(s.path) + ' („' + s.pattern + '“)'; }).join(', ')});
+    filesNote(text);
+    filesIgnoredDirty = true;
     filesReload();
   }).catch(function(){ filesNote(filesError(null)); });
 }
@@ -625,3 +701,86 @@ function filesPoll() {
 function filesClose() { filesSeq++; clearTimeout(filesJobTimer); filesEls = null; }
 document.getElementById('closeFiles').addEventListener('click', function(){ filesClose(); closeAllOverlays(); });
 document.getElementById('filesBack').addEventListener('click', function(){ var to = filesBackTo; filesClose(); if (to) to(); else openMenu(); });
+
+/* ---------- overview "Ausgeblendet": every .mpdignore below the drives with its lines (System › Laufwerke on Volumio,
+   Mac settings › Musikordner). A line Xplorio's trash needs stays; any other can be removed here. A tap on the folder
+   opens it in the file manager. back(): where the file manager's back arrow leads ---------- */
+var filesIgnoredDirty = false;                             /* hidden or shown in the file manager: ask for a fresh list */
+function filesIgnoredBox(back, backTitle) {
+  var box = histEl('div', 'fmIgn');
+  box.appendChild(histEl('div', 'syK msLabel', T('ign.title')));
+  box.appendChild(histEl('div', 'syNote', T('ign.note')));
+  var list = histEl('div', 'fmIgnList'), msg = histEl('div', 'syNote', '');
+  box.appendChild(list); box.appendChild(msg);
+  var seq = 0;
+  function load(fresh) {
+    var my = ++seq;
+    filesClear(list);
+    list.appendChild(histEl('div', 'syNote', T('ign.searching')));
+    filesPost({op: 'ignored', fresh: !!(fresh || filesIgnoredDirty)}).then(function(r){
+      if (my !== seq) return;
+      filesIgnoredDirty = false;
+      filesClear(list);
+      if (r && (r.error === 'auth' || r.error === 'nopw')) {
+        list.appendChild(histEl('div', 'syNote', r.error === 'nopw' ? T(filesNoPwKey()) : T('ign.login')));
+        list.appendChild(open(T('files.title'), ''));
+        return;
+      }
+      if (!r || !r.ok) { list.appendChild(histEl('div', 'syNote syWarn', filesError(r))); return; }
+      var any = false;
+      r.files.forEach(function(f){
+        var lines = f.lines.filter(function(l){ return !l.trash; });
+        if (!lines.length) return;                          /* only the trash's line: nothing the user hid */
+        any = true;
+        var head = histEl('div', 'msItem fmIgnDir');
+        var tx = histEl('div', 'msItemText');
+        tx.appendChild(histEl('div', 'msItemName', filesShown(f.dir)));
+        tx.appendChild(histEl('div', 'msItemSub', T('ign.count', {n: lines.length})));
+        head.appendChild(tx);
+        head.appendChild(open(T('ign.open'), f.dir));
+        list.appendChild(head);
+        lines.forEach(function(l){
+          var row = histEl('div', 'msItem fmIgnLine');
+          var pt = histEl('div', 'msItemText');
+          var glob = /[*[]/.test(l.pattern);                 /* "?" alone: mostly a name Xplorio wrote with [ ] or * in it */
+          pt.appendChild(histEl('div', 'fmIgnPat' + (glob ? ' fmIgnGlob' : ''), l.pattern));
+          if (glob) pt.appendChild(histEl('div', 'msItemSub', T('ign.pattern')));
+          row.appendChild(pt);
+          var b = histEl('div', 'mxChip mxSmall msBtn', T('ign.show'));
+          b.addEventListener('click', function(){
+            if (b.classList.contains('off')) return;
+            b.classList.add('off');
+            filesPost({op: 'unignore', dir: f.dir, pattern: l.pattern}).then(function(x){
+              msg.textContent = x && x.ok ? T('ign.removed', {p: l.pattern, dir: filesShown(f.dir)}) : filesError(x);
+              msg.classList.toggle('syWarn', !(x && x.ok));
+              load(true);
+            }).catch(function(){ b.classList.remove('off'); msg.textContent = filesError(null); });
+          });
+          row.appendChild(b);
+          list.appendChild(row);
+        });
+      });
+      if (!any) list.appendChild(histEl('div', 'syNote', T('ign.none')));
+      if (r.partial) list.appendChild(histEl('div', 'syNote syWarn', T('ign.partial')));
+      var again = histEl('div', 'pbRow msAddRow');
+      again.appendChild(histEl('div', 'mxChip mxSmall msBtn', T('ign.refresh')));
+      again.firstChild.addEventListener('click', function(){ msg.textContent = ''; load(true); });
+      again.appendChild(open(T('files.title'), ''));
+      list.appendChild(again);
+    }).catch(function(){
+      if (my !== seq) return;
+      filesClear(list);
+      list.appendChild(histEl('div', 'syNote syWarn', T('trash.offline')));
+    });
+  }
+  /* button: the file manager at this folder (left), back to the page it came from */
+  function open(label, dir) {
+    var b = histEl('div', 'mxChip mxSmall msBtn', label);
+    b.addEventListener('click', function(){
+      if (dir) openFiles(dir, filesPanes[1].path, back, backTitle); else openFiles(undefined, undefined, back, backTitle);
+    });
+    return b;
+  }
+  load(false);
+  return box;
+}

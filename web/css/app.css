@@ -864,6 +864,20 @@ html.noStream.hasVinyl #searchSources { display:flex; }
 .fmSize { flex:0 0 auto; font-size:calc(3 * var(--vw)); opacity:.55; font-variant-numeric:tabular-nums; }
 .fmEmpty { padding:calc(3 * var(--vw)); }
 .fmMeta { font-size:calc(2.9 * var(--vw)); opacity:.55; margin-top:1px; overflow-wrap:anywhere; }
+/* hidden from the library (.mpdignore): grey name and icon, the reason below; a line on top inside a hidden folder */
+.fmRow.fmHidden .fmIcon, .fmRow.fmHidden .fmName > :first-child, .fmRow.fmHidden .fmName { color:rgba(var(--fg-rgb),.45); }
+.fmRow.fmHidden .fmIcon svg { opacity:.3; }
+.fmRow.fmHidden .fmHidNote { opacity:1; font-style:italic; }
+.fmHidHere { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:0 calc(1 * var(--vw)) calc(1.5 * var(--vw));
+  padding:calc(1.6 * var(--vw)) calc(2 * var(--vw)); border-radius:6px; background:rgba(var(--fg-rgb),.07);
+  font-size:calc(3 * var(--vw)); color:rgba(var(--fg-rgb),.75); }
+.fmHidHere > div { flex:1 1 12em; }
+.fmHidGo { flex:0 0 auto; }
+.fmIgn { margin-top:calc(3 * var(--vw)); }
+.fmIgnDir { border-bottom:none; padding-bottom:0; }
+.fmIgnLine { padding-left:calc(4 * var(--vw)); }
+.fmIgnPat { overflow-wrap:anywhere; }
+.fmIgnPat.fmIgnGlob { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.9em; }
 .fmImgIcon { cursor:zoom-in; width:calc(7 * var(--vw)); height:calc(7 * var(--vw)); min-width:26px; min-height:26px; align-items:center; justify-content:center; }
 .fmThumb { width:100%; height:100%; object-fit:cover; border-radius:3px; display:block; }
 .fmLightbox { position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.82); display:flex; flex-direction:column;
