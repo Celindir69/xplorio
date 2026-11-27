@@ -106,6 +106,7 @@ t('removeLine (overview): any line but the trash\'s', function(){
   assert.deepStrictEqual(ig.removeLine(root, 'USB/S/Mix', '*.wav'), {ok: true, dir: 'USB/S/Mix'});
   assert.strictEqual(read(root, 'USB/S/Mix/.mpdignore'), 'b.flac\n');
   assert.strictEqual(ig.removeLine(root, 'USB/S', 'Xplorio Trash').ok, false);
+  assert.strictEqual(ig.removeLine(root, 'USB/S', 'Xplorio Duplicates').ok, false, 'the trash under an earlier name neither');
   assert.strictEqual(ig.removeLine(root, 'USB/S/Mix', 'nope').ok, false);
   assert.strictEqual(ig.removeLine(root, '../x', 'a').ok, false);
   assert.strictEqual(read(root, 'USB/S/.mpdignore'), 'Xplorio Trash\n');
@@ -118,11 +119,12 @@ t('findAll: every .mpdignore below the drives, not in hidden folders or the tras
   mk(root, 'USB/S/Xplorio Trash/Old/.mpdignore', 'y\n');
   mk(root, 'USB/S/Mix/.mpdignore', '# only a comment\n');
   mk(root, 'INTERNAL/A/.mpdignore', '*.cue\n');
+  mk(root, 'USB/S/.mpdignore', 'Xplorio Trash\nXplorio Duplicates\n');
   ig.findAll(root, function(r){
     assert.ok(r.ok && !r.partial);
     assert.deepStrictEqual(r.files, [
       {dir: 'INTERNAL/A', lines: [{pattern: '*.cue', trash: false}]},
-      {dir: 'USB/S', lines: [{pattern: 'Xplorio Trash', trash: true}]},
+      {dir: 'USB/S', lines: [{pattern: 'Xplorio Trash', trash: true}, {pattern: 'Xplorio Duplicates', trash: true}]},
       {dir: 'USB/S/Beatles', lines: [{pattern: 'Live', trash: false}]}]);
     done();
   });
