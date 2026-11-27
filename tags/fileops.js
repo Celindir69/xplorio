@@ -1,7 +1,7 @@
 /* File management (menu "Dateien", web/js/files.js): browse the drives below the music root, make folders, copy and move
    files and folders, move them into "Xplorio Trash" (duplicates.js trashPath), delete empty folders.
    Paths are relative to the music root (/mnt), e.g. "USB/S/Beatles/Help/01.flac". Rules:
-   - only below INTERNAL, USB/<drive>, NAS/<share>; never into or out of "Xplorio Trash" (that is the Papierkorb's job);
+   - only below INTERNAL, USB/<drive>, NAS/<share> (or USB, NAS as one drive, see drives.js); never into or out of "Xplorio Trash" (that is the Papierkorb's job);
      a symlink must not lead out of its drive;
    - never overwrites: a name that is taken gets " (2)", " (3)" …;
    - moving within a drive is a rename; between drives it is a copy (size checked) and the original then goes into the
@@ -11,6 +11,7 @@ var fs = require('fs');
 var path = require('path');
 var cp = require('child_process');
 var duplicates = require('./duplicates.js');
+var drives = require('./drives.js');
 
 var ROOTS = ['INTERNAL', 'USB', 'NAS'];
 var MAX_LIST = 5000;                                  /* entries shown per folder */
@@ -36,9 +37,9 @@ function rmrf(p) {
 /* Mac leftovers: count as nothing in an "empty" folder, never shown */
 var junkFile = require('./junk.js').junkFile, junkDir = require('./junk.js').junkDir;
 
-/* number of path parts of the drive: INTERNAL 1, USB/<x> and NAS/<x> 2 */
-function driveParts(parts) { return parts[0] === 'INTERNAL' ? 1 : 2; }
-function driveOf(rel) { var p = String(rel).split('/'); return p.slice(0, driveParts(p)).join('/'); }
+/* number of path parts of the drive: INTERNAL 1, USB/<x> and NAS/<x> 2, USB or NAS as one drive 1 (drives.js) */
+function driveParts(parts, root) { return drives.driveParts(parts, root); }
+function driveOf(rel, root) { return drives.driveOf(rel, root); }
 
 /* the one check: rel -> {rel, full, drive, parts} or null.
    item: must lie inside a drive (not be the drive itself); missing: may not exist yet */
@@ -46,7 +47,7 @@ function check(root, rel, item, missing) {
   if (typeof rel !== 'string' || !rel || rel.length > 4000 || rel.indexOf('\0') >= 0) return null;
   var parts = rel.split('/');
   if (ROOTS.indexOf(parts[0]) < 0) return null;
-  var n = driveParts(parts);
+  var n = driveParts(parts, root);
   if (parts.length < n + (item ? 1 : 0)) return null;
   for (var i = 0; i < parts.length; i++) {
     if (!parts[i] || parts[i] === '.' || parts[i] === '..' || duplicates.isTrash(parts[i])) return null;
@@ -87,18 +88,18 @@ function freeName(full, name, dir, taken) {
 
 function cmpName(a, b) { return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}); }
 
-/* '' -> the drives; a folder -> its folders and files.
-   -> {ok, path, drives: [{path, name}]} or {ok, path, dirs: [{name, n}], files: [{name, bytes, audio}], more} */
+/* '' -> the drives; a folder -> its folders and files. whole: the places that are one drive (drives.js), for the page.
+   -> {ok, path, whole, drives: [{path, name}]} or {ok, path, whole, dirs: [{name, n}], files: [{name, bytes, audio}], more} */
 function list(root, rel) {
+  var whole = drives.wholeList(root);
   if (!rel) {
     var out = [];
     if (isDir(path.join(root, 'INTERNAL'))) out.push({path: 'INTERNAL', name: 'INTERNAL'});
+    var found = drives.list(root).filter(function(d){ return d.split('/').every(function(x){ return x.charAt(0) !== '.'; }); });
     ['USB', 'NAS'].forEach(function(r){
-      children(path.join(root, r)).sort(cmpName).forEach(function(d){
-        if (d.charAt(0) !== '.' && isDir(path.join(root, r, d))) out.push({path: r + '/' + d, name: r + '/' + d});
-      });
+      found.filter(function(d){ return d.split('/')[0] === r; }).sort(cmpName).forEach(function(d){ out.push({path: d, name: d}); });
     });
-    return {ok: true, path: '', drives: out};
+    return {ok: true, path: '', whole: whole, drives: out};
   }
   var p = check(root, rel, false, false);
   if (!p || !isDir(p.full)) return {ok: false, error: 'not found'};
@@ -118,7 +119,7 @@ function list(root, rel) {
   files.sort(function(a, b){ return cmpName(a.name, b.name); });
   var more = dirs.length + files.length > MAX_LIST;
   if (more) { dirs = dirs.slice(0, MAX_LIST); files = files.slice(0, Math.max(0, MAX_LIST - dirs.length)); }
-  return {ok: true, path: rel, dirs: dirs, files: files, more: more};
+  return {ok: true, path: rel, whole: whole, dirs: dirs, files: files, more: more};
 }
 
 /* an image for the preview: rel -> {ok, full, mime, bytes} or {ok: false, error} */
@@ -197,7 +198,7 @@ function toTrash(root, items) {
   for (var i = 0; i < items.length; i++) {
     var p = check(root, items[i], true, false);
     if (!p) return {ok: false, error: 'not found: ' + items[i], moved: moved};
-    var dir = isDir(p.full), base = duplicates.trashPath(items[i]);
+    var dir = isDir(p.full), base = duplicates.trashPath(items[i], root);
     var to = path.dirname(base) + '/' + freeName(path.join(root, path.dirname(base)), path.basename(base), dir);
     mkdirs(path.dirname(path.join(root, to)));
     fs.renameSync(p.full, path.join(root, to));
@@ -350,7 +351,7 @@ function run(root, steps, mode, hooks, cb) {
 
 function errText(e, s) {
   if (e && (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS')) return 'no write permission: /mnt/' + s.to.split('/').slice(0, -1).join('/');
-  if (e && e.code === 'ENOSPC') return 'drive full: /mnt/' + driveOf(s.to);
+  if (e && e.code === 'ENOSPC') return 'drive full: /mnt/' + driveOf(s.to);   /* the music root set in drives.setup */
   return (e && e.message) || String(e);
 }
 

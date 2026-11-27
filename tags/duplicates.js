@@ -3,6 +3,7 @@
    "[Deluxe Edition]" do not count, compilations are compared by album name only. Folders of one album split by
    disc (CD1, CD2 or different disc numbers next to each other) are one version. Node 8, ES5 only. */
 var path = require('path');
+var drives = require('./drives.js');
 
 var LOSSLESS = ['flac', 'wav', 'aiff', 'aif', 'alac', 'ape', 'wv', 'tta', 'tak'];
 var DSD      = ['dsf', 'dff', 'dsd'];
@@ -19,14 +20,12 @@ var DISC_RE  = /^(cd|disc|disk|disco|disque|side)\s*[-_.]?\s*\d+\b/i;
 
 function albumKey(name, artistKey) { return artistKey(String(name || '').replace(EXTRA_RE, '').replace(DASH_RE, '')); }
 
-/* "INTERNAL/x/y" -> "INTERNAL", "USB/Stick/x" -> "USB/Stick": the drive a folder is on */
-function driveOf(dir) {
-  var p = String(dir).split('/');
-  return p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
-}
+/* "INTERNAL/x/y" -> "INTERNAL", "USB/Stick/x" -> "USB/Stick" (or "USB" when USB is one drive, drives.js): the drive a
+   folder is on. root: the music root, else the one set in drives.setup */
+function driveOf(dir, root) { return drives.driveOf(dir, root); }
 /* where a folder goes when it is moved aside: <drive>/Xplorio Trash/<rest of the path> */
-function trashPath(dir) {
-  var drive = driveOf(dir);
+function trashPath(dir, root) {
+  var drive = driveOf(dir, root);
   return drive + '/' + TRASH + '/' + String(dir).slice(drive.length + 1);
 }
 

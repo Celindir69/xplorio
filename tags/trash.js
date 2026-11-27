@@ -6,6 +6,7 @@
 var fs = require('fs');
 var path = require('path');
 var duplicates = require('./duplicates.js');
+var drives = require('./drives.js');
 var junk = require('./junk.js');
 var TRASH = duplicates.TRASH;
 
@@ -13,26 +14,25 @@ function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch (e) { ret
 function exists(p) { try { fs.lstatSync(p); return true; } catch (e) { return false; } }
 function children(p) { try { return fs.readdirSync(p).sort(); } catch (e) { return []; } }
 
-/* the drives: INTERNAL, USB/<name>, NAS/<name> */
-function drives(root) {
-  var out = ['INTERNAL'];
-  ['USB', 'NAS'].forEach(function(r){ children(path.join(root, r)).forEach(function(d){ if (isDir(path.join(root, r, d))) out.push(r + '/' + d); }); });
-  return out;
+/* the drives: INTERNAL, USB/<name>, NAS/<name> (or USB, NAS as one drive, drives.js) */
+function driveList(root) {
+  return ['INTERNAL'].concat(drives.list(root));
 }
 
-/* "USB/S/Xplorio Trash/Help/1.flac" -> {drive: 'USB/S', rest: 'Help/1.flac'}; null if not inside a trash folder or not safe */
-function split(rel) {
+/* "USB/S/Xplorio Trash/Help/1.flac" -> {drive: 'USB/S', rest: 'Help/1.flac'}; null if not inside a trash folder or not safe.
+   root: the music root (which places are one drive, drives.js), else the one set in drives.setup */
+function split(rel, root) {
   if (typeof rel !== 'string' || !rel || rel.indexOf('\0') >= 0 || rel.charAt(0) === '/') return null;
   var parts = rel.split('/');
   if (parts.some(function(p){ return !p || p === '.' || p === '..'; })) return null;
-  var n = parts[0] === 'INTERNAL' ? 1 : (parts[0] === 'USB' || parts[0] === 'NAS') ? 2 : 0;
+  var n = parts[0] === 'INTERNAL' || parts[0] === 'USB' || parts[0] === 'NAS' ? drives.driveParts(parts, root) : 0;
   if (!n || parts.length < n + 2 || parts[n] !== TRASH) return null;
   return {drive: parts.slice(0, n).join('/'), rest: parts.slice(n + 1).join('/')};
 }
 
 /* old place of something in the trash, without a journal entry */
-function origin(rel) {
-  var s = split(rel);
+function origin(rel, root) {
+  var s = split(rel, root);
   return s ? s.drive + '/' + s.rest : null;
 }
 
@@ -53,7 +53,7 @@ function list(root, journal) {
   var byTo = {};
   (journal || []).forEach(function(j){ if (j && j.to) byTo[j.to] = j; });
   var out = {drives: [], bytes: 0, count: 0};
-  drives(root).forEach(function(drive){
+  driveList(root).forEach(function(drive){
     var base = drive + '/' + TRASH;
     if (!isDir(path.join(root, base))) return;
     var entries = [], covered = {};
@@ -64,7 +64,7 @@ function list(root, journal) {
     function inCovered(rel) { return Object.keys(covered).some(function(c){ return rel === c || rel.indexOf(c + '/') === 0; }); }
     Object.keys(covered).sort().forEach(function(to){
       var j = byTo[to], full = path.join(root, to), m = measure(full);
-      entries.push({path: to, kind: isDir(full) ? 'dir' : 'file', from: j.from || origin(to), at: j.at || changed(full),
+      entries.push({path: to, kind: isDir(full) ? 'dir' : 'file', from: j.from || origin(to, root), at: j.at || changed(full),
                     reason: j.reason || '', bytes: m.bytes, files: m.files});
     });
     /* the rest: every folder with files of its own (or a file right in the trash folder) is one entry */
@@ -75,14 +75,14 @@ function list(root, journal) {
         var r = rel + '/' + c, f = path.join(root, r);
         if (inCovered(r)) return;
         if (isDir(f)) walk(r);
-        else if (rel === base) { var m = measure(f); entries.push({path: r, kind: 'file', from: origin(r), at: changed(f), reason: '', bytes: m.bytes, files: 1}); }
+        else if (rel === base) { var m = measure(f); entries.push({path: r, kind: 'file', from: origin(r, root), at: changed(f), reason: '', bytes: m.bytes, files: 1}); }
         else own = true;
       });
       if (own && rel !== base) {
         var m = measure(full), mine = 0;
         /* without the parts that are entries of their own */
         Object.keys(covered).forEach(function(c){ if (c.indexOf(rel + '/') === 0) { var x = measure(path.join(root, c)); mine += x.bytes; m.files -= x.files; } });
-        entries.push({path: rel, kind: 'dir', from: origin(rel), at: changed(full), reason: '', bytes: m.bytes - mine, files: m.files});
+        entries.push({path: rel, kind: 'dir', from: origin(rel, root), at: changed(full), reason: '', bytes: m.bytes - mine, files: m.files});
       }
     })(base);
     entries.sort(function(a, b){ return b.at - a.at || (a.path < b.path ? -1 : 1); });
@@ -111,7 +111,7 @@ function rmrf(p) {
 
 /* empty folders above rel, up to (not including) the trash folder of its drive; Mac and Windows leftovers do not count */
 function pruneUp(root, rel) {
-  var s = split(rel);
+  var s = split(rel, root);
   if (!s) return;
   var base = s.drive + '/' + TRASH, cur = path.dirname(rel);
   while (cur.indexOf(base + '/') === 0) {
@@ -135,7 +135,7 @@ function filesBelow(p, pre) {
 
 /* the real path stays inside the drive (a symlink could lead out) */
 function inside(root, rel) {
-  var s = split(rel);
+  var s = split(rel, root);
   if (!s) return false;
   try {
     var real = fs.realpathSync(path.join(root, rel)), base = fs.realpathSync(path.join(root, s.drive, TRASH));
@@ -145,10 +145,10 @@ function inside(root, rel) {
 
 /* put an entry back at its old place; never overwrites. -> {ok, from, to} or {ok: false, error, conflict} */
 function restore(root, rel, from) {
-  if (!split(rel) || !exists(path.join(root, rel))) return {ok: false, error: 'gone'};
+  if (!split(rel, root) || !exists(path.join(root, rel))) return {ok: false, error: 'gone'};
   if (!inside(root, rel)) return {ok: false, error: 'not in the trash'};
-  var to = from || origin(rel), s = split(rel);
-  if (!to || to.split('/')[0] !== rel.split('/')[0] || to.indexOf(s.drive + '/') !== 0 || split(to) || to.split('/').indexOf('..') >= 0) return {ok: false, error: 'bad origin'};
+  var to = from || origin(rel, root), s = split(rel, root);
+  if (!to || to.split('/')[0] !== rel.split('/')[0] || to.indexOf(s.drive + '/') !== 0 || split(to, root) || to.split('/').indexOf('..') >= 0) return {ok: false, error: 'bad origin'};
   var src = path.join(root, rel), dst = path.join(root, to);
   if (!isDir(src)) {
     if (exists(dst)) return {ok: false, error: 'exists', conflict: to};
@@ -171,7 +171,7 @@ function restore(root, rel, from) {
 
 /* delete an entry for good -> {ok} */
 function remove(root, rel) {
-  if (!split(rel) || !exists(path.join(root, rel))) return {ok: false, error: 'gone'};
+  if (!split(rel, root) || !exists(path.join(root, rel))) return {ok: false, error: 'gone'};
   if (!inside(root, rel)) return {ok: false, error: 'not in the trash'};
   rmrf(path.join(root, rel));
   pruneUp(root, rel);
@@ -180,7 +180,7 @@ function remove(root, rel) {
 
 /* empty the trash folder of a drive (the folder itself stays, with its .mpdignore line) -> {ok, removed} */
 function empty(root, drive) {
-  if (drives(root).indexOf(drive) < 0) return {ok: false, error: 'no such drive'};
+  if (driveList(root).indexOf(drive) < 0) return {ok: false, error: 'no such drive'};
   var base = path.join(root, drive, TRASH), n = 0;
   if (!isDir(base)) return {ok: true, removed: 0};
   var real;
@@ -192,7 +192,7 @@ function empty(root, drive) {
 
 /* the files of a folder entry, for putting back or deleting one by one -> {ok, files: [{path, name, bytes}]} */
 function files(root, rel) {
-  if (!split(rel) || !isDir(path.join(root, rel))) return {ok: false, error: 'gone'};
+  if (!split(rel, root) || !isDir(path.join(root, rel))) return {ok: false, error: 'gone'};
   if (!inside(root, rel)) return {ok: false, error: 'not in the trash'};
   return {ok: true, files: filesBelow(path.join(root, rel), '').filter(function(f){
     return !junk.junkFile(path.basename(f)) && !f.split('/').some(junk.junkDir);
@@ -219,4 +219,76 @@ function journalAdd(journal, entries, root) {
   return keep.concat(entries).slice(-2000);
 }
 
-module.exports = {drives: drives, split: split, origin: origin, originOf: originOf, files: files, list: list, restore: restore, remove: remove, empty: empty, journalAdd: journalAdd};
+/* ---------- one drive instead of many (Mac, drives.js) ---------- */
+
+/* the next free name for something put next to existing entries: "Help" -> "Help (2)", "1.flac" -> "1 (2).flac" */
+function freeName(dir, name, isFolder) {
+  var ext = isFolder ? '' : path.extname(name), base = name.slice(0, name.length - ext.length), n = 2, cand = name;
+  if (ext === name) { ext = ''; base = name; }
+  while (exists(path.join(dir, cand))) cand = base + ' (' + (n++) + ')' + ext;
+  return cand;
+}
+/* src into dst (both relative): renamed if dst is free, else entry by entry (folders merged, files with a free name).
+   moves gets every {from, to} */
+function mergeInto(root, src, dst, moves) {
+  var s = path.join(root, src), d = path.join(root, dst);
+  if (!exists(d)) { mkdirs(path.dirname(d)); fs.renameSync(s, d); moves.push({from: src, to: dst}); return; }
+  if (!isDir(s) || !isDir(d)) {
+    var name = freeName(path.dirname(d), path.basename(d), isDir(s)), to = path.dirname(dst) + '/' + name;
+    fs.renameSync(s, path.join(root, to)); moves.push({from: src, to: to}); return;
+  }
+  children(s).forEach(function(c){ mergeInto(root, src + '/' + c, dst + '/' + c, moves); });
+  var left = children(s);
+  if (left.every(function(c){ return junk.junkFile(c) || junk.junkDir(c); })) rmrf(s);
+}
+/* the trash's line out of folder dir's .mpdignore (the trash folder there is gone); the file goes when nothing is left */
+function dropIgnoreLine(full, names) {
+  var f = path.join(full, '.mpdignore'), text;
+  try { text = fs.readFileSync(f, 'utf8'); } catch (e) { return; }
+  var lines = text.split(/\r?\n/), keep = lines.filter(function(l){ return names.indexOf(l.trim()) < 0; });
+  if (keep.length === lines.length) return;
+  try {
+    if (!keep.join('').trim()) fs.unlinkSync(f);
+    else fs.writeFileSync(f, keep.join('\n').replace(/\n*$/, '\n'));
+  } catch (e) { /* stays */ }
+}
+/* a place that is one drive now (USB -> /Volumes/MX-Media) may still hold the trash folders of the time when every folder
+   in it counted as a drive: "USB/Musik/Xplorio Trash/Help" becomes "USB/Xplorio Trash/Musik/Help" (same old place,
+   "USB/Musik/Help"). Old names of the trash (OLD_TRASHES) too. -> {moves: [{from, to}], errors: [text]} */
+function gatherWhole(root) {
+  var out = {moves: [], errors: []}, names = [TRASH].concat(duplicates.OLD_TRASHES);
+  drives.wholeList(root).forEach(function(d){
+    children(path.join(root, d)).forEach(function(c){
+      if (c.charAt(0) === '.' || duplicates.isTrash(c)) return;
+      var full = path.join(root, d, c), st;
+      try { st = fs.lstatSync(full); } catch (e) { return; }
+      if (!st.isDirectory()) return;                                    /* not through links: they may lead elsewhere */
+      var any = false;
+      names.forEach(function(t){
+        var old = d + '/' + c + '/' + t;
+        if (!isDir(path.join(root, old))) return;
+        try { mergeInto(root, old, d + '/' + TRASH + '/' + c, out.moves); any = true; }
+        catch (e) { out.errors.push(old + ': ' + e.message); }
+      });
+      if (any && !names.some(function(t){ return exists(path.join(full, t)); })) dropIgnoreLine(full, names);
+    });
+  });
+  return out;
+}
+/* journal entries after gatherWhole: "to" follows the moves */
+function journalMove(journal, moves) {
+  return (journal || []).map(function(j){
+    if (!j || !j.to) return j;
+    for (var i = 0; i < moves.length; i++) {
+      var m = moves[i];
+      if (j.to === m.from || j.to.indexOf(m.from + '/') === 0) {
+        var x = {}; Object.keys(j).forEach(function(k){ x[k] = j[k]; });
+        x.to = m.to + j.to.slice(m.from.length);
+        return x;
+      }
+    }
+    return j;
+  });
+}
+
+module.exports = {gatherWhole: gatherWhole, journalMove: journalMove, drives: driveList, split: split, origin: origin, originOf: originOf, files: files, list: list, restore: restore, remove: remove, empty: empty, journalAdd: journalAdd};

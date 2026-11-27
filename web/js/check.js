@@ -1010,7 +1010,7 @@ function checkSpellingOthers(g) {
 /* ---------- Duplicate albums: move a version into "Xplorio Trash" on the same drive (tag service POST /dupmove) ---------- */
 var CHECK_TRASH = 'Xplorio Trash';                     /* duplicates.TRASH in the tag service */
 function checkDupTrashPath(dir) {                       /* same rule as duplicates.trashPath in the tag service */
-  var p = dir.split('/'), drive = p[0] === 'INTERNAL' ? 'INTERNAL' : p.slice(0, 2).join('/');
+  var drive = libDrive(dir);
   return drive + '/' + CHECK_TRASH + '/' + dir.slice(drive.length + 1);
 }
 /* what was moved aside: put back or delete for good in the trash view (trash.js) */

@@ -151,13 +151,13 @@ function filesPaneEl(i) {
   return p;
 }
 
-/* "USB/S/Beatles" -> "USB/S"; a drive -> '' (the list of drives) */
+/* "USB/S/Beatles" -> "USB/S"; a drive -> '' (the list of drives). USB or NAS can be one drive (libDrive, tagedit.js) */
 function filesParent(rel) {
-  var parts = String(rel).split('/'), n = parts[0] === 'INTERNAL' ? 1 : 2;
+  var parts = String(rel).split('/'), n = libDriveParts(parts);
   return parts.length <= n ? '' : parts.slice(0, -1).join('/');
 }
 
-function filesDrive(rel) { var p = String(rel).split('/'); return p.slice(0, p[0] === 'INTERNAL' ? 1 : 2).join('/'); }
+function filesDrive(rel) { return libDrive(rel); }
 
 function filesOpen(i, rel) {
   filesPanes[i].path = rel; filesPanes[i].sel = {};
@@ -171,6 +171,7 @@ function filesLoad(i) {
   filesCrumbs(i);
   filesPost({op: 'list', path: rel}).then(function(r){
     if (seq !== p.seq || !filesEls || filesEls.panes[i] !== p) return;
+    if (r && r.ok && r.whole) { libDrivesSet(r.whole); filesCrumbs(i); }   /* which places are one drive, before the head is drawn again */
     if (r && !r.ok && rel && r.error === 'not found') return filesOpen(i, filesParent(rel));   /* gone meanwhile: one up */
     if (r && r.error === 'auth') { filesClear(filesBody); filesEls = null; return filesBody.appendChild(filesLogin()); }
     p.data = r && r.ok ? r : null;
@@ -190,7 +191,7 @@ function filesCrumbs(i) {
   root.addEventListener('click', function(){ filesOpen(i, ''); });
   p.crumbs.appendChild(root);
   if (!rel) return;
-  var parts = rel.split('/'), n = parts[0] === 'INTERNAL' ? 1 : 2;
+  var parts = rel.split('/'), n = libDriveParts(parts);
   for (var k = n; k <= parts.length; k++) {
     (function(to, label){
       p.crumbs.appendChild(histEl('span', 'fmSep', '›'));

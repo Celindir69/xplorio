@@ -105,7 +105,7 @@ function hiddenBy(root, rel) {
    if it lies inside a hidden folder (or is one): l.hidden = {path, dir, pattern, own} */
 function mark(root, l) {
   if (!l || !l.ok || !l.path) return l;
-  var drive = fileops.driveOf(l.path), up = hiddenBy(root, l.path);
+  var drive = fileops.driveOf(l.path, root), up = hiddenBy(root, l.path);
   if (up && up.path.split('/').length > drive.split('/').length) l.hidden = up;   /* the drive itself is not ours to show */
   var files = chain(root, l.path);
   if (!files.length) return l;
