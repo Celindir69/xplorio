@@ -601,7 +601,7 @@ langRegister('de', 'Deutsch', {
   'mac.impErrSource': 'Der gewählte Ordner ist nicht lesbar.',
   'mac.impErrTarget': 'Der Zielordner ist nicht erreichbar.',
   'mac.impErrInside': 'Quelle und Ziel liegen ineinander.',
-  'mac.impErrExists': 'Im Ziel gibt es unter import schon einen Ordner mit diesem Namen.',
+  'mac.impErrExists': 'Im Ziel gibt es schon import/{name}. Neue Unterordner eines vorhandenen Ordners (z. B. Künstler/Album) kommen hinzu, vorhandene nicht.',
   'mac.impErrRunning': 'Es läuft schon ein Import.',
   'mac.impErrBusy': 'rsgain oder die Audioanalyse laufen gerade; bitte danach importieren.',
   'mac.impErrFs': 'Kopieren fehlgeschlagen (Schreibrechte, Platz?).',

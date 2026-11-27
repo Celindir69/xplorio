@@ -385,7 +385,7 @@ function msImpSend(body) {
     if (seq !== msSeq) return;
     if (r && r.available === false) { msImp = r; return; }
     if (r && r.ok) { msImp = r; if (body.action) { msImpForm = null; msImpMsg = ''; msImpBad = false; } }
-    else { msImpBad = true; msImpMsg = T(MS_IMP_ERRORS[r && r.error] || 'mac.impErrFs'); }
+    else { msImpBad = true; msImpMsg = T(MS_IMP_ERRORS[r && r.error] || 'mac.impErrFs', {name: r && r.conflict || ''}); }
     if (msImp && msImp.job && !msImp.job.end) msImpTimer = setTimeout(function(){
       if (seq !== msSeq || !overlayMacSettings.classList.contains('on')) return;
       if (msImp.job.step === 'analysis' && !(msAna && msAna.running)) msAnaSend({});   /* its progress, asked from then on */
@@ -481,20 +481,29 @@ function msImpRecognized(c, j) {
     c.appendChild(box);
   });
 }
-/* import waits for tags: the tag editor opens with the first folder still missing them (search fields filled from its name) */
+/* folders still missing tags -> albums for the tag editor, in order: CD1, CD2 … of one album together (its folder) */
+function msImpEditorGroups(need, discRe) {
+  var groups = [], byKey = {};
+  (need || []).forEach(function(x){
+    var name = x.dir.split('/').slice(-1)[0], up = x.dir.slice(0, x.dir.lastIndexOf('/'));
+    var disc = !!(discRe && discRe.test(name)), key = disc ? up : x.dir;
+    if (!byKey[key]) { byKey[key] = {dir: x.dir, name: disc ? up.split('/').slice(-1)[0] : name, files: [], disc: disc}; groups.push(byKey[key]); }
+    byKey[key].files = byKey[key].files.concat(x.files);
+  });
+  return groups;
+}
+/* import waits for tags: the tag editor opens with the albums still missing them one after another (closing it opens
+   the next); each starts the recognition at MusicBrainz at once when the import found a suggestion for it */
 function msImpOpenEditor(j) {
   var need = j && j.waitTags && j.check && j.check.needTags || [];
   if (!need.length || typeof openTagEditor !== 'function') return;
-  var r = (j.recognized || []).filter(function(x){ return x.dir === need[0].dir; })[0];
-  tagAutoRecognize = !!(r && r.state === 'suggest');
-  var files = need[0].files, name = need[0].dir.split('/').slice(-1)[0], up = need[0].dir.slice(0, need[0].dir.lastIndexOf('/'));
-  if (typeof TAG_DISC_RE !== 'undefined' && TAG_DISC_RE.test(name)) {   /* CD1, CD2 …: the whole album at once */
-    files = [];
-    need.forEach(function(x){ if (x.dir.slice(0, x.dir.lastIndexOf('/')) === up) files = files.concat(x.files); });
-    name = up.split('/').slice(-1)[0];
-    tagAutoRecognize = false;
-  }
-  openTagEditor(files.map(function(u){ return {uri: u}; }), name);
+  var groups = msImpEditorGroups(need, typeof TAG_DISC_RE !== 'undefined' ? TAG_DISC_RE : null);
+  (function open(i){
+    var g = groups[i], r = (j.recognized || []).filter(function(x){ return x.dir === g.dir; })[0];
+    tagAutoRecognize = !g.disc && !!(r && r.state === 'suggest');
+    openTagEditor(g.files.map(function(u){ return {uri: u}; }), groups.length > 1 ? g.name + ' (' + (i + 1) + '/' + groups.length + ')' : g.name,
+                  i + 1 < groups.length ? {onClose: function(){ open(i + 1); }} : null);
+  })(0);
 }
 function msImpResult(c, j) {
   var name = j.dest.split('/').slice(-1)[0];

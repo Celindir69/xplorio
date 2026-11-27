@@ -1,6 +1,9 @@
 /* Importing new music on the Mac (settings page, "Music folders"): a folder is copied or moved to <music folder>/import/<name>,
    MPD reads exactly that folder, its tags are checked, then (if wanted and installed) rsgain and the audio analysis run on
    that folder only, and MPD reads it once more. One import at a time; the steps can be followed with status().
+   Is import/<name> already there (an artist folder: Madonna/Music imported earlier, now Madonna with American Pie),
+   the new subfolders are added to it (job.parts) and only those are checked, tagged and analysed; refused ('exists',
+   conflict()) when one of them is there already or the folder itself holds audio files (an album imported again).
    Node 8, ES5 only.
    opts: musicRoot, mpd(cmds, cb(err, lists)), rsgain (rsgainrun Runner), analysis (essentiarun Runner), now(), log(text),
          onDone() */
@@ -83,11 +86,26 @@ function checkTags(lines, imageDirs) {
           needTags: Object.keys(need).sort().slice(0, 50).map(function(d){ return {dir: d, files: byDir[d]}; })};
 }
 
+/* files of list() below the given top-level entries only (all with no parts) */
+function inParts(files, parts) {
+  if (!parts) return files || [];
+  return (files || []).filter(function(f){ return parts.indexOf(f.rel.split('/')[0]) >= 0; });
+}
+
+/* import/<name> exists: can src be added to it? -> '' or what clashes ('.': src holds audio files itself, an album) */
+function merging(src, dest) {
+  var names = fs.readdirSync(src).filter(function(n){ return !junk(n); }).sort();
+  if (names.some(function(n){ return AUDIO.indexOf(path.extname(n).toLowerCase()) >= 0 && fs.statSync(path.join(src, n)).isFile(); })) return '.';
+  return names.filter(function(n){ return fs.existsSync(path.join(dest, n)); })[0] || '';
+}
+
 function Import(o) {
   this.o = o;
   this.now = o.now || Date.now;
   this.job = null;          /* the current or last import */
+  this.conflictName = '';   /* after 'exists': what is there already, below import (e.g. "Madonna/Music") */
 }
+Import.prototype.conflict = function() { return this.conflictName; };
 Import.prototype.log = function(t) { if (this.o.log) this.o.log(t); };
 Import.prototype.running = function() { return !!(this.job && !this.job.end); };
 Import.prototype.status = function() { return {ok: true, job: this.job}; };
@@ -111,10 +129,18 @@ Import.prototype.start = function(opts, cb) {
   var destDir = path.join(opts.target, 'import'), dest = path.join(destDir, name);
   var real = function(p){ try { return fs.realpathSync(p); } catch (e) { return p; } };
   if ((real(opts.target) + '/').indexOf(real(src) + '/') === 0 || (real(src) + '/').indexOf(real(opts.target) + '/') === 0) return cb('inside');
-  if (fs.existsSync(dest)) return cb('exists');
+  this.conflictName = '';
+  var parts = null;                                      /* merging into an existing folder: its new top-level entries */
+  if (fs.existsSync(dest)) {
+    var clash = merging(src, dest);
+    if (clash) { this.conflictName = clash === '.' ? name : name + '/' + clash; return cb('exists'); }
+    parts = fs.readdirSync(src).filter(function(n){ return !junk(n); }).sort();
+  }
   var mpdPath = String(opts.rel).replace(/^\/+|\/+$/g, '') + '/import/' + name;
   var job = this.job = {source: src, dest: dest, mpdPath: mpdPath, move: !!opts.move, start: this.now(), end: 0,
-                        step: 'copy', done: 0, total: 0, bytes: 0, totalBytes: 0, error: '', steps: [], check: null};
+                        step: 'copy', done: 0, total: 0, bytes: 0, totalBytes: 0, error: '', steps: [], check: null, parts: parts};
+  var partDirs = (parts || []).filter(function(n){ return fs.statSync(path.join(src, n)).isDirectory(); });
+  function checkNow(cb2) { self.check(dest, mpdPath, cb2, parts); }
   cb(null);
   function fail(code, e) {
     job.error = code; job.end = self.now();
@@ -129,7 +155,7 @@ Import.prototype.start = function(opts, cb) {
     self.scan(mpdPath, function(e){
       if (e) return fail('mpd', e);
       step('check');
-      self.check(dest, mpdPath, function(c){
+      checkNow(function(c){
         job.check = c;
         afterCheck();
       });
@@ -148,7 +174,7 @@ Import.prototype.start = function(opts, cb) {
         step('rescan');
         return self.scan(mpdPath, function(){                /* MPD reads the new tags, the check sees them */
           step('check');
-          self.check(dest, mpdPath, function(c){ job.check = c; gate(); });
+          checkNow(function(c){ job.check = c; gate(); });
         });
       }
       self.o.recognize(need[i].dir, need[i].files, function(r){ r.files = need[i].files; job.recognized.push(r); next(i + 1); });
@@ -166,7 +192,7 @@ Import.prototype.start = function(opts, cb) {
       step('rescan');
       self.scan(mpdPath, function(){
         step('check');
-        self.check(dest, mpdPath, function(c){ job.check = c; afterTags(); });
+        checkNow(function(c){ job.check = c; afterTags(); });
       });
     };
     self.log('Import waits for tags: ' + still.length + ' folder(s) in ' + dest);
@@ -176,7 +202,7 @@ Import.prototype.start = function(opts, cb) {
     if (!opts.rsgain || !self.o.rsgain || !self.o.rsgain.bin()) return analyse();
     step('rsgain');
     self.o.rsgain.start(function(e){ if (e) { job.rsgainError = e; analyse(); } },
-      {dirs: [dest], walkRoot: path.join(self.o.musicRoot, mpdPath), own: true, done: function(files){
+      {dirs: parts ? partDirs.map(function(n){ return path.join(dest, n); }) : [dest], walkRoot: path.join(self.o.musicRoot, mpdPath), own: true, done: function(files){
         job.rsgainFiles = files;
         if (!files) return analyse();
         step('rescan');
@@ -187,13 +213,13 @@ Import.prototype.start = function(opts, cb) {
     if (!opts.analysis || !self.o.analysis) return finish();
     step('analysis');
     self.o.analysis.start(function(e){ if (e) { job.analysisError = e; finish(); } },
-      {roots: [path.join(self.o.musicRoot, mpdPath)], own: true, done: function(p){ job.analysed = p && p.done || 0; finish(); }});
+      {roots: parts ? partDirs.map(function(n){ return path.join(self.o.musicRoot, mpdPath, n); }) : [path.join(self.o.musicRoot, mpdPath)], own: true, done: function(p){ job.analysed = p && p.done || 0; finish(); }});
   }
   /* the result shows the tags as they are at the end (MPD has read the folder again after rsgain; tags may have been
      edited in the meantime) */
   function finish() {
     if (!job.check) return done();
-    self.check(dest, mpdPath, function(c){ job.check = c; done(); });
+    checkNow(function(c){ job.check = c; done(); });
   }
   function done() {
     step('done'); job.end = self.now();
@@ -205,6 +231,16 @@ Import.prototype.start = function(opts, cb) {
     if (e) return fail('source', e);
     job.total = files.length;
     job.totalBytes = files.reduce(function(a, f){ return a + f.size; }, 0);
+    if (job.move && parts) {                             /* same drive, into the existing folder: each entry renamed */
+      return (function next(i){
+        if (i >= parts.length) return removeTree(src, function(){ job.done = job.total; job.bytes = job.totalBytes; placed(); });
+        fs.rename(path.join(src, parts[i]), path.join(dest, parts[i]), function(e2){
+          if (!e2) return next(i + 1);
+          if (e2.code !== 'EXDEV' || i) return fail('fs', e2);
+          copyAll(files, dirs);
+        });
+      })(0);
+    }
     if (job.move) {                                      /* same drive: just rename */
       return fs.rename(src, dest, function(e2){
         if (!e2) { job.done = job.total; job.bytes = job.totalBytes; return placed(); }
@@ -216,7 +252,7 @@ Import.prototype.start = function(opts, cb) {
   });
 
   function copyAll(files, dirs) {
-    try { fs.mkdirSync(dest); dirs.slice().sort().forEach(function(d){ fs.mkdirSync(path.join(dest, d)); }); }
+    try { if (!parts) fs.mkdirSync(dest); dirs.slice().sort().forEach(function(d){ fs.mkdirSync(path.join(dest, d)); }); }
     catch (e) { return fail('fs', e); }
     (function next(i){
       if (i >= files.length) return copied();
@@ -232,6 +268,7 @@ Import.prototype.start = function(opts, cb) {
     function copied() {
       if (!job.move) return placed();
       list(dest, function(e, got){                        /* moved to another drive: remove the source only when all arrived */
+        got = inParts(got, parts);
         var ok = !e && got.length === files.length && got.reduce(function(a, f){ return a + f.size; }, 0) === job.totalBytes;
         if (!ok) { job.keptSource = true; return placed(); }
         removeTree(src, function(e2){ if (e2) job.keptSource = true; placed(); });
@@ -259,20 +296,29 @@ Import.prototype.scan = function(mpdPath, cb) {
   }
 };
 
-/* tags from MPD, cover files from the folder */
-Import.prototype.check = function(dest, mpdPath, cb) {
+/* tags from MPD, cover files from the folder; parts: only these entries of it (an import into an existing folder) */
+Import.prototype.check = function(dest, mpdPath, cb, parts) {
   var self = this;
   list(dest, function(e, files){
+    files = inParts(files, parts);
     var imageDirs = {};
     (files || []).forEach(function(f){
       if (IMAGES.test(path.basename(f.rel))) imageDirs[path.dirname(mpdPath + '/' + f.rel)] = true;
     });
     var audio = (files || []).filter(function(f){ return AUDIO.indexOf(path.extname(f.rel).toLowerCase()) >= 0; }).length;
-    self.o.mpd(['listallinfo ' + q(mpdPath)], function(e2, lists){
-      var c = checkTags(e2 ? [] : lists && lists[0], imageDirs);
-      c.audioFiles = audio;
-      cb(c);
-    });
+    var paths = parts ? parts.filter(function(n){ try { return fs.statSync(path.join(dest, n)).isDirectory(); } catch (x) { return false; } })
+                         .map(function(n){ return mpdPath + '/' + n; }) : [mpdPath], lines = [];
+    (function next(i){
+      if (i >= paths.length) {
+        var c = checkTags(lines, imageDirs);
+        c.audioFiles = audio;
+        return cb(c);
+      }
+      self.o.mpd(['listallinfo ' + q(paths[i])], function(e2, lists){
+        if (!e2) lines = lines.concat(lists && lists[0] || []);
+        next(i + 1);
+      });
+    })(0);
   });
 };
 

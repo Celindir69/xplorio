@@ -3646,6 +3646,7 @@ function doMacImport(req, res) {
                          rsgain: !!body.rsgain, analysis: !!body.analysis}, function(e){
       var st = musicImport().status();
       if (e) { st.ok = false; st.error = e; }
+      if (e === 'exists') st.conflict = musicImport().conflict();   /* below import, e.g. "Madonna/Music" */
       send(res, 200, st);
     });
   });
