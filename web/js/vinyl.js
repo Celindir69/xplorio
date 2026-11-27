@@ -164,11 +164,12 @@ function browseVinyl(e, seq) {
     /* playing: the own files, else the streaming services that have it */
     var ways = histEl('div');
     browseBody.appendChild(ways);
+    ways.appendChild(vinylNowRow(it, seq));
     var local = r.local && r.local.length ? r.local : it.dir ? [{dir: it.dir, al: it.al}] : [];
     var versBox = histEl('div');                         /* the list of own versions after all play rows */
     if (local.length) vinylLocalWays(ways, versBox, it, local);
     browseBody.appendChild(versBox);
-    var svcs = streamsOn();
+    var svcs = local.some(vinylLossless) ? [] : streamsOn();   /* lossless in the library: no streaming service needed */
     var searching = svcs.length ? browseNote(T('vinyl.searching', {services: streamNames()})) : null;
     if (searching) ways.appendChild(searching);
     else if (!local.length) ways.appendChild(browseNote(T('vinyl.nowhere')));
@@ -217,6 +218,12 @@ function browseVinyl(e, seq) {
   });
 }
 
+/* a local version without loss (CD quality, hi-res, DSD, MQA); unknown quality counts as not */
+function vinylLossless(v) {
+  if (!v || !v.ext || typeof versionQuality !== 'function') return false;
+  return /^(lossless|hires|dsd|mqa)$/.test(versionQuality(v).kind || '');
+}
+
 /* own versions of the record: "Play local" (several: "Play best local", which one it is in the line below, then each
    version with its quality: tap opens it, ▶ plays it); "Open in the library" inside the row, above its line */
 function vinylLocalWays(box, listBox, it, local) {
@@ -258,6 +265,108 @@ function vinylLocalWays(box, listBox, it, local) {
     row.appendChild(pb);
     row.addEventListener('click', function(){ open(v); });
     box.appendChild(row);
+  });
+}
+
+/* ---------- record on the turntable ("Läuft auf dem Plattenspieler") ---------- */
+/* Tap on the record page: the player of every device shows the record (Discogs cover, artist, album, year, track list in
+   the lyrics pane, the usual album info) instead of Volumio. Kept by the tag service (POST /vinyl {action: 'now'}), so
+   the iPad shows it too, when the phone started it. Ends with a tap on the same row, when Xplorio plays something,
+   when the amplifier goes from the turntable to Xplorio's input or to standby, and after 3 hours (tag service) */
+var vinylNow = null;             /* {item, tracks, at, seen, amp: {foreign, on}} or null */
+function vinylNowKey(n) { return n ? n.item.id + '|' + n.at : ''; }
+function vinylNowSet(now) {
+  if (vinylNowKey(now) === vinylNowKey(vinylNow)) {
+    if (now && vinylNow) { vinylNow.item = now.item; vinylNow.tracks = now.tracks; }   /* track list may have arrived meanwhile */
+    return;
+  }
+  vinylNow = now ? {item: now.item, tracks: now.tracks, at: now.at, seen: Date.now(), amp: {}} : null;
+  if (typeof poll === 'function') poll();                 /* show it (or Volumio again) now */
+}
+function vinylNowFetch() {
+  if (document.hidden || !vinylOn()) return;
+  tagGetJson('/vinyl?now=1').then(function(r){ if (r && r.ok) vinylNowSet(r.now); }).catch(function(){});
+}
+/* asked every 15 s, but only while it can matter: a record is shown, the amplifier is on another input (e.g. phono),
+   or there is no Rotel to tell */
+setInterval(function(){
+  var amp = typeof ROTEL_ON !== 'undefined' && ROTEL_ON;
+  var other = typeof rotelInput === 'function' && rotelInput();
+  if (vinylNow || !amp || (other && !other.off)) vinylNowFetch();
+}, 15000);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) vinylNowFetch(); });
+whenTags(function(){ setTimeout(vinylNowFetch, 1500); });
+
+/* the amplifier's input for the turntable (icon or command "phono"), or null */
+function vinylPhonoSource() {
+  var p = typeof rotelProf !== 'undefined' && rotelProf;
+  return p && (p.sources || []).filter(function(x){ return x.icon === 'phono' || rotelNorm(x.cmd) === 'phono'; })[0] || null;
+}
+function vinylNowStart(it) {
+  tagPostJson('/vinyl', {action: 'now', id: it.id}).then(function(r){
+    if (!r || !r.ok || !r.now) { showToast(T('genre.offline')); return; }
+    var here = typeof remoteMode === 'undefined' || remoteMode !== 'remote';
+    if (here) player.state().then(function(st){ if (st && st.status === 'play') player.cmd('pause'); }).catch(function(){});
+    var ph = vinylPhonoSource();                          /* amplifier on: switch it to the turntable */
+    if (here && ph && typeof rotelOn !== 'undefined' && rotelOn && rotelLinked && rotelNorm(rotelSource) !== rotelNorm(ph.cmd))
+      rotel('/cmd?c=' + encodeURIComponent(ph.cmd));
+    vinylNowSet(r.now);
+    showToast(T('vinyl.nowShown'));
+    if (typeof closeAllOverlays === 'function') closeAllOverlays();
+  }).catch(function(){ showToast(T('genre.offline')); });
+}
+function vinylNowEnd(toast) {
+  var n = vinylNow;
+  if (!n) return;
+  vinylNow = null;
+  tagPostJson('/vinyl', {action: 'now', at: n.at}).catch(function(){});
+  if (toast) showToast(T('vinyl.nowEnded'));
+  if (typeof poll === 'function') poll();
+}
+/* row on the record page: start, or end when this record is shown */
+function vinylNowRow(it, seq) {
+  var on = !!(vinylNow && vinylNow.item.id === it.id);
+  var row = playRow(T(on ? 'vinyl.nowOn' : 'vinyl.nowStart'), T(on ? 'vinyl.nowStop' : 'vinyl.nowSub'), function(){
+    if (on) { vinylNowEnd(true); if (seq === browseSeq) browseRender(); }
+    else vinylNowStart(it);
+  });
+  row.classList.add('vnNowRow');
+  if (on) row.classList.add('on');
+  row.firstChild.innerHTML = '<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="' + VINYL_SVG + '"/></svg>';
+  return row;
+}
+/* what the player shows instead of Volumio's state (poll.js inputApply), or null; ends the display when Xplorio plays
+   or the amplifier left the turntable (only after it was seen on another input, resp. on, since the start) */
+function vinylNowApply(st) {
+  var n = vinylNow;
+  if (!n) return null;
+  if (st.status === 'play' && st.trackType !== 'input' && Date.now() - n.seen > 8000) { vinylNowEnd(); return null; }
+  if (typeof ROTEL_ON !== 'undefined' && ROTEL_ON && rotelReachable && rotelLinked && (typeof remoteMode === 'undefined' || remoteMode !== 'remote')) {
+    var mine = rotelOn && rotelProf && rotelSource && rotelIsPlayer(rotelSource);
+    var foreign = rotelOn && rotelProf && rotelSource && !mine;
+    if (foreign) n.amp.foreign = true;
+    if (rotelOn) n.amp.on = true;
+    if ((mine && n.amp.foreign) || (!rotelOn && n.amp.on)) { vinylNowEnd(); return null; }
+  }
+  var it = n.item, r = {};
+  for (var k in st) if (st.hasOwnProperty(k)) r[k] = st[k];   /* volume, shuffle, repeat stay from Volumio */
+  r.artist = it.ar; r.album = it.al; r.title = ''; r.albumart = it.img || it.th || '';
+  r.trackType = r.service = 'vinyl'; r.uri = 'vinyl:' + it.id;
+  r.status = 'stop'; r.duration = 0; r.seek = 0;
+  r.samplerate = r.bitdepth = r.bitrate = r.fileFormat = '';
+  r.vinyl = n;
+  return r;
+}
+/* line below the album line ("Vinyl LP (1984)") in the player: "LP, Album · Jive · 6.25 933" */
+function vinylNowTech(n) {
+  var it = n.item;
+  return [vinylFormat(it), it.lab].filter(Boolean).join(' · ');
+}
+/* the record's tracks for the lyrics pane: side and number ("A1"), title, length */
+function vinylNowTracks(n) {
+  return (n.tracks || []).filter(function(t){ return t && t.t; }).map(function(t){
+    var m = /^(\d+):(\d\d)$/.exec(String(t.d || '').trim());
+    return {title: t.t, pos: t.p || '', duration: m ? +m[1] * 60 + +m[2] : 0};
   });
 }
 
