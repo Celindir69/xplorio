@@ -50,18 +50,21 @@ function renderTrackList(tracks) {
     lyricsText.appendChild(row);
   });
 }
-/* lyrics of one track of the list (record on the turntable): plain text from lrclib, an X at the top right goes back */
+/* lyrics of one track of the list (record on the turntable): plain text from lrclib, the title centred above it, an
+   arrow on the left goes back to the list */
 function showTrackLyrics(t) {
   var seq = ++lyrTrackSeq, list = lyrTrackList;
   while (lyricsText.firstChild) lyricsText.removeChild(lyricsText.firstChild);
   lyricsText.className = 'lyrTracks lyrTrkLyrics';
   area.scrollTop = 0;
   var head = document.createElement('div'); head.className = 'lyrTrkTop';
-  var ti = document.createElement('div'); ti.className = 'lyrTrkHead'; ti.textContent = (t.pos ? t.pos + '  ' : '') + (t.title || '');
-  var x = document.createElement('button'); x.className = 'lyrTrkX'; x.title = T('lyrics.tracks');
-  x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
-  x.addEventListener('click', function(ev){ ev.stopPropagation(); area.scrollTop = 0; renderTrackList(list); });
-  head.appendChild(ti); head.appendChild(x);
+  var back = document.createElement('button'); back.className = 'lyrTrkBack'; back.title = T('lyrics.tracks');
+  back.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
+  back.addEventListener('click', function(ev){ ev.stopPropagation(); area.scrollTop = 0; renderTrackList(list); });
+  var ti = document.createElement('div'); ti.className = 'lyrTrkName';
+  if (t.pos) ti.appendChild(Object.assign(document.createElement('span'), {className: 'lyrTrkPos', textContent: t.pos + ' '}));
+  ti.appendChild(document.createTextNode(t.title || ''));
+  head.appendChild(back); head.appendChild(ti); head.appendChild(document.createElement('span'));   /* empty right cell: title centred */
   var body = document.createElement('div'); body.className = 'lyrTrkText'; body.textContent = T('browse.loading');
   lyricsText.appendChild(head); lyricsText.appendChild(body);
   fetch(extraUrl(t.artist || '', t.title || '')).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){

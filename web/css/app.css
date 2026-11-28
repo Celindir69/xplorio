@@ -767,12 +767,13 @@ html:not(.otherInput) .lyrTrk:hover .lyrTrkT { text-decoration:underline; text-u
 html .lyrTrk.lyr { cursor:pointer; }   /* record: a tap shows the lyrics, on any input */
 html .lyrTrk.lyr:hover .lyrTrkT { text-decoration:underline; text-underline-offset:.15em; }
 .lyrTrkSide { height:0; border-top:1px solid rgba(var(--fg-rgb),.25); margin:.7em 0; }   /* between side A and side B */
-.lyrTrkTop { display:flex; align-items:flex-start; justify-content:space-between; gap:.8em; position:sticky; top:0; }
-.lyrTrkTop .lyrTrkHead { margin:0; padding-top:.35em; }
-.lyrTrkX { flex:0 0 auto; width:2em; height:2em; padding:.35em; border:0; border-radius:50%; cursor:pointer;
+.lyrTrkTop { display:grid; grid-template-columns:2.2em 1fr 2.2em; align-items:center; gap:.5em; position:sticky; top:0; }
+.lyrTrkName { text-align:center; font-weight:700; line-height:1.3; }
+.lyrTrkPos { opacity:.5; font-weight:400; }
+.lyrTrkBack { width:2.2em; height:2.2em; padding:.3em; border:0; border-radius:50%; cursor:pointer;
   background:rgba(var(--fg-rgb),.12); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
-.lyrTrkX svg { width:100%; height:100%; fill:var(--fg); display:block; }
-.lyrTrkText { white-space:pre-wrap; margin-top:.4em; }
+.lyrTrkBack svg { width:100%; height:100%; fill:var(--fg); display:block; }
+.lyrTrkText { white-space:pre-wrap; margin-top:.6em; }
 .lyrTrkText.none { opacity:.55; }
 .lyrTrk.cur .lyrTrkT { font-weight:700; text-shadow:var(--glow); }   /* the track playing ("Track list" chosen) */
 
