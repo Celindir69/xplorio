@@ -825,6 +825,7 @@ mArtist.addEventListener('click', function(){
   openBrowse({kind:'artist', artist:a, stream:curStream ? curStream.id : undefined});   /* track from a service: search there */
 });
 mAlbum.addEventListener('click', function(){
+  if (typeof vinylNow !== 'undefined' && vinylNow && document.documentElement.classList.contains('vinylNow')) return openRecords();   /* record on the turntable: "Vinyl LP (1989)" leads to Meine Platten */
   var a = mArtist.textContent, al = curAlbumTitle;
   if (curRadio || !a || !al) return;
   openBrowse({kind:'album', artist:a, album:al, stream:curStream ? curStream.id : undefined,
