@@ -362,14 +362,13 @@ function toggleCredit(n, more, name, link) {
   });
 }
 
-/* Swipe between the info tabs. Scrolling through long texts must never flip the tab, so:
-   the direction is decided once after the first few pixels and then kept for the whole gesture;
-   only a clearly sideways gesture (twice as wide as high, long enough) counts, and once the
-   text has scrolled vertically the gesture is a scroll, not a swipe. Touches inside a row that
-   scrolls sideways itself (cover rows) are left to that row. */
-var infoSwipe = null;
-function infoInSideScroller(el) {
-  for (; el && el !== infoOverlayBody; el = el.parentElement) {
+/* Sideways swipe on a scrolling pane (info tabs, a record track's lyrics). Scrolling through long texts must never
+   count as a swipe, so: the direction is decided once after the first few pixels and then kept for the whole gesture;
+   only a clearly sideways gesture (twice as wide as high, long enough) counts, and once the text has scrolled
+   vertically the gesture is a scroll, not a swipe. Touches inside a row that scrolls sideways itself (cover rows) are
+   left to that row. onSwipe(dir): 1 = to the left (next), -1 = to the right (back) */
+function swipeInSideScroller(el, root) {
+  for (; el && el !== root; el = el.parentElement) {
     if (el.scrollWidth > el.clientWidth + 2) {
       var ox = getComputedStyle(el).overflowX;
       if (ox === 'auto' || ox === 'scroll') return true;
@@ -377,32 +376,43 @@ function infoInSideScroller(el) {
   }
   return false;
 }
-infoOverlayBody.addEventListener('touchstart', function(e){
-  if (e.touches.length !== 1 || infoInSideScroller(e.target)) { infoSwipe = null; return; }
-  var t = e.touches[0];
-  infoSwipe = { x: t.clientX, y: t.clientY, top: infoOverlayBody.scrollTop, dir: null };
-}, {passive:true});
-infoOverlayBody.addEventListener('touchmove', function(e){
-  if (!infoSwipe) return;
-  if (e.touches.length !== 1) { infoSwipe = null; return; }
-  if (infoSwipe.dir) return;                                         /* direction already locked */
-  var t = e.touches[0];
-  var dx = Math.abs(t.clientX - infoSwipe.x), dy = Math.abs(t.clientY - infoSwipe.y);
-  if (dx < 10 && dy < 10) return;                                    /* too little movement to tell yet */
-  infoSwipe.dir = dx > dy * 2 ? 'h' : 'v';
-  if (infoSwipe.dir === 'v') infoSwipe = null;                       /* a scroll: ignore the rest */
-}, {passive:true});
-infoOverlayBody.addEventListener('touchcancel', function(){ infoSwipe = null; }, {passive:true});
-infoOverlayBody.addEventListener('touchend', function(e){
-  var s = infoSwipe; infoSwipe = null;
-  if (!s || s.dir !== 'h') return;
-  if (Math.abs(infoOverlayBody.scrollTop - s.top) > 5) return;       /* the text scrolled meanwhile */
-  var t = e.changedTouches[0];
-  var dx = t.clientX - s.x, dy = t.clientY - s.y;
-  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;  /* not long or not sideways enough */
-  var dir = dx < 0 ? 1 : -1;
+function sideSwipe(el, onSwipe) {
+  var sw = null;
+  el.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1 || swipeInSideScroller(e.target, el)) { sw = null; return; }
+    var t = e.touches[0];
+    sw = { x: t.clientX, y: t.clientY, top: el.scrollTop, dir: null };
+  }, {passive:true});
+  el.addEventListener('touchmove', function(e){
+    if (!sw) return;
+    if (e.touches.length !== 1) { sw = null; return; }
+    if (sw.dir) return;                                                /* direction already locked */
+    var t = e.touches[0];
+    var dx = Math.abs(t.clientX - sw.x), dy = Math.abs(t.clientY - sw.y);
+    if (dx < 10 && dy < 10) return;                                    /* too little movement to tell yet */
+    sw.dir = dx > dy * 2 ? 'h' : 'v';
+    if (sw.dir === 'v') sw = null;                                     /* a scroll: ignore the rest */
+  }, {passive:true});
+  el.addEventListener('touchcancel', function(){ sw = null; }, {passive:true});
+  el.addEventListener('touchend', function(e){
+    var s = sw; sw = null;
+    if (!s || s.dir !== 'h') return;
+    if (Math.abs(el.scrollTop - s.top) > 5) return;                    /* the text scrolled meanwhile */
+    var t = e.changedTouches[0];
+    var dx = t.clientX - s.x, dy = t.clientY - s.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;  /* not long or not sideways enough */
+    onSwipe(dx < 0 ? 1 : -1);
+  }, {passive:true});
+}
+sideSwipe(infoOverlayBody, function(dir){
   var next = infoIdx + dir;
   if (next < 0 || next >= infoItems.length) return;
   infoIdx = next; buildInfoTabs(); renderInfo(dir);
-}, {passive:true});
+});
+/* a record track's lyrics: swipe to the right goes back to the track list, like the arrow */
+sideSwipe(area, function(dir){
+  if (dir !== -1) return;
+  var back = lyricsText.querySelector('.lyrTrkBack');
+  if (back && lyricsText.classList.contains('lyrTrkLyrics')) back.click();
+});
 
