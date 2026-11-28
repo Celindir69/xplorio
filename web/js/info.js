@@ -362,15 +362,44 @@ function toggleCredit(n, more, name, link) {
   });
 }
 
-var infoSwipeX = null;
+/* Swipe between the info tabs. Scrolling through long texts must never flip the tab, so:
+   the direction is decided once after the first few pixels and then kept for the whole gesture;
+   only a clearly sideways gesture (twice as wide as high, long enough) counts, and once the
+   text has scrolled vertically the gesture is a scroll, not a swipe. Touches inside a row that
+   scrolls sideways itself (cover rows) are left to that row. */
+var infoSwipe = null;
+function infoInSideScroller(el) {
+  for (; el && el !== infoOverlayBody; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 2) {
+      var ox = getComputedStyle(el).overflowX;
+      if (ox === 'auto' || ox === 'scroll') return true;
+    }
+  }
+  return false;
+}
 infoOverlayBody.addEventListener('touchstart', function(e){
-  infoSwipeX = e.changedTouches[0].clientX;
+  if (e.touches.length !== 1 || infoInSideScroller(e.target)) { infoSwipe = null; return; }
+  var t = e.touches[0];
+  infoSwipe = { x: t.clientX, y: t.clientY, top: infoOverlayBody.scrollTop, dir: null };
 }, {passive:true});
+infoOverlayBody.addEventListener('touchmove', function(e){
+  if (!infoSwipe) return;
+  if (e.touches.length !== 1) { infoSwipe = null; return; }
+  if (infoSwipe.dir) return;                                         /* direction already locked */
+  var t = e.touches[0];
+  var dx = Math.abs(t.clientX - infoSwipe.x), dy = Math.abs(t.clientY - infoSwipe.y);
+  if (dx < 10 && dy < 10) return;                                    /* too little movement to tell yet */
+  infoSwipe.dir = dx > dy * 2 ? 'h' : 'v';
+  if (infoSwipe.dir === 'v') infoSwipe = null;                       /* a scroll: ignore the rest */
+}, {passive:true});
+infoOverlayBody.addEventListener('touchcancel', function(){ infoSwipe = null; }, {passive:true});
 infoOverlayBody.addEventListener('touchend', function(e){
-  if (infoSwipeX === null) return;
-  var dx = e.changedTouches[0].clientX - infoSwipeX;
-  infoSwipeX = null;
-  if (Math.abs(dx) < 50) return;
+  var s = infoSwipe; infoSwipe = null;
+  if (!s || s.dir !== 'h') return;
+  if (Math.abs(infoOverlayBody.scrollTop - s.top) > 5) return;       /* the text scrolled meanwhile */
+  var t = e.changedTouches[0];
+  var dx = t.clientX - s.x, dy = t.clientY - s.y;
+  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;  /* not long or not sideways enough */
   var dir = dx < 0 ? 1 : -1;
   var next = infoIdx + dir;
   if (next < 0 || next >= infoItems.length) return;
