@@ -122,26 +122,69 @@ function remoteDelayMs() {
   return remoteDelay.ms;
 }
 
-function remoteStart() {
+/* Keeping the stream alive on the go: mobile networks drop, change (WLAN <-> mobile) or stall without the audio element
+   ever reporting an error. Every interruption reconnects by itself, with growing pauses (REMOTE_RETRY_MS) until sound
+   comes again; a watchdog notices a stream that stopped moving (no progress for REMOTE_STALL_MS, longer right after
+   connecting because of the server's cushion), a network change ("online", connection type) checks at once.
+   Only a missing tap (iOS: NotAllowedError) pauses the player as before; other failures just try again. */
+var REMOTE_RETRY_MS = [1000, 2000, 4000, 8000, 15000];
+var REMOTE_STALL_MS = 10000, REMOTE_STALL_START_MS = 20000, REMOTE_STALL_NET_MS = 3000;
+var remoteRetryN = 0, remoteRetryTimer = null, remoteProg = {t: -1, at: 0, played: false}, remoteNetAt = 0, remoteToasted = false;
+function remoteRetry() {
+  if (remoteRetryTimer || !remotePlaying() || !remoteWant) return;
+  var ms = REMOTE_RETRY_MS[Math.min(remoteRetryN, REMOTE_RETRY_MS.length - 1)];
+  remoteRetryN++;
+  if (remoteRetryN === 2 && !remoteToasted && !document.hidden) { remoteToasted = true; showToast(T('remote.reconnect')); }
+  remoteRetryTimer = setTimeout(function(){
+    remoteRetryTimer = null;
+    if (!remotePlaying() || !remoteWant) return;
+    if (remoteAudio) { remoteAudio.pause(); remoteAudio.removeAttribute('src'); }
+    remoteStart(true);
+  }, ms);
+}
+function remoteRetryReset() {
+  clearTimeout(remoteRetryTimer); remoteRetryTimer = null; remoteRetryN = 0;
+}
+/* watchdog: playing wanted, element not paused by the user, but the time stands still */
+setInterval(function(){
+  if (!remotePlaying() || !remoteWant || !remoteAudio || !remoteAudio.src || remoteAudio.paused || remoteRetryTimer) return;
+  var now = Date.now(), t = remoteAudio.currentTime;
+  if (t !== remoteProg.t) { remoteProg.t = t; remoteProg.at = now; return; }
+  var limit = remoteNetAt > remoteProg.at ? REMOTE_STALL_NET_MS : remoteProg.played ? REMOTE_STALL_MS : REMOTE_STALL_START_MS;
+  if (now - Math.max(remoteProg.at, remoteNetAt) >= limit) remoteRetry();
+}, 1000);
+function remoteNetChange() {                                   /* network changed: the old connection is often dead */
+  remoteNetAt = Date.now();
+}
+window.addEventListener('online', function(){ remoteNetChange(); if (remotePlaying() && remoteWant) { remoteRetryReset(); remoteRetry(); } });
+if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', remoteNetChange);
+
+function remoteStart(retry) {
   if (!remoteAudio) {
     remoteAudio = new Audio();
-    var again = function(){                                    /* connection lost (network, app switch): connect anew */
-      if (!remotePlaying() || !remoteWant || !remoteAudio.src) return;
-      setTimeout(function(){ if (remotePlaying() && remoteWant) { remoteAudio.removeAttribute('src'); remoteStart(); } }, 2000);
-    };
+    remoteAudio.preload = 'auto';
+    var again = function(){ if (remotePlaying() && remoteWant && remoteAudio.src) remoteRetry(); };   /* connection lost: connect anew */
     remoteAudio.addEventListener('ended', again);
     remoteAudio.addEventListener('error', again);
-    remoteAudio.addEventListener('playing', function(){ remoteHinted = false; });   /* next interruption: hint again */
+    remoteAudio.addEventListener('playing', function(){                 /* sound again: next interruption starts from the beginning */
+      remoteHinted = false; remoteRetryReset(); remoteToasted = false;
+      remoteProg.played = true; remoteProg.at = Date.now();
+    });
   }
   if (!remoteAudio.paused && remoteAudio.src) return;
+  if (!retry) remoteRetryReset();
+  remoteProg = {t: -1, at: Date.now(), played: false};
   remoteAudio.src = TAGS + '/stream?t=' + Date.now();          /* live: always connect anew, so it does not lag behind */
   var p = remoteAudio.play();
-  if (p && p.catch) p.catch(function(){                         /* iOS: sound only after a tap -> pause, Play continues */
-    if (!remoteHinted) { remoteHinted = true; remoteInterrupt(''); }
+  if (p && p.catch) p.catch(function(e){
+    if (!e || e.name !== 'NotAllowedError') return remoteRetry();   /* network, aborted: try again */
+    if (retry && document.hidden) return;                       /* in the background: back in the foreground it tries again */
+    if (!remoteHinted) { remoteHinted = true; remoteInterrupt(''); }   /* iOS: sound only after a tap -> pause, Play continues */
   });
 }
 function remoteStop() {
   remoteDelay = {ms: 0, at: 0};                                /* next connection: measure anew */
+  remoteRetryReset();
   if (!remoteAudio || !remoteAudio.src) return;
   remoteAudio.pause();
   remoteAudio.removeAttribute('src');
@@ -182,7 +225,10 @@ document.addEventListener('click', function(ev){
 document.addEventListener('visibilitychange', function(){
   if (document.hidden) return;
   remoteCheck(true);
-  if (remotePlaying() && remoteWant && (!remoteAudio || remoteAudio.paused)) remoteStart();
+  if (!remotePlaying() || !remoteWant) return;
+  if (!remoteAudio || remoteAudio.paused || !remoteAudio.src) remoteStart();
+  else if (remoteAudio.currentTime !== remoteProg.t) { remoteProg.t = remoteAudio.currentTime; remoteProg.at = Date.now(); }
+  else if (remoteProg.played && !remoteRetryTimer && Date.now() - remoteProg.at > 1500) { remoteRetryReset(); remoteRetry(); }   /* stood still meanwhile */
 });
 
 /* start: button only with a stream output; explicit ?player=, else the player's mode (listening here if this device
