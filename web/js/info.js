@@ -25,20 +25,54 @@ function fmtTrackDur(s) {
   s = Math.round(Number(s) || 0);
   return s > 0 ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : '';
 }
+var lyrTrackList = null, lyrTrackSeq = 0;      /* the track list shown, to come back to it from a track's lyrics */
 function renderTrackList(tracks) {
   if (!tracks || !tracks.length) return;
+  lyrTrackList = tracks; lyrTrackSeq++;
+  while (lyricsText.firstChild) lyricsText.removeChild(lyricsText.firstChild);
   lyricsText.className = 'lyrTracks';
   var head = document.createElement('div'); head.className = 'lyrTrkHead'; head.textContent = T('lyrics.tracks');
   lyricsText.appendChild(head);
+  var side = '';
   tracks.forEach(function(t, i){
+    var s = /^([A-Za-z])\d*$/.exec(t.pos || '');                /* record: side A, B … from "A1"; a line between the sides */
+    s = s ? s[1].toUpperCase() : '';
+    if (s && side && s !== side) lyricsText.appendChild(Object.assign(document.createElement('div'), {className: 'lyrTrkSide'}));
+    if (s) side = s;
     var row = document.createElement('div'), n = document.createElement('span'), ti = document.createElement('span'), d = document.createElement('span');
-    row.className = 'lyrTrk' + (typeof curTitle !== 'undefined' && curTitle && (t.title || t.name) === curTitle ? ' cur' : ''); n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
+    row.className = 'lyrTrk' + (t.lyrics ? ' lyr' : '') + (typeof curTitle !== 'undefined' && curTitle && (t.title || t.name) === curTitle ? ' cur' : ''); n.className = 'lyrTrkN'; ti.className = 'lyrTrkT'; d.className = 'lyrTrkD';
     n.textContent = t.pos || (i + 1) + '.';             /* record: side and number ("A1") */
     ti.textContent = t.title || t.name || '';
     d.textContent = fmtTrackDur(t.duration);
     row.appendChild(n); row.appendChild(ti); row.appendChild(d);
     if (t.queueIndex >= 0) row.addEventListener('click', function(){ queuePlayAt(t.queueIndex); });   /* play it (other input: only a hint, queue.js) */
+    else if (t.lyrics) row.addEventListener('click', function(){ showTrackLyrics(t); });   /* record: its lyrics (lrclib) */
     lyricsText.appendChild(row);
+  });
+}
+/* lyrics of one track of the list (record on the turntable): plain text from lrclib, an X at the top right goes back */
+function showTrackLyrics(t) {
+  var seq = ++lyrTrackSeq, list = lyrTrackList;
+  while (lyricsText.firstChild) lyricsText.removeChild(lyricsText.firstChild);
+  lyricsText.className = 'lyrTracks lyrTrkLyrics';
+  area.scrollTop = 0;
+  var head = document.createElement('div'); head.className = 'lyrTrkTop';
+  var ti = document.createElement('div'); ti.className = 'lyrTrkHead'; ti.textContent = (t.pos ? t.pos + '  ' : '') + (t.title || '');
+  var x = document.createElement('button'); x.className = 'lyrTrkX'; x.title = T('lyrics.tracks');
+  x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+  x.addEventListener('click', function(ev){ ev.stopPropagation(); area.scrollTop = 0; renderTrackList(list); });
+  head.appendChild(ti); head.appendChild(x);
+  var body = document.createElement('div'); body.className = 'lyrTrkText'; body.textContent = T('browse.loading');
+  lyricsText.appendChild(head); lyricsText.appendChild(body);
+  fetch(extraUrl(t.artist || '', t.title || '')).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    var plain = j && typeof j.plainLyrics === 'string' ? j.plainLyrics.trim() : '';
+    if (!plain && j && typeof j.syncedLyrics === 'string')                 /* only synced: without the times */
+      plain = j.syncedLyrics.split(/\r?\n/).map(function(l){ return l.replace(/\[[^\]]+\]/g, '').trim(); }).join('\n').trim();
+    return plain.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n');
+  }).catch(function(){ return ''; }).then(function(text){
+    if (seq !== lyrTrackSeq) return;
+    body.textContent = text || T('lyrics.none');
+    if (!text) body.classList.add('none');
   });
 }
 /* the queued tracks of this album (all of the queue if none match, e.g. a playlist) */
