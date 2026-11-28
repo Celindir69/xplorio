@@ -1042,9 +1042,11 @@ Rechner, auf dem Xplorio gerade offen ist. Der nächste Tipp schaltet zurück au
 Warteschlange, Abspielen, Pause und Lautstärke am Gerät. Die Einstellung gehört zum Player; jedes offene Xplorio zeigt
 sie an (spätestens nach 10 s). Ton gibt es aber nur auf Geräten, die es selbst gewählt haben; auf den anderen ist der
 Knopf gedimmt, und ein Tipp dort hört mit, ohne etwas umzuschalten. Auf iPhone und iPad startet der Ton erst nach einem
-Tipp irgendwo in Xplorio. Hört eine Minute lang niemand zu, schaltet der Player von selbst zurück auf die Anlage, damit
-er nie stumm bleibt. Startet Volumio MPD neu (etwa beim Speichern im Plugin), sind danach Anlage und Stream beide an; auch
-dann schaltet Xplorio den Stream nach einer Minute ohne Zuhörer wieder ab. Solange ein Gerät mithört, zeigt die Qualitätsanzeige dort
+Tipp irgendwo in Xplorio. Reißt die Verbindung ab (Funkloch, Wechsel zwischen WLAN und Mobilfunk) oder bleibt der Ton
+stehen, verbindet sich das Gerät von selbst neu, erst nach einer Sekunde, dann in wachsenden Abständen bis 15 s, bis wieder
+Ton kommt; der Player läuft dabei weiter. Hört drei Minuten lang niemand zu, schaltet der Player von selbst zurück auf die
+Anlage, damit er nie stumm bleibt. Startet Volumio MPD neu (etwa beim Speichern im Plugin), sind danach Anlage und Stream
+beide an; auch dann schaltet Xplorio den Stream nach drei Minuten ohne Zuhörer wieder ab. Solange ein Gerät mithört, zeigt die Qualitätsanzeige dort
 „Stream“ und das Format des Streams (z. B. MP3 · 192 kbps) statt der Werte der Datei. Steht der Rotel dabei auf einem
 anderen Eingang (jemand daheim hört etwa Phono), sind Lautstärke und Ein/Aus im Player gesperrt; ein Tipp sagt nur, warum.
 

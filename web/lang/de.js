@@ -291,6 +291,7 @@ langRegister('de', 'Deutsch', {
   'remote.mode.lokal': 'Wiedergabe: Anlage',
   'remote.mode.remote': 'Wiedergabe: nur dieses Gerät',
   'remote.none': 'Kein Stream-Ausgang in MPD eingerichtet',
+  'remote.reconnect': 'Verbindung unterbrochen, verbinde neu …',
   'remote.tap': 'Wiedergabe unterbrochen. Zum Fortsetzen erneut starten.',
   'remote.volume': 'Nur dieses Gerät: Lautstärke mit den Tasten des Geräts einstellen.',
   'scan.updating': 'Bibliothek wird eingelesen. Der Player kann so lange langsamer reagieren.',

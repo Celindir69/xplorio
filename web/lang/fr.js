@@ -292,6 +292,7 @@ langRegister('fr', 'Français', {
   'remote.mode.lokal': 'Lecture : chaîne',
   'remote.mode.remote': 'Lecture : cet appareil seulement',
   'remote.none': 'Aucune sortie stream configurée dans MPD',
+  'remote.reconnect': 'Connexion perdue, reconnexion …',
   'remote.tap': 'Lecture interrompue. Appuyez sur lecture pour continuer.',
   'remote.volume': 'Seulement cet appareil : réglez le volume avec les boutons de l\'appareil.',
   'scan.updating': 'Lecture de la bibliothèque. Le lecteur peut réagir plus lentement en attendant.',

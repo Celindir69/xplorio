@@ -3016,7 +3016,8 @@ function doLastfmApi(query, cb) {
    and stream are both on without anyone choosing it (after MPD restarts), see remote.idleReset. */
 var remote = require('./remote.js');
 var MPD_CONF = process.env.MPD_CONF || '/etc/mpd.conf';
-var REMOTE_IDLE_MS = 60000;
+var REMOTE_IDLE_MS = 180000;                            /* long enough for a dead spot on the go: the device reconnects by itself */
+var STREAM_DEAD_MS = 60000;                            /* a connection that takes nothing for this long is gone (phone left the network) */
 var STREAM_CUSHION_MS = 6000;                          /* head start for the browser's buffer (remote.cushion) */
 var remoteListeners = 0, remoteLastListen = Date.now(), remoteChosen = '';   /* last mode set here (POST /remote) */
 var remoteMacOn = [];                                    /* Mac: names of the sound outputs playing before "remote" (back on for "lokal") */
@@ -3065,16 +3066,28 @@ function doStream(req, res) {
       res.writeHead(a.status, a.headers);
       remoteListeners++;                                 /* every connection counts: Safari asks "bytes=0-" for the live stream too */
       u.on('close', function(){ remoteListeners--; remoteLastListen = Date.now(); });
+      /* a phone that vanished (dead spot, network change) never says goodbye: do not pile up music for it in memory
+         (wait while it takes nothing) and drop the connection after STREAM_DEAD_MS, so MPD's stream and the
+         listener count stay right; the device reconnects on its own */
+      var dead = null;
+      if (res.socket) { res.socket.setKeepAlive(true, 15000); res.socket.setNoDelay(true); }
+      res.on('drain', function(){ clearTimeout(dead); dead = null; u.resume(); });
+      res.on('close', function(){ clearTimeout(dead); u.destroy(); });
       u.on('data', function(chunk){
         remoteLastListen = Date.now();
+        var full = false;
         hold.push(chunk, Date.now()).forEach(function(c){
-          if (!left) return res.write(c);
+          if (!left) { if (!res.write(c)) full = true; return; }
           if (left === -1) return;
           if (c.length > left) c = c.slice(0, left);
           left -= c.length;
-          res.write(c);
+          if (!res.write(c)) full = true;
           if (!left) { left = -1; res.end(); u.destroy(); }
         });
+        if (full && left !== -1) {
+          u.pause();
+          if (!dead) dead = setTimeout(function(){ u.destroy(); res.destroy(); }, STREAM_DEAD_MS);
+        }
       });
       u.on('end', function(){ res.end(); });
     });
