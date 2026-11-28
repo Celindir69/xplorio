@@ -365,7 +365,7 @@ updateSyncedLyrics();
       }
     }
     mArtist.classList.toggle('link', !radio && !!artist);      /* click opens albums or tracks (browse.js) */
-    mAlbum.classList.toggle('link',  !radio && !preview && !!album);
+    mAlbum.classList.toggle('link',  (!radio && !preview && !!album) || !!vinylRec);   /* record: opens "Meine Platten" */
     paintQuality(st);
     tagPaintPlayer(st);
     if (radio) {
