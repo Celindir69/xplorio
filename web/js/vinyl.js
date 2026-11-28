@@ -372,11 +372,11 @@ function vinylNowTech(n) {
   var it = n.item;
   return [vinylFormat(it), it.lab].filter(Boolean).join(' · ');
 }
-/* the record's tracks for the lyrics pane: side and number ("A1"), title, length */
+/* the record's tracks for the lyrics pane: side and number ("A1"), title, length; a tap shows the track's lyrics */
 function vinylNowTracks(n) {
   return (n.tracks || []).filter(function(t){ return t && t.t; }).map(function(t){
     var m = /^(\d+):(\d\d)$/.exec(String(t.d || '').trim());
-    return {title: t.t, pos: t.p || '', duration: m ? +m[1] * 60 + +m[2] : 0};
+    return {title: t.t, pos: t.p || '', duration: m ? +m[1] * 60 + +m[2] : 0, artist: t.ar || n.item.ar, lyrics: true};
   });
 }
 
